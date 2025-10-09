@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm:*)",
+      "Bash(xargs rm:*)",
+      "Bash(mv:*)",
+      "Bash(find:*)",
+      "Bash(test:*)",
+      "Bash(cmd //c \"move game engine\\ && move missions engine\\ && move startmenu engine\\ && move utils engine\\\")",
+      "Bash(npm run build:*)",
+      "Bash(npm install)",
+      "Read(//c/Users/joris/programs/**)",
+      "Bash(chmod:*)",
+      "Bash(npm run serve:*)",
+      "Bash(curl:*)",
+      "Bash(netstat:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

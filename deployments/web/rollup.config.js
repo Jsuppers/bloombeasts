@@ -1,0 +1,34 @@
+import typescript from '@rollup/plugin-typescript';
+import resolve from '@rollup/plugin-node-resolve';
+
+export default {
+  input: 'src/main.ts',
+  output: {
+    file: 'dist/bundle.js',
+    format: 'es',
+    sourcemap: true
+  },
+  plugins: [
+    typescript({
+      tsconfig: './tsconfig.json',
+      include: ['src/**/*.ts', '../../bloombeasts/**/*.ts', '../../shared/**/*.ts'],
+      compilerOptions: {
+        target: 'ES2017',
+        module: 'ES2015',
+        lib: ['ES2017', 'DOM'],
+        moduleResolution: 'node',
+        sourceMap: true,
+        declaration: false,
+        skipLibCheck: true,
+        strict: false,
+        noImplicitAny: false,
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true
+      }
+    }),
+    resolve({
+      extensions: ['.ts', '.js']
+    })
+  ],
+  external: []
+};

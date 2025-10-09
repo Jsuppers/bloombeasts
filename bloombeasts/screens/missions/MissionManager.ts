@@ -1,0 +1,304 @@
+/**
+ * Mission Manager - Handles mission progress, rewards, and completion
+ */
+
+import { Mission, MissionObjective, MissionRewards, CardPool } from './types';
+import { missions, getMissionById } from './definitions';
+import { BloomBeastCard, HabitatCard, TrapCard, MagicCard } from '../../engine/types/core';
+import { GameState } from '../../engine/types/game';
+import { getAllCards } from '../../engine/cards';
+import { SimpleMap } from '../../utils/polyfills';
+
+export interface MissionRunProgress {
+  missionId: string;
+  objectiveProgress: SimpleMap<string, number>;
+  turnCount: number;
+  isCompleted: boolean;
+  damageDealt: number;
+  beastsSummoned: number;
+  abilitiesUsed: number;
+  playerHealth: number;
+  opponentHealth: number;
+}
+
+export interface RewardResult {
+  xpGained: number;
+  cardsReceived: (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[];
+  nectarGained: number;
+  bonusRewards?: string[];
+}
+
+export class MissionManager {
+  private currentMission: Mission | null = null;
+  private progress: MissionRunProgress | null = null;
+  private completedMissions: SimpleMap<string, number> = new SimpleMap();
+
+  /**
+   * Start a mission
+   */
+  startMission(missionId: string): Mission | null {
+    const mission = getMissionById(missionId);
+    if (!mission) {
+      console.error(`Mission ${missionId} not found`);
+      return null;
+    }
+
+    this.currentMission = mission;
+    this.progress = {
+      missionId,
+      objectiveProgress: new SimpleMap(),
+      turnCount: 0,
+      isCompleted: false,
+      damageDealt: 0,
+      beastsSummoned: 0,
+      abilitiesUsed: 0,
+      playerHealth: 30,
+      opponentHealth: 30,
+    };
+
+    // Initialize objective tracking
+    mission.objectives.forEach(obj => {
+      const key = this.getObjectiveKey(obj);
+      this.progress!.objectiveProgress.set(key, 0);
+    });
+
+    return mission;
+  }
+
+  /**
+   * Update mission progress based on game events
+   */
+  updateProgress(event: string, data: any): void {
+    if (!this.progress || !this.currentMission) return;
+
+    switch (event) {
+      case 'turn-end':
+        this.progress.turnCount++;
+        this.checkTurnBasedObjectives();
+        break;
+
+      case 'damage-dealt':
+        this.progress.damageDealt += data.amount;
+        this.updateObjective('deal-damage', this.progress.damageDealt);
+        break;
+
+      case 'beast-summoned':
+        this.progress.beastsSummoned++;
+        this.updateObjective('summon-beasts', this.progress.beastsSummoned);
+        break;
+
+      case 'ability-used':
+        this.progress.abilitiesUsed++;
+        this.updateObjective('use-abilities', this.progress.abilitiesUsed);
+        break;
+
+      case 'opponent-defeated':
+        this.updateObjective('defeat-opponent', 1);
+        this.checkMissionCompletion();
+        break;
+
+      case 'health-update':
+        this.progress.playerHealth = data.playerHealth;
+        this.progress.opponentHealth = data.opponentHealth;
+        this.updateObjective('maintain-health', this.progress.playerHealth);
+        break;
+    }
+
+    this.checkMissionCompletion();
+  }
+
+  /**
+   * Check if all objectives are completed
+   */
+  private checkMissionCompletion(): void {
+    if (!this.currentMission || !this.progress) return;
+
+    const allObjectivesComplete = this.currentMission.objectives.every(obj => {
+      const key = this.getObjectiveKey(obj);
+      const progress = this.progress!.objectiveProgress.get(key) || 0;
+
+      switch (obj.type) {
+        case 'defeat-opponent':
+          return progress >= 1;
+        case 'deal-damage':
+        case 'summon-beasts':
+        case 'use-abilities':
+        case 'survive-turns':
+          return progress >= (obj.target || 0);
+        case 'maintain-health':
+          return this.progress!.playerHealth >= (obj.target || 0);
+        default:
+          return false;
+      }
+    });
+
+    if (allObjectivesComplete) {
+      this.progress.isCompleted = true;
+    }
+  }
+
+  /**
+   * Complete the mission and generate rewards
+   */
+  completeMission(): RewardResult | null {
+    if (!this.currentMission || !this.progress || !this.progress.isCompleted) {
+      return null;
+    }
+
+    const rewards = this.generateRewards(this.currentMission.rewards);
+
+    // Track completion
+    const timesCompleted = this.completedMissions.get(this.currentMission.id) || 0;
+    this.completedMissions.set(this.currentMission.id, timesCompleted + 1);
+    this.currentMission.timesCompleted = timesCompleted + 1;
+
+    // Unlock next mission
+    const nextMissionIndex = missions.indexOf(this.currentMission) + 1;
+    if (nextMissionIndex < missions.length) {
+      missions[nextMissionIndex].unlocked = true;
+    }
+
+    // Clear current mission
+    this.currentMission = null;
+    this.progress = null;
+
+    return rewards;
+  }
+
+  /**
+   * Generate rewards based on mission configuration
+   */
+  private generateRewards(rewardConfig: MissionRewards): RewardResult {
+    const result: RewardResult = {
+      xpGained: rewardConfig.guaranteedXP,
+      cardsReceived: [],
+      nectarGained: rewardConfig.nectarReward || 0,
+      bonusRewards: [],
+    };
+
+    // Roll for bonus XP
+    if (rewardConfig.bonusXPChance && Math.random() < rewardConfig.bonusXPChance) {
+      result.xpGained += rewardConfig.bonusXPAmount || 0;
+      result.bonusRewards?.push(`Bonus XP: +${rewardConfig.bonusXPAmount}`);
+    }
+
+    // Generate card rewards
+    if (rewardConfig.cardRewards) {
+      rewardConfig.cardRewards.forEach(cardReward => {
+        if (Math.random() < cardReward.dropChance) {
+          const amount = Math.floor(
+            Math.random() * (cardReward.maxAmount - cardReward.minAmount + 1) +
+            cardReward.minAmount
+          );
+
+          const cards = this.selectRandomCards(
+            cardReward.cardPool,
+            amount,
+            cardReward.affinity
+          );
+
+          result.cardsReceived.push(...cards);
+        }
+      });
+    }
+
+    // Apply special rule rewards (like double rewards for mission 10)
+    if (this.currentMission?.specialRules) {
+      const hasDoubleRewards = this.currentMission.specialRules.some(
+        rule => rule.effect === 'double-xp' || rule.id === 'champions-trial'
+      );
+      if (hasDoubleRewards) {
+        result.xpGained *= 2;
+        result.nectarGained *= 2;
+        result.bonusRewards?.push('Double rewards earned!');
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Select random cards from the card pool
+   */
+  private selectRandomCards(
+    pool: CardPool,
+    amount: number,
+    affinity?: string
+  ): (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[] {
+    const allCards = getAllCards();
+
+    // Filter by pool and affinity (excluding Resource cards)
+    let eligibleCards = allCards.filter(card => {
+      // Exclude Resource cards from rewards
+      if (card.type === 'Resource') {
+        return false;
+      }
+
+      if (affinity && 'affinity' in card && card.affinity !== affinity) {
+        return false;
+      }
+
+      // Filter by rarity based on pool
+      // Cards have rarity added dynamically by getAllCards
+      const cardWithRarity = card as any;
+      switch (pool) {
+        case 'common':
+          return !cardWithRarity.rarity || cardWithRarity.rarity === 'common';
+        case 'uncommon':
+          return cardWithRarity.rarity === 'uncommon';
+        case 'rare':
+          return cardWithRarity.rarity === 'rare';
+        case 'any':
+        case 'affinity':
+        default:
+          return true;
+      }
+    }) as (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[];
+
+    // Randomly select cards
+    const selected: (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[] = [];
+    for (let i = 0; i < amount && eligibleCards.length > 0; i++) {
+      const index = Math.floor(Math.random() * eligibleCards.length);
+      selected.push(eligibleCards[index]);
+      // Allow duplicates in rewards
+    }
+
+    return selected;
+  }
+
+  /**
+   * Helper methods
+   */
+  private getObjectiveKey(objective: MissionObjective): string {
+    return `${objective.type}-${objective.target || 0}`;
+  }
+
+  private updateObjective(type: string, value: number): void {
+    if (!this.progress) return;
+
+    this.progress.objectiveProgress.forEach((_, key) => {
+      if (key.startsWith(type)) {
+        this.progress!.objectiveProgress.set(key, value);
+      }
+    });
+  }
+
+  private checkTurnBasedObjectives(): void {
+    this.updateObjective('survive-turns', this.progress!.turnCount);
+  }
+
+  /**
+   * Get current mission status
+   */
+  getCurrentMission(): Mission | null {
+    return this.currentMission;
+  }
+
+  getProgress(): MissionRunProgress | null {
+    return this.progress;
+  }
+
+  getCompletedCount(missionId: string): number {
+    return this.completedMissions.get(missionId) || 0;
+  }
+}
