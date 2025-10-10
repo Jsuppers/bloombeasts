@@ -21,6 +21,7 @@ import {
 } from './engine/utils/deckBuilder';
 import { BloomBeastCard } from './engine/types/core';
 import { Mission } from './screens/missions/types';
+import * as AllCards from './allCardDefinitions';
 
 /**
  * Platform callbacks interface - implement these for your specific platform
@@ -84,16 +85,20 @@ export interface BattleDisplay {
   playerDeckCount: number;
   playerNectar: number;
   playerHand: any[];
+  playerTrapZone: any[]; // Player's trap cards (face-down)
   opponentHealth: number;
   opponentMaxHealth: number;
   opponentDeckCount: number;
   opponentNectar: number;
-  playerField: any[];
   opponentField: any[];
+  opponentTrapZone: any[]; // Opponent's trap cards (face-down)
+  playerField: any[];
   currentTurn: number;
   turnPlayer: string;
   turnTimeRemaining: number;
   objectives: ObjectiveDisplay[];
+  habitatZone: any | null; // Current habitat card
+  selectedBeastIndex: number | null; // Track selected beast for attacking
 }
 
 export interface ObjectiveDisplay {
@@ -135,6 +140,7 @@ export class GameManager {
   private selectedDeck: DeckList | null = null;
   private currentBattleId: string | null = null;
   private playerDeck: string[] = []; // Track player's custom deck (card IDs)
+  private selectedBeastIndex: number | null = null; // Track selected beast in battle
 
   constructor(platformCallbacks: PlatformCallbacks) {
     this.platform = platformCallbacks;
@@ -234,6 +240,18 @@ export class GameManager {
         // Handle deck selection buttons
         if (buttonId.startsWith('deck-')) {
           this.selectDeck(buttonId.substring(5));
+        }
+        // Handle viewing hand cards in battle
+        else if (buttonId.startsWith('view-hand-card-')) {
+          const index = parseInt(buttonId.substring(15));
+          await this.handleViewHandCard(index);
+        }
+        // Handle viewing field cards in battle
+        else if (buttonId.startsWith('view-field-card-')) {
+          const parts = buttonId.substring(16).split('-');
+          const player = parts[0]; // 'player' or 'opponent'
+          const index = parseInt(parts[1]);
+          await this.handleViewFieldCard(player, index);
         }
         // Handle action buttons in battle
         else if (buttonId.startsWith('action-')) {
@@ -342,6 +360,48 @@ export class GameManager {
   }
 
   /**
+   * Get abilities for a card based on its level
+   */
+  private getAbilitiesForLevel(cardInstance: CardInstance): { passive: any; bloom: any } {
+    // Get the base card definition
+    const cardDef = Object.values(AllCards).find((card: any) =>
+      card && card.id === cardInstance.cardId
+    ) as BloomBeastCard | undefined;
+
+    if (!cardDef || cardDef.type !== 'Bloom') {
+      return {
+        passive: cardInstance.passiveAbility,
+        bloom: cardInstance.bloomAbility
+      };
+    }
+
+    const level = cardInstance.level;
+    let passive = cardDef.passiveAbility;
+    let bloom = cardDef.bloomAbility;
+
+    // Apply ability upgrades based on level
+    if (cardDef.levelingConfig?.abilityUpgrades) {
+      const upgrades = cardDef.levelingConfig.abilityUpgrades;
+
+      // Check each upgrade level (4, 7, 9) up to current level
+      if (level >= 4 && upgrades[4]) {
+        passive = upgrades[4].passiveAbility || passive;
+        bloom = upgrades[4].bloomAbility || bloom;
+      }
+      if (level >= 7 && upgrades[7]) {
+        passive = upgrades[7].passiveAbility || passive;
+        bloom = upgrades[7].bloomAbility || bloom;
+      }
+      if (level >= 9 && upgrades[9]) {
+        passive = upgrades[9].passiveAbility || passive;
+        bloom = upgrades[9].bloomAbility || bloom;
+      }
+    }
+
+    return { passive, bloom };
+  }
+
+  /**
    * Get player's deck cards for battle
    */
   private getPlayerDeckCards(): BloomBeastCard[] {
@@ -352,6 +412,9 @@ export class GameManager {
       const cardInstance = this.cardCollection.getCard(cardId);
 
       if (cardInstance) {
+        // Get the correct abilities for the card's level
+        const abilities = this.getAbilitiesForLevel(cardInstance);
+
         // Convert CardInstance to BloomBeastCard format for battle
         const bloomCard: any = {
           id: cardInstance.cardId,
@@ -362,8 +425,9 @@ export class GameManager {
           cost: cardInstance.cost,
           baseAttack: cardInstance.baseAttack,
           baseHealth: cardInstance.baseHealth,
-          passiveAbility: cardInstance.passiveAbility,
-          bloomAbility: cardInstance.bloomAbility,
+          passiveAbility: abilities.passive,
+          bloomAbility: abilities.bloom,
+          level: cardInstance.level, // Include level for beast instance
           levelingConfig: {} as any, // Not used in battle
         };
 
@@ -451,9 +515,11 @@ export class GameManager {
       ];
       if (cardEntry.passiveAbility) {
         details.push(`Passive: ${cardEntry.passiveAbility.name}`);
+        details.push(`  ${cardEntry.passiveAbility.description}`);
       }
       if (cardEntry.bloomAbility) {
         details.push(`Bloom: ${cardEntry.bloomAbility.name}`);
+        details.push(`  ${cardEntry.bloomAbility.description}`);
       }
 
       // Check if card is in deck
@@ -543,6 +609,39 @@ export class GameManager {
   }
 
   /**
+   * Enrich field beasts with card definition data for display
+   */
+  private enrichFieldBeasts(field: any[]): any[] {
+    // Create a card lookup map from all card definitions
+    const cardMap = new Map<string, BloomBeastCard>();
+    Object.values(AllCards).forEach((card: any) => {
+      if (card && card.type === 'Bloom') {
+        cardMap.set(card.id, card as BloomBeastCard);
+      }
+    });
+
+    return field.map(beast => {
+      if (!beast) return null;
+
+      // Get the card definition
+      const cardDef = cardMap.get(beast.cardId);
+
+      if (!cardDef) return beast; // Return as-is if card not found
+
+      // Merge instance data with card definition data
+      // Only add abilities if they're not already present
+      return {
+        ...beast,
+        name: beast.name || cardDef.name,
+        affinity: beast.affinity || cardDef.affinity,
+        cost: beast.cost || cardDef.cost,
+        passiveAbility: beast.passiveAbility || cardDef.passiveAbility,
+        bloomAbility: beast.bloomAbility || cardDef.bloomAbility,
+      };
+    });
+  }
+
+  /**
    * Update battle display
    */
   private async updateBattleDisplay(): Promise<void> {
@@ -565,16 +664,20 @@ export class GameManager {
       playerDeckCount: player.deck.length,
       playerNectar: player.currentNectar,
       playerHand: player.hand,
+      playerTrapZone: player.trapZone || [null, null, null],
       opponentHealth: opponent.health,
       opponentMaxHealth: opponent.maxHealth || 30, // Default to 30 if undefined
       opponentDeckCount: opponent.deck.length,
       opponentNectar: opponent.currentNectar,
-      playerField: player.field,
-      opponentField: opponent.field,
+      opponentField: this.enrichFieldBeasts(opponent.field),
+      opponentTrapZone: opponent.trapZone || [null, null, null],
+      playerField: this.enrichFieldBeasts(player.field),
       currentTurn: battleState.gameState.turn,
       turnPlayer: battleState.gameState.activePlayer === 0 ? 'player' : 'opponent',
       turnTimeRemaining: 60, // TODO: Implement actual timer
       objectives: this.getObjectiveDisplay(battleState),
+      habitatZone: battleState.gameState.habitatZone,
+      selectedBeastIndex: this.selectedBeastIndex,
     };
 
     this.platform.renderBattle(display);
@@ -608,9 +711,244 @@ export class GameManager {
   }
 
   /**
+   * Handle viewing a card in player's hand
+   */
+  private async handleViewHandCard(index: number): Promise<void> {
+    const battleState = this.battleUI.getCurrentBattle();
+    if (!battleState || !battleState.gameState) return;
+
+    const player = battleState.gameState.players[0];
+    const card = player.hand[index];
+
+    // Debug: Check hand card data
+    console.log('Hand card:', card);
+
+    if (!card) return;
+
+    // Format card details
+    const details = [
+      `Name: ${card.name}`,
+      `Cost: ${card.cost}`,
+    ];
+
+    // Type guard for Bloom Beast cards
+    const isBloomCard = (card as any).type === 'Bloom' || (card as any).affinity !== undefined;
+
+    if (isBloomCard) {
+      details.push(`Affinity: ${(card as any).affinity}`);
+      details.push(`Attack: ${(card as any).baseAttack || 0}`);
+      details.push(`Health: ${(card as any).baseHealth || 0}`);
+    }
+
+    if ((card as any).passiveAbility) {
+      details.push(`Passive: ${(card as any).passiveAbility.name}`);
+      details.push(`  ${(card as any).passiveAbility.description}`);
+    }
+    if ((card as any).bloomAbility) {
+      const bloomAbility = (card as any).bloomAbility as any;
+      details.push(`Bloom: ${bloomAbility.name}`);
+
+      // Show trigger type
+      const trigger = bloomAbility.trigger || 'Passive';
+      if (trigger === 'Activated') {
+        // Show cost if it exists
+        if (bloomAbility.cost) {
+          if (bloomAbility.cost.type === 'nectar') {
+            details.push(`  Cost: ${bloomAbility.cost.value || 1} Nectar`);
+          } else if (bloomAbility.cost.type === 'discard') {
+            details.push(`  Cost: Discard ${bloomAbility.cost.value || 1} card(s)`);
+          } else if (bloomAbility.cost.type === 'remove-counter') {
+            details.push(`  Cost: Remove ${bloomAbility.cost.value || 1} ${bloomAbility.cost.counter} counter(s)`);
+          }
+        } else {
+          details.push(`  Cost: Free`);
+        }
+      } else {
+        details.push(`  Trigger: ${trigger}`);
+      }
+
+      details.push(`  ${bloomAbility.description}`);
+    }
+
+    // Check if card is affordable
+    const canAfford = card.cost <= player.currentNectar;
+    const buttons = canAfford ? ['Play to Battle', 'Close'] : ['Close'];
+
+    const result = await this.platform.showDialog('Card Details', details.join('\n'), buttons);
+
+    if (result === 'Play to Battle' && canAfford) {
+      // Play the card
+      await this.handleBattleAction(`play-card-${index}`);
+    }
+  }
+
+  /**
+   * Handle viewing a card on the battle field
+   */
+  private async handleViewFieldCard(player: string, index: number): Promise<void> {
+    const battleState = this.battleUI.getCurrentBattle();
+    if (!battleState || !battleState.gameState) return;
+
+    const playerObj = player === 'player' ? battleState.gameState.players[0] : battleState.gameState.players[1];
+
+    // Debug: Check raw field data
+    console.log('Raw field beast:', playerObj.field[index]);
+
+    const field = player === 'player' ? this.enrichFieldBeasts(playerObj.field) : this.enrichFieldBeasts(playerObj.field);
+    const beast = field[index];
+
+    // Debug: Check enriched data
+    console.log('Enriched beast:', beast);
+
+    if (!beast) return;
+
+    // Format card details
+    const details = [
+      `Name: ${beast.name}`,
+      `Affinity: ${beast.affinity}`,
+      `Level: ${beast.currentLevel || 1}`,
+      `Attack: ${beast.currentAttack}`,
+      `Health: ${beast.currentHealth}/${beast.maxHealth}`,
+    ];
+
+    if (beast.passiveAbility) {
+      details.push(`Passive: ${beast.passiveAbility.name}`);
+      details.push(`  ${beast.passiveAbility.description}`);
+    }
+    if (beast.bloomAbility) {
+      const bloomAbility = beast.bloomAbility as any;
+      details.push(`Bloom: ${bloomAbility.name}`);
+
+      // Show trigger type
+      const trigger = bloomAbility.trigger || 'Passive';
+      if (trigger === 'Activated') {
+        // Show cost if it exists
+        if (bloomAbility.cost) {
+          if (bloomAbility.cost.type === 'nectar') {
+            details.push(`  Cost: ${bloomAbility.cost.value || 1} Nectar`);
+          } else if (bloomAbility.cost.type === 'discard') {
+            details.push(`  Cost: Discard ${bloomAbility.cost.value || 1} card(s)`);
+          } else if (bloomAbility.cost.type === 'remove-counter') {
+            details.push(`  Cost: Remove ${bloomAbility.cost.value || 1} ${bloomAbility.cost.counter} counter(s)`);
+          }
+        } else {
+          details.push(`  Cost: Free`);
+        }
+      } else {
+        details.push(`  Trigger: ${trigger}`);
+      }
+
+      details.push(`  ${bloomAbility.description}`);
+    }
+
+    // Show summoning sickness if applicable
+    if (beast.summoningSickness) {
+      details.push('Status: Summoning Sickness');
+    }
+
+    // Different buttons based on which player's card it is
+    let buttons: string[] = ['Close'];
+    let canUseBloom = false;
+
+    if (player === 'player') {
+      // Player's own beast - can select for attacking or use bloom ability
+      const isPlayerTurn = battleState.gameState.activePlayer === 0;
+      const hasBloomAbility = beast.bloomAbility !== undefined;
+
+      if (isPlayerTurn && !beast.summoningSickness) {
+        buttons = ['Select'];
+
+        // Add bloom button only for ACTIVATED abilities
+        if (hasBloomAbility) {
+          const bloomAbility = beast.bloomAbility as any;
+          const trigger = bloomAbility.trigger || 'Passive';
+
+          // Only show Use Bloom for Activated abilities
+          if (trigger === 'Activated') {
+            const player = battleState.gameState.players[0];
+            canUseBloom = true;
+
+            if (bloomAbility.cost) {
+              if (bloomAbility.cost.type === 'nectar') {
+                const required = bloomAbility.cost.value || 1;
+                canUseBloom = player.currentNectar >= required;
+                // Add affordability info to details
+                if (!canUseBloom) {
+                  details.push(`  [Need ${required} nectar, have ${player.currentNectar}]`);
+                }
+              } else if (bloomAbility.cost.type === 'discard') {
+                const required = bloomAbility.cost.value || 1;
+                canUseBloom = player.hand.length >= required;
+                // Add affordability info to details
+                if (!canUseBloom) {
+                  details.push(`  [Need ${required} card(s) in hand, have ${player.hand.length}]`);
+                }
+              } else if (bloomAbility.cost.type === 'remove-counter') {
+                // Check habitat zone for counters
+                const habitat = battleState.gameState.habitatZone;
+                const required = bloomAbility.cost.value || 1;
+                const counterType = bloomAbility.cost.counter;
+
+                // TODO: Check actual counter amounts on habitat
+                // For now, assume can't afford if no habitat
+                canUseBloom = habitat !== null;
+                if (!canUseBloom) {
+                  details.push(`  [Need ${required} ${counterType} counter(s) on habitat]`);
+                }
+              }
+            }
+
+            // Always show the button, but indicate if it can't be used
+            if (canUseBloom) {
+              buttons.push('Use Bloom');
+            } else {
+              buttons.push('Use Bloom (Can\'t Afford)');
+            }
+          }
+        }
+        buttons.push('Close');
+      } else {
+        buttons = ['Close'];
+      }
+    } else {
+      // Opponent's beast - check if we have a selected beast
+      if (this.selectedBeastIndex !== null) {
+        buttons = ['Attack', 'Close'];
+      }
+    }
+
+    const result = await this.platform.showDialog('Card Details', details.join('\n'), buttons);
+
+    if (result === 'Select') {
+      // Select this beast for attacking
+      this.selectedBeastIndex = index;
+      await this.updateBattleDisplay(); // Refresh to show selection
+    } else if (result === 'Attack') {
+      // Attack this opponent beast with selected beast
+      if (this.selectedBeastIndex !== null) {
+        await this.handleBattleAction(`attack-beast-${this.selectedBeastIndex}-${index}`);
+        this.selectedBeastIndex = null; // Clear selection after attack
+      }
+    } else if (result === 'Use Bloom' && canUseBloom) {
+      // Activate bloom ability (only if affordable)
+      await this.handleBattleAction(`use-bloom-${index}`);
+    } else if (result === 'Use Bloom (Can\'t Afford)') {
+      // Show message explaining why they can't use it
+      await this.platform.showDialog('Cannot Use Bloom', 'You do not have enough resources to use this bloom ability.', ['OK']);
+      // Re-show the card details
+      await this.handleViewFieldCard(player, index);
+    }
+  }
+
+  /**
    * Handle battle actions
    */
   private async handleBattleAction(action: string): Promise<void> {
+    // Clear selection after attack actions
+    if (action.startsWith('attack-')) {
+      this.selectedBeastIndex = null;
+    }
+
     // Process action through battle UI
     await this.battleUI.processPlayerAction(action, {});
 
@@ -622,6 +960,9 @@ export class GameManager {
    * Handle end turn
    */
   private async handleEndTurn(): Promise<void> {
+    // Clear beast selection when ending turn
+    this.selectedBeastIndex = null;
+
     await this.battleUI.processPlayerAction('end-turn', {});
     await this.updateBattleDisplay();
   }
@@ -701,6 +1042,7 @@ export class GameManager {
     // Clear battle
     this.battleUI.clearBattle();
     this.currentBattleId = null;
+    this.selectedBeastIndex = null; // Clear selection
 
     // Return to mission select
     await this.showMissionSelect();
@@ -728,6 +1070,7 @@ export class GameManager {
         if (result === 'Yes') {
           this.battleUI.clearBattle();
           this.currentBattleId = null;
+          this.selectedBeastIndex = null; // Clear selection
           await this.showMissionSelect();
         }
         break;

@@ -22,3 +22,13 @@ export const habitatShiftCardDimensions = {
   width: 138,
   height: 138,
 };
+
+export const sideMenuDimensions = {
+  width: 127,
+  height: 465,
+};
+
+export const sideMenuButtonDimensions = {
+  width: 105,
+  height: 36,
+};

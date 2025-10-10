@@ -17,6 +17,8 @@ interface PlayerCardPositions {
 
 interface CardTextInfo extends SimplePosition {
   size: number;
+  textAlign?: 'left' | 'right' | 'center' | 'start' | 'end';
+  textBaseline?: 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom';
 }
 
 export interface CardTextPositions {
@@ -26,6 +28,28 @@ export interface CardTextPositions {
   special: CardTextInfo;
   attack: CardTextInfo;
   health: CardTextInfo;
+}
+
+export interface UIButtonPositions {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  spacing: number; // Vertical spacing between buttons
+}
+
+export interface UITextSafeZone {
+  x: number;
+  y: number;
+  lineHeight: number; // Vertical spacing between lines of text
+}
+
+export interface SideMenuPositions {
+  x: number;
+  y: number;
+  headerStartPosition: SimplePosition;
+  textStartPosition: SimplePosition;
+  buttonStartPosition: SimplePosition;
 }
 
 export interface BattleBoardAssetPositions {

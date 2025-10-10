@@ -27,6 +27,7 @@ export interface Player {
   discardPile?: AnyCard[];
   graveyard: AnyCard[];  // Cards that have been destroyed
   field: (BloomBeastInstance | null)[]; // Nullable for empty slots
+  trapZone: (AnyCard | null)[]; // Face-down trap cards (max 3)
   habitatCounters: SimpleMap<string, number>; // Counters specific to this player's habitat
 }
 

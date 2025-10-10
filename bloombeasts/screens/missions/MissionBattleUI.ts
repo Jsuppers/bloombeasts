@@ -55,6 +55,7 @@ export class MissionBattleUI {
       hand: [],
       field: [],
       graveyard: [],
+      trapZone: [],
       currentNectar: 1,
       summonsThisTurn: 0,
       habitatCounters: new SimpleMap(),
@@ -70,6 +71,7 @@ export class MissionBattleUI {
       hand: [],
       field: [],
       graveyard: [],
+      trapZone: [],
       currentNectar: 1,
       summonsThisTurn: 0,
       habitatCounters: new SimpleMap(),
@@ -135,6 +137,10 @@ export class MissionBattleUI {
       // Extract card index from action (e.g., 'play-card-0' -> 0)
       const cardIndex = parseInt(action.substring('play-card-'.length), 10);
       result = this.playCard(cardIndex);
+    } else if (action.startsWith('use-bloom-')) {
+      // Extract beast index (e.g., 'use-bloom-0' -> 0)
+      const beastIndex = parseInt(action.substring('use-bloom-'.length), 10);
+      result = this.useBloomAbility(beastIndex);
     } else if (action.startsWith('attack-beast-')) {
       // Extract attacker and target indices (e.g., 'attack-beast-0-1' -> attacker=0, target=1)
       const parts = action.substring('attack-beast-'.length).split('-');
@@ -211,7 +217,7 @@ export class MissionBattleUI {
     const beastInstance: any = {
       cardId: playedCard.id,
       instanceId: playedCard.instanceId || `${playedCard.id}-${Date.now()}`,
-      currentLevel: 1 as any,
+      currentLevel: (playedCard as any).level || 1, // Use card's level if available
       currentXP: 0,
       currentAttack: playedCard.baseAttack,
       currentHealth: playedCard.baseHealth,
@@ -220,10 +226,13 @@ export class MissionBattleUI {
       statusEffects: [],
       slotIndex: player.field.length,
       summoningSickness: true, // Can't attack on first turn
+      usedBloomThisTurn: false, // Track bloom ability usage
       // Store original card data for display
       name: playedCard.name,
       affinity: playedCard.affinity,
       baseAttack: playedCard.baseAttack,
+      passiveAbility: playedCard.passiveAbility,
+      bloomAbility: playedCard.bloomAbility,
     };
 
     // Add to field
@@ -331,6 +340,123 @@ export class MissionBattleUI {
   }
 
   /**
+   * Activate a beast's bloom ability
+   */
+  private useBloomAbility(beastIndex: number): any {
+    if (!this.currentBattle || !this.currentBattle.gameState) {
+      return { success: false, message: 'No active battle' };
+    }
+
+    const player = this.currentBattle.gameState.players[0];
+    const opponent = this.currentBattle.gameState.players[1];
+
+    // Validate beast index
+    if (beastIndex < 0 || beastIndex >= player.field.length) {
+      return { success: false, message: 'Invalid beast index' };
+    }
+
+    const beast: any = player.field[beastIndex];
+    if (!beast) {
+      return { success: false, message: 'No beast at this position' };
+    }
+
+    // Check if beast has summoning sickness
+    if (beast.summoningSickness) {
+      return { success: false, message: 'Beast has summoning sickness' };
+    }
+
+    // Check if beast has a bloom ability
+    if (!beast.bloomAbility) {
+      return { success: false, message: 'Beast has no bloom ability' };
+    }
+
+    // Check if bloom ability was already used this turn
+    if (beast.usedBloomThisTurn) {
+      return { success: false, message: 'Bloom ability already used this turn' };
+    }
+
+    const ability = beast.bloomAbility as any;
+
+    // Check and pay costs
+    if (ability.cost) {
+      switch (ability.cost.type) {
+        case 'nectar':
+          const nectarCost = ability.cost.value || 1;
+          if (player.currentNectar < nectarCost) {
+            return { success: false, message: 'Not enough nectar' };
+          }
+          player.currentNectar -= nectarCost;
+          break;
+        case 'discard':
+          const discardCost = ability.cost.value || 1;
+          if (player.hand.length < discardCost) {
+            return { success: false, message: 'Not enough cards to discard' };
+          }
+          for (let i = 0; i < discardCost; i++) {
+            const card = player.hand.pop();
+            if (card) player.graveyard.push(card);
+          }
+          break;
+        case 'remove-counter':
+          // TODO: Implement counter removal from habitat
+          console.log('Counter removal not yet implemented');
+          break;
+      }
+    }
+
+    // Process bloom ability effects
+    if (ability.effects && Array.isArray(ability.effects)) {
+      for (const effect of ability.effects) {
+        this.processAbilityEffect(effect, beast, player, opponent);
+      }
+    }
+
+    // Mark ability as used this turn
+    beast.usedBloomThisTurn = true;
+
+    console.log(`Activated bloom ability: ${ability.name}`);
+    return { success: true, message: `Used ${ability.name}` };
+  }
+
+  /**
+   * Process a single ability effect
+   */
+  private processAbilityEffect(effect: any, source: any, player: any, opponent: any): void {
+    switch (effect.type) {
+      case 'modify-stats':
+        if (effect.target === 'self') {
+          if (effect.stat === 'attack') {
+            source.currentAttack += effect.value || 0;
+          } else if (effect.stat === 'health') {
+            source.currentHealth += effect.value || 0;
+            source.maxHealth += effect.value || 0; // Also increase max health
+          }
+        }
+        break;
+
+      case 'heal':
+        if (effect.target === 'self') {
+          const healAmount = effect.value || 0;
+          source.currentHealth = Math.min(source.maxHealth, source.currentHealth + healAmount);
+        }
+        break;
+
+      case 'damage':
+        // TODO: Implement damage targeting
+        console.log(`Damage effect: ${effect.value}`);
+        break;
+
+      case 'immunity':
+        // TODO: Implement immunity tracking
+        console.log(`Immunity effect: ${effect.immuneTo}`);
+        break;
+
+      default:
+        console.log(`Unknown effect type: ${effect.type}`);
+    }
+  }
+
+  /**
    * End player's turn and start opponent's turn
    */
   private async endPlayerTurn(): Promise<any> {
@@ -340,11 +466,12 @@ export class MissionBattleUI {
 
     const gameState = this.currentBattle.gameState;
 
-    // Remove summoning sickness from all player beasts
+    // Remove summoning sickness and reset bloom usage for all player beasts
     const player = gameState.players[0];
     player.field.forEach((beast: any) => {
       if (beast) {
         beast.summoningSickness = false;
+        beast.usedBloomThisTurn = false; // Reset bloom ability usage
       }
     });
 
@@ -407,6 +534,15 @@ export class MissionBattleUI {
     if (this.renderCallback) this.renderCallback();
     await delay(500);
 
+    // Remove summoning sickness from beasts that were already on the field at start of turn
+    // (Don't remove from beasts that will be summoned this turn)
+    opponent.field.forEach((beast: any) => {
+      if (beast) {
+        beast.summoningSickness = false;
+        beast.usedBloomThisTurn = false; // Reset bloom ability usage
+      }
+    });
+
     // Simple AI: Play cards if affordable and field has space
     for (let i = opponent.hand.length - 1; i >= 0; i--) {
       const card: any = opponent.hand[i];
@@ -427,11 +563,14 @@ export class MissionBattleUI {
           counters: [],
           statusEffects: [],
           slotIndex: opponent.field.length,
-          summoningSickness: true,
+          summoningSickness: true, // Can't attack on the turn they're summoned
+          usedBloomThisTurn: false, // Track bloom ability usage
           // Store original card data for display
           name: playedCard.name,
           affinity: playedCard.affinity,
           baseAttack: playedCard.baseAttack,
+          passiveAbility: playedCard.passiveAbility,
+          bloomAbility: playedCard.bloomAbility,
         };
 
         opponent.field.push(beastInstance);
@@ -442,13 +581,6 @@ export class MissionBattleUI {
         await delay(1200);
       }
     }
-
-    // Remove summoning sickness from all opponent beasts
-    opponent.field.forEach((beast: any) => {
-      if (beast) {
-        beast.summoningSickness = false;
-      }
-    });
 
     // Attack with all beasts that don't have summoning sickness
     for (let index = opponent.field.length - 1; index >= 0; index--) {

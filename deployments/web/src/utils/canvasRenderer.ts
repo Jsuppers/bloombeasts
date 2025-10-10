@@ -8,8 +8,10 @@ import {
     standardCardDimensions,
     magicCardDimensions,
     trapCardDimensions,
+    sideMenuDimensions,
+    sideMenuButtonDimensions,
 } from '../../../../shared/constants/dimensions';
-import { standardCardTextPositions } from '../../../../shared/constants/positions';
+import { standardCardTextPositions, sideMenuPositions } from '../../../../shared/constants/positions';
 
 export class CanvasRenderer {
     constructor(public ctx: CanvasRenderingContext2D) {}
@@ -114,6 +116,51 @@ export class CanvasRenderer {
         this.ctx.imageSmoothingEnabled = true;
     }
 
+    drawGreenButton(text: string, x: number, y: number, width: number, height: number): void {
+        // Disable image smoothing for pixelated look
+        this.ctx.imageSmoothingEnabled = false;
+
+        // Draw outer shadow/border (dark green)
+        this.ctx.fillStyle = '#2d5016';
+        this.ctx.fillRect(x + 4, y + 4, width, height);
+
+        // Draw button background (green)
+        this.ctx.fillStyle = '#3d7524';
+        this.ctx.fillRect(x, y, width, height);
+
+        // Draw inner highlight (light green)
+        this.ctx.fillStyle = '#5fa349';
+        this.ctx.fillRect(x + 4, y + 4, width - 8, height - 8);
+
+        // Draw main button face (medium green)
+        this.ctx.fillStyle = '#4a8c2a';
+        this.ctx.fillRect(x + 6, y + 6, width - 12, height - 12);
+
+        // Draw thick outer border
+        this.ctx.strokeStyle = '#1a3a10';
+        this.ctx.lineWidth = 4;
+        this.ctx.strokeRect(x, y, width, height);
+
+        // Draw inner border for more depth
+        this.ctx.strokeStyle = '#7bc850';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(x + 6, y + 6, width - 12, height - 12);
+
+        // Draw button text with pixelated style
+        this.ctx.font = 'bold 24px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        // Text shadow for depth
+        this.ctx.fillStyle = '#1a3a10';
+        this.ctx.fillText(text, x + width / 2 + 2, y + height / 2 + 2);
+        // Main text
+        this.ctx.fillStyle = '#fff';
+        this.ctx.fillText(text, x + width / 2, y + height / 2);
+
+        // Re-enable image smoothing
+        this.ctx.imageSmoothingEnabled = true;
+    }
+
     drawText(
         text: string,
         x: number,
@@ -189,31 +236,56 @@ export class CanvasRenderer {
         } else {
             // Fallback: draw colored card background
             this.drawCard(x, y, cardWidth, cardHeight, beast.affinity || '');
-
-            // Card info
-            this.ctx.fillStyle = '#fff';
-            this.ctx.font = 'bold 16px Arial';
-            this.ctx.textAlign = 'center';
-            this.ctx.fillText(beast.name || 'Beast', x + cardWidth / 2, y + 20);
         }
 
-        // Draw stats overlay (always shown)
-        const attack = beast.currentAttack || beast.attack || 0;
-        const health = beast.currentHealth || beast.health || 0;
+        // Draw text overlay using standardCardTextPositions
+        const positions = standardCardTextPositions;
 
+        // Setup common fill style
         this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 32px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 3;
+
+        // Cost (top left)
+        this.ctx.font = `bold ${positions.cost.size}px Arial`;
+        this.ctx.textAlign = positions.cost.textAlign || 'center';
+        this.ctx.textBaseline = positions.cost.textBaseline || 'alphabetic';
+        this.ctx.fillText(`${beast.cost || 0}`, x + positions.cost.x, y + positions.cost.y);
+
+        // Level (top middle area)
+        this.ctx.font = `bold ${positions.level.size}px Arial`;
+        this.ctx.textAlign = positions.level.textAlign || 'center';
+        this.ctx.textBaseline = positions.level.textBaseline || 'alphabetic';
+        this.ctx.fillText(`${beast.level || 1}`, x + positions.level.x, y + positions.level.y);
+
+        // Name (bottom left area) - truncate if too long
+        this.ctx.font = `bold ${positions.name.size}px Arial`;
+        this.ctx.textAlign = positions.name.textAlign || 'left';
+        this.ctx.textBaseline = positions.name.textBaseline || 'alphabetic';
+        const maxNameWidth = 115; // Max width to avoid overlapping with special indicator
+        const truncatedName = this.truncateText(`${beast.name}`, maxNameWidth);
+        this.ctx.fillText(truncatedName, x + positions.name.x, y + positions.name.y);
+
+        // Special (bottom right area) - show "?" if card has abilities
+        this.ctx.font = `bold ${positions.special.size}px Arial`;
+        this.ctx.textAlign = positions.special.textAlign || 'right';
+        this.ctx.textBaseline = positions.special.textBaseline || 'alphabetic';
+        // Check if card has passive or bloom ability
+        const hasAbility = beast.passiveAbility || beast.bloomAbility;
+        const special = hasAbility ? '?' : '';
+        this.ctx.fillText(special, x + positions.special.x, y + positions.special.y);
 
         // Attack (bottom left)
-        this.ctx.strokeText(`${attack}`, x + 50, y + cardHeight - 30);
-        this.ctx.fillText(`${attack}`, x + 50, y + cardHeight - 30);
+        const attack = beast.currentAttack || beast.baseAttack || beast.attack || 0;
+        this.ctx.font = `bold ${positions.attack.size}px Arial`;
+        this.ctx.textAlign = positions.attack.textAlign || 'center';
+        this.ctx.textBaseline = positions.attack.textBaseline || 'alphabetic';
+        this.ctx.fillText(`${attack}`, x + positions.attack.x, y + positions.attack.y);
 
         // Health (bottom right)
-        this.ctx.strokeText(`${health}`, x + cardWidth - 50, y + cardHeight - 30);
-        this.ctx.fillText(`${health}`, x + cardWidth - 50, y + cardHeight - 30);
+        const health = beast.currentHealth || beast.baseHealth || beast.health || 0;
+        this.ctx.font = `bold ${positions.health.size}px Arial`;
+        this.ctx.textAlign = positions.health.textAlign || 'center';
+        this.ctx.textBaseline = positions.health.textBaseline || 'alphabetic';
+        this.ctx.fillText(`${health}`, x + positions.health.x, y + positions.health.y);
     }
 
     drawMissionCard(
@@ -278,47 +350,51 @@ export class CanvasRenderer {
         // Draw text overlay using standardCardTextPositions
         const positions = standardCardTextPositions;
 
-        // Cost (top left)
+        // Setup common fill style
         this.ctx.fillStyle = '#fff';
+
+        // Cost (top left)
         this.ctx.font = `bold ${positions.cost.size}px Arial`;
-        this.ctx.textAlign = 'center';
-        this.ctx.strokeStyle = '#000';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeText(`${card.cost || 0}`, x + positions.cost.x, y + positions.cost.y + positions.cost.size);
-        this.ctx.fillText(`${card.cost || 0}`, x + positions.cost.x, y + positions.cost.y + positions.cost.size);
+        this.ctx.textAlign = positions.cost.textAlign || 'center';
+        this.ctx.textBaseline = positions.cost.textBaseline || 'alphabetic';
+        this.ctx.fillText(`${card.cost || 0}`, x + positions.cost.x, y + positions.cost.y);
 
         // Level (top middle area)
         this.ctx.font = `bold ${positions.level.size}px Arial`;
-        this.ctx.strokeText(`${card.level}`, x + positions.level.x, y + positions.level.y + positions.level.size);
-        this.ctx.fillText(`${card.level}`, x + positions.level.x, y + positions.level.y + positions.level.size);
+        this.ctx.textAlign = positions.level.textAlign || 'center';
+        this.ctx.textBaseline = positions.level.textBaseline || 'alphabetic';
+        this.ctx.fillText(`${card.level || 1}`, x + positions.level.x, y + positions.level.y);
 
-        // Name (bottom left area)
+        // Name (bottom left area) - truncate if too long
         this.ctx.font = `bold ${positions.name.size}px Arial`;
-        this.ctx.textAlign = 'left';
-        this.ctx.strokeText(`${card.name}`, x + positions.name.x, y + positions.name.y + positions.name.size);
-        this.ctx.fillText(`${card.name}`, x + positions.name.x, y + positions.name.y + positions.name.size);
+        this.ctx.textAlign = positions.name.textAlign || 'left';
+        this.ctx.textBaseline = positions.name.textBaseline || 'alphabetic';
+        const maxNameWidth = 115; // Max width to avoid overlapping with special indicator
+        const truncatedName = this.truncateText(`${card.name}`, maxNameWidth);
+        this.ctx.fillText(truncatedName, x + positions.name.x, y + positions.name.y);
 
         // Special (bottom right area) - show "?" if card has abilities
         this.ctx.font = `bold ${positions.special.size}px Arial`;
-        this.ctx.textAlign = 'right';
+        this.ctx.textAlign = positions.special.textAlign || 'right';
+        this.ctx.textBaseline = positions.special.textBaseline || 'alphabetic';
         // Check if card has passive or bloom ability
         const hasAbility = card.passiveAbility || card.bloomAbility;
         const special = hasAbility ? '?' : '';
-        this.ctx.strokeText(special, x + positions.special.x, y + positions.special.y + positions.special.size);
-        this.ctx.fillText(special, x + positions.special.x, y + positions.special.y + positions.special.size);
+        this.ctx.fillText(special, x + positions.special.x, y + positions.special.y);
 
         // Attack (bottom left)
-        this.ctx.textAlign = 'center';
         const attack = card.currentAttack || card.baseAttack || 0;
         this.ctx.font = `bold ${positions.attack.size}px Arial`;
-        this.ctx.strokeText(`${attack}`, x + positions.attack.x, y + positions.attack.y + positions.attack.size);
-        this.ctx.fillText(`${attack}`, x + positions.attack.x, y + positions.attack.y + positions.attack.size);
+        this.ctx.textAlign = positions.attack.textAlign || 'center';
+        this.ctx.textBaseline = positions.attack.textBaseline || 'alphabetic';
+        this.ctx.fillText(`${attack}`, x + positions.attack.x, y + positions.attack.y);
 
         // Health (bottom right)
         const health = card.currentHealth || card.baseHealth || 0;
         this.ctx.font = `bold ${positions.health.size}px Arial`;
-        this.ctx.strokeText(`${health}`, x + positions.health.x, y + positions.health.y + positions.health.size);
-        this.ctx.fillText(`${health}`, x + positions.health.x, y + positions.health.y + positions.health.size);
+        this.ctx.textAlign = positions.health.textAlign || 'center';
+        this.ctx.textBaseline = positions.health.textBaseline || 'alphabetic';
+        this.ctx.fillText(`${health}`, x + positions.health.x, y + positions.health.y);
     }
 
     drawObjectives(objectives: any[], startX: number, startY: number): void {
@@ -341,6 +417,37 @@ export class CanvasRenderer {
         });
     }
 
+    /**
+     * Truncate text with ellipsis if it exceeds max width
+     */
+    private truncateText(text: string, maxWidth: number): string {
+        const textWidth = this.ctx.measureText(text).width;
+
+        if (textWidth <= maxWidth) {
+            return text;
+        }
+
+        // Binary search for the right length
+        let left = 0;
+        let right = text.length;
+        let result = text;
+
+        while (left < right) {
+            const mid = Math.floor((left + right + 1) / 2);
+            const truncated = text.substring(0, mid) + '...';
+            const width = this.ctx.measureText(truncated).width;
+
+            if (width <= maxWidth) {
+                result = truncated;
+                left = mid;
+            } else {
+                right = mid - 1;
+            }
+        }
+
+        return result;
+    }
+
     private getAffinityColor(affinity: string): string {
         const colors: Record<string, string> = {
             Forest: 'rgba(76, 175, 80, 0.7)',
@@ -349,5 +456,83 @@ export class CanvasRenderer {
             Sky: 'rgba(156, 39, 176, 0.7)',
         };
         return colors[affinity] || 'rgba(158, 158, 158, 0.7)';
+    }
+
+    /**
+     * Draw the side menu background
+     */
+    drawSideMenuBackground(sideMenuImg: HTMLImageElement): void {
+        this.ctx.drawImage(
+            sideMenuImg,
+            sideMenuPositions.x,
+            sideMenuPositions.y,
+            sideMenuDimensions.width,
+            sideMenuDimensions.height
+        );
+    }
+
+    /**
+     * Draw a green button on the side menu (for active End Turn button)
+     */
+    drawSideMenuGreenButton(text: string, x: number, y: number, buttonImg: HTMLImageElement): void {
+        // Draw button image
+        this.ctx.drawImage(
+            buttonImg,
+            x,
+            y,
+            sideMenuButtonDimensions.width,
+            sideMenuButtonDimensions.height
+        );
+
+        // Draw button text
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(text, x + sideMenuButtonDimensions.width / 2, y + sideMenuButtonDimensions.height / 2);
+    }
+
+    /**
+     * Draw a standard button on the side menu
+     */
+    drawSideMenuStandardButton(text: string, x: number, y: number, buttonImg: HTMLImageElement): void {
+        // Draw button image
+        this.ctx.drawImage(
+            buttonImg,
+            x,
+            y,
+            sideMenuButtonDimensions.width,
+            sideMenuButtonDimensions.height
+        );
+
+        // Draw button text
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(text, x + sideMenuButtonDimensions.width / 2, y + sideMenuButtonDimensions.height / 2);
+    }
+
+    /**
+     * Draw a disabled button on the side menu
+     */
+    drawSideMenuDisabledButton(text: string, x: number, y: number, buttonImg: HTMLImageElement): void {
+        // Draw button image with reduced opacity
+        this.ctx.globalAlpha = 0.5;
+        this.ctx.drawImage(
+            buttonImg,
+            x,
+            y,
+            sideMenuButtonDimensions.width,
+            sideMenuButtonDimensions.height
+        );
+        this.ctx.globalAlpha = 1.0;
+
+        // Draw button text (grayed out)
+        this.ctx.fillStyle = '#888';
+        this.ctx.font = 'bold 18px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(text, x + sideMenuButtonDimensions.width / 2, y + sideMenuButtonDimensions.height / 2);
     }
 }

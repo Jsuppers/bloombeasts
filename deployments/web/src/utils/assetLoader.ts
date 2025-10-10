@@ -17,6 +17,9 @@ export class AssetLoader {
             await this.loadImage('menu', '/shared/images/Menu.png');
             await this.loadImage('background', '/shared/images/Background.png');
             await this.loadImage('playboard', '/shared/images/Playboard.png');
+            await this.loadImage('sideMenu', '/shared/images/SideMenu.png');
+            await this.loadImage('sideMenuGreenButton', '/shared/images/SideMenuGreenButton.png');
+            await this.loadImage('sideMenuStandardButton', '/shared/images/SideMenuStandardButton.png');
 
             if (this.loadingEl) {
                 this.loadingEl.classList.add('hidden');

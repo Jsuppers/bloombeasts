@@ -6,7 +6,8 @@ import { CardDisplay } from '../../../../bloombeasts/gameManager';
 import { CanvasRenderer } from '../utils/canvasRenderer';
 import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
-import { standardCardDimensions } from '../../../../shared/constants/dimensions';
+import { standardCardDimensions, sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
+import { uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions } from '../../../../shared/constants/positions';
 
 export class InventoryScreen {
     private scrollOffset: number = 0;
@@ -35,11 +36,16 @@ export class InventoryScreen {
             this.renderer.drawImage(bgImg);
         }
 
-        // Draw title
-        this.renderer.drawText('Card Inventory', 50, 30, 36, '#fff');
+        // Draw side menu background
+        const sideMenuImg = this.assets.getImage('sideMenu');
+        if (sideMenuImg) {
+            this.renderer.drawSideMenuBackground(sideMenuImg);
+        }
 
-        // Draw deck size on top right
-        this.renderer.drawText(`Deck: ${deckSize}/30`, 1050, 30, 32, '#fff', 'left');
+        // Draw title and deck info on side menu
+        const textPos = sideMenuPositions.textStartPosition;
+        this.renderer.drawText('Inventory', textPos.x, textPos.y, 20, '#fff', 'left');
+        this.renderer.drawText(`D: ${deckSize}/30`, textPos.x, textPos.y + 25, 18, '#fff', 'left');
 
         if (cards.length === 0) {
             this.renderer.drawText('No cards in your collection yet.', 400, 350, 24, '#fff', 'center');
@@ -87,67 +93,74 @@ export class InventoryScreen {
             // Calculate total pages needed
             const totalPages = Math.ceil(cards.length / cardsPerPage);
 
-            // Button positions (Back, Up, Down from top to bottom)
-            const btnX = 1149;
-            const btnWidth = 120;
-            const btnHeight = 50;
-            const upBtnY = 191;
-            const downBtnY = 251;
+            // Get button images
+            const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
 
-            // Up arrow button (always visible, disabled if can't scroll up)
-            const canScrollUp = this.scrollOffset > 0;
-            if (canScrollUp) {
-                this.renderer.drawButton('↑', btnX, upBtnY, btnWidth, btnHeight);
-                this.clickManager.addRegion({
-                    id: 'scroll-up',
-                    x: btnX,
-                    y: upBtnY,
-                    width: btnWidth,
-                    height: btnHeight,
-                    callback: () => {
-                        this.scrollOffset = Math.max(0, this.scrollOffset - 1);
-                        // Re-render with new offset
-                        this.render(cards, deckSize, deckCardIds, onCardSelect, onBack);
-                    },
-                });
-            } else {
-                this.renderer.drawDisabledButton('↑', btnX, upBtnY, btnWidth, btnHeight);
-            }
+            // Button positions on side menu
+            const buttonX = sideMenuPositions.buttonStartPosition.x;
+            const buttonSpacing = 10;
+            const upBtnY = sideMenuPositions.buttonStartPosition.y;
+            const downBtnY = upBtnY + sideMenuButtonDimensions.height + buttonSpacing;
 
-            // Down arrow button (always visible, disabled if can't scroll down)
-            const canScrollDown = this.scrollOffset < totalPages - 1;
-            if (canScrollDown) {
-                this.renderer.drawButton('↓', btnX, downBtnY, btnWidth, btnHeight);
-                this.clickManager.addRegion({
-                    id: 'scroll-down',
-                    x: btnX,
-                    y: downBtnY,
-                    width: btnWidth,
-                    height: btnHeight,
-                    callback: () => {
-                        this.scrollOffset = Math.min(totalPages - 1, this.scrollOffset + 1);
-                        // Re-render with new offset
-                        this.render(cards, deckSize, deckCardIds, onCardSelect, onBack);
-                    },
-                });
-            } else {
-                this.renderer.drawDisabledButton('↓', btnX, downBtnY, btnWidth, btnHeight);
+            if (standardButtonImg) {
+                // Up arrow button (always visible, disabled if can't scroll up)
+                const canScrollUp = this.scrollOffset > 0;
+                if (canScrollUp) {
+                    this.renderer.drawSideMenuStandardButton('↑', buttonX, upBtnY, standardButtonImg);
+                    this.clickManager.addRegion({
+                        id: 'scroll-up',
+                        x: buttonX,
+                        y: upBtnY,
+                        width: sideMenuButtonDimensions.width,
+                        height: sideMenuButtonDimensions.height,
+                        callback: () => {
+                            this.scrollOffset = Math.max(0, this.scrollOffset - 1);
+                            // Re-render with new offset
+                            this.render(cards, deckSize, deckCardIds, onCardSelect, onBack);
+                        },
+                    });
+                } else {
+                    this.renderer.drawSideMenuDisabledButton('↑', buttonX, upBtnY, standardButtonImg);
+                }
+
+                // Down arrow button (always visible, disabled if can't scroll down)
+                const canScrollDown = this.scrollOffset < totalPages - 1;
+                if (canScrollDown) {
+                    this.renderer.drawSideMenuStandardButton('↓', buttonX, downBtnY, standardButtonImg);
+                    this.clickManager.addRegion({
+                        id: 'scroll-down',
+                        x: buttonX,
+                        y: downBtnY,
+                        width: sideMenuButtonDimensions.width,
+                        height: sideMenuButtonDimensions.height,
+                        callback: () => {
+                            this.scrollOffset = Math.min(totalPages - 1, this.scrollOffset + 1);
+                            // Re-render with new offset
+                            this.render(cards, deckSize, deckCardIds, onCardSelect, onBack);
+                        },
+                    });
+                } else {
+                    this.renderer.drawSideMenuDisabledButton('↓', buttonX, downBtnY, standardButtonImg);
+                }
             }
         }
 
-        // Back button at top (1. Back, 2. Up, 3. Down)
-        const backBtnX = 1149;
-        const backBtnY = 131;
-        const backBtnWidth = 120;
-        const backBtnHeight = 50;
-        this.renderer.drawButton('← Back', backBtnX, backBtnY, backBtnWidth, backBtnHeight);
-        this.clickManager.addRegion({
-            id: 'back',
-            x: backBtnX,
-            y: backBtnY,
-            width: backBtnWidth,
-            height: backBtnHeight,
-            callback: onBack,
-        });
+        // Get button image
+        const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
+
+        // Back button at header position
+        const backBtnX = sideMenuPositions.headerStartPosition.x;
+        const backBtnY = sideMenuPositions.headerStartPosition.y;
+        if (standardButtonImg) {
+            this.renderer.drawSideMenuStandardButton('Back', backBtnX, backBtnY, standardButtonImg);
+            this.clickManager.addRegion({
+                id: 'back',
+                x: backBtnX,
+                y: backBtnY,
+                width: sideMenuButtonDimensions.width,
+                height: sideMenuButtonDimensions.height,
+                callback: onBack,
+            });
+        }
     }
 }
