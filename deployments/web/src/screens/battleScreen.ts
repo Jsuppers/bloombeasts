@@ -297,29 +297,13 @@ export class BattleScreen {
         const habitatWidth = 150;
         const habitatHeight = 185; // Increased height to match card proportions
 
-        // Load the habitat card image
-        const cardImage = await this.assets.loadCardImage(habitat.name, habitat.affinity || 'Forest');
+        // Load the habitat card image and template
+        const affinity = habitat.affinity || 'Forest';
+        const habitatImage = await this.assets.loadHabitatImage(habitat.name, affinity);
+        const playboardTemplate = await this.assets.loadHabitatCardPlayboardTemplate(affinity);
 
-        if (cardImage) {
-            // Draw the card image scaled to fit the habitat zone
-            this.renderer.ctx.drawImage(
-                cardImage,
-                pos.x,
-                pos.y,
-                habitatWidth,
-                habitatHeight
-            );
-        } else {
-            // Fallback: Draw a simple representation if image not available
-            // Draw habitat card background
-            this.renderer.ctx.fillStyle = '#1b5e20'; // Dark green
-            this.renderer.ctx.fillRect(pos.x, pos.y, habitatWidth, habitatHeight);
-
-            // Draw habitat name
-            if (habitat.name) {
-                this.renderer.drawText(habitat.name, pos.x + habitatWidth / 2, pos.y + 20, 16, '#fff', 'center');
-            }
-        }
+        // Use the new drawHabitatCardPlayboard method
+        this.renderer.drawHabitatCardPlayboard(pos.x, pos.y, habitatWidth, habitatHeight, habitatImage, playboardTemplate);
 
         // Add glowing border to indicate active habitat
         this.renderer.ctx.strokeStyle = '#4caf50'; // Green glow
@@ -404,11 +388,15 @@ export class BattleScreen {
             // Load card images separately for layered rendering
             const beastImage = card.type === 'Bloom' ? await this.assets.loadBeastImage(card.name, card.affinity) : null;
             const baseCardImage = await this.assets.loadBaseCardImage(card.affinity);
-            const affinityIcon = card.affinity ? await this.assets.loadAffinityIcon(card.affinity) : null;
+            // Only load affinity icon for Bloom cards (Magic and Trap cards don't have affinity)
+            const affinityIcon = card.type === 'Bloom' && card.affinity ? await this.assets.loadAffinityIcon(card.affinity) : null;
 
-            // For Magic/Trap cards, load the specific image and template
+            // For Magic/Trap/Habitat cards, load the specific image and template
             const magicCardTemplate = card.type === 'Magic' ? await this.assets.loadMagicCardTemplate() : null;
-            const cardImage = card.type !== 'Bloom' ? await this.assets.loadCardImage(card.name, card.affinity, card.type) : null;
+            const trapCardTemplate = card.type === 'Trap' ? await this.assets.loadTrapCardTemplate() : null;
+            const habitatCardTemplate = card.type === 'Habitat' && card.affinity ? await this.assets.loadHabitatCardTemplate(card.affinity) : null;
+            const habitatImage = card.type === 'Habitat' && card.affinity ? await this.assets.loadHabitatImage(card.name, card.affinity) : null;
+            const cardImage = (card.type === 'Magic' || card.type === 'Trap') ? await this.assets.loadCardImage(card.name, card.affinity, card.type) : null;
 
             // Check if affordable
             const canAfford = card.cost <= playerNectar;
@@ -418,8 +406,12 @@ export class BattleScreen {
                 this.renderer.drawBeastCard(x, y, card, beastImage, baseCardImage, affinityIcon);
             } else if (card.type === 'Magic') {
                 this.renderer.drawMagicCard(x, y, card, cardImage, magicCardTemplate, baseCardImage);
+            } else if (card.type === 'Trap') {
+                this.renderer.drawTrapCard(x, y, card, cardImage, trapCardTemplate, baseCardImage);
+            } else if (card.type === 'Habitat') {
+                this.renderer.drawHabitatCard(x, y, card, habitatImage, habitatCardTemplate, baseCardImage);
             } else {
-                // For Trap and other card types
+                // Other card types (fallback)
                 this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, cardImage, false);
             }
 

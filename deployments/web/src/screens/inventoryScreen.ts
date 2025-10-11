@@ -75,12 +75,15 @@ export class InventoryScreen {
                 // Load card images separately for layered rendering
                 const beastImage = card.type === 'Bloom' ? await this.assets.loadBeastImage(card.name, card.affinity) : null;
                 const baseCardImage = await this.assets.loadBaseCardImage(card.affinity);
-                const affinityIcon = card.affinity ? await this.assets.loadAffinityIcon(card.affinity) : null;
+                // Only load affinity icon for Bloom cards (Magic and Trap cards don't have affinity)
+                const affinityIcon = card.type === 'Bloom' && card.affinity ? await this.assets.loadAffinityIcon(card.affinity) : null;
 
-                // For Magic/Trap cards, load the specific image and template
+                // For Magic/Trap/Habitat cards, load the specific image and template
                 const magicCardTemplate = card.type === 'Magic' ? await this.assets.loadMagicCardTemplate() : null;
                 const trapCardTemplate = card.type === 'Trap' ? await this.assets.loadTrapCardTemplate() : null;
-                const cardImage = card.type !== 'Bloom' ? await this.assets.loadCardImage(card.name, card.affinity, card.type) : null;
+                const habitatCardTemplate = card.type === 'Habitat' && card.affinity ? await this.assets.loadHabitatCardTemplate(card.affinity) : null;
+                const habitatImage = card.type === 'Habitat' && card.affinity ? await this.assets.loadHabitatImage(card.name, card.affinity) : null;
+                const cardImage = (card.type === 'Magic' || card.type === 'Trap') ? await this.assets.loadCardImage(card.name, card.affinity, card.type) : null;
 
                 // Check if card is in deck
                 const isInDeck = deckCardIds.includes(card.id);
@@ -92,8 +95,10 @@ export class InventoryScreen {
                     this.renderer.drawMagicCard(x, y, card, cardImage, magicCardTemplate, baseCardImage);
                 } else if (card.type === 'Trap') {
                     this.renderer.drawTrapCard(x, y, card, cardImage, trapCardTemplate, baseCardImage);
+                } else if (card.type === 'Habitat') {
+                    this.renderer.drawHabitatCard(x, y, card, habitatImage, habitatCardTemplate, baseCardImage);
                 } else {
-                    // Habitat or other card types
+                    // Other card types (fallback)
                     this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, cardImage, false);
                 }
 

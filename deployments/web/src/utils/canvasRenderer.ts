@@ -486,6 +486,60 @@ export class CanvasRenderer {
     }
 
     /**
+     * Draw Habitat card with layered rendering (for inventory/hand)
+     */
+    drawHabitatCard(x: number, y: number, card: any, habitatImage?: HTMLImageElement | null, templateImage?: HTMLImageElement | null, baseCardImage?: HTMLImageElement | null): void {
+        const cardWidth = standardCardDimensions.width;
+        const cardHeight = standardCardDimensions.height;
+
+        // Layered rendering:
+        // 1. Draw habitat artwork (185x185)
+        // 2. Draw BaseCard frame
+        // 3. Draw HabitatCard template overlay
+        // 4. Draw text overlay
+
+        // Step 1: Draw habitat image if available
+        if (habitatImage) {
+            // Habitat images are 185x185, positioned at offset (12, 13)
+            const habitatImageSize = 185;
+            const imageX = x + 12;
+            const imageY = y + 13;
+            this.ctx.drawImage(habitatImage, imageX, imageY, habitatImageSize, habitatImageSize);
+        }
+
+        // Step 2: Draw base card frame
+        if (baseCardImage) {
+            this.ctx.drawImage(baseCardImage, x, y, cardWidth, cardHeight);
+        }
+
+        // Step 3: Draw HabitatCard template overlay
+        if (templateImage) {
+            this.ctx.drawImage(templateImage, x, y, cardWidth, cardHeight);
+        }
+
+        // Step 4: Draw text overlay
+        this.drawCardTextOverlay(x, y, card);
+    }
+
+    /**
+     * Draw Habitat card for playboard
+     */
+    drawHabitatCardPlayboard(x: number, y: number, width: number, height: number, habitatImage?: HTMLImageElement | null, playboardTemplate?: HTMLImageElement | null): void {
+        // Draw playboard template background
+        if (playboardTemplate) {
+            this.ctx.drawImage(playboardTemplate, x, y, width, height);
+        }
+
+        // Draw habitat image centered and resized
+        if (habitatImage) {
+            const imageSize = Math.min(width - 20, height - 20);
+            const imageX = x + (width - imageSize) / 2;
+            const imageY = y + (height - imageSize) / 2;
+            this.ctx.drawImage(habitatImage, imageX, imageY, imageSize, imageSize);
+        }
+    }
+
+    /**
      * Helper: Draw card text overlay (used by both beast and inventory cards)
      */
     private drawCardTextOverlay(x: number, y: number, card: any): void {

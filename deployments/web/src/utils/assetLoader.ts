@@ -244,4 +244,67 @@ export class AssetLoader {
             return null;
         }
     }
+
+    async loadHabitatCardTemplate(affinity: string): Promise<HTMLImageElement | null> {
+        const cacheKey = `habitat-card-template-${affinity}`;
+
+        // Return cached image if available
+        if (this.images.has(cacheKey)) {
+            return this.images.get(cacheKey)!;
+        }
+
+        // HabitatCard.png template for inventory/hand display (in affinity folder)
+        const imagePath = `/shared/images/cards/${affinity}/HabitatCard.png`;
+
+        try {
+            await this.loadImage(cacheKey, imagePath);
+            return this.images.get(cacheKey)!;
+        } catch (error) {
+            console.warn(`Failed to load habitat card template: ${imagePath}`);
+            return null;
+        }
+    }
+
+    async loadHabitatCardPlayboardTemplate(affinity: string): Promise<HTMLImageElement | null> {
+        const cacheKey = `habitat-card-playboard-template-${affinity}`;
+
+        // Return cached image if available
+        if (this.images.has(cacheKey)) {
+            return this.images.get(cacheKey)!;
+        }
+
+        // HabitatCardPlayboard.png template for playboard display (in affinity folder)
+        const imagePath = `/shared/images/cards/${affinity}/HabitatCardPlayboard.png`;
+
+        try {
+            await this.loadImage(cacheKey, imagePath);
+            return this.images.get(cacheKey)!;
+        } catch (error) {
+            console.warn(`Failed to load habitat card playboard template: ${imagePath}`);
+            return null;
+        }
+    }
+
+    async loadHabitatImage(cardName: string, affinity: string): Promise<HTMLImageElement | null> {
+        const cacheKey = `habitat-${cardName}-${affinity}`;
+
+        // Return cached image if available
+        if (this.images.has(cacheKey)) {
+            return this.images.get(cacheKey)!;
+        }
+
+        // Remove spaces from card name to match file naming convention
+        const sanitizedCardName = cardName.replace(/\s+/g, '');
+
+        // Habitat images are in the affinity folder
+        const imagePath = `/shared/images/cards/${affinity}/${sanitizedCardName}.png`;
+
+        try {
+            await this.loadImage(cacheKey, imagePath);
+            return this.images.get(cacheKey)!;
+        } catch (error) {
+            console.warn(`Failed to load habitat image: ${imagePath}`);
+            return null;
+        }
+    }
 }
