@@ -8,6 +8,7 @@ import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
 import { standardCardDimensions, sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
 import { uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions } from '../../../../shared/constants/positions';
+import { deckEmoji } from '../../../../shared/constants/emojis';
 
 export class InventoryScreen {
     private scrollOffset: number = 0;
@@ -45,7 +46,7 @@ export class InventoryScreen {
         // Draw title and deck info on side menu
         const textPos = sideMenuPositions.textStartPosition;
         this.renderer.drawText('Inventory', textPos.x, textPos.y, 20, '#fff', 'left');
-        this.renderer.drawText(`D: ${deckSize}/30`, textPos.x, textPos.y + 25, 18, '#fff', 'left');
+        this.renderer.drawText(`${deckEmoji} ${deckSize}/30`, textPos.x, textPos.y + 25, 18, '#fff', 'left');
 
         if (cards.length === 0) {
             this.renderer.drawText('No cards in your collection yet.', 400, 350, 24, '#fff', 'center');

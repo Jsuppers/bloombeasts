@@ -21,6 +21,11 @@ export class AssetLoader {
             await this.loadImage('sideMenuGreenButton', '/shared/images/SideMenuGreenButton.png');
             await this.loadImage('sideMenuStandardButton', '/shared/images/SideMenuStandardButton.png');
 
+            // Load menu animation frames
+            for (let i = 1; i <= 10; i++) {
+                await this.loadImage(`menuFrame${i}`, `/shared/images/menu/Frame${i}.png`);
+            }
+
             if (this.loadingEl) {
                 this.loadingEl.classList.add('hidden');
             }

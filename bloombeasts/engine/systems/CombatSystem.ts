@@ -103,6 +103,19 @@ export class CombatSystem {
    * Check if combat should end
    */
   public checkWinCondition(gameState: GameState): CombatResult | null {
+    const player1Health = gameState.players[0].health;
+    const player2Health = gameState.players[1].health;
+
+    // Check for player health reaching 0
+    if (player1Health <= 0 && player2Health <= 0) {
+      return this.createCombatResult('draw', gameState);
+    } else if (player1Health <= 0) {
+      return this.createCombatResult('player2', gameState);
+    } else if (player2Health <= 0) {
+      return this.createCombatResult('player1', gameState);
+    }
+
+    // Check for beasts on field
     const player1HasBeasts = gameState.players[0].field.some(b => b && b.currentHealth > 0);
     const player2HasBeasts = gameState.players[1].field.some(b => b && b.currentHealth > 0);
 
@@ -114,6 +127,7 @@ export class CombatSystem {
       return this.createCombatResult('player1', gameState);
     }
 
+    // Check for max turns
     if (this.currentTurn >= this.maxTurns) {
       return this.createCombatResult('draw', gameState);
     }

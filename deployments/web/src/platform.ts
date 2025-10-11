@@ -9,6 +9,7 @@ import {
     CardDisplay,
     BattleDisplay,
     RewardDisplay,
+    MenuStats,
 } from '../../../bloombeasts/gameManager';
 
 import { CanvasRenderer } from './utils/canvasRenderer';
@@ -72,14 +73,14 @@ export class WebPlatform implements PlatformCallbacks {
     }
 
     // UI Rendering Methods
-    renderStartMenu(options: string[]): void {
+    renderStartMenu(options: string[], stats: MenuStats): void {
         // Cleanup battle screen if switching from battle
         if (this.currentScreen === 'battle') {
             this.battleScreen.cleanup();
         }
 
         this.currentScreen = 'start-menu';
-        this.menuScreen.render(options, (buttonId) => {
+        this.menuScreen.render(options, stats, (buttonId) => {
             if (this.buttonClickCallback) {
                 this.buttonClickCallback(buttonId);
             }

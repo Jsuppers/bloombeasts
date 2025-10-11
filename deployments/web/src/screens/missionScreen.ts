@@ -8,6 +8,7 @@ import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
 import { uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions } from '../../../../shared/constants/positions';
 import { sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
+import { missionEmoji } from '../../../../shared/constants/emojis';
 
 export class MissionScreen {
     constructor(
@@ -43,7 +44,7 @@ export class MissionScreen {
         // Draw title and completion count on side menu
         const textPos = sideMenuPositions.textStartPosition;
         this.renderer.drawText('Missions', textPos.x, textPos.y, 20, '#fff', 'left');
-        this.renderer.drawText(`M: ${completedCount}/${totalCount}`, textPos.x, textPos.y + 25, 18, '#fff', 'left');
+        this.renderer.drawText(`${missionEmoji} ${completedCount}/${totalCount}`, textPos.x, textPos.y + 25, 18, '#fff', 'left');
 
         // Draw missions as cards
         const cardWidth = 350;

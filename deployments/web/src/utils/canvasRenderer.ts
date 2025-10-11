@@ -13,6 +13,11 @@ import {
 } from '../../../../shared/constants/dimensions';
 import { standardCardTextPositions, sideMenuPositions } from '../../../../shared/constants/positions';
 
+// Font constants
+const FONT_FAMILY = 'monospace';
+const DEFAULT_TEXT_COLOR = '#fff';
+const DISABLED_TEXT_COLOR = '#888';
+
 export class CanvasRenderer {
     constructor(public ctx: CanvasRenderingContext2D) {}
 
@@ -22,6 +27,33 @@ export class CanvasRenderer {
 
     drawImage(img: HTMLImageElement): void {
         this.ctx.drawImage(img, 0, 0, gameDimensions.panelWidth, gameDimensions.panelHeight);
+    }
+
+    /**
+     * Helper: Set font with consistent family
+     */
+    private setFont(size: number, bold: boolean = false): void {
+        this.ctx.font = `${bold ? 'bold ' : ''}${size}px ${FONT_FAMILY}`;
+    }
+
+    /**
+     * Helper: Draw text with font setup
+     */
+    private drawTextWithFont(
+        text: string,
+        x: number,
+        y: number,
+        size: number,
+        color: string = DEFAULT_TEXT_COLOR,
+        align: CanvasTextAlign = 'left',
+        baseline: CanvasTextBaseline = 'top',
+        bold: boolean = false
+    ): void {
+        this.ctx.fillStyle = color;
+        this.setFont(size, bold);
+        this.ctx.textAlign = align;
+        this.ctx.textBaseline = baseline;
+        this.ctx.fillText(text, x, y);
     }
 
     drawButton(text: string, x: number, y: number, width: number, height: number): void {
@@ -166,14 +198,10 @@ export class CanvasRenderer {
         x: number,
         y: number,
         size: number = 24,
-        color: string = '#fff',
+        color: string = DEFAULT_TEXT_COLOR,
         align: CanvasTextAlign = 'left'
     ): void {
-        this.ctx.fillStyle = color;
-        this.ctx.font = `${size}px Arial`;
-        this.ctx.textAlign = align;
-        this.ctx.textBaseline = 'top';
-        this.ctx.fillText(text, x, y);
+        this.drawTextWithFont(text, x, y, size, color, align, 'top', false);
     }
 
     drawHealthBar(x: number, y: number, current: number, max: number, label: string): void {
@@ -181,10 +209,7 @@ export class CanvasRenderer {
         const height = 20;
 
         // Label
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 16px Arial';
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText(label, x, y - 5);
+        this.drawTextWithFont(label, x, y - 5, 16, DEFAULT_TEXT_COLOR, 'left', 'top', true);
 
         // Background
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -204,15 +229,12 @@ export class CanvasRenderer {
         this.ctx.fillRect(x, y + 20, fillWidth, height);
 
         // Border
-        this.ctx.strokeStyle = '#fff';
+        this.ctx.strokeStyle = DEFAULT_TEXT_COLOR;
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(x, y + 20, width, height);
 
         // Text
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = '14px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(`${current}/${max}`, x + width / 2, y + 33);
+        this.drawTextWithFont(`${current}/${max}`, x + width / 2, y + 33, 14, DEFAULT_TEXT_COLOR, 'center', 'top', false);
     }
 
     drawCard(x: number, y: number, width: number, height: number, affinity: string): void {
@@ -238,54 +260,8 @@ export class CanvasRenderer {
             this.drawCard(x, y, cardWidth, cardHeight, beast.affinity || '');
         }
 
-        // Draw text overlay using standardCardTextPositions
-        const positions = standardCardTextPositions;
-
-        // Setup common fill style
-        this.ctx.fillStyle = '#fff';
-
-        // Cost (top left)
-        this.ctx.font = `bold ${positions.cost.size}px Arial`;
-        this.ctx.textAlign = positions.cost.textAlign || 'center';
-        this.ctx.textBaseline = positions.cost.textBaseline || 'alphabetic';
-        this.ctx.fillText(`${beast.cost || 0}`, x + positions.cost.x, y + positions.cost.y);
-
-        // Level (top middle area)
-        this.ctx.font = `bold ${positions.level.size}px Arial`;
-        this.ctx.textAlign = positions.level.textAlign || 'center';
-        this.ctx.textBaseline = positions.level.textBaseline || 'alphabetic';
-        this.ctx.fillText(`${beast.level || 1}`, x + positions.level.x, y + positions.level.y);
-
-        // Name (bottom left area) - truncate if too long
-        this.ctx.font = `bold ${positions.name.size}px Arial`;
-        this.ctx.textAlign = positions.name.textAlign || 'left';
-        this.ctx.textBaseline = positions.name.textBaseline || 'alphabetic';
-        const maxNameWidth = 115; // Max width to avoid overlapping with special indicator
-        const truncatedName = this.truncateText(`${beast.name}`, maxNameWidth);
-        this.ctx.fillText(truncatedName, x + positions.name.x, y + positions.name.y);
-
-        // Special (bottom right area) - show "?" if card has abilities
-        this.ctx.font = `bold ${positions.special.size}px Arial`;
-        this.ctx.textAlign = positions.special.textAlign || 'right';
-        this.ctx.textBaseline = positions.special.textBaseline || 'alphabetic';
-        // Check if card has passive or bloom ability
-        const hasAbility = beast.passiveAbility || beast.bloomAbility;
-        const special = hasAbility ? '?' : '';
-        this.ctx.fillText(special, x + positions.special.x, y + positions.special.y);
-
-        // Attack (bottom left)
-        const attack = beast.currentAttack || beast.baseAttack || beast.attack || 0;
-        this.ctx.font = `bold ${positions.attack.size}px Arial`;
-        this.ctx.textAlign = positions.attack.textAlign || 'center';
-        this.ctx.textBaseline = positions.attack.textBaseline || 'alphabetic';
-        this.ctx.fillText(`${attack}`, x + positions.attack.x, y + positions.attack.y);
-
-        // Health (bottom right)
-        const health = beast.currentHealth || beast.baseHealth || beast.health || 0;
-        this.ctx.font = `bold ${positions.health.size}px Arial`;
-        this.ctx.textAlign = positions.health.textAlign || 'center';
-        this.ctx.textBaseline = positions.health.textBaseline || 'alphabetic';
-        this.ctx.fillText(`${health}`, x + positions.health.x, y + positions.health.y);
+        // Draw text overlay
+        this.drawCardTextOverlay(x, y, beast);
     }
 
     drawMissionCard(
@@ -304,22 +280,17 @@ export class CanvasRenderer {
         this.ctx.fillRect(x, y, width, height);
 
         // Border
-        this.ctx.strokeStyle = mission.isCompleted ? '#43e97b' : '#fff';
+        this.ctx.strokeStyle = mission.isCompleted ? '#43e97b' : DEFAULT_TEXT_COLOR;
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(x, y, width, height);
 
         // Mission info
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 20px Arial';
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText(mission.name, x + 15, y + 15);
-
-        this.ctx.font = '14px Arial';
-        this.ctx.fillText(`Level ${mission.level} - ${mission.difficulty}`, x + 15, y + 45);
-        this.ctx.fillText(mission.description.substring(0, 40) + '...', x + 15, y + 70);
+        this.drawTextWithFont(mission.name, x + 15, y + 15, 20, DEFAULT_TEXT_COLOR, 'left', 'top', true);
+        this.drawTextWithFont(`Level ${mission.level} - ${mission.difficulty}`, x + 15, y + 45, 14, DEFAULT_TEXT_COLOR, 'left', 'top', false);
+        this.drawTextWithFont(mission.description.substring(0, 40) + '...', x + 15, y + 70, 14, DEFAULT_TEXT_COLOR, 'left', 'top', false);
 
         if (mission.isCompleted) {
-            this.ctx.fillText('✅ Completed', x + 15, y + 95);
+            this.drawTextWithFont('✅ Completed', x + 15, y + 95, 14, DEFAULT_TEXT_COLOR, 'left', 'top', false);
         }
     }
 
@@ -347,74 +318,105 @@ export class CanvasRenderer {
             this.ctx.strokeRect(x, y, width, height);
         }
 
-        // Draw text overlay using standardCardTextPositions
-        const positions = standardCardTextPositions;
-
-        // Setup common fill style
-        this.ctx.fillStyle = '#fff';
-
-        // Cost (top left)
-        this.ctx.font = `bold ${positions.cost.size}px Arial`;
-        this.ctx.textAlign = positions.cost.textAlign || 'center';
-        this.ctx.textBaseline = positions.cost.textBaseline || 'alphabetic';
-        this.ctx.fillText(`${card.cost || 0}`, x + positions.cost.x, y + positions.cost.y);
-
-        // Level (top middle area)
-        this.ctx.font = `bold ${positions.level.size}px Arial`;
-        this.ctx.textAlign = positions.level.textAlign || 'center';
-        this.ctx.textBaseline = positions.level.textBaseline || 'alphabetic';
-        this.ctx.fillText(`${card.level || 1}`, x + positions.level.x, y + positions.level.y);
-
-        // Name (bottom left area) - truncate if too long
-        this.ctx.font = `bold ${positions.name.size}px Arial`;
-        this.ctx.textAlign = positions.name.textAlign || 'left';
-        this.ctx.textBaseline = positions.name.textBaseline || 'alphabetic';
-        const maxNameWidth = 115; // Max width to avoid overlapping with special indicator
-        const truncatedName = this.truncateText(`${card.name}`, maxNameWidth);
-        this.ctx.fillText(truncatedName, x + positions.name.x, y + positions.name.y);
-
-        // Special (bottom right area) - show "?" if card has abilities
-        this.ctx.font = `bold ${positions.special.size}px Arial`;
-        this.ctx.textAlign = positions.special.textAlign || 'right';
-        this.ctx.textBaseline = positions.special.textBaseline || 'alphabetic';
-        // Check if card has passive or bloom ability
-        const hasAbility = card.passiveAbility || card.bloomAbility;
-        const special = hasAbility ? '?' : '';
-        this.ctx.fillText(special, x + positions.special.x, y + positions.special.y);
-
-        // Attack (bottom left)
-        const attack = card.currentAttack || card.baseAttack || 0;
-        this.ctx.font = `bold ${positions.attack.size}px Arial`;
-        this.ctx.textAlign = positions.attack.textAlign || 'center';
-        this.ctx.textBaseline = positions.attack.textBaseline || 'alphabetic';
-        this.ctx.fillText(`${attack}`, x + positions.attack.x, y + positions.attack.y);
-
-        // Health (bottom right)
-        const health = card.currentHealth || card.baseHealth || 0;
-        this.ctx.font = `bold ${positions.health.size}px Arial`;
-        this.ctx.textAlign = positions.health.textAlign || 'center';
-        this.ctx.textBaseline = positions.health.textBaseline || 'alphabetic';
-        this.ctx.fillText(`${health}`, x + positions.health.x, y + positions.health.y);
+        // Draw text overlay
+        this.drawCardTextOverlay(x, y, card);
     }
 
     drawObjectives(objectives: any[], startX: number, startY: number): void {
         if (!objectives || objectives.length === 0) return;
 
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 18px Arial';
-        this.ctx.textAlign = 'left';
-        this.ctx.fillText('Objectives:', startX, startY);
+        this.drawTextWithFont('Objectives:', startX, startY, 18, DEFAULT_TEXT_COLOR, 'left', 'top', true);
 
         objectives.forEach((obj, index) => {
             const y = startY + 30 + index * 25;
             const icon = obj.isComplete ? '✅' : '⬜';
-            this.ctx.font = '14px Arial';
-            this.ctx.fillText(`${icon} ${obj.description}`, startX, y);
+            this.drawTextWithFont(`${icon} ${obj.description}`, startX, y, 14, DEFAULT_TEXT_COLOR, 'left', 'top', false);
 
             if (obj.target) {
-                this.ctx.fillText(`(${obj.progress}/${obj.target})`, startX + 200, y);
+                this.drawTextWithFont(`(${obj.progress}/${obj.target})`, startX + 200, y, 14, DEFAULT_TEXT_COLOR, 'left', 'top', false);
             }
         });
+    }
+
+    /**
+     * Helper: Draw card text overlay (used by both beast and inventory cards)
+     */
+    private drawCardTextOverlay(x: number, y: number, card: any): void {
+        const positions = standardCardTextPositions;
+        this.ctx.fillStyle = DEFAULT_TEXT_COLOR;
+
+        // Cost (top left)
+        this.drawTextWithFont(
+            `${card.cost || 0}`,
+            x + positions.cost.x,
+            y + positions.cost.y,
+            positions.cost.size,
+            DEFAULT_TEXT_COLOR,
+            positions.cost.textAlign || 'center',
+            positions.cost.textBaseline || 'alphabetic',
+            true
+        );
+
+        // Level (top middle area)
+        this.drawTextWithFont(
+            `${card.level || 1}`,
+            x + positions.level.x,
+            y + positions.level.y,
+            positions.level.size,
+            DEFAULT_TEXT_COLOR,
+            positions.level.textAlign || 'center',
+            positions.level.textBaseline || 'alphabetic',
+            true
+        );
+
+        // Name (bottom left area) - truncate if too long
+        this.setFont(positions.name.size, true);
+        this.ctx.textAlign = positions.name.textAlign || 'left';
+        this.ctx.textBaseline = positions.name.textBaseline || 'alphabetic';
+        const maxNameWidth = 115;
+        const truncatedName = this.truncateText(`${card.name}`, maxNameWidth);
+        this.ctx.fillText(truncatedName, x + positions.name.x, y + positions.name.y);
+
+        // Special (bottom right area) - show "?" if card has abilities
+        const hasAbility = card.passiveAbility || card.bloomAbility;
+        if (hasAbility) {
+            this.drawTextWithFont(
+                '?',
+                x + positions.special.x,
+                y + positions.special.y,
+                positions.special.size,
+                DEFAULT_TEXT_COLOR,
+                positions.special.textAlign || 'right',
+                positions.special.textBaseline || 'alphabetic',
+                true
+            );
+        }
+
+        // Attack (bottom left)
+        const attack = card.currentAttack || card.baseAttack || card.attack || 0;
+        this.drawTextWithFont(
+            `${attack}`,
+            x + positions.attack.x,
+            y + positions.attack.y,
+            positions.attack.size,
+            DEFAULT_TEXT_COLOR,
+            positions.attack.textAlign || 'center',
+            positions.attack.textBaseline || 'alphabetic',
+            true
+        );
+
+        // Health (bottom right)
+        const health = card.currentHealth || card.baseHealth || card.health || 0;
+        this.drawTextWithFont(
+            `${health}`,
+            x + positions.health.x,
+            y + positions.health.y,
+            positions.health.size,
+            DEFAULT_TEXT_COLOR,
+            positions.health.textAlign || 'center',
+            positions.health.textBaseline || 'alphabetic',
+            true
+        );
     }
 
     /**
@@ -472,67 +474,44 @@ export class CanvasRenderer {
     }
 
     /**
+     * Helper: Draw button text centered on side menu button
+     */
+    private drawSideMenuButtonText(text: string, x: number, y: number, color: string = DEFAULT_TEXT_COLOR): void {
+        this.drawTextWithFont(
+            text,
+            x + sideMenuButtonDimensions.width / 2,
+            y + sideMenuButtonDimensions.height / 2,
+            18,
+            color,
+            'center',
+            'middle',
+            true
+        );
+    }
+
+    /**
      * Draw a green button on the side menu (for active End Turn button)
      */
     drawSideMenuGreenButton(text: string, x: number, y: number, buttonImg: HTMLImageElement): void {
-        // Draw button image
-        this.ctx.drawImage(
-            buttonImg,
-            x,
-            y,
-            sideMenuButtonDimensions.width,
-            sideMenuButtonDimensions.height
-        );
-
-        // Draw button text
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 18px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText(text, x + sideMenuButtonDimensions.width / 2, y + sideMenuButtonDimensions.height / 2);
+        this.ctx.drawImage(buttonImg, x, y, sideMenuButtonDimensions.width, sideMenuButtonDimensions.height);
+        this.drawSideMenuButtonText(text, x, y);
     }
 
     /**
      * Draw a standard button on the side menu
      */
     drawSideMenuStandardButton(text: string, x: number, y: number, buttonImg: HTMLImageElement): void {
-        // Draw button image
-        this.ctx.drawImage(
-            buttonImg,
-            x,
-            y,
-            sideMenuButtonDimensions.width,
-            sideMenuButtonDimensions.height
-        );
-
-        // Draw button text
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 18px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText(text, x + sideMenuButtonDimensions.width / 2, y + sideMenuButtonDimensions.height / 2);
+        this.ctx.drawImage(buttonImg, x, y, sideMenuButtonDimensions.width, sideMenuButtonDimensions.height);
+        this.drawSideMenuButtonText(text, x, y);
     }
 
     /**
      * Draw a disabled button on the side menu
      */
     drawSideMenuDisabledButton(text: string, x: number, y: number, buttonImg: HTMLImageElement): void {
-        // Draw button image with reduced opacity
         this.ctx.globalAlpha = 0.5;
-        this.ctx.drawImage(
-            buttonImg,
-            x,
-            y,
-            sideMenuButtonDimensions.width,
-            sideMenuButtonDimensions.height
-        );
+        this.ctx.drawImage(buttonImg, x, y, sideMenuButtonDimensions.width, sideMenuButtonDimensions.height);
         this.ctx.globalAlpha = 1.0;
-
-        // Draw button text (grayed out)
-        this.ctx.fillStyle = '#888';
-        this.ctx.font = 'bold 18px Arial';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        this.ctx.fillText(text, x + sideMenuButtonDimensions.width / 2, y + sideMenuButtonDimensions.height / 2);
+        this.drawSideMenuButtonText(text, x, y, DISABLED_TEXT_COLOR);
     }
 }

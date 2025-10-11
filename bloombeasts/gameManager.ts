@@ -23,12 +23,21 @@ import { BloomBeastCard } from './engine/types/core';
 import { Mission } from './screens/missions/types';
 import * as AllCards from './allCardDefinitions';
 
+export interface MenuStats {
+  totalCards: number;
+  missionsCompleted: number;
+  totalMissions: number;
+  nectar: number;
+  playerLevel: number;
+  totalXP: number;
+}
+
 /**
  * Platform callbacks interface - implement these for your specific platform
  */
 export interface PlatformCallbacks {
   // UI Rendering
-  renderStartMenu(options: string[]): void;
+  renderStartMenu(options: string[], stats: MenuStats): void;
   renderMissionSelect(missions: MissionDisplay[]): void;
   renderInventory(cards: CardDisplay[], deckSize: number, deckCardIds: string[]): void;
   renderBattle(battleState: BattleDisplay): void;
@@ -271,7 +280,25 @@ export class GameManager {
       'inventory',
     ];
 
-    this.platform.renderStartMenu(menuOptions);
+    // Gather game stats for menu display
+    const totalCards = this.cardCollection.getAllCards().length;
+    const completedMissionIds = Object.keys(this.playerData.completedMissions);
+    const missionsCompleted = completedMissionIds.length;
+
+    // Get total available missions
+    this.missionUI.setPlayerLevel(this.playerData.playerLevel);
+    const totalMissions = this.missionUI.getMissionList().length;
+
+    const stats: MenuStats = {
+      totalCards,
+      missionsCompleted,
+      totalMissions,
+      nectar: this.playerData.nectar,
+      playerLevel: this.playerData.playerLevel,
+      totalXP: this.playerData.totalXP,
+    };
+
+    this.platform.renderStartMenu(menuOptions, stats);
     this.platform.playSound('menu-music');
   }
 

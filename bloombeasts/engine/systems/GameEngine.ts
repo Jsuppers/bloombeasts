@@ -688,6 +688,15 @@ export class GameEngine {
       const damage = attacker.currentAttack;
       defendingPlayer.health = Math.max(0, defendingPlayer.health - damage);
       console.log(`${attacker.cardId} attacked player for ${damage} damage`);
+
+      // Check if player was defeated
+      if (defendingPlayer.health <= 0) {
+        console.log(`${defendingPlayer.name} was defeated!`);
+        const result = this.combatSystem.checkWinCondition(this.gameState);
+        if (result) {
+          this.endMatch(result);
+        }
+      }
     }
 
     return true;

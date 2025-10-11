@@ -819,8 +819,10 @@ export class MissionBattleUI {
         console.log('Mission Complete!', rewards);
       }
     } else {
-      // Defeat
-      console.log('Mission Failed');
+      // Defeat - player health reached 0 or other loss condition
+      console.log('Mission Failed - Player Defeated');
+      this.currentBattle.isComplete = true;
+      this.currentBattle.rewards = null; // No rewards for losing
     }
   }
 

@@ -8,6 +8,7 @@ import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
 import { battleBoardAssetPositions, uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions } from '../../../../shared/constants/positions';
 import { standardCardDimensions, sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
+import { nectarEmoji, deckEmoji } from '../../../../shared/constants/emojis';
 
 export class BattleScreen {
     private showHand: boolean = true;
@@ -74,7 +75,7 @@ export class BattleScreen {
             'left'
         );
         this.renderer.drawText(
-            `Nectar ${battleState.opponentNectar}/10`,
+            `${nectarEmoji} ${battleState.opponentNectar}/10`,
             opponentInfoPos.x,
             opponentInfoPos.y + 25,
             18,
@@ -82,7 +83,7 @@ export class BattleScreen {
             'left'
         );
         this.renderer.drawText(
-            `Deck ${battleState.opponentDeckCount}/30`,
+            `${deckEmoji} ${battleState.opponentDeckCount}/30`,
             opponentInfoPos.x,
             opponentInfoPos.y + 50,
             18,
@@ -109,7 +110,7 @@ export class BattleScreen {
             'left'
         );
         this.renderer.drawText(
-            `Nectar ${battleState.playerNectar}/10`,
+            `${nectarEmoji} ${battleState.playerNectar}/10`,
             playerInfoPos.x,
             playerInfoPos.y + 25,
             18,
@@ -117,7 +118,7 @@ export class BattleScreen {
             'left'
         );
         this.renderer.drawText(
-            `Deck ${battleState.playerDeckCount}/30`,
+            `${deckEmoji} ${battleState.playerDeckCount}/30`,
             playerInfoPos.x,
             playerInfoPos.y + 50,
             18,
