@@ -227,13 +227,8 @@ export class MissionManager {
   ): (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[] {
     const allCards = getAllCards();
 
-    // Filter by pool and affinity (excluding Resource cards)
+    // Filter by pool and affinity
     let eligibleCards = allCards.filter(card => {
-      // Exclude Resource cards from rewards
-      if (card.type === 'Resource') {
-        return false;
-      }
-
       if (affinity && 'affinity' in card && card.affinity !== affinity) {
         return false;
       }

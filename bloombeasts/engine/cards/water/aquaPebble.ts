@@ -3,21 +3,21 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType, EffectDuration, ConditionType, HealValueType } from '../../types/abilities';
 
 const aquaPebblePassive: StructuredAbility = {
   name: 'Tide Flow',
   description: 'When you summon another Water Affinity Bloom Beast, Aqua-Pebble gains +1 ATK until the end of the turn.',
-  trigger: 'OnSummon',
+  trigger: AbilityTrigger.OnSummon,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'self',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.Self,
+      stat: StatType.Attack,
       value: 1,
-      duration: 'end-of-turn',
+      duration: EffectDuration.EndOfTurn,
       condition: {
-        type: 'affinity-matches',
+        type: ConditionType.AffinityMatches,
         value: 'Water',
       },
     },
@@ -27,11 +27,11 @@ const aquaPebblePassive: StructuredAbility = {
 const aquaPebbleBloom: StructuredAbility = {
   name: 'Hydration',
   description: 'At the end of your turn, heal any other allied Bloom Beast by 1 HP.',
-  trigger: 'EndOfTurn',
+  trigger: AbilityTrigger.EndOfTurn,
   effects: [
     {
-      type: 'heal',
-      target: 'other-ally',
+      type: EffectType.Heal,
+      target: AbilityTarget.OtherAlly,
       value: 1,
     },
   ],
@@ -41,16 +41,16 @@ const aquaPebbleBloom: StructuredAbility = {
 const aquaPebblePassive4: StructuredAbility = {
   name: 'Tidal Surge',
   description: 'When you summon another Water Beast, gain +2 ATK until end of turn.',
-  trigger: 'OnSummon',
+  trigger: AbilityTrigger.OnSummon,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'self',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.Self,
+      stat: StatType.Attack,
       value: 2,
-      duration: 'end-of-turn',
+      duration: EffectDuration.EndOfTurn,
       condition: {
-        type: 'affinity-matches',
+        type: ConditionType.AffinityMatches,
         value: 'Water',
       },
     },
@@ -61,11 +61,11 @@ const aquaPebblePassive4: StructuredAbility = {
 const aquaPebbleBloom7: StructuredAbility = {
   name: 'Rejuvenation',
   description: 'At end of turn, heal all allied Bloom Beasts by 2 HP.',
-  trigger: 'EndOfTurn',
+  trigger: AbilityTrigger.EndOfTurn,
   effects: [
     {
-      type: 'heal',
-      target: 'all-allies',
+      type: EffectType.Heal,
+      target: AbilityTarget.AllAllies,
       value: 2,
     },
   ],
@@ -75,16 +75,16 @@ const aquaPebbleBloom7: StructuredAbility = {
 const aquaPebblePassive9: StructuredAbility = {
   name: 'Tsunami Force',
   description: 'When you summon another Water Beast, gain +3 ATK permanently.',
-  trigger: 'OnSummon',
+  trigger: AbilityTrigger.OnSummon,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'self',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.Self,
+      stat: StatType.Attack,
       value: 3,
-      duration: 'permanent',
+      duration: EffectDuration.Permanent,
       condition: {
-        type: 'affinity-matches',
+        type: ConditionType.AffinityMatches,
         value: 'Water',
       },
     },
@@ -94,12 +94,12 @@ const aquaPebblePassive9: StructuredAbility = {
 const aquaPebbleBloom9: StructuredAbility = {
   name: 'Fountain of Life',
   description: 'At end of turn, fully heal all allied Bloom Beasts.',
-  trigger: 'EndOfTurn',
+  trigger: AbilityTrigger.EndOfTurn,
   effects: [
     {
-      type: 'heal',
-      target: 'all-allies',
-      value: 'full',
+      type: EffectType.Heal,
+      target: AbilityTarget.AllAllies,
+      value: HealValueType.Full,
     },
   ],
 };
@@ -112,8 +112,7 @@ export const AQUA_PEBBLE: BloomBeastCard = {
   cost: 1,
   baseAttack: 1,
   baseHealth: 4,
-  passiveAbility: aquaPebblePassive,
-  bloomAbility: aquaPebbleBloom,
+  ability: aquaPebblePassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -128,14 +127,13 @@ export const AQUA_PEBBLE: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        passiveAbility: aquaPebblePassive4,
+        ability: aquaPebblePassive4,
       },
       7: {
-        bloomAbility: aquaPebbleBloom7,
+        ability: aquaPebbleBloom7,
       },
       9: {
-        passiveAbility: aquaPebblePassive9,
-        bloomAbility: aquaPebbleBloom9,
+        ability: aquaPebblePassive9,
       },
     },
   },

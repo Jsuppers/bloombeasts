@@ -3,13 +3,19 @@
  */
 
 import { GameState, Player, Phase, BloomBeastInstance } from '../types/game';
-import { AnyCard, BloomBeastCard, TrapCard } from '../types/core';
+import { AnyCard, BloomBeastCard, TrapCard, MagicCard, HabitatCard, TrapTrigger } from '../types/core';
 import { CombatSystem } from './CombatSystem';
 import { AbilityProcessor } from './AbilityProcessor';
 import { LevelingSystem } from './LevelingSystem';
 import { DeckList } from '../utils/deckBuilder';
 import { SimpleMap } from '../../utils/polyfills';
-import * as AllCards from '../../allCardDefinitions';
+import { getAllCards } from '../cards';
+import {
+  AbilityEffect,
+  EffectType,
+  AbilityTarget,
+  ResourceType
+} from '../types/abilities';
 
 export interface MatchOptions {
   player1Name?: string;
@@ -36,7 +42,8 @@ export class GameEngine {
    */
   private buildCardDatabase(): Map<string, AnyCard> {
     const db = new Map<string, AnyCard>();
-    Object.values(AllCards).forEach((card: any) => {
+    const allCards = getAllCards();
+    allCards.forEach((card: any) => {
       if (card && card.id && card.type) {
         db.set(card.id, card as AnyCard);
       }
@@ -278,7 +285,7 @@ export class GameEngine {
 
       case 'Magic':
         // Execute magic card effect immediately
-        this.processMagicCard(card, player, target);
+        this.processMagicCard(card as MagicCard, player, target);
         player.graveyard.push(card);
         console.log(`Played magic card: ${card.name}`);
         break;
@@ -295,54 +302,60 @@ export class GameEngine {
           player.graveyard.push(card);
         }
         break;
-
-      case 'Resource':
-        // Execute resource card effect
-        const resourceCard = card as any;
-        if (resourceCard.effect.includes('Gain 2 nectar')) {
-          player.currentNectar = Math.min(10, player.currentNectar + 2);
-        }
-        player.graveyard.push(card);
-        console.log(`Played resource card: ${card.name}`);
-        break;
     }
 
     return true;
   }
 
   /**
-   * Process magic card effects
+   * Process magic card effects using structured effects
    */
-  private processMagicCard(card: AnyCard, player: Player, target?: any): void {
-    const magicCard = card as any;
-    const effect = magicCard.effect;
+  private processMagicCard(card: MagicCard, player: Player, target?: any): void {
+    const opponent = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
 
-    // Parse and execute magic card effects
-    // This is simplified - in a full implementation, magic cards would have structured effects
-    if (effect.includes('Gain') && effect.includes('nectar')) {
-      const match = effect.match(/Gain (\d+) nectar/);
-      if (match) {
-        const amount = parseInt(match[1]);
-        player.currentNectar = Math.min(10, player.currentNectar + amount);
-      }
-    }
+    // Process each effect in the magic card
+    for (const effect of card.effects) {
+      switch (effect.type) {
+        case EffectType.GainResource:
+          if (effect.resource === ResourceType.Nectar) {
+            player.currentNectar = Math.min(10, player.currentNectar + effect.value);
+          }
+          break;
 
-    if (effect.includes('Draw')) {
-      const match = effect.match(/Draw (\d+)/);
-      if (match) {
-        const amount = parseInt(match[1]);
-        this.drawCards(player, amount);
-      }
-    }
+        case EffectType.DrawCards:
+          this.drawCards(player, effect.value);
+          break;
 
-    if (effect.includes('Remove all counters')) {
-      // Remove counters from all beasts
-      for (const beast of player.field) {
-        if (beast) beast.counters = [];
-      }
-      const opponent = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
-      for (const beast of opponent.field) {
-        if (beast) beast.counters = [];
+        case EffectType.RemoveCounter:
+          // Remove counters based on target
+          if (effect.target === AbilityTarget.AllUnits) {
+            // Remove from all beasts on both sides
+            for (const beast of player.field) {
+              if (beast) {
+                if (effect.counter) {
+                  // Remove specific counter type
+                  beast.counters = beast.counters.filter(c => c.type !== effect.counter);
+                } else {
+                  // Remove all counters
+                  beast.counters = [];
+                }
+              }
+            }
+            for (const beast of opponent.field) {
+              if (beast) {
+                if (effect.counter) {
+                  beast.counters = beast.counters.filter(c => c.type !== effect.counter);
+                } else {
+                  beast.counters = [];
+                }
+              }
+            }
+          }
+          break;
+
+        // Add more effect types as needed
+        default:
+          console.log(`Unhandled magic card effect type: ${effect.type}`);
       }
     }
   }
@@ -353,11 +366,58 @@ export class GameEngine {
   private applyHabitatEffects(): void {
     if (!this.gameState.habitatZone) return;
 
-    const habitat = this.gameState.habitatZone as any;
-    console.log(`Applying habitat effects: ${habitat.habitatShiftEffect}`);
+    const habitat = this.gameState.habitatZone as HabitatCard;
+    const activePlayer = this.gameState.players[this.gameState.activePlayer];
+    const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
 
-    // Habitat effects are passive and apply continuously
-    // They're checked during combat and ability processing
+    // Apply on-play effects immediately
+    if (habitat.onPlayEffects) {
+      for (const effect of habitat.onPlayEffects) {
+        this.processHabitatEffect(effect, activePlayer, opposingPlayer);
+      }
+    }
+
+    // Ongoing effects are applied continuously and checked during combat/ability processing
+    console.log(`Habitat ${habitat.name} active with ${habitat.ongoingEffects?.length || 0} ongoing effects`);
+  }
+
+  /**
+   * Process a single habitat effect
+   */
+  private processHabitatEffect(effect: AbilityEffect, activePlayer: Player, opposingPlayer: Player): void {
+    switch (effect.type) {
+      case EffectType.RemoveCounter:
+        // Remove counters from all units
+        if (effect.target === AbilityTarget.AllUnits) {
+          for (const beast of activePlayer.field) {
+            if (beast) {
+              if (effect.counter) {
+                beast.counters = beast.counters.filter(c => c.type !== effect.counter);
+              } else {
+                beast.counters = [];
+              }
+            }
+          }
+          for (const beast of opposingPlayer.field) {
+            if (beast) {
+              if (effect.counter) {
+                beast.counters = beast.counters.filter(c => c.type !== effect.counter);
+              } else {
+                beast.counters = [];
+              }
+            }
+          }
+        }
+        break;
+
+      // Ongoing effects like stat boosts are handled by the AbilityProcessor during combat
+      case EffectType.ModifyStats:
+        console.log(`Habitat provides ongoing stat modifications`);
+        break;
+
+      default:
+        console.log(`Unhandled habitat effect type: ${effect.type}`);
+    }
   }
 
   /**
@@ -441,8 +501,8 @@ export class GameEngine {
     if (!cardDef || cardDef.type !== 'Bloom') return;
 
     const beastCard = cardDef as any;
-    if (beastCard.passiveAbility && beastCard.passiveAbility.trigger === 'OnSummon') {
-      AbilityProcessor.processAbility(beastCard.passiveAbility, {
+    if (beastCard.ability && beastCard.ability.trigger === 'OnSummon') {
+      AbilityProcessor.processAbility(beastCard.ability, {
         source: beast,
         sourceCard: beastCard,
         trigger: 'OnSummon',
@@ -468,8 +528,8 @@ export class GameEngine {
       if (!cardDef || cardDef.type !== 'Bloom') continue;
 
       const beastCard = cardDef as any;
-      if (beastCard.passiveAbility && beastCard.passiveAbility.trigger === trigger) {
-        AbilityProcessor.processAbility(beastCard.passiveAbility, {
+      if (beastCard.ability && beastCard.ability.trigger === trigger) {
+        AbilityProcessor.processAbility(beastCard.ability, {
           source: beast,
           sourceCard: beastCard,
           trigger,
@@ -538,9 +598,9 @@ export class GameEngine {
   }
 
   /**
-   * Activate bloom ability for a beast
+   * Activate ability for a beast
    */
-  public activateBloomAbility(
+  public activateAbility(
     player: Player,
     beastIndex: number,
     target?: any
@@ -564,13 +624,14 @@ export class GameEngine {
     }
 
     const beastCard = cardDef as BloomBeastCard;
-    if (!beastCard.bloomAbility) {
-      console.error('Beast has no bloom ability');
+    // Check if the ability is activated type
+    if (!beastCard.ability || beastCard.ability.trigger !== 'Activated') {
+      console.error('Beast has no activated ability');
       return false;
     }
 
-    // Check if bloom ability has cost
-    const ability = beastCard.bloomAbility as any;
+    // Check if ability has cost
+    const ability = beastCard.ability as any;
     if (ability.cost) {
       switch (ability.cost.type) {
         case 'nectar':
@@ -606,7 +667,7 @@ export class GameEngine {
       opposingPlayer: opposingPlayer,
     });
 
-    console.log(`Activated bloom ability: ${ability.name}`);
+    console.log(`Activated ability: ${ability.name}`);
     return true;
   }
 
@@ -715,8 +776,8 @@ export class GameEngine {
     if (!cardDef || cardDef.type !== 'Bloom') return;
 
     const beastCard = cardDef as BloomBeastCard;
-    if (beastCard.passiveAbility && beastCard.passiveAbility.trigger === trigger) {
-      AbilityProcessor.processAbility(beastCard.passiveAbility as any, {
+    if (beastCard.ability && beastCard.ability.trigger === trigger) {
+      AbilityProcessor.processAbility(beastCard.ability as any, {
         source: beast,
         sourceCard: beastCard,
         trigger,
@@ -748,20 +809,18 @@ export class GameEngine {
       let shouldTrigger = false;
 
       // Check if trap activation condition matches the trigger
-      const activation = trap.activation.toLowerCase();
-
       switch (triggerType) {
         case 'OnBloomPlay':
-          shouldTrigger = activation.includes('bloom') && activation.includes('play');
+          shouldTrigger = trap.activation.trigger === TrapTrigger.OnBloomPlay;
           break;
         case 'OnHabitatPlay':
-          shouldTrigger = activation.includes('habitat') && activation.includes('play');
+          shouldTrigger = trap.activation.trigger === TrapTrigger.OnHabitatPlay;
           break;
         case 'OnAttack':
-          shouldTrigger = activation.includes('attack');
+          shouldTrigger = trap.activation.trigger === TrapTrigger.OnAttack;
           break;
         case 'OnDamage':
-          shouldTrigger = activation.includes('damage');
+          shouldTrigger = trap.activation.trigger === TrapTrigger.OnDamage;
           break;
       }
 
@@ -779,7 +838,7 @@ export class GameEngine {
   }
 
   /**
-   * Process trap card effect
+   * Process trap card effect using structured effects
    */
   private async processTrapEffect(
     trap: TrapCard,
@@ -787,57 +846,50 @@ export class GameEngine {
     opponent: Player,
     data?: any
   ): Promise<void> {
-    const effect = trap.effect.toLowerCase();
+    // Process each effect in the trap card
+    for (const effect of trap.effects) {
+      switch (effect.type) {
+        case EffectType.NullifyEffect:
+          // Counter/nullify the triggering effect
+          if (data && data.habitatCard) {
+            console.log(`Habitat countered by ${trap.name}`);
+            data.countered = true;
+          }
+          if (data && data.attackNegated !== undefined) {
+            data.attackNegated = true;
+            console.log(`Attack negated by ${trap.name}`);
+          }
+          break;
 
-    // Parse and execute trap effects
-    if (effect.includes('counter') && effect.includes('habitat')) {
-      // Counter habitat play - card is sent to graveyard instead
-      if (data && data.habitatCard) {
-        console.log(`Habitat countered by ${trap.name}`);
-        data.countered = true;
-      }
-    }
-
-    if (effect.includes('damage')) {
-      // Deal damage to beasts or player
-      const match = effect.match(/(\d+)\s*damage/);
-      if (match) {
-        const damage = parseInt(match[1]);
-        if (effect.includes('all')) {
-          // Damage all opponent's beasts
-          for (const beast of opponent.field) {
-            if (beast) {
-              beast.currentHealth = Math.max(0, beast.currentHealth - damage);
-              if (beast.currentHealth <= 0) {
-                const index = opponent.field.indexOf(beast);
-                if (index !== -1) {
-                  opponent.field[index] = null;
-                  opponent.graveyard.push(beast as any);
+        case EffectType.DealDamage:
+          // Deal damage based on target
+          if (effect.target === AbilityTarget.AllEnemies) {
+            for (const beast of opponent.field) {
+              if (beast) {
+                const damage = typeof effect.value === 'number' ? effect.value : 0;
+                beast.currentHealth = Math.max(0, beast.currentHealth - damage);
+                if (beast.currentHealth <= 0) {
+                  const index = opponent.field.indexOf(beast);
+                  if (index !== -1) {
+                    opponent.field[index] = null;
+                    opponent.graveyard.push(beast as any);
+                  }
                 }
               }
             }
+          } else if (effect.target === AbilityTarget.OpponentGardener) {
+            const damage = typeof effect.value === 'number' ? effect.value : 0;
+            opponent.health = Math.max(0, opponent.health - damage);
           }
-        } else if (effect.includes('player')) {
-          // Damage player
-          opponent.health = Math.max(0, opponent.health - damage);
-        }
-      }
-    }
+          break;
 
-    if (effect.includes('draw')) {
-      // Draw cards
-      const match = effect.match(/draw\s*(\d+)/);
-      if (match) {
-        const count = parseInt(match[1]);
-        this.drawCards(trapOwner, count);
-      }
-    }
+        case EffectType.DrawCards:
+          this.drawCards(trapOwner, effect.value);
+          break;
 
-    if (effect.includes('counter') && effect.includes('attack')) {
-      // Negate attack
-      if (data && data.attackNegated !== undefined) {
-        data.attackNegated = true;
-        console.log(`Attack negated by ${trap.name}`);
+        // Add more effect types as needed
+        default:
+          console.log(`Unhandled trap effect type: ${effect.type}`);
       }
     }
   }

@@ -3,18 +3,18 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, EffectDuration, ConditionType, Comparison } from '../../types/abilities';
 
 const magmitePassive: StructuredAbility = {
   name: 'Hardened Shell',
   description: 'Magmite takes 1 less damage from all sources.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'damage-reduction',
-      target: 'self',
+      type: EffectType.DamageReduction,
+      target: AbilityTarget.Self,
       value: 1,
-      duration: 'while-on-field',
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -22,11 +22,11 @@ const magmitePassive: StructuredAbility = {
 const magmiteBloom: StructuredAbility = {
   name: 'Volcanic Burst',
   description: "When Magmite is destroyed, deal 3 damage to the opponent's Gardener.",
-  trigger: 'OnDestroy',
+  trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
-      type: 'deal-damage',
-      target: 'opponent-gardener',
+      type: EffectType.DealDamage,
+      target: AbilityTarget.OpponentGardener,
       value: 3,
     },
   ],
@@ -36,13 +36,13 @@ const magmiteBloom: StructuredAbility = {
 const magmitePassive4: StructuredAbility = {
   name: 'Molten Armor',
   description: 'Magmite takes 2 less damage from all sources.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'damage-reduction',
-      target: 'self',
+      type: EffectType.DamageReduction,
+      target: AbilityTarget.Self,
       value: 2,
-      duration: 'while-on-field',
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -51,16 +51,16 @@ const magmitePassive4: StructuredAbility = {
 const magmiteBloom7: StructuredAbility = {
   name: 'Eruption',
   description: "When destroyed, deal 5 damage to opponent Gardener and 2 damage to all opponent Bloom Beasts.",
-  trigger: 'OnDestroy',
+  trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
-      type: 'deal-damage',
-      target: 'opponent-gardener',
+      type: EffectType.DealDamage,
+      target: AbilityTarget.OpponentGardener,
       value: 5,
     },
     {
-      type: 'deal-damage',
-      target: 'all-enemies',
+      type: EffectType.DealDamage,
+      target: AbilityTarget.AllEnemies,
       value: 2,
     },
   ],
@@ -70,17 +70,17 @@ const magmiteBloom7: StructuredAbility = {
 const magmitePassive9: StructuredAbility = {
   name: 'Obsidian Carapace',
   description: 'Takes 3 less damage. When attacked, deal 2 damage to attacker.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'damage-reduction',
-      target: 'self',
+      type: EffectType.DamageReduction,
+      target: AbilityTarget.Self,
       value: 3,
-      duration: 'while-on-field',
+      duration: EffectDuration.WhileOnField,
     },
     {
-      type: 'retaliation',
-      target: 'attacker',
+      type: EffectType.Retaliation,
+      target: AbilityTarget.Attacker,
       value: 2,
     },
   ],
@@ -89,20 +89,20 @@ const magmitePassive9: StructuredAbility = {
 const magmiteBloom9: StructuredAbility = {
   name: 'Cataclysm',
   description: "When destroyed, deal 8 damage to opponent Gardener and destroy all Bloom Beasts with 3 HP or less.",
-  trigger: 'OnDestroy',
+  trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
-      type: 'deal-damage',
-      target: 'opponent-gardener',
+      type: EffectType.DealDamage,
+      target: AbilityTarget.OpponentGardener,
       value: 8,
     },
     {
-      type: 'destroy',
-      target: 'all-enemies',
+      type: EffectType.Destroy,
+      target: AbilityTarget.AllEnemies,
       condition: {
-        type: 'health-below',
+        type: ConditionType.HealthBelow,
         value: 4,
-        comparison: 'less',
+        comparison: Comparison.Less,
       },
     },
   ],
@@ -116,8 +116,7 @@ export const MAGMITE: BloomBeastCard = {
   cost: 3,
   baseAttack: 4,
   baseHealth: 6,
-  passiveAbility: magmitePassive,
-  bloomAbility: magmiteBloom,
+  ability: magmitePassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -132,14 +131,13 @@ export const MAGMITE: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        passiveAbility: magmitePassive4,
+        ability: magmitePassive4,
       },
       7: {
-        bloomAbility: magmiteBloom7,
+        ability: magmiteBloom7,
       },
       9: {
-        passiveAbility: magmitePassive9,
-        bloomAbility: magmiteBloom9,
+        ability: magmitePassive9,
       },
     },
   },

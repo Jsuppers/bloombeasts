@@ -3,16 +3,16 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, ImmunityType, EffectDuration } from '../../types/abilities';
 
 const charcoilPassive: StructuredAbility = {
   name: 'Sooty Defense',
   description: 'If Charcoil is targeted by a Magic Card, place a "Soot" counter on the Magic Card.',
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'apply-counter',
-      target: 'target',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Target,
       counter: 'Soot',
       value: 1,
     },
@@ -22,11 +22,11 @@ const charcoilPassive: StructuredAbility = {
 const charcoilBloom: StructuredAbility = {
   name: 'Flame Retaliation',
   description: 'When Charcoil is attacked, if it survives, return 1 damage to the attacking Bloom Beast.',
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'retaliation',
-      target: 'attacker',
+      type: EffectType.Retaliation,
+      target: AbilityTarget.Attacker,
       value: 1,
     },
   ],
@@ -36,16 +36,16 @@ const charcoilBloom: StructuredAbility = {
 const charcoilBloom4: StructuredAbility = {
   name: 'Burning Retaliation',
   description: 'When attacked and survives, return 2 damage and apply 1 Burn counter to attacker.',
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'retaliation',
-      target: 'attacker',
+      type: EffectType.Retaliation,
+      target: AbilityTarget.Attacker,
       value: 2,
     },
     {
-      type: 'apply-counter',
-      target: 'attacker',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Attacker,
       counter: 'Burn',
       value: 1,
     },
@@ -56,17 +56,17 @@ const charcoilBloom4: StructuredAbility = {
 const charcoilPassive7: StructuredAbility = {
   name: 'Smoke Screen',
   description: 'If targeted by Magic or Trap, nullify it and place 2 Soot counters.',
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'immunity',
-      target: 'self',
-      immuneTo: ['magic', 'trap'],
-      duration: 'while-on-field',
+      type: EffectType.Immunity,
+      target: AbilityTarget.Self,
+      immuneTo: [ImmunityType.Magic, ImmunityType.Trap],
+      duration: EffectDuration.WhileOnField,
     },
     {
-      type: 'apply-counter',
-      target: 'target',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Target,
       counter: 'Soot',
       value: 2,
     },
@@ -77,17 +77,17 @@ const charcoilPassive7: StructuredAbility = {
 const charcoilPassive9: StructuredAbility = {
   name: 'Blazing Vengeance',
   description: 'Immune to Magic and Trap cards. When targeted by anything, place 3 Burn counters on the source.',
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'immunity',
-      target: 'self',
-      immuneTo: ['magic', 'trap'],
-      duration: 'while-on-field',
+      type: EffectType.Immunity,
+      target: AbilityTarget.Self,
+      immuneTo: [ImmunityType.Magic, ImmunityType.Trap],
+      duration: EffectDuration.WhileOnField,
     },
     {
-      type: 'apply-counter',
-      target: 'attacker',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Attacker,
       counter: 'Burn',
       value: 3,
     },
@@ -97,16 +97,16 @@ const charcoilPassive9: StructuredAbility = {
 const charcoilBloom9: StructuredAbility = {
   name: 'Infernal Reflection',
   description: 'When attacked, reflect all damage back to attacker and apply 2 Burn counters.',
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'retaliation',
-      target: 'attacker',
+      type: EffectType.Retaliation,
+      target: AbilityTarget.Attacker,
       value: 'reflected',
     },
     {
-      type: 'apply-counter',
-      target: 'attacker',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Attacker,
       counter: 'Burn',
       value: 2,
     },
@@ -121,8 +121,7 @@ export const CHARCOIL: BloomBeastCard = {
   cost: 2,
   baseAttack: 3,
   baseHealth: 4,
-  passiveAbility: charcoilPassive,
-  bloomAbility: charcoilBloom,
+  ability: charcoilBloom,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -137,14 +136,13 @@ export const CHARCOIL: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        bloomAbility: charcoilBloom4,
+        ability: charcoilBloom4,
       },
       7: {
-        passiveAbility: charcoilPassive7,
+        ability: charcoilPassive7,
       },
       9: {
-        passiveAbility: charcoilPassive9,
-        bloomAbility: charcoilBloom9,
+        ability: charcoilPassive9,
       },
     },
   },

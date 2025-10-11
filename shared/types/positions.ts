@@ -23,11 +23,13 @@ interface CardTextInfo extends SimplePosition {
 
 export interface CardTextPositions {
   cost: CardTextInfo;
+  affinity: SimplePosition;
   level: CardTextInfo;
   name: CardTextInfo;
-  special: CardTextInfo;
+  ability: CardTextInfo;
   attack: CardTextInfo;
   health: CardTextInfo;
+  beastImage: SimplePosition;
 }
 
 export interface UIButtonPositions {

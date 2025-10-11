@@ -3,16 +3,16 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, ResourceType } from '../../types/abilities';
 
 const rootlingPassive: StructuredAbility = {
   name: 'Deep Roots',
   description: 'This Bloom Beast cannot be targeted by Magic Cards.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'cannot-be-targeted',
-      target: 'self',
+      type: EffectType.CannotBeTargeted,
+      target: AbilityTarget.Self,
       by: ['magic'],
     },
   ],
@@ -21,12 +21,12 @@ const rootlingPassive: StructuredAbility = {
 const rootlingBloom: StructuredAbility = {
   name: 'Nourish',
   description: 'When Rootling destroys a Bloom Beast, immediately gain +1 Nectar.',
-  trigger: 'OnDestroy',
+  trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
-      type: 'gain-resource',
-      target: 'player-gardener',
-      resource: 'nectar',
+      type: EffectType.GainResource,
+      target: AbilityTarget.PlayerGardener,
+      resource: ResourceType.Nectar,
       value: 1,
     },
   ],
@@ -36,12 +36,12 @@ const rootlingBloom: StructuredAbility = {
 const rootlingBloom4: StructuredAbility = {
   name: 'Abundant Nourish',
   description: 'When Rootling destroys a Bloom Beast, gain +2 Nectar.',
-  trigger: 'OnDestroy',
+  trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
-      type: 'gain-resource',
-      target: 'player-gardener',
-      resource: 'nectar',
+      type: EffectType.GainResource,
+      target: AbilityTarget.PlayerGardener,
+      resource: ResourceType.Nectar,
       value: 2,
     },
   ],
@@ -51,11 +51,11 @@ const rootlingBloom4: StructuredAbility = {
 const rootlingPassive7: StructuredAbility = {
   name: 'Ancient Roots',
   description: 'Cannot be targeted by Magic Cards or Trap Cards.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'cannot-be-targeted',
-      target: 'self',
+      type: EffectType.CannotBeTargeted,
+      target: AbilityTarget.Self,
       by: ['magic', 'trap'],
     },
   ],
@@ -65,11 +65,11 @@ const rootlingPassive7: StructuredAbility = {
 const rootlingPassive9: StructuredAbility = {
   name: 'Eternal Roots',
   description: 'Cannot be targeted by Magic, Trap, or opponent Bloom abilities.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'cannot-be-targeted',
-      target: 'self',
+      type: EffectType.CannotBeTargeted,
+      target: AbilityTarget.Self,
       by: ['magic', 'trap', 'abilities'],
     },
   ],
@@ -78,17 +78,17 @@ const rootlingPassive9: StructuredAbility = {
 const rootlingBloom9: StructuredAbility = {
   name: 'Harvest Feast',
   description: 'When Rootling destroys a Bloom Beast, gain +2 Nectar and draw 1 card.',
-  trigger: 'OnDestroy',
+  trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
-      type: 'gain-resource',
-      target: 'player-gardener',
-      resource: 'nectar',
+      type: EffectType.GainResource,
+      target: AbilityTarget.PlayerGardener,
+      resource: ResourceType.Nectar,
       value: 2,
     },
     {
-      type: 'draw-cards',
-      target: 'player-gardener',
+      type: EffectType.DrawCards,
+      target: AbilityTarget.PlayerGardener,
       value: 1,
     },
   ],
@@ -102,8 +102,7 @@ export const ROOTLING: BloomBeastCard = {
   cost: 1,
   baseAttack: 1,
   baseHealth: 3,
-  passiveAbility: rootlingPassive,
-  bloomAbility: rootlingBloom,
+  ability: rootlingPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -118,14 +117,13 @@ export const ROOTLING: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        bloomAbility: rootlingBloom4,
+        ability: rootlingBloom4,
       },
       7: {
-        passiveAbility: rootlingPassive7,
+        ability: rootlingPassive7,
       },
       9: {
-        passiveAbility: rootlingPassive9,
-        bloomAbility: rootlingBloom9,
+        ability: rootlingPassive9,
       },
     },
   },

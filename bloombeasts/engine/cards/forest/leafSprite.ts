@@ -3,16 +3,16 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, ResourceType, ImmunityType, EffectDuration } from '../../types/abilities';
 
 const leafSpritePassive: StructuredAbility = {
   name: 'Evasive',
   description: 'Leaf Sprite can attack an opposing Bloom Beast directly, ignoring "Guard" or "Block" effects.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'piercing',
     },
   ],
@@ -21,12 +21,12 @@ const leafSpritePassive: StructuredAbility = {
 const leafSpriteBloom: StructuredAbility = {
   name: 'Pollen Haste',
   description: 'If Leaf Sprite destroys a Bloom Beast, immediately play one additional Nectar Card this turn.',
-  trigger: 'OnDestroy',
+  trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
-      type: 'gain-resource',
-      target: 'player-gardener',
-      resource: 'extra-nectar-play',
+      type: EffectType.GainResource,
+      target: AbilityTarget.PlayerGardener,
+      resource: ResourceType.ExtraNectarPlay,
       value: 1,
     },
   ],
@@ -36,12 +36,12 @@ const leafSpriteBloom: StructuredAbility = {
 const leafSpriteBloom4: StructuredAbility = {
   name: 'Pollen Rush',
   description: 'If Leaf Sprite destroys a Bloom Beast, play 2 additional Nectar Cards this turn.',
-  trigger: 'OnDestroy',
+  trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
-      type: 'gain-resource',
-      target: 'player-gardener',
-      resource: 'extra-nectar-play',
+      type: EffectType.GainResource,
+      target: AbilityTarget.PlayerGardener,
+      resource: ResourceType.ExtraNectarPlay,
       value: 2,
     },
   ],
@@ -51,18 +51,18 @@ const leafSpriteBloom4: StructuredAbility = {
 const leafSpritePassive7: StructuredAbility = {
   name: 'Master Evasion',
   description: 'Leaf Sprite ignores all defensive abilities and can attack directly.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'piercing',
     },
     {
-      type: 'immunity',
-      target: 'self',
-      immuneTo: ['targeting'],
-      duration: 'while-on-field',
+      type: EffectType.Immunity,
+      target: AbilityTarget.Self,
+      immuneTo: [ImmunityType.Targeting],
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -71,16 +71,16 @@ const leafSpritePassive7: StructuredAbility = {
 const leafSpritePassive9: StructuredAbility = {
   name: 'Shadow Strike',
   description: 'Leaf Sprite can attack twice per turn and ignores all defensive abilities.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'attack-twice',
     },
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'piercing',
     },
   ],
@@ -89,17 +89,17 @@ const leafSpritePassive9: StructuredAbility = {
 const leafSpriteBloom9: StructuredAbility = {
   name: 'Explosive Pollen',
   description: 'When destroying a Bloom Beast, play 3 Nectar Cards and draw 1 card.',
-  trigger: 'OnDestroy',
+  trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
-      type: 'gain-resource',
-      target: 'player-gardener',
-      resource: 'extra-nectar-play',
+      type: EffectType.GainResource,
+      target: AbilityTarget.PlayerGardener,
+      resource: ResourceType.ExtraNectarPlay,
       value: 3,
     },
     {
-      type: 'draw-cards',
-      target: 'player-gardener',
+      type: EffectType.DrawCards,
+      target: AbilityTarget.PlayerGardener,
       value: 1,
     },
   ],
@@ -113,8 +113,7 @@ export const LEAF_SPRITE: BloomBeastCard = {
   cost: 2,
   baseAttack: 3,
   baseHealth: 2,
-  passiveAbility: leafSpritePassive,
-  bloomAbility: leafSpriteBloom,
+  ability: leafSpritePassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -129,14 +128,13 @@ export const LEAF_SPRITE: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        bloomAbility: leafSpriteBloom4,
+        ability: leafSpriteBloom4,
       },
       7: {
-        passiveAbility: leafSpritePassive7,
+        ability: leafSpritePassive7,
       },
       9: {
-        passiveAbility: leafSpritePassive9,
-        bloomAbility: leafSpriteBloom9,
+        ability: leafSpritePassive9,
       },
     },
   },

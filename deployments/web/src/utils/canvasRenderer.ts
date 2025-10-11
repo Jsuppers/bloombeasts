@@ -6,12 +6,13 @@
 import {
     gameDimensions,
     standardCardDimensions,
+    standardCardBeastImageDimensions,
     magicCardDimensions,
     trapCardDimensions,
     sideMenuDimensions,
     sideMenuButtonDimensions,
 } from '../../../../shared/constants/dimensions';
-import { standardCardTextPositions, sideMenuPositions } from '../../../../shared/constants/positions';
+import { standardCardPositions, sideMenuPositions } from '../../../../shared/constants/positions';
 
 // Font constants
 const FONT_FAMILY = 'monospace';
@@ -248,19 +249,50 @@ export class CanvasRenderer {
         this.ctx.strokeRect(x, y, width, height);
     }
 
-    drawBeastCard(x: number, y: number, beast: any, cardImage?: HTMLImageElement | null): void {
+    drawBeastCard(x: number, y: number, beast: any, beastImage?: HTMLImageElement | null, baseCardImage?: HTMLImageElement | null, affinityImage?: HTMLImageElement | null): void {
         const cardWidth = standardCardDimensions.width;
         const cardHeight = standardCardDimensions.height;
+        const beastImageWidth = standardCardBeastImageDimensions.width;
+        const beastImageHeight = standardCardBeastImageDimensions.height;
+        const positions = standardCardPositions;
 
-        if (cardImage) {
-            // Draw the card image
-            this.ctx.drawImage(cardImage, x, y, cardWidth, cardHeight);
-        } else {
-            // Fallback: draw colored card background
+        // Layered rendering approach:
+        // 1. Draw beast artwork in the beast image area
+        // 2. Draw base card frame on top
+        // 3. Draw affinity icon
+        // 4. Draw text overlay
+
+        // Step 1: Draw beast image as background artwork
+        if (beastImage) {
+            this.ctx.drawImage(
+                beastImage,
+                x + positions.beastImage.x,
+                y + positions.beastImage.y,
+                beastImageWidth,
+                beastImageHeight
+            );
+        }
+
+        // Step 2: Draw base card frame on top
+        if (baseCardImage) {
+            this.ctx.drawImage(baseCardImage, x, y, cardWidth, cardHeight);
+        } else if (!beastImage) {
+            // Fallback: draw colored card background only if no beast image
             this.drawCard(x, y, cardWidth, cardHeight, beast.affinity || '');
         }
 
-        // Draw text overlay
+        // Step 3: Draw affinity icon if available
+        if (affinityImage) {
+            this.ctx.drawImage(
+                affinityImage,
+                x + positions.affinity.x,
+                y + positions.affinity.y,
+                30, // Affinity icon width
+                30  // Affinity icon height
+            );
+        }
+
+        // Step 4: Draw text overlay for dynamic values
         this.drawCardTextOverlay(x, y, beast);
     }
 
@@ -339,10 +371,125 @@ export class CanvasRenderer {
     }
 
     /**
+     * Draw Magic card with layered rendering (for inventory/hand)
+     */
+    drawMagicCard(x: number, y: number, card: any, magicImage?: HTMLImageElement | null, templateImage?: HTMLImageElement | null, baseCardImage?: HTMLImageElement | null): void {
+        const cardWidth = standardCardDimensions.width;
+        const cardHeight = standardCardDimensions.height;
+
+        // Layered rendering:
+        // 1. Draw magic artwork (185x185)
+        // 2. Draw BaseCard frame
+        // 3. Draw MagicCard template overlay
+        // 4. Draw text overlay
+
+        // Step 1: Draw magic image if available
+        if (magicImage) {
+            // Magic images are 185x185, positioned at offset (12, 13)
+            const magicImageSize = 185;
+            const imageX = x + 12;
+            const imageY = y + 13;
+            this.ctx.drawImage(magicImage, imageX, imageY, magicImageSize, magicImageSize);
+        }
+
+        // Step 2: Draw base card frame
+        if (baseCardImage) {
+            this.ctx.drawImage(baseCardImage, x, y, cardWidth, cardHeight);
+        }
+
+        // Step 3: Draw MagicCard template overlay
+        if (templateImage) {
+            this.ctx.drawImage(templateImage, x, y, cardWidth, cardHeight);
+        }
+
+        // Step 4: Draw text overlay
+        this.drawCardTextOverlay(x, y, card);
+    }
+
+    /**
+     * Draw Magic card for playboard (smaller size with centered image)
+     */
+    drawMagicCardPlayboard(x: number, y: number, width: number, height: number, card: any, magicImage?: HTMLImageElement | null, playboardTemplate?: HTMLImageElement | null): void {
+        // Draw playboard template background
+        if (playboardTemplate) {
+            this.ctx.drawImage(playboardTemplate, x, y, width, height);
+        }
+
+        // Draw magic image centered and resized to 100x100
+        if (magicImage) {
+            const imageSize = 100;
+            const imageX = x + (width - imageSize) / 2;
+            const imageY = y + (height - imageSize) / 2;
+            this.ctx.drawImage(magicImage, imageX, imageY, imageSize, imageSize);
+        }
+
+        // Minimal text overlay for playboard
+        // Just show cost
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 14px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(`${card.cost || 0}`, x + 15, y + 20);
+    }
+
+    /**
+     * Draw Trap card with layered rendering (for inventory/hand)
+     */
+    drawTrapCard(x: number, y: number, card: any, trapImage?: HTMLImageElement | null, templateImage?: HTMLImageElement | null, baseCardImage?: HTMLImageElement | null): void {
+        const cardWidth = standardCardDimensions.width;
+        const cardHeight = standardCardDimensions.height;
+
+        // Layered rendering:
+        // 1. Draw trap artwork (185x185)
+        // 2. Draw BaseCard frame
+        // 3. Draw TrapCard template overlay
+        // 4. Draw text overlay
+
+        // Step 1: Draw trap image if available
+        if (trapImage) {
+            // Trap images are 185x185, positioned at offset (12, 13)
+            const trapImageSize = 185;
+            const imageX = x + 12;
+            const imageY = y + 13;
+            this.ctx.drawImage(trapImage, imageX, imageY, trapImageSize, trapImageSize);
+        }
+
+        // Step 2: Draw base card frame
+        if (baseCardImage) {
+            this.ctx.drawImage(baseCardImage, x, y, cardWidth, cardHeight);
+        }
+
+        // Step 3: Draw TrapCard template overlay
+        if (templateImage) {
+            this.ctx.drawImage(templateImage, x, y, cardWidth, cardHeight);
+        }
+
+        // Step 4: Draw text overlay
+        this.drawCardTextOverlay(x, y, card);
+    }
+
+    /**
+     * Draw Trap card for playboard (face-down)
+     */
+    drawTrapCardPlayboard(x: number, y: number, width: number, height: number, trapTemplate?: HTMLImageElement | null): void {
+        if (trapTemplate) {
+            // Draw the TrapCardPlayboard template (face-down trap card)
+            this.ctx.drawImage(trapTemplate, x, y, width, height);
+        } else {
+            // Fallback: Draw purple card back
+            this.ctx.fillStyle = '#4a148c';
+            this.ctx.fillRect(x, y, width, height);
+            this.ctx.strokeStyle = '#7b1fa2';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(x, y, width, height);
+            this.drawText('TRAP', x + width / 2, y + height / 2 - 5, 14, '#fff', 'center');
+        }
+    }
+
+    /**
      * Helper: Draw card text overlay (used by both beast and inventory cards)
      */
     private drawCardTextOverlay(x: number, y: number, card: any): void {
-        const positions = standardCardTextPositions;
+        const positions = standardCardPositions;
         this.ctx.fillStyle = DEFAULT_TEXT_COLOR;
 
         // Cost (top left)
@@ -357,17 +504,49 @@ export class CanvasRenderer {
             true
         );
 
-        // Level (top middle area)
-        this.drawTextWithFont(
-            `${card.level || 1}`,
-            x + positions.level.x,
-            y + positions.level.y,
-            positions.level.size,
-            DEFAULT_TEXT_COLOR,
-            positions.level.textAlign || 'center',
-            positions.level.textBaseline || 'alphabetic',
-            true
-        );
+        // Only show level/experience for Bloom beasts
+        if (card.type === 'Bloom' || card.level !== undefined) {
+            // Level and Experience
+            const level = card.level || 1;
+            const currentExp = card.experience || 0;
+            const expNeeded = card.experienceRequired || (level * 100); // Default exp formula if not provided
+
+            // Draw "Level X" text
+            this.drawTextWithFont(
+                `Level ${level}`,
+                x + positions.level.x,
+                y + positions.level.y,
+                positions.level.size,
+                DEFAULT_TEXT_COLOR,
+                positions.level.textAlign || 'center',
+                positions.level.textBaseline || 'alphabetic',
+                false
+            );
+
+            // Draw experience below level (smaller text)
+            this.drawTextWithFont(
+                `${currentExp}/${expNeeded}`,
+                x + positions.level.x,
+                y + positions.level.y + 14,
+                positions.level.size - 2,
+                '#aaa',
+                positions.level.textAlign || 'center',
+                positions.level.textBaseline || 'alphabetic',
+                false
+            );
+        } else if (card.type) {
+            // For non-Bloom cards, show the card type
+            this.drawTextWithFont(
+                card.type,
+                x + positions.level.x,
+                y + positions.level.y,
+                positions.level.size + 2,
+                DEFAULT_TEXT_COLOR,
+                positions.level.textAlign || 'center',
+                positions.level.textBaseline || 'alphabetic',
+                true
+            );
+        }
 
         // Name (bottom left area) - truncate if too long
         this.setFont(positions.name.size, true);
@@ -377,46 +556,99 @@ export class CanvasRenderer {
         const truncatedName = this.truncateText(`${card.name}`, maxNameWidth);
         this.ctx.fillText(truncatedName, x + positions.name.x, y + positions.name.y);
 
-        // Special (bottom right area) - show "?" if card has abilities
-        const hasAbility = card.passiveAbility || card.bloomAbility;
+        // Ability - show full text with wrapping
+        const hasAbility = card.ability;
         if (hasAbility) {
+            const abilityText = typeof card.ability === 'object' ?
+                card.ability.description || card.ability.name || '' :
+                card.ability.toString();
+
+            if (abilityText) {
+                this.drawWrappedText(
+                    abilityText,
+                    x + positions.ability.x,
+                    y + positions.ability.y,
+                    180, // Max width for text wrapping
+                    positions.ability.size,
+                    DEFAULT_TEXT_COLOR,
+                    positions.ability.textAlign || 'left'
+                );
+            }
+        }
+
+        // Only show attack/health for Bloom beasts
+        if (card.type === 'Bloom' || card.baseAttack !== undefined || card.currentAttack !== undefined) {
+            // Attack (bottom left)
+            const attack = card.currentAttack || card.baseAttack || card.attack || 0;
             this.drawTextWithFont(
-                '?',
-                x + positions.special.x,
-                y + positions.special.y,
-                positions.special.size,
+                `${attack}`,
+                x + positions.attack.x,
+                y + positions.attack.y,
+                positions.attack.size,
                 DEFAULT_TEXT_COLOR,
-                positions.special.textAlign || 'right',
-                positions.special.textBaseline || 'alphabetic',
+                positions.attack.textAlign || 'center',
+                positions.attack.textBaseline || 'alphabetic',
+                true
+            );
+
+            // Health (bottom right)
+            const health = card.currentHealth || card.baseHealth || card.health || 0;
+            this.drawTextWithFont(
+                `${health}`,
+                x + positions.health.x,
+                y + positions.health.y,
+                positions.health.size,
+                DEFAULT_TEXT_COLOR,
+                positions.health.textAlign || 'center',
+                positions.health.textBaseline || 'alphabetic',
                 true
             );
         }
+    }
 
-        // Attack (bottom left)
-        const attack = card.currentAttack || card.baseAttack || card.attack || 0;
-        this.drawTextWithFont(
-            `${attack}`,
-            x + positions.attack.x,
-            y + positions.attack.y,
-            positions.attack.size,
-            DEFAULT_TEXT_COLOR,
-            positions.attack.textAlign || 'center',
-            positions.attack.textBaseline || 'alphabetic',
-            true
-        );
+    /**
+     * Draw text with word wrapping
+     */
+    private drawWrappedText(
+        text: string,
+        x: number,
+        y: number,
+        maxWidth: number,
+        fontSize: number,
+        color: string = DEFAULT_TEXT_COLOR,
+        align: CanvasTextAlign = 'left'
+    ): void {
+        this.ctx.fillStyle = color;
+        this.setFont(fontSize, false);
+        this.ctx.textAlign = align;
+        this.ctx.textBaseline = 'top';
 
-        // Health (bottom right)
-        const health = card.currentHealth || card.baseHealth || card.health || 0;
-        this.drawTextWithFont(
-            `${health}`,
-            x + positions.health.x,
-            y + positions.health.y,
-            positions.health.size,
-            DEFAULT_TEXT_COLOR,
-            positions.health.textAlign || 'center',
-            positions.health.textBaseline || 'alphabetic',
-            true
-        );
+        const words = text.split(' ');
+        let line = '';
+        let currentY = y;
+        const lineHeight = fontSize + 2; // Add some spacing between lines
+
+        for (let i = 0; i < words.length; i++) {
+            const testLine = line + (line ? ' ' : '') + words[i];
+            const metrics = this.ctx.measureText(testLine);
+
+            if (metrics.width > maxWidth && line) {
+                // Draw current line and start a new one
+                this.ctx.fillText(line, x, currentY);
+                line = words[i];
+                currentY += lineHeight;
+
+                // Stop if we're going too far down the card
+                if (currentY > y + 50) break;
+            } else {
+                line = testLine;
+            }
+        }
+
+        // Draw the last line if there's space
+        if (line && currentY <= y + 50) {
+            this.ctx.fillText(line, x, currentY);
+        }
     }
 
     /**

@@ -3,16 +3,16 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger } from '../../types/abilities';
 
 const fuzzletPassive: StructuredAbility = {
   name: 'Spores of Defense',
   description: 'When Fuzzlet takes damage, place a "Spore" counter on the Habitat Card.',
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'apply-counter',
-      target: 'self',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Self,
       counter: 'Spore',
       value: 1,
     },
@@ -22,11 +22,11 @@ const fuzzletPassive: StructuredAbility = {
 const fuzzletBloom: StructuredAbility = {
   name: 'Rapid Growth',
   description: 'At the start of your turn, Fuzzlet gains +1 Health for every 2 Spore counters on the Habitat Card.',
-  trigger: 'StartOfTurn',
+  trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
-      type: 'heal',
-      target: 'self',
+      type: EffectType.Heal,
+      target: AbilityTarget.Self,
       value: 1, // TODO: Needs calculation based on Spore counters / 2
     },
   ],
@@ -36,11 +36,11 @@ const fuzzletBloom: StructuredAbility = {
 const fuzzletPassive4: StructuredAbility = {
   name: 'Spore Burst',
   description: 'When Fuzzlet takes damage, place 2 "Spore" counters on the Habitat Card.',
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'apply-counter',
-      target: 'self',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Self,
       counter: 'Spore',
       value: 2,
     },
@@ -51,11 +51,11 @@ const fuzzletPassive4: StructuredAbility = {
 const fuzzletBloom7: StructuredAbility = {
   name: 'Accelerated Growth',
   description: 'At the start of your turn, Fuzzlet gains +2 Health for every 2 Spore counters on the Habitat Card.',
-  trigger: 'StartOfTurn',
+  trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
-      type: 'heal',
-      target: 'self',
+      type: EffectType.Heal,
+      target: AbilityTarget.Self,
       value: 2, // TODO: Needs calculation based on Spore counters / 2
     },
   ],
@@ -65,17 +65,17 @@ const fuzzletBloom7: StructuredAbility = {
 const fuzzletPassive9: StructuredAbility = {
   name: 'Spore Dominance',
   description: 'When Fuzzlet takes damage, place 2 "Spore" counters on the Habitat Card and heal 1 HP.',
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'apply-counter',
-      target: 'self',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Self,
       counter: 'Spore',
       value: 2,
     },
     {
-      type: 'heal',
-      target: 'self',
+      type: EffectType.Heal,
+      target: AbilityTarget.Self,
       value: 1,
     },
   ],
@@ -84,16 +84,16 @@ const fuzzletPassive9: StructuredAbility = {
 const fuzzletBloom9: StructuredAbility = {
   name: 'Maximum Bloom',
   description: 'At the start of your turn, Fuzzlet gains +3 Health for every 2 Spore counters. Adjacent allies gain +1 HP.',
-  trigger: 'StartOfTurn',
+  trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
-      type: 'heal',
-      target: 'self',
+      type: EffectType.Heal,
+      target: AbilityTarget.Self,
       value: 3, // TODO: Needs calculation based on Spore counters / 2
     },
     {
-      type: 'heal',
-      target: 'adjacent-allies',
+      type: EffectType.Heal,
+      target: AbilityTarget.AdjacentAllies,
       value: 1,
     },
   ],
@@ -107,8 +107,7 @@ export const FUZZLET: BloomBeastCard = {
   cost: 2,
   baseAttack: 2,
   baseHealth: 4,
-  passiveAbility: fuzzletPassive,
-  bloomAbility: fuzzletBloom,
+  ability: fuzzletPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -123,14 +122,13 @@ export const FUZZLET: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        passiveAbility: fuzzletPassive4,
+        ability: fuzzletPassive4,
       },
       7: {
-        bloomAbility: fuzzletBloom7,
+        ability: fuzzletBloom7,
       },
       9: {
-        passiveAbility: fuzzletPassive9,
-        bloomAbility: fuzzletBloom9,
+        ability: fuzzletPassive9,
       },
     },
   },

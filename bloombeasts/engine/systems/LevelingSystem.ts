@@ -208,8 +208,7 @@ export class LevelingSystem {
    * Get current abilities for a beast based on its level
    */
   static getCurrentAbilities(card: BloomBeastCard, level: Level) {
-    let passiveAbility = card.passiveAbility;
-    let bloomAbility = card.bloomAbility;
+    let ability = card.ability;
 
     // Check for ability upgrades at level milestones
     const upgrades = card.levelingConfig?.abilityUpgrades;
@@ -219,17 +218,14 @@ export class LevelingSystem {
       for (const lvl of upgradeLevel) {
         if (level >= lvl && upgrades[lvl]) {
           const upgrade = upgrades[lvl];
-          if (upgrade && upgrade.passiveAbility) {
-            passiveAbility = upgrade.passiveAbility;
-          }
-          if (upgrade && upgrade.bloomAbility) {
-            bloomAbility = upgrade.bloomAbility;
+          if (upgrade && upgrade.ability) {
+            ability = upgrade.ability;
           }
         }
       }
     }
 
-    return { passiveAbility, bloomAbility };
+    return { ability };
   }
 
   /**

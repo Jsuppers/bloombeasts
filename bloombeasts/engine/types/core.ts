@@ -2,11 +2,11 @@
  * Core type definitions for Bloom Beasts card game
  */
 
-import type { StructuredAbility } from './abilities';
+import type { StructuredAbility, AbilityEffect } from './abilities';
 
 export type Affinity = 'Forest' | 'Fire' | 'Water' | 'Sky' | 'Generic';
 
-export type CardType = 'Resource' | 'Magic' | 'Trap' | 'Bloom' | 'Habitat';
+export type CardType = 'Magic' | 'Trap' | 'Bloom' | 'Habitat';
 
 export type CounterType = 'XP' | 'Spore' | 'Burn' | 'Freeze' | 'Soot' | 'Entangle';
 
@@ -26,11 +26,39 @@ export interface Card {
 }
 
 /**
- * Resource card (Nectar Block)
+ * Trigger conditions for trap cards
  */
-export interface ResourceCard extends Card {
-  type: 'Resource';
-  effect: string;
+export enum TrapTrigger {
+  OnBloomPlay = 'OnBloomPlay',          // When opponent plays a Bloom Beast
+  OnHabitatPlay = 'OnHabitatPlay',      // When opponent plays a Habitat
+  OnMagicPlay = 'OnMagicPlay',          // When opponent plays a Magic card
+  OnAttack = 'OnAttack',                // When opponent attacks
+  OnDamage = 'OnDamage',                // When your units take damage
+  OnDestroy = 'OnDestroy',              // When your units are destroyed
+  OnDraw = 'OnDraw',                    // When opponent draws cards
+  OnHeal = 'OnHeal',                    // When opponent heals
+  OnAbilityUse = 'OnAbilityUse'        // When opponent uses an ability
+}
+
+/**
+ * Trap condition types
+ */
+export enum TrapConditionType {
+  CostAbove = 'cost-above',
+  CostBelow = 'cost-below',
+  AffinityMatches = 'affinity-matches',
+  DamageAbove = 'damage-above'
+}
+
+/**
+ * Structured trap activation
+ */
+export interface TrapActivation {
+  trigger: TrapTrigger;
+  condition?: {
+    type: TrapConditionType;
+    value?: number | Affinity;
+  };
 }
 
 /**
@@ -38,7 +66,8 @@ export interface ResourceCard extends Card {
  */
 export interface MagicCard extends Card {
   type: 'Magic';
-  effect: string;
+  effects: AbilityEffect[];  // Structured effects instead of string
+  targetRequired?: boolean;  // Whether the card needs a target
 }
 
 /**
@@ -46,8 +75,9 @@ export interface MagicCard extends Card {
  */
 export interface TrapCard extends Card {
   type: 'Trap';
-  activation: string;
-  effect: string;
+  description: string;
+  activation: TrapActivation;  // Structured activation instead of string
+  effects: AbilityEffect[];     // Structured effects instead of string
 }
 
 /**
@@ -56,15 +86,15 @@ export interface TrapCard extends Card {
 export interface HabitatCard extends Card {
   type: 'Habitat';
   affinity: Affinity;
-  habitatShiftEffect: string;
+  ongoingEffects: AbilityEffect[];  // Effects that persist while habitat is active
+  onPlayEffects?: AbilityEffect[];  // One-time effects when played
 }
 
 /**
  * Ability upgrade at a specific level
  */
 export interface AbilityUpgrade {
-  passiveAbility?: Ability;
-  bloomAbility?: Ability;
+  ability?: Ability;
 }
 
 /**
@@ -87,8 +117,7 @@ export interface BloomBeastCard extends Card {
   affinity: Affinity;
   baseAttack: number;
   baseHealth: number;
-  passiveAbility: Ability;
-  bloomAbility: Ability;
+  ability: Ability;  // Single ability field (trigger determines if passive/active)
   /** Optional custom leveling configuration */
   levelingConfig?: LevelingConfig;
 }
@@ -111,4 +140,4 @@ export type Ability = SimpleAbility | StructuredAbility;
 /**
  * Union type for all cards
  */
-export type AnyCard = ResourceCard | MagicCard | TrapCard | HabitatCard | BloomBeastCard;
+export type AnyCard = MagicCard | TrapCard | HabitatCard | BloomBeastCard;

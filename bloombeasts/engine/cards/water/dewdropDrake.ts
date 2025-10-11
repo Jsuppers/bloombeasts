@@ -3,21 +3,21 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, EffectDuration, ConditionType, Comparison, CostType } from '../../types/abilities';
 
 const dewdropDrakePassive: StructuredAbility = {
   name: 'Mist Screen',
   description: "Opponent's Bloom Beasts can only attack Dewdrop Drake if it is the only beast on the field.",
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'attack-first',
       condition: {
-        type: 'units-on-field',
+        type: ConditionType.UnitsOnField,
         value: 1,
-        comparison: 'equal',
+        comparison: Comparison.Equal,
       },
     },
   ],
@@ -26,15 +26,15 @@ const dewdropDrakePassive: StructuredAbility = {
 const dewdropDrakeBloom: StructuredAbility = {
   name: 'Torrent',
   description: "You may pay 1 Nectar to deal 2 damage to the opponent's Gardener when Dewdrop Drake attacks.",
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   cost: {
-    type: 'nectar',
+    type: CostType.Nectar,
     value: 1,
   },
   effects: [
     {
-      type: 'deal-damage',
-      target: 'opponent-gardener',
+      type: EffectType.DealDamage,
+      target: AbilityTarget.OpponentGardener,
       value: 2,
     },
   ],
@@ -44,15 +44,15 @@ const dewdropDrakeBloom: StructuredAbility = {
 const dewdropDrakeBloom4: StructuredAbility = {
   name: 'Deluge',
   description: "Pay 1 Nectar to deal 3 damage to opponent Gardener when attacking.",
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   cost: {
-    type: 'nectar',
+    type: CostType.Nectar,
     value: 1,
   },
   effects: [
     {
-      type: 'deal-damage',
-      target: 'opponent-gardener',
+      type: EffectType.DealDamage,
+      target: AbilityTarget.OpponentGardener,
       value: 3,
     },
   ],
@@ -62,18 +62,18 @@ const dewdropDrakeBloom4: StructuredAbility = {
 const dewdropDrakePassive7: StructuredAbility = {
   name: 'Fog Veil',
   description: 'Opponents must attack Dewdrop Drake first. Reduce all damage taken by 1.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'attack-first',
     },
     {
-      type: 'damage-reduction',
-      target: 'self',
+      type: EffectType.DamageReduction,
+      target: AbilityTarget.Self,
       value: 1,
-      duration: 'while-on-field',
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -82,18 +82,18 @@ const dewdropDrakePassive7: StructuredAbility = {
 const dewdropDrakePassive9: StructuredAbility = {
   name: 'Storm Guardian',
   description: 'All opponents must attack Dewdrop Drake first. Reduce all damage by 2.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'attack-first',
     },
     {
-      type: 'damage-reduction',
-      target: 'self',
+      type: EffectType.DamageReduction,
+      target: AbilityTarget.Self,
       value: 2,
-      duration: 'while-on-field',
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -101,16 +101,16 @@ const dewdropDrakePassive9: StructuredAbility = {
 const dewdropDrakeBloom9: StructuredAbility = {
   name: 'Maelstrom',
   description: "When attacking, deal 5 damage to opponent Gardener and freeze one opponent Bloom Beast.",
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'deal-damage',
-      target: 'opponent-gardener',
+      type: EffectType.DealDamage,
+      target: AbilityTarget.OpponentGardener,
       value: 5,
     },
     {
-      type: 'apply-counter',
-      target: 'random-enemy',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.RandomEnemy,
       counter: 'Freeze',
       value: 1,
     },
@@ -125,8 +125,7 @@ export const DEWDROP_DRAKE: BloomBeastCard = {
   cost: 3,
   baseAttack: 3,
   baseHealth: 6,
-  passiveAbility: dewdropDrakePassive,
-  bloomAbility: dewdropDrakeBloom,
+  ability: dewdropDrakePassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -141,14 +140,13 @@ export const DEWDROP_DRAKE: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        bloomAbility: dewdropDrakeBloom4,
+        ability: dewdropDrakeBloom4,
       },
       7: {
-        passiveAbility: dewdropDrakePassive7,
+        ability: dewdropDrakePassive7,
       },
       9: {
-        passiveAbility: dewdropDrakePassive9,
-        bloomAbility: dewdropDrakeBloom9,
+        ability: dewdropDrakePassive9,
       },
     },
   },

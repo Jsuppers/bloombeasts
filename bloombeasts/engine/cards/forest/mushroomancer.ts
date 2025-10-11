@@ -3,19 +3,19 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType, EffectDuration, CostType, HealValueType } from '../../types/abilities';
 
 const mushroomancerPassive: StructuredAbility = {
   name: 'Fungal Cloud',
   description: 'When Summoned, give all adjacent Bloom Beasts -1 ATK until the start of your next turn.',
-  trigger: 'OnSummon',
+  trigger: AbilityTrigger.OnSummon,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'adjacent-enemies',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AdjacentEnemies,
+      stat: StatType.Attack,
       value: -1,
-      duration: 'start-of-next-turn',
+      duration: EffectDuration.StartOfNextTurn,
     },
   ],
 };
@@ -23,16 +23,16 @@ const mushroomancerPassive: StructuredAbility = {
 const mushroomancerBloom: StructuredAbility = {
   name: 'Life Spore',
   description: 'Remove 1 Spore counter from the Habitat Card to heal Mushroomancer by 2 HP.',
-  trigger: 'Activated',
+  trigger: AbilityTrigger.Activated,
   cost: {
-    type: 'remove-counter',
+    type: CostType.RemoveCounter,
     counter: 'Spore',
     value: 1,
   },
   effects: [
     {
-      type: 'heal',
-      target: 'self',
+      type: EffectType.Heal,
+      target: AbilityTarget.Self,
       value: 2,
     },
   ],
@@ -42,14 +42,14 @@ const mushroomancerBloom: StructuredAbility = {
 const mushroomancerPassive4: StructuredAbility = {
   name: 'Toxic Spores',
   description: 'When Summoned, give all adjacent Bloom Beasts -2 ATK until the start of your next turn.',
-  trigger: 'OnSummon',
+  trigger: AbilityTrigger.OnSummon,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'adjacent-enemies',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AdjacentEnemies,
+      stat: StatType.Attack,
       value: -2,
-      duration: 'start-of-next-turn',
+      duration: EffectDuration.StartOfNextTurn,
     },
   ],
 };
@@ -58,16 +58,16 @@ const mushroomancerPassive4: StructuredAbility = {
 const mushroomancerBloom7: StructuredAbility = {
   name: 'Greater Life Spore',
   description: 'Remove 1 Spore counter from the Habitat Card to heal Mushroomancer by 3 HP.',
-  trigger: 'Activated',
+  trigger: AbilityTrigger.Activated,
   cost: {
-    type: 'remove-counter',
+    type: CostType.RemoveCounter,
     counter: 'Spore',
     value: 1,
   },
   effects: [
     {
-      type: 'heal',
-      target: 'self',
+      type: EffectType.Heal,
+      target: AbilityTarget.Self,
       value: 3,
     },
   ],
@@ -77,14 +77,14 @@ const mushroomancerBloom7: StructuredAbility = {
 const mushroomancerPassive9: StructuredAbility = {
   name: 'Parasitic Bloom',
   description: 'When Summoned, give all opponent Bloom Beasts -2 ATK permanently.',
-  trigger: 'OnSummon',
+  trigger: AbilityTrigger.OnSummon,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'all-enemies',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AllEnemies,
+      stat: StatType.Attack,
       value: -2,
-      duration: 'permanent',
+      duration: EffectDuration.Permanent,
     },
   ],
 };
@@ -92,24 +92,24 @@ const mushroomancerPassive9: StructuredAbility = {
 const mushroomancerBloom9: StructuredAbility = {
   name: 'Spore Regeneration',
   description: 'Remove 1 Spore counter to fully heal Mushroomancer and gain +1 ATK permanently.',
-  trigger: 'Activated',
+  trigger: AbilityTrigger.Activated,
   cost: {
-    type: 'remove-counter',
+    type: CostType.RemoveCounter,
     counter: 'Spore',
     value: 1,
   },
   effects: [
     {
-      type: 'heal',
-      target: 'self',
-      value: 'full',
+      type: EffectType.Heal,
+      target: AbilityTarget.Self,
+      value: HealValueType.Full,
     },
     {
-      type: 'modify-stats',
-      target: 'self',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.Self,
+      stat: StatType.Attack,
       value: 1,
-      duration: 'permanent',
+      duration: EffectDuration.Permanent,
     },
   ],
 };
@@ -122,8 +122,7 @@ export const MUSHROOMANCER: BloomBeastCard = {
   cost: 3,
   baseAttack: 3,
   baseHealth: 5,
-  passiveAbility: mushroomancerPassive,
-  bloomAbility: mushroomancerBloom,
+  ability: mushroomancerPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -138,14 +137,13 @@ export const MUSHROOMANCER: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        passiveAbility: mushroomancerPassive4,
+        ability: mushroomancerPassive4,
       },
       7: {
-        bloomAbility: mushroomancerBloom7,
+        ability: mushroomancerBloom7,
       },
       9: {
-        passiveAbility: mushroomancerPassive9,
-        bloomAbility: mushroomancerBloom9,
+        ability: mushroomancerPassive9,
       },
     },
   },

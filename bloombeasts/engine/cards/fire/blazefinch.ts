@@ -3,16 +3,22 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import {
+  StructuredAbility,
+  EffectType,
+  AbilityTarget,
+  AbilityTrigger,
+  ConditionType
+} from '../../types/abilities';
 
 const blazefinchPassive: StructuredAbility = {
   name: 'Quick Strike',
   description: 'Blazefinch can attack the turn it is summoned.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'remove-summoning-sickness',
-      target: 'self',
+      type: EffectType.RemoveSummoningSickness,
+      target: AbilityTarget.Self,
     },
   ],
 };
@@ -20,14 +26,14 @@ const blazefinchPassive: StructuredAbility = {
 const blazefinchBloom: StructuredAbility = {
   name: 'Incinerate',
   description: 'When Blazefinch attacks a Wilting Bloom Beast, its attack deals double damage.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'double-damage',
       condition: {
-        type: 'is-wilting',
+        type: ConditionType.IsWilting,
       },
     },
   ],
@@ -37,14 +43,14 @@ const blazefinchBloom: StructuredAbility = {
 const blazefinchBloom4: StructuredAbility = {
   name: 'Ember Strike',
   description: 'When attacking a damaged Bloom Beast, deal triple damage.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'triple-damage',
       condition: {
-        type: 'is-damaged',
+        type: ConditionType.IsDamaged,
       },
     },
   ],
@@ -54,15 +60,15 @@ const blazefinchBloom4: StructuredAbility = {
 const blazefinchPassive7: StructuredAbility = {
   name: 'Lightning Speed',
   description: 'Blazefinch can attack twice the turn it is summoned.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'remove-summoning-sickness',
-      target: 'self',
+      type: EffectType.RemoveSummoningSickness,
+      target: AbilityTarget.Self,
     },
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'attack-twice',
     },
   ],
@@ -72,11 +78,11 @@ const blazefinchPassive7: StructuredAbility = {
 const blazefinchPassive9: StructuredAbility = {
   name: 'Phoenix Form',
   description: 'Blazefinch can attack twice per turn. When destroyed, return to hand.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'attack-twice',
     },
     // Note: Return to hand on death would need a separate OnDestroy trigger
@@ -86,14 +92,14 @@ const blazefinchPassive9: StructuredAbility = {
 const blazefinchBloom9: StructuredAbility = {
   name: 'Annihilation',
   description: 'When attacking a damaged Bloom Beast, instantly destroy it.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'instant-destroy',
       condition: {
-        type: 'is-damaged',
+        type: ConditionType.IsDamaged,
       },
     },
   ],
@@ -107,8 +113,7 @@ export const BLAZEFINCH: BloomBeastCard = {
   cost: 1,
   baseAttack: 1,
   baseHealth: 2,
-  passiveAbility: blazefinchPassive,
-  bloomAbility: blazefinchBloom,
+  ability: blazefinchPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -123,14 +128,13 @@ export const BLAZEFINCH: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        bloomAbility: blazefinchBloom4,
+        ability: blazefinchBloom4,
       },
       7: {
-        passiveAbility: blazefinchPassive7,
+        ability: blazefinchPassive7,
       },
       9: {
-        passiveAbility: blazefinchPassive9,
-        bloomAbility: blazefinchBloom9,
+        ability: blazefinchPassive9,
       },
     },
   },

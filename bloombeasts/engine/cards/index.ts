@@ -6,7 +6,7 @@ import { FireDeck } from './fire';
 import { WaterDeck } from './water';
 import { ForestDeck } from './forest';
 import { SkyDeck } from './sky';
-import { BloomBeastCard, HabitatCard, TrapCard, MagicCard, ResourceCard, AnyCard } from '../types/core';
+import { BloomBeastCard, HabitatCard, TrapCard, MagicCard, AnyCard } from '../types/core';
 import { SimpleMap, arrayFrom } from '../../utils/polyfills';
 
 // Export deck classes

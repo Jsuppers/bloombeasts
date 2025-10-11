@@ -3,16 +3,16 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, EffectDuration, ImmunityType } from '../../types/abilities';
 
 const cirrusFloofPassive: StructuredAbility = {
   name: 'Lightness',
   description: 'Cirrus Floof cannot be targeted by Bloom Beasts with a Cost of 3 or higher.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'cannot-be-targeted',
-      target: 'self',
+      type: EffectType.CannotBeTargeted,
+      target: AbilityTarget.Self,
       by: ['high-cost-units'],
       costThreshold: 3,
     },
@@ -22,11 +22,11 @@ const cirrusFloofPassive: StructuredAbility = {
 const cirrusFloofBloom: StructuredAbility = {
   name: 'Cloud Cover',
   description: 'All allied Bloom Beasts gain 1 temporary HP at the start of your turn.',
-  trigger: 'StartOfTurn',
+  trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
-      type: 'temporary-hp',
-      target: 'all-allies',
+      type: EffectType.TemporaryHP,
+      target: AbilityTarget.AllAllies,
       value: 1,
     },
   ],
@@ -36,11 +36,11 @@ const cirrusFloofBloom: StructuredAbility = {
 const cirrusFloofBloom4: StructuredAbility = {
   name: 'Storm Shield',
   description: 'All allied Bloom Beasts gain 2 temporary HP at start of turn.',
-  trigger: 'StartOfTurn',
+  trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
-      type: 'temporary-hp',
-      target: 'all-allies',
+      type: EffectType.TemporaryHP,
+      target: AbilityTarget.AllAllies,
       value: 2,
     },
   ],
@@ -50,11 +50,11 @@ const cirrusFloofBloom4: StructuredAbility = {
 const cirrusFloofPassive7: StructuredAbility = {
   name: 'Ethereal Form',
   description: 'Cannot be targeted by any Bloom Beast attacks.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'cannot-be-targeted',
-      target: 'self',
+      type: EffectType.CannotBeTargeted,
+      target: AbilityTarget.Self,
       by: ['attacks'],
     },
   ],
@@ -64,18 +64,18 @@ const cirrusFloofPassive7: StructuredAbility = {
 const cirrusFloofPassive9: StructuredAbility = {
   name: 'Celestial Protector',
   description: 'Cannot be targeted by anything. Reduce all damage to allies by 1.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'cannot-be-targeted',
-      target: 'self',
+      type: EffectType.CannotBeTargeted,
+      target: AbilityTarget.Self,
       by: ['all'],
     },
     {
-      type: 'damage-reduction',
-      target: 'all-allies',
+      type: EffectType.DamageReduction,
+      target: AbilityTarget.AllAllies,
       value: 1,
-      duration: 'while-on-field',
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -83,18 +83,18 @@ const cirrusFloofPassive9: StructuredAbility = {
 const cirrusFloofBloom9: StructuredAbility = {
   name: 'Divine Barrier',
   description: 'All allied Bloom Beasts gain 3 temporary HP and immunity to negative effects this turn.',
-  trigger: 'StartOfTurn',
+  trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
-      type: 'temporary-hp',
-      target: 'all-allies',
+      type: EffectType.TemporaryHP,
+      target: AbilityTarget.AllAllies,
       value: 3,
     },
     {
-      type: 'immunity',
-      target: 'all-allies',
-      immuneTo: ['negative-effects'],
-      duration: 'this-turn',
+      type: EffectType.Immunity,
+      target: AbilityTarget.AllAllies,
+      immuneTo: [ImmunityType.NegativeEffects],
+      duration: EffectDuration.ThisTurn,
     },
   ],
 };
@@ -107,8 +107,7 @@ export const CIRRUS_FLOOF: BloomBeastCard = {
   cost: 2,
   baseAttack: 1,
   baseHealth: 6,
-  passiveAbility: cirrusFloofPassive,
-  bloomAbility: cirrusFloofBloom,
+  ability: cirrusFloofPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -123,14 +122,13 @@ export const CIRRUS_FLOOF: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        bloomAbility: cirrusFloofBloom4,
+        ability: cirrusFloofBloom4,
       },
       7: {
-        passiveAbility: cirrusFloofPassive7,
+        ability: cirrusFloofPassive7,
       },
       9: {
-        passiveAbility: cirrusFloofPassive9,
-        bloomAbility: cirrusFloofBloom9,
+        ability: cirrusFloofPassive9,
       },
     },
   },

@@ -135,8 +135,8 @@ export class BattleScreen {
         if (!this.currentBattleState) return; // Cleaned up during async operation
 
         // Render trap zones
-        this.renderTrapZone('player', battleState.playerTrapZone);
-        this.renderTrapZone('opponent', battleState.opponentTrapZone);
+        await this.renderTrapZone('player', battleState.playerTrapZone);
+        await this.renderTrapZone('opponent', battleState.opponentTrapZone);
 
         // Render habitat zone
         if (battleState.habitatZone) {
@@ -228,8 +228,10 @@ export class BattleScreen {
                 const cardWidth = 210;
                 const cardHeight = 260;
 
-                // Load card image
-                const cardImage = await this.assets.loadCardImage(beast.name, beast.affinity);
+                // Load card images separately
+                const beastImage = await this.assets.loadBeastImage(beast.name, beast.affinity);
+                const baseCardImage = await this.assets.loadBaseCardImage(beast.affinity);
+                const affinityIcon = beast.affinity ? await this.assets.loadAffinityIcon(beast.affinity) : null;
 
                 // Highlight if selected (player beasts only)
                 if (player === 'player' && this.currentBattleState && this.currentBattleState.selectedBeastIndex === index) {
@@ -238,8 +240,8 @@ export class BattleScreen {
                     this.renderer.ctx.strokeRect(pos.x - 3, pos.y - 3, cardWidth + 6, cardHeight + 6);
                 }
 
-                // Draw the card with the image
-                this.renderer.drawBeastCard(pos.x, pos.y, beast, cardImage);
+                // Draw the card with layered images
+                this.renderer.drawBeastCard(pos.x, pos.y, beast, beastImage, baseCardImage, affinityIcon);
 
                 // Add click regions - show card details
                 this.clickManager.addRegion({
@@ -259,7 +261,7 @@ export class BattleScreen {
 
     }
 
-    private renderTrapZone(player: 'player' | 'opponent', traps: any[]): void {
+    private async renderTrapZone(player: 'player' | 'opponent', traps: any[]): Promise<void> {
         const positions =
             player === 'player'
                 ? battleBoardAssetPositions.playerTwo
@@ -269,22 +271,16 @@ export class BattleScreen {
         const trapWidth = 75;
         const trapHeight = 95;
 
+        // Load trap card template once for all trap cards
+        const trapTemplate = await this.assets.loadTrapCardPlayboardTemplate();
+
         for (let index = 0; index < trapSlots.length; index++) {
             const pos = trapSlots[index];
             const trap = traps[index];
 
             if (trap) {
-                // Draw face-down trap card (purple/dark background)
-                this.renderer.ctx.fillStyle = '#4a148c'; // Dark purple
-                this.renderer.ctx.fillRect(pos.x, pos.y, trapWidth, trapHeight);
-
-                // Add border
-                this.renderer.ctx.strokeStyle = '#7b1fa2';
-                this.renderer.ctx.lineWidth = 2;
-                this.renderer.ctx.strokeRect(pos.x, pos.y, trapWidth, trapHeight);
-
-                // Draw "TRAP" text
-                this.renderer.drawText('TRAP', pos.x + trapWidth / 2, pos.y + trapHeight / 2 - 5, 14, '#fff', 'center');
+                // Use the TrapCardPlayboard template for face-down trap cards
+                this.renderer.drawTrapCardPlayboard(pos.x, pos.y, trapWidth, trapHeight, trapTemplate);
             } else {
                 // Draw empty trap slot (dashed outline)
                 this.renderer.ctx.strokeStyle = '#666';
@@ -299,24 +295,59 @@ export class BattleScreen {
     private async renderHabitatZone(habitat: any): Promise<void> {
         const pos = battleBoardAssetPositions.habitatZone;
         const habitatWidth = 150;
-        const habitatHeight = 90;
+        const habitatHeight = 185; // Increased height to match card proportions
 
-        // Draw habitat card background
-        this.renderer.ctx.fillStyle = '#1b5e20'; // Dark green
-        this.renderer.ctx.fillRect(pos.x, pos.y, habitatWidth, habitatHeight);
+        // Load the habitat card image
+        const cardImage = await this.assets.loadCardImage(habitat.name, habitat.affinity || 'Forest');
 
-        // Add border
-        this.renderer.ctx.strokeStyle = '#2e7d32';
-        this.renderer.ctx.lineWidth = 3;
-        this.renderer.ctx.strokeRect(pos.x, pos.y, habitatWidth, habitatHeight);
+        if (cardImage) {
+            // Draw the card image scaled to fit the habitat zone
+            this.renderer.ctx.drawImage(
+                cardImage,
+                pos.x,
+                pos.y,
+                habitatWidth,
+                habitatHeight
+            );
+        } else {
+            // Fallback: Draw a simple representation if image not available
+            // Draw habitat card background
+            this.renderer.ctx.fillStyle = '#1b5e20'; // Dark green
+            this.renderer.ctx.fillRect(pos.x, pos.y, habitatWidth, habitatHeight);
 
-        // Draw habitat name
-        if (habitat.name) {
-            this.renderer.drawText(habitat.name, pos.x + habitatWidth / 2, pos.y + 20, 16, '#fff', 'center');
+            // Draw habitat name
+            if (habitat.name) {
+                this.renderer.drawText(habitat.name, pos.x + habitatWidth / 2, pos.y + 20, 16, '#fff', 'center');
+            }
         }
 
-        // Draw "HABITAT" label
-        this.renderer.drawText('HABITAT', pos.x + habitatWidth / 2, pos.y + habitatHeight - 15, 12, '#aed581', 'center');
+        // Add glowing border to indicate active habitat
+        this.renderer.ctx.strokeStyle = '#4caf50'; // Green glow
+        this.renderer.ctx.lineWidth = 4;
+        this.renderer.ctx.shadowColor = '#4caf50';
+        this.renderer.ctx.shadowBlur = 10;
+        this.renderer.ctx.strokeRect(pos.x, pos.y, habitatWidth, habitatHeight);
+
+        // Reset shadow
+        this.renderer.ctx.shadowColor = 'transparent';
+        this.renderer.ctx.shadowBlur = 0;
+
+        // Add "HABITAT ACTIVE" label below the card
+        this.renderer.drawText('HABITAT ACTIVE', pos.x + habitatWidth / 2, pos.y + habitatHeight + 15, 12, '#4caf50', 'center');
+
+        // Add click region to view habitat details
+        this.clickManager.addRegion({
+            id: 'view-habitat',
+            x: pos.x,
+            y: pos.y,
+            width: habitatWidth,
+            height: habitatHeight,
+            callback: () => {
+                if (this.currentButtonCallback) {
+                    this.currentButtonCallback('view-habitat-card');
+                }
+            },
+        });
     }
 
     private async renderPlayerHand(hand: any[], playerNectar: number, onButtonClick: (buttonId: string) => void, showFull: boolean = true): Promise<void> {
@@ -370,14 +401,27 @@ export class BattleScreen {
             const x = startX + col * (cardWidth + spacing);
             const y = startY + row * (cardHeight + spacing);
 
-            // Load card image
-            const cardImage = await this.assets.loadCardImage(card.name, card.affinity);
+            // Load card images separately for layered rendering
+            const beastImage = card.type === 'Bloom' ? await this.assets.loadBeastImage(card.name, card.affinity) : null;
+            const baseCardImage = await this.assets.loadBaseCardImage(card.affinity);
+            const affinityIcon = card.affinity ? await this.assets.loadAffinityIcon(card.affinity) : null;
+
+            // For Magic/Trap cards, load the specific image and template
+            const magicCardTemplate = card.type === 'Magic' ? await this.assets.loadMagicCardTemplate() : null;
+            const cardImage = card.type !== 'Bloom' ? await this.assets.loadCardImage(card.name, card.affinity, card.type) : null;
 
             // Check if affordable
             const canAfford = card.cost <= playerNectar;
 
-            // Draw card with full text using drawInventoryCard
-            this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, cardImage, false);
+            // Use appropriate rendering method based on card type
+            if (card.type === 'Bloom') {
+                this.renderer.drawBeastCard(x, y, card, beastImage, baseCardImage, affinityIcon);
+            } else if (card.type === 'Magic') {
+                this.renderer.drawMagicCard(x, y, card, cardImage, magicCardTemplate, baseCardImage);
+            } else {
+                // For Trap and other card types
+                this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, cardImage, false);
+            }
 
             // Highlight if affordable
             if (canAfford) {

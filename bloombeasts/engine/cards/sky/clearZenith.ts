@@ -3,6 +3,18 @@
  */
 
 import { HabitatCard } from '../../types/core';
+import {
+  DrawCardEffect,
+  EffectType,
+  AbilityTarget
+} from '../../types/abilities';
+
+// On play effect: Draw 1 card
+const drawCard: DrawCardEffect = {
+  type: EffectType.DrawCards,
+  target: AbilityTarget.PlayerGardener,
+  value: 1
+};
 
 export const CLEAR_ZENITH: HabitatCard = {
   id: 'clear-zenith',
@@ -10,5 +22,6 @@ export const CLEAR_ZENITH: HabitatCard = {
   type: 'Habitat',
   affinity: 'Sky',
   cost: 1,
-  habitatShiftEffect: 'When this card enters the zone, the current player may draw 1 card.',
+  onPlayEffects: [drawCard],
+  ongoingEffects: []
 };

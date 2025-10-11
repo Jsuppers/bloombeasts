@@ -10,5 +10,7 @@ export const DEEP_SEA_GROTTO: HabitatCard = {
   type: 'Habitat',
   affinity: 'Water',
   cost: 1,
-  habitatShiftEffect: 'When this card enters the zone, all non-Water Bloom Beasts have their Cost temporarily increased by 1.',
+  // TODO: Add ongoingEffects to increase cost of non-Water beasts
+  // This requires a new effect type for modifying card costs
+  ongoingEffects: []
 };

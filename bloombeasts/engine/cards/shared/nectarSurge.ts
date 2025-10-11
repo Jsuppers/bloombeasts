@@ -3,11 +3,27 @@
  */
 
 import { MagicCard } from '../../types/core';
+import { ResourceGainEffect, DrawCardEffect, EffectType, AbilityTarget, ResourceType, EffectDuration } from '../../types/abilities';
+
+const gainNectar: ResourceGainEffect = {
+  type: EffectType.GainResource,
+  target: AbilityTarget.PlayerGardener,
+  resource: ResourceType.Nectar,
+  value: 3,
+  duration: EffectDuration.ThisTurn
+};
+
+const drawCard: DrawCardEffect = {
+  type: EffectType.DrawCards,
+  target: AbilityTarget.PlayerGardener,
+  value: 1
+};
 
 export const NECTAR_SURGE: MagicCard = {
   id: 'nectar-surge',
   name: 'Nectar Surge',
   type: 'Magic',
   cost: 1,
-  effect: 'Draw 1 card and gain +1 Nectar for this turn only.',
+  effects: [gainNectar, drawCard],
+  targetRequired: false
 };

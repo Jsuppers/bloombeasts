@@ -1,12 +1,14 @@
 import { BattleBoardAssetPositions, CardTextPositions, SideMenuPositions, UIButtonPositions, UITextSafeZone } from "../types/positions";
 
-export const standardCardTextPositions: CardTextPositions = {
-  cost: { x: 18, y: 10, size: 24, textAlign: 'center', textBaseline: 'top' },
-  level: { x: 62, y: 10, size: 24, textAlign: 'center', textBaseline: 'top' },
-  name: { x: 16, y: 179, size: 18, textAlign: 'left', textBaseline: 'top' },
-  special: { x: 186, y: 176, size: 24, textAlign: 'center', textBaseline: 'top' },
-  attack: { x: 56, y: 218, size: 40, textAlign: 'center', textBaseline: 'top' },
-  health: { x: 150, y: 218, size: 40, textAlign: 'center', textBaseline: 'top' },
+export const standardCardPositions: CardTextPositions = {
+  cost: { x: 20, y: 10, size: 26, textAlign: 'center', textBaseline: 'top' },
+  affinity: { x: 175, y: 7 },
+  beastImage: { x: 12, y: 13 },
+  level: { x: 105, y: 182, size: 12, textAlign: 'center', textBaseline: 'top' },
+  name: { x: 105, y: 13, size: 18, textAlign: 'center', textBaseline: 'top' },
+  ability: { x: 21, y: 212, size: 12, textAlign: 'left', textBaseline: 'top' },
+  attack: { x: 20, y: 176, size: 26, textAlign: 'center', textBaseline: 'top' },
+  health: { x: 188, y: 176, size: 26, textAlign: 'center', textBaseline: 'top' },
 };
 
 // Safe zone for UI buttons and interactive elements
@@ -61,5 +63,5 @@ export const battleBoardAssetPositions: BattleBoardAssetPositions = {
   },
   playerTwoInfoPosition: { x: 1015, y: 379 },
   habitatZone: { x: 725, y: 310 },
-  cardTextPositions: standardCardTextPositions,
+  cardTextPositions: standardCardPositions,
 };

@@ -3,16 +3,16 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType, EffectDuration } from '../../types/abilities';
 
 const bubblefinPassive: StructuredAbility = {
   name: 'Emerge',
   description: 'Bubblefin cannot be targeted by a Trap Card.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'cannot-be-targeted',
-      target: 'self',
+      type: EffectType.CannotBeTargeted,
+      target: AbilityTarget.Self,
       by: ['trap'],
     },
   ],
@@ -21,14 +21,14 @@ const bubblefinPassive: StructuredAbility = {
 const bubblefinBloom: StructuredAbility = {
   name: 'Dampen',
   description: "When Bubblefin is attacked, reduce the attacker's ATK by 1 until the end of the turn.",
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'attacker',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.Attacker,
+      stat: StatType.Attack,
       value: -1,
-      duration: 'end-of-turn',
+      duration: EffectDuration.EndOfTurn,
     },
   ],
 };
@@ -37,14 +37,14 @@ const bubblefinBloom: StructuredAbility = {
 const bubblefinBloom4: StructuredAbility = {
   name: 'Tidal Shield',
   description: "When attacked, reduce attacker's ATK by 2 until end of turn.",
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'attacker',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.Attacker,
+      stat: StatType.Attack,
       value: -2,
-      duration: 'end-of-turn',
+      duration: EffectDuration.EndOfTurn,
     },
   ],
 };
@@ -53,11 +53,11 @@ const bubblefinBloom4: StructuredAbility = {
 const bubblefinPassive7: StructuredAbility = {
   name: 'Deep Dive',
   description: 'Cannot be targeted by Trap Cards or Magic Cards.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'cannot-be-targeted',
-      target: 'self',
+      type: EffectType.CannotBeTargeted,
+      target: AbilityTarget.Self,
       by: ['trap', 'magic'],
     },
   ],
@@ -67,11 +67,11 @@ const bubblefinPassive7: StructuredAbility = {
 const bubblefinPassive9: StructuredAbility = {
   name: 'Ocean Sanctuary',
   description: 'Cannot be targeted by any opponent cards or abilities.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'cannot-be-targeted',
-      target: 'self',
+      type: EffectType.CannotBeTargeted,
+      target: AbilityTarget.Self,
       by: ['magic', 'trap', 'abilities'],
     },
   ],
@@ -80,18 +80,18 @@ const bubblefinPassive9: StructuredAbility = {
 const bubblefinBloom9: StructuredAbility = {
   name: 'Crushing Depths',
   description: "When attacked, reduce attacker's ATK by 3 permanently and heal self by 2 HP.",
-  trigger: 'OnDamage',
+  trigger: AbilityTrigger.OnDamage,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'attacker',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.Attacker,
+      stat: StatType.Attack,
       value: -3,
-      duration: 'permanent',
+      duration: EffectDuration.Permanent,
     },
     {
-      type: 'heal',
-      target: 'self',
+      type: EffectType.Heal,
+      target: AbilityTarget.Self,
       value: 2,
     },
   ],
@@ -105,8 +105,7 @@ export const BUBBLEFIN: BloomBeastCard = {
   cost: 2,
   baseAttack: 2,
   baseHealth: 5,
-  passiveAbility: bubblefinPassive,
-  bloomAbility: bubblefinBloom,
+  ability: bubblefinPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -121,14 +120,13 @@ export const BUBBLEFIN: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        bloomAbility: bubblefinBloom4,
+        ability: bubblefinBloom4,
       },
       7: {
-        passiveAbility: bubblefinPassive7,
+        ability: bubblefinPassive7,
       },
       9: {
-        passiveAbility: bubblefinPassive9,
-        bloomAbility: bubblefinBloom9,
+        ability: bubblefinPassive9,
       },
     },
   },

@@ -3,16 +3,16 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType, EffectDuration } from '../../types/abilities';
 
 const aeroMothPassive: StructuredAbility = {
   name: 'Wing Flutter',
   description: 'When Aero-Moth is summoned, draw one card.',
-  trigger: 'OnSummon',
+  trigger: AbilityTrigger.OnSummon,
   effects: [
     {
-      type: 'draw-cards',
-      target: 'player-gardener',
+      type: EffectType.DrawCards,
+      target: AbilityTarget.PlayerGardener,
       value: 1,
     },
   ],
@@ -21,11 +21,11 @@ const aeroMothPassive: StructuredAbility = {
 const aeroMothBloom: StructuredAbility = {
   name: 'Gust',
   description: "When Aero-Moth attacks, swap the position of two opponent's Bloom Beasts.",
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'swap-positions',
-      target: 'all-enemies',
+      type: EffectType.SwapPositions,
+      target: AbilityTarget.AllEnemies,
     },
   ],
 };
@@ -34,11 +34,11 @@ const aeroMothBloom: StructuredAbility = {
 const aeroMothPassive4: StructuredAbility = {
   name: 'Hypnotic Wings',
   description: 'When summoned, draw 2 cards.',
-  trigger: 'OnSummon',
+  trigger: AbilityTrigger.OnSummon,
   effects: [
     {
-      type: 'draw-cards',
-      target: 'player-gardener',
+      type: EffectType.DrawCards,
+      target: AbilityTarget.PlayerGardener,
       value: 2,
     },
   ],
@@ -48,11 +48,11 @@ const aeroMothPassive4: StructuredAbility = {
 const aeroMothBloom7: StructuredAbility = {
   name: 'Cyclone',
   description: 'When attacking, rearrange all opponent Bloom Beasts in any order.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'swap-positions',
-      target: 'all-enemies',
+      type: EffectType.SwapPositions,
+      target: AbilityTarget.AllEnemies,
     },
   ],
 };
@@ -61,26 +61,26 @@ const aeroMothBloom7: StructuredAbility = {
 const aeroMothPassive9: StructuredAbility = {
   name: 'Rainbow Cascade',
   description: 'When summoned, draw 3 cards and all allies gain +1/+1.',
-  trigger: 'OnSummon',
+  trigger: AbilityTrigger.OnSummon,
   effects: [
     {
-      type: 'draw-cards',
-      target: 'player-gardener',
+      type: EffectType.DrawCards,
+      target: AbilityTarget.PlayerGardener,
       value: 3,
     },
     {
-      type: 'modify-stats',
-      target: 'all-allies',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AllAllies,
+      stat: StatType.Attack,
       value: 1,
-      duration: 'permanent',
+      duration: EffectDuration.Permanent,
     },
     {
-      type: 'modify-stats',
-      target: 'all-allies',
-      stat: 'health',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AllAllies,
+      stat: StatType.Health,
       value: 1,
-      duration: 'permanent',
+      duration: EffectDuration.Permanent,
     },
   ],
 };
@@ -88,20 +88,20 @@ const aeroMothPassive9: StructuredAbility = {
 const aeroMothBloom9: StructuredAbility = {
   name: 'Chaos Storm',
   description: 'When attacking, rearrange opponent Beasts, return one to hand, and draw 2 cards.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'swap-positions',
-      target: 'all-enemies',
+      type: EffectType.SwapPositions,
+      target: AbilityTarget.AllEnemies,
     },
     {
-      type: 'return-to-hand',
-      target: 'random-enemy',
+      type: EffectType.ReturnToHand,
+      target: AbilityTarget.RandomEnemy,
       value: 1,
     },
     {
-      type: 'draw-cards',
-      target: 'player-gardener',
+      type: EffectType.DrawCards,
+      target: AbilityTarget.PlayerGardener,
       value: 2,
     },
   ],
@@ -115,8 +115,7 @@ export const AERO_MOTH: BloomBeastCard = {
   cost: 2,
   baseAttack: 3,
   baseHealth: 3,
-  passiveAbility: aeroMothPassive,
-  bloomAbility: aeroMothBloom,
+  ability: aeroMothPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -131,14 +130,13 @@ export const AERO_MOTH: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        passiveAbility: aeroMothPassive4,
+        ability: aeroMothPassive4,
       },
       7: {
-        bloomAbility: aeroMothBloom7,
+        ability: aeroMothBloom7,
       },
       9: {
-        passiveAbility: aeroMothPassive9,
-        bloomAbility: aeroMothBloom9,
+        ability: aeroMothPassive9,
       },
     },
   },

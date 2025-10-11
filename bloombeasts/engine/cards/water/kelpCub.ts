@@ -3,17 +3,17 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, EffectDuration, ImmunityType } from '../../types/abilities';
 
 const kelpCubPassive: StructuredAbility = {
   name: 'Entangle',
   description: 'When Kelp Cub attacks, the target Bloom Beast cannot attack next turn.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'prevent-attack',
-      target: 'target',
-      duration: 'start-of-next-turn',
+      type: EffectType.PreventAttack,
+      target: AbilityTarget.Target,
+      duration: EffectDuration.StartOfNextTurn,
     },
   ],
 };
@@ -21,13 +21,13 @@ const kelpCubPassive: StructuredAbility = {
 const kelpCubBloom: StructuredAbility = {
   name: 'Anchor',
   description: "Kelp Cub cannot be returned to the hand or deck by an opponent's card effect.",
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'immunity',
-      target: 'self',
-      immuneTo: ['magic', 'trap'],
-      duration: 'while-on-field',
+      type: EffectType.Immunity,
+      target: AbilityTarget.Self,
+      immuneTo: [ImmunityType.Magic, ImmunityType.Trap],
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -36,17 +36,17 @@ const kelpCubBloom: StructuredAbility = {
 const kelpCubPassive4: StructuredAbility = {
   name: 'Binding Vines',
   description: 'When attacking, target cannot attack or use abilities next turn.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'prevent-attack',
-      target: 'target',
-      duration: 'start-of-next-turn',
+      type: EffectType.PreventAttack,
+      target: AbilityTarget.Target,
+      duration: EffectDuration.StartOfNextTurn,
     },
     {
-      type: 'prevent-abilities',
-      target: 'target',
-      duration: 'start-of-next-turn',
+      type: EffectType.PreventAbilities,
+      target: AbilityTarget.Target,
+      duration: EffectDuration.StartOfNextTurn,
     },
   ],
 };
@@ -55,13 +55,13 @@ const kelpCubPassive4: StructuredAbility = {
 const kelpCubBloom7: StructuredAbility = {
   name: 'Deep Anchor',
   description: 'Cannot be affected by any opponent card effects.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'immunity',
-      target: 'self',
-      immuneTo: ['magic', 'trap', 'bloom-abilities'],
-      duration: 'while-on-field',
+      type: EffectType.Immunity,
+      target: AbilityTarget.Self,
+      immuneTo: [ImmunityType.Magic, ImmunityType.Trap, ImmunityType.Abilities],
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -70,17 +70,17 @@ const kelpCubBloom7: StructuredAbility = {
 const kelpCubPassive9: StructuredAbility = {
   name: 'Strangling Grasp',
   description: 'When attacking, permanently disable target Bloom Beast (it cannot attack or use abilities).',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'prevent-attack',
-      target: 'target',
-      duration: 'permanent',
+      type: EffectType.PreventAttack,
+      target: AbilityTarget.Target,
+      duration: EffectDuration.Permanent,
     },
     {
-      type: 'prevent-abilities',
-      target: 'target',
-      duration: 'permanent',
+      type: EffectType.PreventAbilities,
+      target: AbilityTarget.Target,
+      duration: EffectDuration.Permanent,
     },
   ],
 };
@@ -88,17 +88,17 @@ const kelpCubPassive9: StructuredAbility = {
 const kelpCubBloom9: StructuredAbility = {
   name: 'Immovable Force',
   description: 'Cannot be affected by anything. When attacked, entangle the attacker permanently.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'immunity',
-      target: 'self',
-      immuneTo: ['damage', 'targeting', 'negative-effects'],
-      duration: 'while-on-field',
+      type: EffectType.Immunity,
+      target: AbilityTarget.Self,
+      immuneTo: [ImmunityType.Damage, ImmunityType.Targeting, ImmunityType.NegativeEffects],
+      duration: EffectDuration.WhileOnField,
     },
     {
-      type: 'retaliation',
-      target: 'self',
+      type: EffectType.Retaliation,
+      target: AbilityTarget.Self,
       value: 0,
       applyCounter: 'Entangle',
       counterValue: 1,
@@ -114,8 +114,7 @@ export const KELP_CUB: BloomBeastCard = {
   cost: 2,
   baseAttack: 3,
   baseHealth: 3,
-  passiveAbility: kelpCubPassive,
-  bloomAbility: kelpCubBloom,
+  ability: kelpCubPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -130,14 +129,13 @@ export const KELP_CUB: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        passiveAbility: kelpCubPassive4,
+        ability: kelpCubPassive4,
       },
       7: {
-        bloomAbility: kelpCubBloom7,
+        ability: kelpCubBloom7,
       },
       9: {
-        passiveAbility: kelpCubPassive9,
-        bloomAbility: kelpCubBloom9,
+        ability: kelpCubPassive9,
       },
     },
   },

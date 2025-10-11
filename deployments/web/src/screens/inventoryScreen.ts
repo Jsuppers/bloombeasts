@@ -72,13 +72,37 @@ export class InventoryScreen {
                 const x = startX + col * spacingX;
                 const y = startY + row * spacingY;
 
-                // Load card image
-                const cardImage = await this.assets.loadCardImage(card.name, card.affinity);
+                // Load card images separately for layered rendering
+                const beastImage = card.type === 'Bloom' ? await this.assets.loadBeastImage(card.name, card.affinity) : null;
+                const baseCardImage = await this.assets.loadBaseCardImage(card.affinity);
+                const affinityIcon = card.affinity ? await this.assets.loadAffinityIcon(card.affinity) : null;
+
+                // For Magic/Trap cards, load the specific image and template
+                const magicCardTemplate = card.type === 'Magic' ? await this.assets.loadMagicCardTemplate() : null;
+                const trapCardTemplate = card.type === 'Trap' ? await this.assets.loadTrapCardTemplate() : null;
+                const cardImage = card.type !== 'Bloom' ? await this.assets.loadCardImage(card.name, card.affinity, card.type) : null;
 
                 // Check if card is in deck
                 const isInDeck = deckCardIds.includes(card.id);
 
-                this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, cardImage, isInDeck);
+                // Use appropriate rendering method based on card type
+                if (card.type === 'Bloom') {
+                    this.renderer.drawBeastCard(x, y, card, beastImage, baseCardImage, affinityIcon);
+                } else if (card.type === 'Magic') {
+                    this.renderer.drawMagicCard(x, y, card, cardImage, magicCardTemplate, baseCardImage);
+                } else if (card.type === 'Trap') {
+                    this.renderer.drawTrapCard(x, y, card, cardImage, trapCardTemplate, baseCardImage);
+                } else {
+                    // Habitat or other card types
+                    this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, cardImage, false);
+                }
+
+                // Draw deck indicator if in deck
+                if (isInDeck) {
+                    this.renderer.ctx.strokeStyle = '#43e97b'; // Green border for cards in deck
+                    this.renderer.ctx.lineWidth = 4;
+                    this.renderer.ctx.strokeRect(x, y, cardWidth, cardHeight);
+                }
 
                 // Add clickable region
                 this.clickManager.addRegion({

@@ -25,6 +25,10 @@ import {
   SearchDeckEffect,
   DestroyEffect,
   TemporaryHPEffect,
+  EffectType,
+  ResourceType,
+  StatType,
+  ConditionType,
 } from '../types/abilities';
 
 export interface AbilityContext {
@@ -116,40 +120,40 @@ export class AbilityProcessor {
 
     // Get targets
     const targets = this.resolveTargets(effect.target, context);
-    if (targets.length === 0 && effect.target !== 'opponent-gardener' && effect.target !== 'player-gardener') {
+    if (targets.length === 0 && effect.target !== AbilityTarget.OpponentGardener && effect.target !== AbilityTarget.PlayerGardener) {
       return { success: false, message: 'No valid targets' };
     }
 
     // Process based on effect type
     switch (effect.type) {
-      case 'modify-stats':
+      case EffectType.ModifyStats:
         return this.processStatModification(effect as StatModificationEffect, targets, context);
-      case 'deal-damage':
+      case EffectType.DealDamage:
         return this.processDamage(effect as DamageEffect, targets, context);
-      case 'heal':
+      case EffectType.Heal:
         return this.processHeal(effect as HealEffect, targets, context);
-      case 'draw-cards':
+      case EffectType.DrawCards:
         return this.processDrawCards(effect as DrawCardEffect, context);
-      case 'apply-counter':
+      case EffectType.ApplyCounter:
         return this.processApplyCounter(effect as ApplyCounterEffect, targets, context);
-      case 'immunity':
+      case EffectType.Immunity:
         return this.processImmunity(effect as ImmunityEffect, targets, context);
-      case 'cannot-be-targeted':
+      case EffectType.CannotBeTargeted:
         return this.processCannotBeTargeted(effect as CannotBeTargetedEffect, targets, context);
-      case 'attack-modification':
+      case EffectType.AttackModification:
         return this.processAttackModification(effect as AttackModificationEffect, context);
-      case 'move-unit':
+      case EffectType.MoveUnit:
         return this.processMoveUnit(effect as MoveEffect, targets, context);
-      case 'gain-resource':
+      case EffectType.GainResource:
         return this.processResourceGain(effect as ResourceGainEffect, context);
-      case 'prevent-attack':
-      case 'prevent-abilities':
+      case EffectType.PreventAttack:
+      case EffectType.PreventAbilities:
         return this.processPrevent(effect as PreventEffect, targets, context);
-      case 'search-deck':
+      case EffectType.SearchDeck:
         return this.processSearchDeck(effect as SearchDeckEffect, context);
-      case 'destroy':
+      case EffectType.Destroy:
         return this.processDestroy(effect as DestroyEffect, targets, context);
-      case 'temporary-hp':
+      case EffectType.TemporaryHP:
         return this.processTemporaryHP(effect as TemporaryHPEffect, targets, context);
       default:
         return { success: false, message: 'Unknown effect type' };
@@ -166,22 +170,22 @@ export class AbilityProcessor {
     const targets: BloomBeastInstance[] = [];
 
     switch (targetType) {
-      case 'self':
+      case AbilityTarget.Self:
         targets.push(context.source);
         break;
-      case 'target':
+      case AbilityTarget.Target:
         if (context.target) targets.push(context.target);
         break;
-      case 'attacker':
+      case AbilityTarget.Attacker:
         if (context.attacker) targets.push(context.attacker);
         break;
-      case 'all-allies':
+      case AbilityTarget.AllAllies:
         targets.push(...context.controllingPlayer.field.filter(u => u !== null) as BloomBeastInstance[]);
         break;
-      case 'all-enemies':
+      case AbilityTarget.AllEnemies:
         targets.push(...context.opposingPlayer.field.filter(u => u !== null) as BloomBeastInstance[]);
         break;
-      case 'adjacent-allies':
+      case AbilityTarget.AdjacentAllies:
         const sourceIndex = context.source.slotIndex;
         if (sourceIndex > 0 && context.controllingPlayer.field[sourceIndex - 1]) {
           targets.push(context.controllingPlayer.field[sourceIndex - 1]!);
@@ -190,7 +194,7 @@ export class AbilityProcessor {
           targets.push(context.controllingPlayer.field[sourceIndex + 1]!);
         }
         break;
-      case 'adjacent-enemies':
+      case AbilityTarget.AdjacentEnemies:
         const adjacentIndices = [context.source.slotIndex - 1, context.source.slotIndex, context.source.slotIndex + 1]
           .filter(i => i >= 0 && i < 5);
         for (const idx of adjacentIndices) {
@@ -199,21 +203,21 @@ export class AbilityProcessor {
           }
         }
         break;
-      case 'random-enemy':
+      case AbilityTarget.RandomEnemy:
         const enemies = context.opposingPlayer.field.filter(u => u !== null) as BloomBeastInstance[];
         if (enemies.length > 0) {
           targets.push(enemies[Math.floor(Math.random() * enemies.length)]);
         }
         break;
-      case 'damaged-enemies':
+      case AbilityTarget.DamagedEnemies:
         targets.push(...context.opposingPlayer.field
           .filter(u => u !== null && u.currentHealth < u.maxHealth) as BloomBeastInstance[]);
         break;
-      case 'wilting-enemies':
+      case AbilityTarget.WiltingEnemies:
         targets.push(...context.opposingPlayer.field
           .filter(u => u !== null && u.currentHealth === 1) as BloomBeastInstance[]);
         break;
-      case 'highest-attack-enemy':
+      case AbilityTarget.HighestAttackEnemy:
         const highestAtk = context.opposingPlayer.field
           .filter(u => u !== null)
           .reduce((highest, current) => {
@@ -224,7 +228,7 @@ export class AbilityProcessor {
           }, null as BloomBeastInstance | null);
         if (highestAtk) targets.push(highestAtk);
         break;
-      case 'lowest-health-enemy':
+      case AbilityTarget.LowestHealthEnemy:
         const lowestHP = context.opposingPlayer.field
           .filter(u => u !== null)
           .reduce((lowest, current) => {
@@ -248,16 +252,20 @@ export class AbilityProcessor {
     context: AbilityContext
   ): boolean {
     switch (condition.type) {
-      case 'has-counter':
+      case ConditionType.HasCounter:
         return context.source.counters.some(c => c.type === condition.value);
-      case 'health-below':
+      case ConditionType.HealthBelow:
         return context.source.currentHealth < (condition.value as number);
-      case 'health-above':
+      case ConditionType.HealthAbove:
         return context.source.currentHealth > (condition.value as number);
-      case 'is-damaged':
+      case ConditionType.IsDamaged:
         return context.source.currentHealth < context.source.maxHealth;
-      case 'is-wilting':
+      case ConditionType.IsWilting:
         return context.source.currentHealth === 1;
+      case ConditionType.AffinityMatches:
+        // Check if source beast's affinity matches the condition value
+        const cardDef = context.sourceCard;
+        return !!(cardDef && 'affinity' in cardDef && cardDef.affinity === condition.value);
       default:
         return true;
     }
@@ -276,29 +284,29 @@ export class AbilityProcessor {
     for (const target of targets) {
       const modified = { ...target };
 
-      if (effect.stat === 'attack' || effect.stat === 'both') {
+      if (effect.stat === StatType.Attack || effect.stat === StatType.Both) {
         modified.currentAttack = Math.max(0, modified.currentAttack + effect.value);
       }
 
-      if (effect.stat === 'health' || effect.stat === 'both') {
+      if (effect.stat === StatType.Health || effect.stat === StatType.Both) {
         modified.currentHealth = Math.min(
           modified.maxHealth,
           Math.max(0, modified.currentHealth + effect.value)
         );
-        if (effect.duration === 'permanent' && effect.value > 0) {
+        if (effect.duration === EffectDuration.Permanent && effect.value > 0) {
           modified.maxHealth += effect.value;
         }
       }
 
       // Store duration info if not permanent
-      if (effect.duration !== 'permanent') {
+      if (effect.duration !== EffectDuration.Permanent) {
         modified.temporaryEffects = modified.temporaryEffects || [];
         modified.temporaryEffects.push({
           type: 'stat-mod',
           stat: effect.stat,
           value: effect.value,
           duration: effect.duration,
-          turnsRemaining: effect.duration === 'end-of-turn' ? 0 : 1,
+          turnsRemaining: effect.duration === EffectDuration.EndOfTurn ? 0 : 1,
         });
       }
 
@@ -335,7 +343,7 @@ export class AbilityProcessor {
     }
 
     // Handle damage to gardener
-    if (effect.target === 'opponent-gardener') {
+    if (effect.target === AbilityTarget.OpponentGardener) {
       const damage = effect.value === 'attack-value'
         ? context.source.currentAttack
         : effect.value;
@@ -558,7 +566,7 @@ export class AbilityProcessor {
     context: AbilityContext
   ): EffectResult {
     switch (effect.resource) {
-      case 'nectar':
+      case ResourceType.Nectar:
         return {
           success: true,
           message: `Gain ${effect.value} Nectar`,
@@ -573,7 +581,7 @@ export class AbilityProcessor {
             ] as [Player, Player],
           },
         };
-      case 'extra-summon':
+      case ResourceType.ExtraSummon:
         return {
           success: true,
           message: `Gain ${effect.value} extra summon(s)`,

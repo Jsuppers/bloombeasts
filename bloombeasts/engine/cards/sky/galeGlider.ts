@@ -3,16 +3,16 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType, EffectDuration } from '../../types/abilities';
 
 const galeGliderPassive: StructuredAbility = {
   name: 'First Wind',
   description: 'Gale Glider always attacks first in a conflict phase.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'attack-first',
     },
   ],
@@ -21,11 +21,11 @@ const galeGliderPassive: StructuredAbility = {
 const galeGliderBloom: StructuredAbility = {
   name: 'Air Current',
   description: 'When Gale Glider attacks, you may move it to an adjacent empty Beast Slot.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'move-unit',
-      target: 'self',
+      type: EffectType.MoveUnit,
+      target: AbilityTarget.Self,
       destination: 'adjacent-slot',
     },
   ],
@@ -35,11 +35,11 @@ const galeGliderBloom: StructuredAbility = {
 const galeGliderBloom4: StructuredAbility = {
   name: 'Wind Dance',
   description: 'After attacking, move to any empty Beast Slot.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'move-unit',
-      target: 'self',
+      type: EffectType.MoveUnit,
+      target: AbilityTarget.Self,
       destination: 'any-slot',
     },
   ],
@@ -49,19 +49,19 @@ const galeGliderBloom4: StructuredAbility = {
 const galeGliderPassive7: StructuredAbility = {
   name: 'Storm Blade',
   description: 'Always attacks first and deals +2 damage if attacking first.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'attack-first',
     },
     {
-      type: 'modify-stats',
-      target: 'self',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.Self,
+      stat: StatType.Attack,
       value: 2,
-      duration: 'next-attack',
+      duration: EffectDuration.NextAttack,
     },
   ],
 };
@@ -70,21 +70,21 @@ const galeGliderPassive7: StructuredAbility = {
 const galeGliderPassive9: StructuredAbility = {
   name: 'Tempest Strike',
   description: 'Attacks first with triple damage. Cannot be counterattacked.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'attack-first',
     },
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'triple-damage',
     },
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'cannot-counterattack',
     },
   ],
@@ -93,16 +93,16 @@ const galeGliderPassive9: StructuredAbility = {
 const galeGliderBloom9: StructuredAbility = {
   name: 'Hurricane Assault',
   description: 'After attacking, attack again and move to any slot.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'attack-modification',
-      target: 'self',
+      type: EffectType.AttackModification,
+      target: AbilityTarget.Self,
       modification: 'attack-twice',
     },
     {
-      type: 'move-unit',
-      target: 'self',
+      type: EffectType.MoveUnit,
+      target: AbilityTarget.Self,
       destination: 'any-slot',
     },
   ],
@@ -116,8 +116,7 @@ export const GALE_GLIDER: BloomBeastCard = {
   cost: 1,
   baseAttack: 2,
   baseHealth: 2,
-  passiveAbility: galeGliderPassive,
-  bloomAbility: galeGliderBloom,
+  ability: galeGliderPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -132,14 +131,13 @@ export const GALE_GLIDER: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        bloomAbility: galeGliderBloom4,
+        ability: galeGliderBloom4,
       },
       7: {
-        passiveAbility: galeGliderPassive7,
+        ability: galeGliderPassive7,
       },
       9: {
-        passiveAbility: galeGliderPassive9,
-        bloomAbility: galeGliderBloom9,
+        ability: galeGliderPassive9,
       },
     },
   },

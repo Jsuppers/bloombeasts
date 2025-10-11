@@ -107,11 +107,8 @@ export class InventoryUI {
     console.log(`║ Attack: ${card.currentAttack}/${card.baseAttack}`.padEnd(39) + '║');
     console.log(`║ Health: ${card.currentHealth}/${card.baseHealth}`.padEnd(39) + '║');
     console.log(`╠════════════════════════════════════════╣`);
-    if (card.passiveAbility) {
-      console.log(`║ Passive: ${card.passiveAbility.name.padEnd(29)} ║`);
-    }
-    if (card.bloomAbility) {
-      console.log(`║ Bloom: ${card.bloomAbility.name.padEnd(31)} ║`);
+    if (card.ability) {
+      console.log(`║ Ability: ${card.ability.name.padEnd(29)} ║`);
     }
     console.log(`╚════════════════════════════════════════╝`);
   }

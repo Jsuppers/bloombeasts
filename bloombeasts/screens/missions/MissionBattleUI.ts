@@ -137,10 +137,10 @@ export class MissionBattleUI {
       // Extract card index from action (e.g., 'play-card-0' -> 0)
       const cardIndex = parseInt(action.substring('play-card-'.length), 10);
       result = this.playCard(cardIndex);
-    } else if (action.startsWith('use-bloom-')) {
-      // Extract beast index (e.g., 'use-bloom-0' -> 0)
-      const beastIndex = parseInt(action.substring('use-bloom-'.length), 10);
-      result = this.useBloomAbility(beastIndex);
+    } else if (action.startsWith('use-ability-')) {
+      // Extract beast index (e.g., 'use-ability-0' -> 0)
+      const beastIndex = parseInt(action.substring('use-ability-'.length), 10);
+      result = this.useAbility(beastIndex);
     } else if (action.startsWith('attack-beast-')) {
       // Extract attacker and target indices (e.g., 'attack-beast-0-1' -> attacker=0, target=1)
       const parts = action.substring('attack-beast-'.length).split('-');
@@ -180,6 +180,7 @@ export class MissionBattleUI {
     }
 
     const player = this.currentBattle.gameState.players[0];
+    const opponent = this.currentBattle.gameState.players[1];
 
     // Validate card index
     if (cardIndex < 0 || cardIndex >= player.hand.length) {
@@ -189,58 +190,117 @@ export class MissionBattleUI {
 
     const card: any = player.hand[cardIndex];
 
-    // Only Bloom Beast cards can be played to the field
-    if (card.type !== 'Bloom') {
-      console.log('Only Bloom Beasts can be played to the field');
-      return { success: false, message: 'Invalid card type' };
-    }
-
     // Check if player has enough nectar
     if (card.cost > player.currentNectar) {
       console.log('Not enough nectar to play this card');
       return { success: false, message: 'Not enough nectar' };
     }
 
-    // Check if field has space (max 3 beasts)
-    if (player.field.length >= 3) {
-      console.log('Field is full');
-      return { success: false, message: 'Field is full' };
+    // Handle different card types
+    switch (card.type) {
+      case 'Bloom':
+        // Check if field has space (max 3 beasts)
+        if (player.field.length >= 3) {
+          console.log('Field is full');
+          return { success: false, message: 'Field is full' };
+        }
+
+        // Remove card from hand
+        const bloomCard: any = player.hand.splice(cardIndex, 1)[0];
+
+        // Deduct nectar cost
+        player.currentNectar -= bloomCard.cost;
+
+        // Create proper BloomBeastInstance for the field
+        const beastInstance: any = {
+          cardId: bloomCard.id,
+          instanceId: bloomCard.instanceId || `${bloomCard.id}-${Date.now()}`,
+          currentLevel: (bloomCard as any).level || 1, // Use card's level if available
+          currentXP: 0,
+          currentAttack: bloomCard.baseAttack,
+          currentHealth: bloomCard.baseHealth,
+          maxHealth: bloomCard.baseHealth,
+          counters: [],
+          statusEffects: [],
+          slotIndex: player.field.length,
+          summoningSickness: true, // Can't attack on first turn
+          usedAbilityThisTurn: false, // Track ability usage
+          // Store original card data for display
+          name: bloomCard.name,
+          affinity: bloomCard.affinity,
+          baseAttack: bloomCard.baseAttack,
+          ability: bloomCard.ability,
+        };
+
+        // Add to field
+        player.field.push(beastInstance);
+
+        console.log(`Played ${bloomCard.name} - Nectar: ${player.currentNectar}`);
+        return { success: true, message: `Played ${bloomCard.name}` };
+
+      case 'Magic':
+        // Remove card from hand
+        const magicCard: any = player.hand.splice(cardIndex, 1)[0];
+
+        // Deduct nectar cost
+        player.currentNectar -= magicCard.cost;
+
+        // Process magic card effects immediately
+        if (magicCard.effects && Array.isArray(magicCard.effects)) {
+          for (const effect of magicCard.effects) {
+            this.processMagicEffect(effect, player, opponent);
+          }
+        }
+
+        // Magic cards go to graveyard after use
+        player.graveyard.push(magicCard);
+
+        console.log(`Played magic card: ${magicCard.name}`);
+        return { success: true, message: `Played ${magicCard.name}` };
+
+      case 'Trap':
+        // Check if trap zone has space (max 3 traps)
+        if (player.trapZone.length >= 3) {
+          console.log('Trap zone is full');
+          return { success: false, message: 'Trap zone is full' };
+        }
+
+        // Remove card from hand
+        const trapCard: any = player.hand.splice(cardIndex, 1)[0];
+
+        // Deduct nectar cost
+        player.currentNectar -= trapCard.cost;
+
+        // Add to trap zone
+        player.trapZone.push(trapCard);
+
+        console.log(`Set trap: ${trapCard.name}`);
+        return { success: true, message: `Set ${trapCard.name}` };
+
+      case 'Habitat':
+        // Remove card from hand
+        const habitatCard: any = player.hand.splice(cardIndex, 1)[0];
+
+        // Deduct nectar cost
+        player.currentNectar -= habitatCard.cost;
+
+        // Set habitat zone
+        this.currentBattle.gameState.habitatZone = habitatCard;
+
+        // Process on-play effects
+        if (habitatCard.onPlayEffects && Array.isArray(habitatCard.onPlayEffects)) {
+          for (const effect of habitatCard.onPlayEffects) {
+            this.processHabitatEffect(effect, player, opponent);
+          }
+        }
+
+        console.log(`Played habitat: ${habitatCard.name}`);
+        return { success: true, message: `Played ${habitatCard.name}` };
+
+      default:
+        console.log(`Cannot play card type: ${card.type}`);
+        return { success: false, message: 'Invalid card type' };
     }
-
-    // Remove card from hand
-    const playedCard: any = player.hand.splice(cardIndex, 1)[0];
-
-    // Deduct nectar cost
-    player.currentNectar -= playedCard.cost;
-
-    // Create proper BloomBeastInstance for the field
-    const beastInstance: any = {
-      cardId: playedCard.id,
-      instanceId: playedCard.instanceId || `${playedCard.id}-${Date.now()}`,
-      currentLevel: (playedCard as any).level || 1, // Use card's level if available
-      currentXP: 0,
-      currentAttack: playedCard.baseAttack,
-      currentHealth: playedCard.baseHealth,
-      maxHealth: playedCard.baseHealth,
-      counters: [],
-      statusEffects: [],
-      slotIndex: player.field.length,
-      summoningSickness: true, // Can't attack on first turn
-      usedBloomThisTurn: false, // Track bloom ability usage
-      // Store original card data for display
-      name: playedCard.name,
-      affinity: playedCard.affinity,
-      baseAttack: playedCard.baseAttack,
-      passiveAbility: playedCard.passiveAbility,
-      bloomAbility: playedCard.bloomAbility,
-    };
-
-    // Add to field
-    player.field.push(beastInstance);
-
-    console.log(`Played ${playedCard.name} - Nectar: ${player.currentNectar}`);
-
-    return { success: true, message: `Played ${playedCard.name}` };
   }
 
   /**
@@ -340,9 +400,9 @@ export class MissionBattleUI {
   }
 
   /**
-   * Activate a beast's bloom ability
+   * Activate a beast's ability
    */
-  private useBloomAbility(beastIndex: number): any {
+  private useAbility(beastIndex: number): any {
     if (!this.currentBattle || !this.currentBattle.gameState) {
       return { success: false, message: 'No active battle' };
     }
@@ -365,17 +425,17 @@ export class MissionBattleUI {
       return { success: false, message: 'Beast has summoning sickness' };
     }
 
-    // Check if beast has a bloom ability
-    if (!beast.bloomAbility) {
-      return { success: false, message: 'Beast has no bloom ability' };
+    // Check if beast has an ability
+    if (!beast.ability) {
+      return { success: false, message: 'Beast has no ability' };
     }
 
-    // Check if bloom ability was already used this turn
-    if (beast.usedBloomThisTurn) {
-      return { success: false, message: 'Bloom ability already used this turn' };
+    // Check if ability was already used this turn
+    if (beast.usedAbilityThisTurn) {
+      return { success: false, message: 'Ability already used this turn' };
     }
 
-    const ability = beast.bloomAbility as any;
+    const ability = beast.ability as any;
 
     // Check and pay costs
     if (ability.cost) {
@@ -404,7 +464,7 @@ export class MissionBattleUI {
       }
     }
 
-    // Process bloom ability effects
+    // Process ability effects
     if (ability.effects && Array.isArray(ability.effects)) {
       for (const effect of ability.effects) {
         this.processAbilityEffect(effect, beast, player, opponent);
@@ -412,9 +472,9 @@ export class MissionBattleUI {
     }
 
     // Mark ability as used this turn
-    beast.usedBloomThisTurn = true;
+    beast.usedAbilityThisTurn = true;
 
-    console.log(`Activated bloom ability: ${ability.name}`);
+    console.log(`Activated ability: ${ability.name}`);
     return { success: true, message: `Used ${ability.name}` };
   }
 
@@ -457,6 +517,159 @@ export class MissionBattleUI {
   }
 
   /**
+   * Process a magic card effect
+   */
+  private processMagicEffect(effect: any, player: any, opponent: any): void {
+    switch (effect.type) {
+      case 'deal-damage':
+        const damageTarget = this.getEffectTargets(effect.target, player, opponent);
+        damageTarget.forEach((target: any) => {
+          if (target.currentHealth !== undefined) {
+            // It's a beast
+            target.currentHealth -= effect.value || 0;
+            if (target.currentHealth <= 0) {
+              // Remove dead beast
+              const ownerField = target === player.field.find((b: any) => b === target)
+                ? player.field
+                : opponent.field;
+              const index = ownerField.indexOf(target);
+              if (index > -1) {
+                ownerField.splice(index, 1);
+              }
+            }
+          } else if (target.health !== undefined) {
+            // It's a player
+            target.health -= effect.value || 0;
+          }
+        });
+        break;
+
+      case 'heal':
+        const healTarget = this.getEffectTargets(effect.target, player, opponent);
+        healTarget.forEach((target: any) => {
+          if (target.currentHealth !== undefined && target.maxHealth !== undefined) {
+            // It's a beast
+            target.currentHealth = Math.min(target.maxHealth, target.currentHealth + (effect.value || 0));
+          } else if (target.health !== undefined && target.maxHealth !== undefined) {
+            // It's a player
+            target.health = Math.min(target.maxHealth, target.health + (effect.value || 0));
+          }
+        });
+        break;
+
+      case 'draw-cards':
+        for (let i = 0; i < (effect.value || 1); i++) {
+          this.drawCard(player);
+        }
+        break;
+
+      case 'destroy':
+        const destroyTarget = this.getEffectTargets(effect.target, player, opponent);
+        destroyTarget.forEach((target: any) => {
+          if (target.currentHealth !== undefined) {
+            // It's a beast - remove it
+            const ownerField = player.field.includes(target) ? player.field : opponent.field;
+            const index = ownerField.indexOf(target);
+            if (index > -1) {
+              ownerField.splice(index, 1);
+            }
+          }
+        });
+        break;
+
+      case 'modify-stats':
+        const statTarget = this.getEffectTargets(effect.target, player, opponent);
+        statTarget.forEach((target: any) => {
+          if (target.currentAttack !== undefined) {
+            if (effect.stat === 'attack' || effect.stat === 'both') {
+              target.currentAttack += effect.value || 0;
+            }
+            if (effect.stat === 'health' || effect.stat === 'both') {
+              target.currentHealth += effect.value || 0;
+              target.maxHealth += effect.value || 0;
+            }
+          }
+        });
+        break;
+
+      case 'gain-resource':
+        // Handle resource gain effects (like NectarBlock)
+        if (effect.resource === 'nectar') {
+          player.currentNectar += effect.value || 1;
+          console.log(`Gained ${effect.value || 1} nectar`);
+        }
+        break;
+
+      default:
+        console.log(`Unhandled magic effect type: ${effect.type}`);
+    }
+  }
+
+  /**
+   * Process a habitat card effect
+   */
+  private processHabitatEffect(effect: any, player: any, opponent: any): void {
+    // Similar to magic effects but for habitat-specific effects
+    switch (effect.type) {
+      case 'gain-resource':
+        if (effect.resource === 'nectar') {
+          player.currentNectar += effect.value || 1;
+        }
+        break;
+
+      case 'modify-stats':
+        // Apply stat modifications to matching affinity beasts
+        if (effect.affinity) {
+          player.field.forEach((beast: any) => {
+            if (beast.affinity === effect.affinity) {
+              if (effect.stat === 'attack' || effect.stat === 'both') {
+                beast.currentAttack += effect.value || 0;
+              }
+              if (effect.stat === 'health' || effect.stat === 'both') {
+                beast.currentHealth += effect.value || 0;
+                beast.maxHealth += effect.value || 0;
+              }
+            }
+          });
+        }
+        break;
+
+      case 'draw-cards':
+        for (let i = 0; i < (effect.value || 1); i++) {
+          this.drawCard(player);
+        }
+        break;
+
+      default:
+        console.log(`Unhandled habitat effect type: ${effect.type}`);
+    }
+  }
+
+  /**
+   * Helper to get effect targets based on target type
+   */
+  private getEffectTargets(targetType: string, player: any, opponent: any): any[] {
+    switch (targetType) {
+      case 'all-enemies':
+        return [...opponent.field];
+      case 'all-allies':
+        return [...player.field];
+      case 'random-enemy':
+        return opponent.field.length > 0
+          ? [opponent.field[Math.floor(Math.random() * opponent.field.length)]]
+          : [];
+      case 'opponent-gardener':
+        return [opponent];
+      case 'player-gardener':
+        return [player];
+      case 'all-units':
+        return [...player.field, ...opponent.field];
+      default:
+        return [];
+    }
+  }
+
+  /**
    * End player's turn and start opponent's turn
    */
   private async endPlayerTurn(): Promise<any> {
@@ -466,12 +679,12 @@ export class MissionBattleUI {
 
     const gameState = this.currentBattle.gameState;
 
-    // Remove summoning sickness and reset bloom usage for all player beasts
+    // Remove summoning sickness and reset ability usage for all player beasts
     const player = gameState.players[0];
     player.field.forEach((beast: any) => {
       if (beast) {
         beast.summoningSickness = false;
-        beast.usedBloomThisTurn = false; // Reset bloom ability usage
+        beast.usedAbilityThisTurn = false; // Reset ability usage
       }
     });
 
@@ -539,7 +752,7 @@ export class MissionBattleUI {
     opponent.field.forEach((beast: any) => {
       if (beast) {
         beast.summoningSickness = false;
-        beast.usedBloomThisTurn = false; // Reset bloom ability usage
+        beast.usedAbilityThisTurn = false; // Reset ability usage
       }
     });
 
@@ -564,13 +777,12 @@ export class MissionBattleUI {
           statusEffects: [],
           slotIndex: opponent.field.length,
           summoningSickness: true, // Can't attack on the turn they're summoned
-          usedBloomThisTurn: false, // Track bloom ability usage
+          usedAbilityThisTurn: false, // Track ability usage
           // Store original card data for display
           name: playedCard.name,
           affinity: playedCard.affinity,
           baseAttack: playedCard.baseAttack,
-          passiveAbility: playedCard.passiveAbility,
-          bloomAbility: playedCard.bloomAbility,
+          ability: playedCard.ability,
         };
 
         opponent.field.push(beastInstance);

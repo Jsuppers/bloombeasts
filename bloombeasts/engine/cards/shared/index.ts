@@ -2,7 +2,7 @@
  * Shared Core Cards - Present in all starter decks
  */
 
-import { ResourceCard, MagicCard, TrapCard } from '../../types/core';
+import { MagicCard, TrapCard } from '../../types/core';
 import { DeckCardEntry } from '../BaseDeck';
 
 // Import all shared cards
@@ -20,7 +20,7 @@ export { HABITAT_LOCK } from './habitatLock';
 /**
  * Get all shared core cards with quantities
  */
-export function getSharedCoreCards(): DeckCardEntry<ResourceCard | MagicCard | TrapCard>[] {
+export function getSharedCoreCards(): DeckCardEntry<MagicCard | TrapCard>[] {
   return [
     { card: NECTAR_BLOCK, quantity: 10 },
     { card: NECTAR_SURGE, quantity: 2 },

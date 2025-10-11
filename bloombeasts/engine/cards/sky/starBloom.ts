@@ -3,19 +3,19 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType, EffectDuration } from '../../types/abilities';
 
 const starBloomPassive: StructuredAbility = {
   name: 'Aura',
   description: 'All allied Bloom Beasts gain +1 ATK.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'all-allies',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AllAllies,
+      stat: StatType.Attack,
       value: 1,
-      duration: 'while-on-field',
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -23,12 +23,12 @@ const starBloomPassive: StructuredAbility = {
 const starBloomBloom: StructuredAbility = {
   name: 'Celestial Alignment',
   description: 'Once per game, during the Main Phase, you may search your deck for one Bloom Card and add it to your hand.',
-  trigger: 'Activated',
+  trigger: AbilityTrigger.Activated,
   maxUsesPerGame: 1,
   effects: [
     {
-      type: 'search-deck',
-      target: 'player-gardener',
+      type: EffectType.SearchDeck,
+      target: AbilityTarget.PlayerGardener,
       searchFor: 'bloom',
       quantity: 1,
     },
@@ -39,14 +39,14 @@ const starBloomBloom: StructuredAbility = {
 const starBloomPassive4: StructuredAbility = {
   name: 'Radiant Aura',
   description: 'All allied Bloom Beasts gain +2 ATK.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'all-allies',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AllAllies,
+      stat: StatType.Attack,
       value: 2,
-      duration: 'while-on-field',
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -55,12 +55,12 @@ const starBloomPassive4: StructuredAbility = {
 const starBloomBloom7: StructuredAbility = {
   name: 'Cosmic Guidance',
   description: 'Once per turn, search deck for any card and add it to hand.',
-  trigger: 'Activated',
+  trigger: AbilityTrigger.Activated,
   maxUsesPerTurn: 1,
   effects: [
     {
-      type: 'search-deck',
-      target: 'player-gardener',
+      type: EffectType.SearchDeck,
+      target: AbilityTarget.PlayerGardener,
       searchFor: 'any',
       quantity: 1,
     },
@@ -71,21 +71,21 @@ const starBloomBloom7: StructuredAbility = {
 const starBloomPassive9: StructuredAbility = {
   name: 'Astral Dominance',
   description: 'All allied Bloom Beasts gain +3 ATK and +2 HP.',
-  trigger: 'Passive',
+  trigger: AbilityTrigger.Passive,
   effects: [
     {
-      type: 'modify-stats',
-      target: 'all-allies',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AllAllies,
+      stat: StatType.Attack,
       value: 3,
-      duration: 'while-on-field',
+      duration: EffectDuration.WhileOnField,
     },
     {
-      type: 'modify-stats',
-      target: 'all-allies',
-      stat: 'health',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AllAllies,
+      stat: StatType.Health,
       value: 2,
-      duration: 'while-on-field',
+      duration: EffectDuration.WhileOnField,
     },
   ],
 };
@@ -93,32 +93,32 @@ const starBloomPassive9: StructuredAbility = {
 const starBloomBloom9: StructuredAbility = {
   name: 'Universal Harmony',
   description: 'Draw 3 cards, search deck for any 2 cards, and all allies gain +2/+2.',
-  trigger: 'Activated',
+  trigger: AbilityTrigger.Activated,
   effects: [
     {
-      type: 'draw-cards',
-      target: 'player-gardener',
+      type: EffectType.DrawCards,
+      target: AbilityTarget.PlayerGardener,
       value: 3,
     },
     {
-      type: 'search-deck',
-      target: 'player-gardener',
+      type: EffectType.SearchDeck,
+      target: AbilityTarget.PlayerGardener,
       searchFor: 'any',
       quantity: 2,
     },
     {
-      type: 'modify-stats',
-      target: 'all-allies',
-      stat: 'attack',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AllAllies,
+      stat: StatType.Attack,
       value: 2,
-      duration: 'permanent',
+      duration: EffectDuration.Permanent,
     },
     {
-      type: 'modify-stats',
-      target: 'all-allies',
-      stat: 'health',
+      type: EffectType.ModifyStats,
+      target: AbilityTarget.AllAllies,
+      stat: StatType.Health,
       value: 2,
-      duration: 'permanent',
+      duration: EffectDuration.Permanent,
     },
   ],
 };
@@ -131,8 +131,7 @@ export const STAR_BLOOM: BloomBeastCard = {
   cost: 3,
   baseAttack: 4,
   baseHealth: 5,
-  passiveAbility: starBloomPassive,
-  bloomAbility: starBloomBloom,
+  ability: starBloomPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -147,14 +146,13 @@ export const STAR_BLOOM: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        passiveAbility: starBloomPassive4,
+        ability: starBloomPassive4,
       },
       7: {
-        bloomAbility: starBloomBloom7,
+        ability: starBloomBloom7,
       },
       9: {
-        passiveAbility: starBloomPassive9,
-        bloomAbility: starBloomBloom9,
+        ability: starBloomPassive9,
       },
     },
   },

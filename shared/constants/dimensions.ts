@@ -8,6 +8,11 @@ export const standardCardDimensions = {
   height: 280,
 };
 
+export const standardCardBeastImageDimensions = {
+  width: 185,
+  height: 185,
+};
+
 export const magicCardDimensions = {
   width: 138,
   height: 138,

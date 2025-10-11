@@ -13,7 +13,6 @@ import type {
   HabitatCard,
   MagicCard,
   TrapCard,
-  ResourceCard,
   AnyCard,
   Affinity,
   CardType,

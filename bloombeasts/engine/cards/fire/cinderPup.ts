@@ -3,16 +3,16 @@
  */
 
 import { BloomBeastCard } from '../../types/core';
-import { StructuredAbility } from '../../types/abilities';
+import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, CostType } from '../../types/abilities';
 
 const cinderPupPassive: StructuredAbility = {
   name: 'Burning Passion',
   description: 'When Cinder Pup attacks, place a Burn counter (1 damage per turn) on the target Bloom Beast.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'apply-counter',
-      target: 'target',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Target,
       counter: 'Burn',
       value: 1,
     },
@@ -22,15 +22,15 @@ const cinderPupPassive: StructuredAbility = {
 const cinderPupBloom: StructuredAbility = {
   name: 'Spitfire',
   description: "Discard one card to apply an additional Burn counter to any opponent's Bloom Beast.",
-  trigger: 'Activated',
+  trigger: AbilityTrigger.Activated,
   cost: {
-    type: 'discard',
+    type: CostType.Discard,
     value: 1,
   },
   effects: [
     {
-      type: 'apply-counter',
-      target: 'target',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Target,
       counter: 'Burn',
       value: 1,
     },
@@ -41,11 +41,11 @@ const cinderPupBloom: StructuredAbility = {
 const cinderPupPassive4: StructuredAbility = {
   name: 'Inferno Bite',
   description: 'When Cinder Pup attacks, place 2 Burn counters on the target.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'apply-counter',
-      target: 'target',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Target,
       counter: 'Burn',
       value: 2,
     },
@@ -56,15 +56,15 @@ const cinderPupPassive4: StructuredAbility = {
 const cinderPupBloom7: StructuredAbility = {
   name: 'Flame Burst',
   description: "Discard one card to apply 2 Burn counters to all opponent Bloom Beasts.",
-  trigger: 'Activated',
+  trigger: AbilityTrigger.Activated,
   cost: {
-    type: 'discard',
+    type: CostType.Discard,
     value: 1,
   },
   effects: [
     {
-      type: 'apply-counter',
-      target: 'all-enemies',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.AllEnemies,
       counter: 'Burn',
       value: 2,
     },
@@ -75,11 +75,11 @@ const cinderPupBloom7: StructuredAbility = {
 const cinderPupPassive9: StructuredAbility = {
   name: 'Wildfire Aura',
   description: 'When Cinder Pup attacks, place 3 Burn counters on the target. Burn damage happens immediately.',
-  trigger: 'OnAttack',
+  trigger: AbilityTrigger.OnAttack,
   effects: [
     {
-      type: 'apply-counter',
-      target: 'target',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.Target,
       counter: 'Burn',
       value: 3,
     },
@@ -89,17 +89,17 @@ const cinderPupPassive9: StructuredAbility = {
 const cinderPupBloom9: StructuredAbility = {
   name: 'Apocalypse Flame',
   description: "Apply 3 Burn counters to all opponent Bloom Beasts and deal 2 damage to opponent Gardener.",
-  trigger: 'Activated',
+  trigger: AbilityTrigger.Activated,
   effects: [
     {
-      type: 'apply-counter',
-      target: 'all-enemies',
+      type: EffectType.ApplyCounter,
+      target: AbilityTarget.AllEnemies,
       counter: 'Burn',
       value: 3,
     },
     {
-      type: 'deal-damage',
-      target: 'opponent-gardener',
+      type: EffectType.DealDamage,
+      target: AbilityTarget.OpponentGardener,
       value: 2,
     },
   ],
@@ -113,8 +113,7 @@ export const CINDER_PUP: BloomBeastCard = {
   cost: 2,
   baseAttack: 2,
   baseHealth: 3,
-  passiveAbility: cinderPupPassive,
-  bloomAbility: cinderPupBloom,
+  ability: cinderPupPassive,
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -129,14 +128,13 @@ export const CINDER_PUP: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        passiveAbility: cinderPupPassive4,
+        ability: cinderPupPassive4,
       },
       7: {
-        bloomAbility: cinderPupBloom7,
+        ability: cinderPupBloom7,
       },
       9: {
-        passiveAbility: cinderPupPassive9,
-        bloomAbility: cinderPupBloom9,
+        ability: cinderPupPassive9,
       },
     },
   },
