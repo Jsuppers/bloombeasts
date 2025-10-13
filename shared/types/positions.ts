@@ -1,4 +1,4 @@
-interface SimplePosition {
+export interface SimplePosition {
   x: number;
   y: number;
 }
@@ -30,6 +30,10 @@ export interface CardTextPositions {
   attack: CardTextInfo;
   health: CardTextInfo;
   beastImage: SimplePosition;
+  icons: {
+    attack: CardTextInfo;
+    ability: CardTextInfo;
+  };
 }
 
 export interface UIButtonPositions {

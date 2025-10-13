@@ -11,19 +11,21 @@ import {
 } from '../../types/abilities';
 
 // On play effect: Deal 1 damage to all non-Fire beasts
-// TODO: Need to add ConditionType.AffinityNotMatches or handle negation
-// For now, this will be handled in the game engine logic
 const damageNonFire: DamageEffect = {
   type: EffectType.DealDamage,
   target: AbilityTarget.AllUnits,
-  value: 1
-  // condition should exclude Fire affinity beasts
+  value: 1,
+  condition: {
+    type: 'affinity-not-matches' as any, // Exclude Fire affinity beasts
+    value: 'Fire'
+  }
 };
 
 export const VOLCANIC_SCAR: HabitatCard = {
   id: 'volcanic-scar',
   name: 'Volcanic Scar',
   type: 'Habitat',
+  description: 'Deals 1 damage to all non-Fire beasts when played.',
   affinity: 'Fire',
   cost: 1,
   onPlayEffects: [damageNonFire],

@@ -14,12 +14,17 @@ export class InventoryScreen {
     private scrollOffset: number = 0;
     private cardsPerRow: number = 5;
     private rowsPerPage: number = 2; // Show 2 rows at a time
+    private playSfx: (src: string) => void = () => {};
 
     constructor(
         private renderer: CanvasRenderer,
         private clickManager: ClickRegionManager,
         private assets: AssetLoader
     ) {}
+
+    setPlaySfxCallback(callback: (src: string) => void): void {
+        this.playSfx = callback;
+    }
 
     async render(
         cards: CardDisplay[],
@@ -31,17 +36,10 @@ export class InventoryScreen {
         this.clickManager.clearRegions();
         this.renderer.clear();
 
-        // Draw background
+        // Draw common UI (background and side menu)
         const bgImg = this.assets.getImage('background');
-        if (bgImg) {
-            this.renderer.drawImage(bgImg);
-        }
-
-        // Draw side menu background
         const sideMenuImg = this.assets.getImage('sideMenu');
-        if (sideMenuImg) {
-            this.renderer.drawSideMenuBackground(sideMenuImg);
-        }
+        this.renderer.drawCommonUI(bgImg, sideMenuImg);
 
         // Draw title and deck info on side menu
         const textPos = sideMenuPositions.textStartPosition;
@@ -72,41 +70,29 @@ export class InventoryScreen {
                 const x = startX + col * spacingX;
                 const y = startY + row * spacingY;
 
-                // Load card images separately for layered rendering
-                const beastImage = card.type === 'Bloom' ? await this.assets.loadBeastImage(card.name, card.affinity) : null;
-                const baseCardImage = await this.assets.loadBaseCardImage(card.affinity);
-                // Only load affinity icon for Bloom cards (Magic and Trap cards don't have affinity)
-                const affinityIcon = card.type === 'Bloom' && card.affinity ? await this.assets.loadAffinityIcon(card.affinity) : null;
-
-                // For Magic/Trap/Habitat cards, load the specific image and template
-                const magicCardTemplate = card.type === 'Magic' ? await this.assets.loadMagicCardTemplate() : null;
-                const trapCardTemplate = card.type === 'Trap' ? await this.assets.loadTrapCardTemplate() : null;
-                const habitatCardTemplate = card.type === 'Habitat' && card.affinity ? await this.assets.loadHabitatCardTemplate(card.affinity) : null;
-                const habitatImage = card.type === 'Habitat' && card.affinity ? await this.assets.loadHabitatImage(card.name, card.affinity) : null;
-                const cardImage = (card.type === 'Magic' || card.type === 'Trap') ? await this.assets.loadCardImage(card.name, card.affinity, card.type) : null;
+                // Load all card assets using the unified method
+                const assets = await this.assets.loadCardAssets(card, 'default');
 
                 // Check if card is in deck
                 const isInDeck = deckCardIds.includes(card.id);
 
                 // Use appropriate rendering method based on card type
                 if (card.type === 'Bloom') {
-                    this.renderer.drawBeastCard(x, y, card, beastImage, baseCardImage, affinityIcon);
+                    this.renderer.drawBeastCard(x, y, card, assets.mainImage, assets.baseCardImage, assets.affinityIcon);
                 } else if (card.type === 'Magic') {
-                    this.renderer.drawMagicCard(x, y, card, cardImage, magicCardTemplate, baseCardImage);
+                    this.renderer.drawMagicCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
                 } else if (card.type === 'Trap') {
-                    this.renderer.drawTrapCard(x, y, card, cardImage, trapCardTemplate, baseCardImage);
+                    this.renderer.drawTrapCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
                 } else if (card.type === 'Habitat') {
-                    this.renderer.drawHabitatCard(x, y, card, habitatImage, habitatCardTemplate, baseCardImage);
+                    this.renderer.drawHabitatCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
                 } else {
                     // Other card types (fallback)
-                    this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, cardImage, false);
+                    this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, assets.mainImage, false);
                 }
 
                 // Draw deck indicator if in deck
                 if (isInDeck) {
-                    this.renderer.ctx.strokeStyle = '#43e97b'; // Green border for cards in deck
-                    this.renderer.ctx.lineWidth = 4;
-                    this.renderer.ctx.strokeRect(x, y, cardWidth, cardHeight);
+                    this.renderer.drawCardSelectionHighlight(x, y, cardWidth, cardHeight, '#43e97b', 4);
                 }
 
                 // Add clickable region
@@ -144,6 +130,7 @@ export class InventoryScreen {
                         width: sideMenuButtonDimensions.width,
                         height: sideMenuButtonDimensions.height,
                         callback: () => {
+                            this.playSfx('sfx/menuButtonSelect.wav');
                             this.scrollOffset = Math.max(0, this.scrollOffset - 1);
                             // Re-render with new offset
                             this.render(cards, deckSize, deckCardIds, onCardSelect, onBack);
@@ -164,6 +151,7 @@ export class InventoryScreen {
                         width: sideMenuButtonDimensions.width,
                         height: sideMenuButtonDimensions.height,
                         callback: () => {
+                            this.playSfx('sfx/menuButtonSelect.wav');
                             this.scrollOffset = Math.min(totalPages - 1, this.scrollOffset + 1);
                             // Re-render with new offset
                             this.render(cards, deckSize, deckCardIds, onCardSelect, onBack);

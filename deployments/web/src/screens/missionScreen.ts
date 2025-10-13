@@ -25,17 +25,10 @@ export class MissionScreen {
         this.clickManager.clearRegions();
         this.renderer.clear();
 
-        // Draw background
+        // Draw common UI (background and side menu)
         const bgImg = this.assets.getImage('background');
-        if (bgImg) {
-            this.renderer.drawImage(bgImg);
-        }
-
-        // Draw side menu background
         const sideMenuImg = this.assets.getImage('sideMenu');
-        if (sideMenuImg) {
-            this.renderer.drawSideMenuBackground(sideMenuImg);
-        }
+        this.renderer.drawCommonUI(bgImg, sideMenuImg);
 
         // Calculate mission completion count
         const completedCount = missions.filter(m => m.isCompleted).length;

@@ -249,7 +249,7 @@ export class CanvasRenderer {
         this.ctx.strokeRect(x, y, width, height);
     }
 
-    drawBeastCard(x: number, y: number, beast: any, beastImage?: HTMLImageElement | null, baseCardImage?: HTMLImageElement | null, affinityImage?: HTMLImageElement | null): void {
+    drawBeastCard(x: number, y: number, beast: any, beastImage?: HTMLImageElement | null, baseCardImage?: HTMLImageElement | null, affinityImage?: HTMLImageElement | null, attackIcon?: HTMLImageElement | null, abilityIcon?: HTMLImageElement | null): void {
         const cardWidth = standardCardDimensions.width;
         const cardHeight = standardCardDimensions.height;
         const beastImageWidth = standardCardBeastImageDimensions.width;
@@ -261,6 +261,7 @@ export class CanvasRenderer {
         // 2. Draw base card frame on top
         // 3. Draw affinity icon
         // 4. Draw text overlay
+        // 5. Draw action icons (attack/ability)
 
         // Step 1: Draw beast image as background artwork
         if (beastImage) {
@@ -294,6 +295,29 @@ export class CanvasRenderer {
 
         // Step 4: Draw text overlay for dynamic values
         this.drawCardTextOverlay(x, y, beast);
+
+        // Step 5: Draw action icons if beast can perform actions
+        // Attack icon - show when beast can attack (no summoning sickness)
+        if (attackIcon && beast.summoningSickness === false) {
+            this.ctx.drawImage(
+                attackIcon,
+                x + positions.icons.attack.x,
+                y + positions.icons.attack.y,
+                positions.icons.attack.size,
+                positions.icons.attack.size
+            );
+        }
+
+        // Ability icon - show when beast has an activated ability and hasn't used it this turn
+        if (abilityIcon && beast.ability && beast.ability.trigger === 'Activated' && !beast.usedAbilityThisTurn) {
+            this.ctx.drawImage(
+                abilityIcon,
+                x + positions.icons.ability.x,
+                y + positions.icons.ability.y,
+                positions.icons.ability.size,
+                positions.icons.ability.size
+            );
+        }
     }
 
     drawMissionCard(
@@ -530,9 +554,9 @@ export class CanvasRenderer {
             this.ctx.drawImage(playboardTemplate, x, y, width, height);
         }
 
-        // Draw habitat image centered and resized
+        // Draw habitat image centered and resized (70x70 on 100x100 template)
         if (habitatImage) {
-            const imageSize = Math.min(width - 20, height - 20);
+            const imageSize = Math.min(width - 30, height - 30);
             const imageX = x + (width - imageSize) / 2;
             const imageY = y + (height - imageSize) / 2;
             this.ctx.drawImage(habitatImage, imageX, imageY, imageSize, imageSize);
@@ -541,28 +565,34 @@ export class CanvasRenderer {
 
     /**
      * Helper: Draw card text overlay (used by both beast and inventory cards)
+     * Handles both card definitions (level, baseAttack) and beast instances (currentLevel, currentAttack)
      */
     private drawCardTextOverlay(x: number, y: number, card: any): void {
         const positions = standardCardPositions;
         this.ctx.fillStyle = DEFAULT_TEXT_COLOR;
 
-        // Cost (top left)
-        this.drawTextWithFont(
-            `${card.cost || 0}`,
-            x + positions.cost.x,
-            y + positions.cost.y,
-            positions.cost.size,
-            DEFAULT_TEXT_COLOR,
-            positions.cost.textAlign || 'center',
-            positions.cost.textBaseline || 'alphabetic',
-            true
-        );
+        // Cost (top left) - beast instances may not have cost, so only show if available
+        if (card.cost !== undefined) {
+            this.drawTextWithFont(
+                `${card.cost}`,
+                x + positions.cost.x,
+                y + positions.cost.y,
+                positions.cost.size,
+                DEFAULT_TEXT_COLOR,
+                positions.cost.textAlign || 'center',
+                positions.cost.textBaseline || 'alphabetic',
+                true
+            );
+        }
+
+        // Check if this is a Bloom beast (either card definition or beast instance)
+        const isBloomBeast = card.type === 'Bloom' || card.currentLevel !== undefined || card.level !== undefined;
 
         // Only show level/experience for Bloom beasts
-        if (card.type === 'Bloom' || card.level !== undefined) {
-            // Level and Experience
-            const level = card.level || 1;
-            const currentExp = card.experience || 0;
+        if (isBloomBeast) {
+            // Level and Experience - check both currentLevel (beast instance) and level (card definition)
+            const level = card.currentLevel || card.level || 1;
+            const currentExp = card.currentXP || card.experience || 0;
             const expNeeded = card.experienceRequired || (level * 100); // Default exp formula if not provided
 
             // Draw "Level X" text
@@ -610,8 +640,11 @@ export class CanvasRenderer {
         const truncatedName = this.truncateText(`${card.name}`, maxNameWidth);
         this.ctx.fillText(truncatedName, x + positions.name.x, y + positions.name.y);
 
-        // Ability - show full text with wrapping
+        // Ability/Description - show full text with wrapping
+        // For Bloom beasts, show ability. For Magic/Trap/Habitat, show description
         const hasAbility = card.ability;
+        const hasDescription = card.description;
+
         if (hasAbility) {
             const abilityText = typeof card.ability === 'object' ?
                 card.ability.description || card.ability.name || '' :
@@ -628,12 +661,24 @@ export class CanvasRenderer {
                     positions.ability.textAlign || 'left'
                 );
             }
+        } else if (hasDescription) {
+            // For Magic, Trap, and Habitat cards, show description
+            this.drawWrappedText(
+                card.description,
+                x + positions.ability.x,
+                y + positions.ability.y,
+                180, // Max width for text wrapping
+                positions.ability.size,
+                DEFAULT_TEXT_COLOR,
+                positions.ability.textAlign || 'left'
+            );
         }
 
-        // Only show attack/health for Bloom beasts
-        if (card.type === 'Bloom' || card.baseAttack !== undefined || card.currentAttack !== undefined) {
-            // Attack (bottom left)
-            const attack = card.currentAttack || card.baseAttack || card.attack || 0;
+        // Only show attack/health for Bloom beasts (check multiple property patterns)
+        const hasAttackHealth = isBloomBeast || card.baseAttack !== undefined || card.currentAttack !== undefined;
+        if (hasAttackHealth) {
+            // Attack (bottom left) - prioritize current values for beast instances
+            const attack = card.currentAttack ?? card.baseAttack ?? card.attack ?? 0;
             this.drawTextWithFont(
                 `${attack}`,
                 x + positions.attack.x,
@@ -645,8 +690,8 @@ export class CanvasRenderer {
                 true
             );
 
-            // Health (bottom right)
-            const health = card.currentHealth || card.baseHealth || card.health || 0;
+            // Health (bottom right) - prioritize current values for beast instances
+            const health = card.currentHealth ?? card.baseHealth ?? card.health ?? 0;
             this.drawTextWithFont(
                 `${health}`,
                 x + positions.health.x,
@@ -658,6 +703,84 @@ export class CanvasRenderer {
                 true
             );
         }
+
+        // Draw counters on beast instances (if any)
+        if (card.counters && Array.isArray(card.counters) && card.counters.length > 0) {
+            this.drawCounterBadges(x, y, card.counters);
+        }
+    }
+
+    /**
+     * Draw counter badges on cards (e.g., Burn, Freeze, XP, etc.)
+     */
+    private drawCounterBadges(x: number, y: number, counters: any[]): void {
+        // Group counters by type and sum their amounts
+        const counterMap = new Map<string, number>();
+        counters.forEach(counter => {
+            const current = counterMap.get(counter.type) || 0;
+            counterMap.set(counter.type, current + counter.amount);
+        });
+
+        // Counter display configuration
+        const counterIcons: Record<string, { emoji: string; color: string }> = {
+            'Burn': { emoji: '🔥', color: '#ff6b6b' },
+            'Freeze': { emoji: '❄️', color: '#4dabf7' },
+            'XP': { emoji: '⭐', color: '#ffd700' },
+            'Spore': { emoji: '🍄', color: '#51cf66' },
+            'Soot': { emoji: '💨', color: '#868e96' },
+            'Entangle': { emoji: '🌿', color: '#37b24d' },
+        };
+
+        // Draw counter badges in a row at the top right of the card
+        let badgeX = x + 155; // Start from right side
+        const badgeY = y + 5;
+        const badgeSize = 28;
+        const badgeSpacing = 32;
+
+        let index = 0;
+        counterMap.forEach((amount, type) => {
+            if (amount > 0) {
+                const config = counterIcons[type] || { emoji: '●', color: '#868e96' };
+                const offsetX = badgeX - (index * badgeSpacing);
+
+                // Draw badge background circle
+                this.ctx.fillStyle = config.color;
+                this.ctx.beginPath();
+                this.ctx.arc(offsetX + badgeSize / 2, badgeY + badgeSize / 2, badgeSize / 2, 0, Math.PI * 2);
+                this.ctx.fill();
+
+                // Draw border
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+
+                // Draw emoji icon
+                this.drawTextWithFont(
+                    config.emoji,
+                    offsetX + badgeSize / 2,
+                    badgeY + badgeSize / 2 - 8,
+                    14,
+                    '#fff',
+                    'center',
+                    'middle',
+                    false
+                );
+
+                // Draw amount
+                this.drawTextWithFont(
+                    `${amount}`,
+                    offsetX + badgeSize / 2,
+                    badgeY + badgeSize / 2 + 4,
+                    11,
+                    '#fff',
+                    'center',
+                    'middle',
+                    true
+                );
+
+                index++;
+            }
+        });
     }
 
     /**
@@ -744,6 +867,105 @@ export class CanvasRenderer {
             Sky: 'rgba(156, 39, 176, 0.7)',
         };
         return colors[affinity] || 'rgba(158, 158, 158, 0.7)';
+    }
+
+    /**
+     * Draw common UI elements: background and side menu
+     * Call this at the start of each screen render
+     */
+    drawCommonUI(backgroundImg?: HTMLImageElement | null, sideMenuImg?: HTMLImageElement | null): void {
+        // Draw background image (full screen)
+        if (backgroundImg) {
+            this.drawImage(backgroundImg);
+        }
+
+        // Draw side menu background
+        if (sideMenuImg) {
+            this.drawSideMenuBackground(sideMenuImg);
+        }
+    }
+
+    /**
+     * Draw a selection highlight around a card
+     * This draws the border outside the card boundaries to avoid cutting off card content
+     */
+    drawCardSelectionHighlight(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        color: string = '#FFD700',
+        lineWidth: number = 5
+    ): void {
+        // Calculate the offset needed to draw the border outside the card
+        const offset = Math.ceil(lineWidth / 2);
+
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = lineWidth;
+        // Draw the border outside by offsetting position and increasing size
+        this.ctx.strokeRect(
+            x - offset,
+            y - offset,
+            width + lineWidth,
+            height + lineWidth
+        );
+    }
+
+    /**
+     * Draw a colored overlay on a card for animation effects
+     * Used for attack animations (green for attacker, red for target)
+     */
+    drawCardBlinkOverlay(
+        x: number,
+        y: number,
+        width: number,
+        height: number,
+        color: string,
+        opacity: number = 0.4
+    ): void {
+        this.ctx.fillStyle = color;
+        this.ctx.globalAlpha = opacity;
+        this.ctx.fillRect(x, y, width, height);
+        this.ctx.globalAlpha = 1.0; // Reset alpha
+    }
+
+    /**
+     * Draw a semi-transparent overlay for the entire screen
+     * Used for card popups and modal displays
+     */
+    drawScreenOverlay(opacity: number = 0.7): void {
+        this.ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+        this.ctx.fillRect(0, 0, gameDimensions.panelWidth, gameDimensions.panelHeight);
+    }
+
+    /**
+     * Draw a centered card popup with full details
+     * Used when magic/trap cards are played/activated
+     */
+    async drawCenteredCardPopup(card: any, assets: any): Promise<void> {
+        // Draw dark overlay first
+        this.drawScreenOverlay(0.7);
+
+        // Calculate centered position for the card
+        const cardWidth = standardCardDimensions.width;
+        const cardHeight = standardCardDimensions.height;
+        const x = (gameDimensions.panelWidth - cardWidth) / 2;
+        const y = (gameDimensions.panelHeight - cardHeight) / 2;
+
+        // Render the card based on its type
+        if (card.type === 'Magic') {
+            this.drawMagicCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
+        } else if (card.type === 'Trap') {
+            this.drawTrapCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
+        } else if (card.type === 'Habitat') {
+            this.drawHabitatCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
+        } else if (card.type === 'Bloom') {
+            // Don't show action icons in popup (this is just for viewing)
+            this.drawBeastCard(x, y, card, assets.mainImage, assets.baseCardImage, assets.affinityIcon, null, null);
+        } else {
+            // Fallback for any other card type
+            this.drawInventoryCard(x, y, cardWidth, cardHeight, card, assets.mainImage, false);
+        }
     }
 
     /**

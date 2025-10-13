@@ -14,18 +14,18 @@ export const standardCardBeastImageDimensions = {
 };
 
 export const magicCardDimensions = {
-  width: 138,
-  height: 138,
+  width: 128,
+  height: 130,
 };
 
 export const trapCardDimensions = {
-  width: 138,
-  height: 138,
+  width: 85,
+  height: 85,
 };
 
 export const habitatShiftCardDimensions = {
-  width: 138,
-  height: 138,
+  width: 100,
+  height: 100,
 };
 
 export const sideMenuDimensions = {

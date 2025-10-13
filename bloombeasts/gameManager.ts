@@ -23,6 +23,7 @@ import {
 import { BloomBeastCard, AnyCard } from './engine/types/core';
 import { Mission } from './screens/missions/types';
 import { getAllCards } from './engine/cards';
+import { SoundManager, SoundSettings } from './systems/SoundManager';
 
 export interface MenuStats {
   totalCards: number;
@@ -42,16 +43,26 @@ export interface PlatformCallbacks {
   renderMissionSelect(missions: MissionDisplay[]): void;
   renderInventory(cards: CardDisplay[], deckSize: number, deckCardIds: string[]): void;
   renderBattle(battleState: BattleDisplay): void;
+  renderSettings(settings: SoundSettings): void;
 
   // Input handling
   onButtonClick(callback: (buttonId: string) => void): void;
   onCardSelect(callback: (cardId: string) => void): void;
   onMissionSelect(callback: (missionId: string) => void): void;
+  onSettingsChange(callback: (settingId: string, value: any) => void): void;
 
   // Asset loading
   loadCardImage(cardId: string): Promise<any>;
   loadBackground(backgroundId: string): Promise<any>;
   playSound(soundId: string): void;
+
+  // Audio control
+  playMusic(src: string, loop: boolean, volume: number): void;
+  stopMusic(): void;
+  playSfx(src: string, volume: number): void;
+  setMusicVolume(volume: number): void;
+  setSfxVolume(volume: number): void;
+  setInventorySfxCallback?(callback: (src: string) => void): void;
 
   // Storage
   saveData(key: string, data: any): Promise<void>;
@@ -109,6 +120,16 @@ export interface BattleDisplay {
   objectives: ObjectiveDisplay[];
   habitatZone: any | null; // Current habitat card
   selectedBeastIndex: number | null; // Track selected beast for attacking
+  attackAnimation?: { // Attack animation state
+    attackerPlayer: 'player' | 'opponent';
+    attackerIndex: number;
+    targetPlayer: 'player' | 'opponent' | 'health';
+    targetIndex?: number; // undefined if targeting health
+  } | null;
+  cardPopup?: { // Card popup display (for magic/trap cards)
+    card: any;
+    player: 'player' | 'opponent';
+  } | null;
 }
 
 export interface ObjectiveDisplay {
@@ -125,7 +146,7 @@ export interface RewardDisplay {
   message: string;
 }
 
-export type GameScreen = 'start-menu' | 'missions' | 'inventory' | 'battle' | 'deck-builder';
+export type GameScreen = 'start-menu' | 'missions' | 'inventory' | 'battle' | 'deck-builder' | 'settings';
 
 /**
  * Main game manager class
@@ -140,6 +161,7 @@ export class GameManager {
   private missionUI: MissionSelectionUI;
   private battleUI: MissionBattleUI;
   private gameEngine: GameEngine;
+  private soundManager: SoundManager;
 
   // Platform callbacks
   private platform: PlatformCallbacks;
@@ -164,6 +186,20 @@ export class GameManager {
     this.missionUI = new MissionSelectionUI(this.missionManager);
     this.gameEngine = new GameEngine();
     this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine);
+
+    // Initialize sound manager
+    this.soundManager = new SoundManager({
+      playMusic: (src, loop, volume) => this.platform.playMusic(src, loop, volume),
+      stopMusic: () => this.platform.stopMusic(),
+      playSfx: (src, volume) => this.platform.playSfx(src, volume),
+      setMusicVolume: (volume) => this.platform.setMusicVolume(volume),
+      setSfxVolume: (volume) => this.platform.setSfxVolume(volume),
+    });
+
+    // Set up SFX callback for inventory screen (if platform supports it)
+    if (this.platform.setInventorySfxCallback) {
+      this.platform.setInventorySfxCallback((src: string) => this.soundManager.playSfx(src));
+    }
 
     // Initialize player data
     this.playerData = {
@@ -217,6 +253,11 @@ export class GameManager {
     this.platform.onMissionSelect((missionId: string) => {
       this.handleMissionSelect(missionId);
     });
+
+    // Settings changes
+    this.platform.onSettingsChange((settingId: string, value: any) => {
+      this.handleSettingsChange(settingId, value);
+    });
   }
 
   /**
@@ -225,6 +266,12 @@ export class GameManager {
   private async handleButtonClick(buttonId: string): Promise<void> {
     console.log(`Button clicked: ${buttonId}`);
 
+    // Determine if this button should play a sound
+    const shouldPlaySound = this.shouldPlayButtonSound(buttonId);
+    if (shouldPlaySound) {
+      this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+    }
+
     switch (buttonId) {
       case 'btn-missions':
         await this.showMissionSelect();
@@ -232,6 +279,10 @@ export class GameManager {
 
       case 'btn-inventory':
         await this.showInventory();
+        break;
+
+      case 'btn-settings':
+        await this.showSettings();
         break;
 
       case 'btn-back':
@@ -263,11 +314,39 @@ export class GameManager {
           const index = parseInt(parts[1]);
           await this.handleViewFieldCard(player, index);
         }
+        // Handle viewing trap cards in battle
+        else if (buttonId.startsWith('view-trap-card-')) {
+          const parts = buttonId.substring(15).split('-');
+          const player = parts[0]; // 'player' or 'opponent'
+          const index = parseInt(parts[1]);
+          await this.handleViewTrapCard(player, index);
+        }
+        // Handle viewing habitat card in battle
+        else if (buttonId === 'view-habitat-card') {
+          await this.handleViewHabitatCard();
+        }
         // Handle action buttons in battle
         else if (buttonId.startsWith('action-')) {
           await this.handleBattleAction(buttonId.substring(7));
         }
     }
+  }
+
+  /**
+   * Determine if a button should play the menu button sound
+   */
+  private shouldPlayButtonSound(buttonId: string): boolean {
+    // Don't play sound for battle card interactions
+    if (buttonId.startsWith('view-hand-card-') ||
+        buttonId.startsWith('view-field-card-') ||
+        buttonId.startsWith('view-trap-card-') ||
+        buttonId === 'view-habitat-card' ||
+        buttonId.startsWith('action-')) {
+      return false;
+    }
+
+    // Play sound for all other buttons (main menu, back, end turn, hand toggle, etc.)
+    return true;
   }
 
   /**
@@ -279,6 +358,7 @@ export class GameManager {
     const menuOptions = [
       'missions',
       'inventory',
+      'settings',
     ];
 
     // Gather game stats for menu display
@@ -300,7 +380,8 @@ export class GameManager {
     };
 
     this.platform.renderStartMenu(menuOptions, stats);
-    this.platform.playSound('menu-music');
+    // Start playing background music
+    this.soundManager.playMusic('BackgroundMusic.mp3', true);
   }
 
   /**
@@ -373,12 +454,29 @@ export class GameManager {
         displayCard.baseHealth = card.baseHealth;
         displayCard.currentHealth = card.currentHealth;
         displayCard.ability = card.ability;
-      } else {
-        // For Magic/Trap/Habitat cards, show effects as ability description
-        if (card.effects && card.effects.length > 0) {
+      } else if (card.type === 'Trap') {
+        // For Trap cards, find the original card definition to get the description
+        const allCardDefs = getAllCards();
+        const trapDef = allCardDefs.find((c: any) => c && c.id === card.cardId);
+        if (trapDef && (trapDef as any).description) {
+          displayCard.ability = {
+            name: 'Trap Card',
+            description: (trapDef as any).description
+          };
+        } else if (card.effects && card.effects.length > 0) {
+          // Fallback to effects if no description found
+          displayCard.ability = {
+            name: 'Trap Card',
+            description: card.effects.join('. ')
+          };
+        }
+      } else if (card.type === 'Magic' || card.type === 'Habitat') {
+        // For Magic/Habitat cards, convert effects to readable descriptions
+        const effectDescs = this.getEffectDescriptions(card);
+        if (effectDescs.length > 0) {
           displayCard.ability = {
             name: card.type + ' Card',
-            description: card.effects.join('. ')
+            description: effectDescs.join('. ')
           };
         }
       }
@@ -417,9 +515,47 @@ export class GameManager {
   }
 
   /**
+   * Show settings screen
+   */
+  async showSettings(): Promise<void> {
+    this.currentScreen = 'settings';
+    const settings = this.soundManager.getSettings();
+    this.platform.renderSettings(settings);
+  }
+
+  /**
+   * Handle settings changes
+   */
+  private handleSettingsChange(settingId: string, value: any): void {
+    // Play menu button sound for settings toggles (but not for sliders)
+    if (settingId === 'music-enabled' || settingId === 'sfx-enabled') {
+      this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+    }
+
+    switch (settingId) {
+      case 'music-volume':
+        this.soundManager.setMusicVolume(value);
+        break;
+      case 'sfx-volume':
+        this.soundManager.setSfxVolume(value);
+        break;
+      case 'music-enabled':
+        this.soundManager.toggleMusic(value);
+        break;
+      case 'sfx-enabled':
+        this.soundManager.toggleSfx(value);
+        break;
+    }
+    // Save settings
+    this.saveGameData();
+    // Re-render settings screen to update UI
+    this.showSettings();
+  }
+
+  /**
    * Get abilities for a card based on its level
    */
-  private getAbilitiesForLevel(cardInstance: CardInstance): { ability: any } {
+  private getAbilitiesForLevel(cardInstance: CardInstance): { ability: any} {
     // Get the base card definition
     const allCards = getAllCards();
     const cardDef = allCards.find((card: any) =>
@@ -529,6 +665,9 @@ export class GameManager {
   private async handleMissionSelect(missionId: string): Promise<void> {
     console.log(`Mission selected: ${missionId}`);
 
+    // Play menu button sound
+    this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+
     // Check if player has a deck with at least some cards
     if (this.playerDeck.length === 0) {
       await this.platform.showDialog(
@@ -568,8 +707,65 @@ export class GameManager {
           }
         });
 
+        // Set up action callback for opponent sound effects and animations
+        this.battleUI.setOpponentActionCallback(async (action: string) => {
+          if (action.startsWith('attack-beast-opponent-')) {
+            // Parse: attack-beast-opponent-{attackerIndex}-player-{targetIndex}
+            const parts = action.substring('attack-beast-opponent-'.length).split('-player-');
+            const attackerIndex = parseInt(parts[0], 10);
+            const targetIndex = parseInt(parts[1], 10);
+
+            // Play sound
+            this.soundManager.playSfx('sfx/attack.wav');
+
+            // Play animation
+            await this.playAttackAnimation('opponent', attackerIndex, 'player', targetIndex);
+          } else if (action.startsWith('attack-player-opponent-')) {
+            // Parse: attack-player-opponent-{attackerIndex}
+            const attackerIndex = parseInt(action.substring('attack-player-opponent-'.length), 10);
+
+            // Play sound
+            this.soundManager.playSfx('sfx/attack.wav');
+
+            // Play animation (opponent attacks player health)
+            await this.playAttackAnimation('opponent', attackerIndex, 'health', undefined);
+          } else if (action.startsWith('play-magic-card:')) {
+            // Parse: play-magic-card:{cardJSON}
+            const cardJSON = action.substring('play-magic-card:'.length);
+            try {
+              const card = JSON.parse(cardJSON);
+              this.soundManager.playSfx('sfx/playCard.wav');
+              await this.showCardPopup(card, 'opponent');
+            } catch (error) {
+              console.error('Failed to parse magic card JSON:', error);
+            }
+          } else if (action.startsWith('play-trap-card:')) {
+            // Trap cards are face-down, so don't show popup when opponent plays them
+            // Just play the sound effect
+            this.soundManager.playSfx('sfx/playCard.wav');
+          } else if (action.startsWith('play-habitat-card:')) {
+            // Parse: play-habitat-card:{cardJSON}
+            const cardJSON = action.substring('play-habitat-card:'.length);
+            try {
+              const card = JSON.parse(cardJSON);
+              this.soundManager.playSfx('sfx/playCard.wav');
+              await this.showCardPopup(card, 'opponent');
+            } catch (error) {
+              console.error('Failed to parse habitat card JSON:', error);
+            }
+          } else if (action === 'play-card') {
+            this.soundManager.playSfx('sfx/playCard.wav');
+          } else if (action === 'player-low-health') {
+            this.soundManager.playSfx('sfx/lowHealthSound.wav');
+          } else if (action === 'trap-activated') {
+            this.soundManager.playSfx('sfx/trapCardActivated.wav');
+          }
+        });
+
         this.currentScreen = 'battle';
         this.currentBattleId = missionId;
+        // Play battle music
+        this.soundManager.playMusic('BattleMusic.mp3', true);
         await this.updateBattleDisplay();
         this.platform.playSound('battle-start');
       }
@@ -586,6 +782,9 @@ export class GameManager {
    * Handle card selection in inventory
    */
   private async handleCardSelect(cardId: string): Promise<void> {
+    // Play menu button sound
+    this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+
     const cardEntry = this.cardCollection.getCard(cardId);
 
     if (cardEntry) {
@@ -750,7 +949,12 @@ export class GameManager {
   /**
    * Update battle display
    */
-  private async updateBattleDisplay(): Promise<void> {
+  private async updateBattleDisplay(attackAnimation?: {
+    attackerPlayer: 'player' | 'opponent';
+    attackerIndex: number;
+    targetPlayer: 'player' | 'opponent' | 'health';
+    targetIndex?: number;
+  } | null): Promise<void> {
     const battleState = this.battleUI.getCurrentBattle();
 
     if (!battleState || !battleState.gameState) {
@@ -784,12 +988,13 @@ export class GameManager {
       objectives: this.getObjectiveDisplay(battleState),
       habitatZone: battleState.gameState.habitatZone,
       selectedBeastIndex: this.selectedBeastIndex,
+      attackAnimation: attackAnimation,
     };
 
     this.platform.renderBattle(display);
 
-    // Check if battle ended
-    if (battleState.isComplete) {
+    // Check if battle ended (only if no animation is running)
+    if (battleState.isComplete && !attackAnimation) {
       await this.handleBattleComplete(battleState);
     }
   }
@@ -837,39 +1042,115 @@ export class GameManager {
       `Cost: ${card.cost}`,
     ];
 
-    // Type guard for Bloom Beast cards
-    const isBloomCard = (card as any).type === 'Bloom' || (card as any).affinity !== undefined;
+    // Handle different card types
+    const cardType = (card as any).type;
 
-    if (isBloomCard) {
+    if (cardType === 'Bloom') {
+      // Beast cards
+      details.push(`Type: Beast`);
       details.push(`Affinity: ${(card as any).affinity}`);
       details.push(`Attack: ${(card as any).baseAttack || 0}`);
       details.push(`Health: ${(card as any).baseHealth || 0}`);
-    }
 
-    if ((card as any).ability) {
-      const ability = (card as any).ability as any;
-      details.push(`Ability: ${ability.name}`);
+      if ((card as any).ability) {
+        const ability = (card as any).ability as any;
+        details.push(`Ability: ${ability.name}`);
 
-      // Show trigger type
-      const trigger = ability.trigger || 'Passive';
-      if (trigger === 'Activated') {
-        // Show cost if it exists
-        if (ability.cost) {
-          if (ability.cost.type === 'nectar') {
-            details.push(`  Cost: ${ability.cost.value || 1} Nectar`);
-          } else if (ability.cost.type === 'discard') {
-            details.push(`  Cost: Discard ${ability.cost.value || 1} card(s)`);
-          } else if (ability.cost.type === 'remove-counter') {
-            details.push(`  Cost: Remove ${ability.cost.value || 1} ${ability.cost.counter} counter(s)`);
+        // Show trigger type
+        const trigger = ability.trigger || 'Passive';
+        if (trigger === 'Activated') {
+          // Show cost if it exists
+          if (ability.cost) {
+            if (ability.cost.type === 'nectar') {
+              details.push(`  Cost: ${ability.cost.value || 1} Nectar`);
+            } else if (ability.cost.type === 'discard') {
+              details.push(`  Cost: Discard ${ability.cost.value || 1} card(s)`);
+            } else if (ability.cost.type === 'remove-counter') {
+              details.push(`  Cost: Remove ${ability.cost.value || 1} ${ability.cost.counter} counter(s)`);
+            }
+          } else {
+            details.push(`  Cost: Free`);
           }
         } else {
-          details.push(`  Cost: Free`);
+          details.push(`  Trigger: ${trigger}`);
         }
-      } else {
-        details.push(`  Trigger: ${trigger}`);
+
+        details.push(`  ${ability.description}`);
+      }
+    } else if (cardType === 'Magic') {
+      // Magic cards
+      details.push(`Type: Magic`);
+
+      // Try multiple ways to get the description
+      let description = (card as any).description;
+
+      // If no description on card instance, look up original card definition
+      if (!description && (card as any).id) {
+        const allCardDefs = getAllCards();
+        const cardDef = allCardDefs.find((c: any) => c && c.id === (card as any).id);
+        if (cardDef && (cardDef as any).description) {
+          description = (cardDef as any).description;
+        }
       }
 
-      details.push(`  ${ability.description}`);
+      if (description) {
+        details.push(`Effect: ${description}`);
+      } else if ((card as any).effects) {
+        // Fallback to parsing effects
+        details.push(`Effects:`);
+        (card as any).effects.forEach((effect: any) => {
+          const effectType = effect.type || '';
+          if (effectType === 'draw-cards' || effectType === 'DrawCards') {
+            details.push(`  • Draw ${effect.value || 1} card(s)`);
+          } else if (effectType === 'heal' || effectType === 'Heal') {
+            details.push(`  • Heal ${effect.value || 0}`);
+          } else if (effectType === 'deal-damage' || effectType === 'Damage') {
+            details.push(`  • Deal ${effect.value || 0} damage`);
+          } else if (effectType === 'modify-stats' || effectType === 'ModifyStats') {
+            details.push(`  • Modify stats by ${effect.attack || effect.value || 0}/${effect.health || effect.value || 0}`);
+          } else if (effectType === 'gain-resource' || effectType === 'GainResource') {
+            details.push(`  • Gain ${effect.value || 1} ${effect.resource || 'nectar'}`);
+          } else if (effectType === 'remove-counter' || effectType === 'RemoveCounter') {
+            details.push(`  • Remove ${effect.counter || 'all'} counters`);
+          } else if (effectType === 'destroy' || effectType === 'Destroy') {
+            details.push(`  • Destroy target`);
+          } else {
+            const typeStr = effectType.toString().replace(/([A-Z])/g, ' $1').replace(/-/g, ' ').trim();
+            details.push(`  • ${typeStr}`);
+          }
+        });
+      }
+    } else if (cardType === 'Trap') {
+      // Trap cards
+      details.push(`Type: Trap`);
+      if ((card as any).description) {
+        details.push(`Effect: ${(card as any).description}`);
+      } else if ((card as any).effects) {
+        details.push(`Effects:`);
+        (card as any).effects.forEach((effect: any) => {
+          if (effect.type === 'NullifyEffect') {
+            details.push(`  • Counter and negate effect`);
+          } else if (effect.type === 'Damage') {
+            details.push(`  • Deal ${effect.value || 0} damage`);
+          } else {
+            const typeStr = (effect.type || '').toString().replace(/([A-Z])/g, ' $1').trim();
+            details.push(`  • ${typeStr}`);
+          }
+        });
+      }
+    } else if (cardType === 'Habitat') {
+      // Habitat cards
+      details.push(`Type: Habitat`);
+      if ((card as any).affinity) {
+        details.push(`Affinity: ${(card as any).affinity}`);
+      }
+      details.push(`Effect: Transforms the battlefield`);
+      if ((card as any).onPlayEffects) {
+        details.push(`  • On Play: Field transformation`);
+      }
+      if ((card as any).ongoingEffects) {
+        details.push(`  • Ongoing: Field bonuses`);
+      }
     }
 
     // Check if card is affordable
@@ -1039,18 +1320,269 @@ export class GameManager {
   }
 
   /**
+   * Handle viewing a trap card in the trap zone
+   */
+  private async handleViewTrapCard(player: string, index: number): Promise<void> {
+    const battleState = this.battleUI.getCurrentBattle();
+    if (!battleState || !battleState.gameState) return;
+
+    const playerObj = player === 'player' ? battleState.gameState.players[0] : battleState.gameState.players[1];
+    const trapZone = playerObj.trapZone || [];
+
+    // Check if trap exists at this index
+    if (index < 0 || index >= trapZone.length || !trapZone[index]) {
+      return;
+    }
+
+    const trapCard: any = trapZone[index];
+
+    // Format trap card details
+    const details = [
+      `Name: ${trapCard.name}`,
+      `Type: Trap`,
+      `Cost: ${trapCard.cost || 0}`,
+    ];
+
+    // Add trap description
+    if (trapCard.description) {
+      details.push(`Effect: ${trapCard.description}`);
+    } else if (trapCard.effects && Array.isArray(trapCard.effects)) {
+      details.push('Effects:');
+      trapCard.effects.forEach((effect: any) => {
+        if (typeof effect === 'string') {
+          details.push(`  • ${effect}`);
+        } else if (effect.type) {
+          if (effect.type === 'NullifyEffect' || effect.type === 'nullify-effect') {
+            details.push(`  • Counter and negate effect`);
+          } else if (effect.type === 'Damage' || effect.type === 'damage') {
+            details.push(`  • Deal ${effect.value || 0} damage`);
+          } else {
+            const typeStr = (effect.type || '').toString().replace(/([A-Z])/g, ' $1').trim();
+            details.push(`  • ${typeStr}`);
+          }
+        }
+      });
+    }
+
+    // Only show Close button (traps are face-down, no actions available)
+    await this.platform.showDialog('Trap Card', details.join('\n'), ['Close']);
+  }
+
+  /**
+   * Handle viewing the habitat card in the habitat zone
+   */
+  private async handleViewHabitatCard(): Promise<void> {
+    const battleState = this.battleUI.getCurrentBattle();
+    if (!battleState || !battleState.gameState) return;
+
+    const habitatCard = battleState.gameState.habitatZone;
+
+    if (!habitatCard) {
+      return; // No habitat card currently played
+    }
+
+    // Format habitat card details
+    const details = [
+      `Name: ${habitatCard.name}`,
+      `Type: Habitat`,
+      `Cost: ${habitatCard.cost || 0}`,
+    ];
+
+    // Add affinity if present
+    if (habitatCard.affinity) {
+      details.push(`Affinity: ${habitatCard.affinity}`);
+    }
+
+    // Add habitat description if available
+    if (habitatCard.description) {
+      details.push(`Effect: ${habitatCard.description}`);
+    } else {
+      // Try to get description from card definition
+      const allCardDefs = getAllCards();
+      const habitatDef = allCardDefs.find((c: any) => c && c.id === habitatCard.id);
+      if (habitatDef && (habitatDef as any).description) {
+        details.push(`Effect: ${(habitatDef as any).description}`);
+      } else {
+        // Fallback to effect descriptions
+        if (habitatCard.onPlayEffects && Array.isArray(habitatCard.onPlayEffects)) {
+          details.push('On Play Effects:');
+          habitatCard.onPlayEffects.forEach((effect: any) => {
+            if (typeof effect === 'string') {
+              details.push(`  • ${effect}`);
+            } else if (effect.type) {
+              const typeStr = (effect.type || '').toString().replace(/([A-Z])/g, ' $1').trim();
+              details.push(`  • ${typeStr}`);
+            }
+          });
+        }
+        if (habitatCard.ongoingEffects && Array.isArray(habitatCard.ongoingEffects)) {
+          details.push('Ongoing Effects:');
+          habitatCard.ongoingEffects.forEach((effect: any) => {
+            if (typeof effect === 'string') {
+              details.push(`  • ${effect}`);
+            } else if (effect.type) {
+              const typeStr = (effect.type || '').toString().replace(/([A-Z])/g, ' $1').trim();
+              details.push(`  • ${typeStr}`);
+            }
+          });
+        }
+      }
+    }
+
+    // Only show Close button (habitat cards are informational only once played)
+    await this.platform.showDialog('Habitat Card', details.join('\n'), ['Close']);
+  }
+
+  /**
    * Handle battle actions
    */
   private async handleBattleAction(action: string): Promise<void> {
-    // Clear selection after attack actions
+    // Handle attack actions with animation
     if (action.startsWith('attack-')) {
+      this.soundManager.playSfx('sfx/attack.wav');
+
+      // Parse attack action to get attacker and target info
+      let attackerPlayer: 'player' | 'opponent' = 'player';
+      let attackerIndex: number = 0;
+      let targetPlayer: 'player' | 'opponent' | 'health' = 'opponent';
+      let targetIndex: number | undefined = undefined;
+
+      if (action.startsWith('attack-beast-')) {
+        // Format: attack-beast-{attackerIndex}-{targetIndex}
+        const parts = action.substring('attack-beast-'.length).split('-');
+        attackerIndex = parseInt(parts[0], 10);
+        targetIndex = parseInt(parts[1], 10);
+        targetPlayer = 'opponent';
+      } else if (action.startsWith('attack-player-')) {
+        // Format: attack-player-{attackerIndex}
+        attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
+        targetPlayer = 'health';
+        targetIndex = undefined;
+      }
+
+      // Run attack animation
+      await this.playAttackAnimation(attackerPlayer, attackerIndex, targetPlayer, targetIndex);
+
+      // Clear selection
       this.selectedBeastIndex = null;
+
+      // Process action through battle UI
+      await this.battleUI.processPlayerAction(action, {});
+    }
+    // Play card sound when playing a card
+    else if (action.startsWith('play-card-')) {
+      this.soundManager.playSfx('sfx/playCard.wav');
+
+      // Get the card being played
+      const cardIndex = parseInt(action.substring('play-card-'.length), 10);
+      const battleState = this.battleUI.getCurrentBattle();
+
+      if (battleState && battleState.gameState) {
+        const player = battleState.gameState.players[0];
+        const card = player.hand[cardIndex];
+
+        // Check if it's a Magic, Trap, or Habitat card
+        if (card && (card.type === 'Magic' || card.type === 'Trap' || card.type === 'Habitat')) {
+          // Show popup for magic/trap/habitat cards
+          await this.showCardPopup(card, 'player');
+        }
+      }
+
+      // Process action through battle UI
+      await this.battleUI.processPlayerAction(action, {});
+    }
+    // Other actions
+    else {
+      // Process action through battle UI
+      await this.battleUI.processPlayerAction(action, {});
     }
 
-    // Process action through battle UI
-    await this.battleUI.processPlayerAction(action, {});
+    // Update display (without animation)
+    await this.updateBattleDisplay();
+  }
 
-    // Update display
+  /**
+   * Play attack animation showing attacker blinking green and target blinking red
+   */
+  private async playAttackAnimation(
+    attackerPlayer: 'player' | 'opponent',
+    attackerIndex: number,
+    targetPlayer: 'player' | 'opponent' | 'health',
+    targetIndex?: number
+  ): Promise<void> {
+    const animationState = {
+      attackerPlayer,
+      attackerIndex,
+      targetPlayer,
+      targetIndex,
+    };
+
+    // Blink 3 times (on/off/on/off/on/off)
+    const blinkCount = 3;
+    const blinkDuration = 150; // 150ms per blink
+
+    for (let i = 0; i < blinkCount * 2; i++) {
+      // Show animation on even iterations (0, 2, 4)
+      const showAnimation = i % 2 === 0;
+
+      if (showAnimation) {
+        await this.updateBattleDisplay(animationState);
+      } else {
+        await this.updateBattleDisplay(null);
+      }
+
+      // Wait for blink duration
+      await new Promise(resolve => setTimeout(resolve, blinkDuration));
+    }
+  }
+
+  /**
+   * Show a card popup for magic/trap cards
+   * Display for 3 seconds then dismiss
+   */
+  private async showCardPopup(card: any, player: 'player' | 'opponent'): Promise<void> {
+    // Get current battle state without animation
+    const battleState = this.battleUI.getCurrentBattle();
+    if (!battleState || !battleState.gameState) return;
+
+    // Build display with cardPopup
+    const playerObj = battleState.gameState.players[0];
+    const opponent = battleState.gameState.players[1];
+
+    const display: BattleDisplay = {
+      playerHealth: playerObj.health,
+      playerMaxHealth: playerObj.maxHealth || 30,
+      playerDeckCount: playerObj.deck.length,
+      playerNectar: playerObj.currentNectar,
+      playerHand: playerObj.hand,
+      playerTrapZone: playerObj.trapZone || [null, null, null],
+      opponentHealth: opponent.health,
+      opponentMaxHealth: opponent.maxHealth || 30,
+      opponentDeckCount: opponent.deck.length,
+      opponentNectar: opponent.currentNectar,
+      opponentField: this.enrichFieldBeasts(opponent.field),
+      opponentTrapZone: opponent.trapZone || [null, null, null],
+      playerField: this.enrichFieldBeasts(playerObj.field),
+      currentTurn: battleState.gameState.turn,
+      turnPlayer: battleState.gameState.activePlayer === 0 ? 'player' : 'opponent',
+      turnTimeRemaining: 60,
+      objectives: this.getObjectiveDisplay(battleState),
+      habitatZone: battleState.gameState.habitatZone,
+      selectedBeastIndex: this.selectedBeastIndex,
+      attackAnimation: null,
+      cardPopup: {
+        card,
+        player,
+      },
+    };
+
+    // Show popup
+    this.platform.renderBattle(display);
+
+    // Wait 2 seconds
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Clear popup (re-render without popup)
     await this.updateBattleDisplay();
   }
 
@@ -1143,24 +1675,29 @@ export class GameManager {
       };
 
       this.platform.showRewards(rewardDisplay);
-      this.platform.playSound('victory');
+      // Play win sound
+      this.soundManager.playSfx('sfx/win.ogg');
 
       // Save game data
       await this.saveGameData();
     } else {
-      // Mission failed
+      // Mission failed - play lose sound before showing dialog
+      this.soundManager.playSfx('sfx/lose.wav');
+
       await this.platform.showDialog(
         'Mission Failed',
         'Better luck next time!',
         ['OK']
       );
-      this.platform.playSound('defeat');
     }
 
     // Clear battle
     this.battleUI.clearBattle();
     this.currentBattleId = null;
     this.selectedBeastIndex = null; // Clear selection
+
+    // Resume background music
+    this.soundManager.playMusic('BackgroundMusic.mp3', true);
 
     // Return to mission select
     await this.showMissionSelect();
@@ -1174,6 +1711,7 @@ export class GameManager {
       case 'missions':
       case 'inventory':
       case 'deck-builder':
+      case 'settings':
         await this.showStartMenu();
         break;
 
@@ -1189,6 +1727,10 @@ export class GameManager {
           this.battleUI.clearBattle();
           this.currentBattleId = null;
           this.selectedBeastIndex = null; // Clear selection
+          // Play lose sound for forfeit
+          this.soundManager.playSfx('sfx/lose.wav');
+          // Resume background music
+          this.soundManager.playMusic('BackgroundMusic.mp3', true);
           await this.showMissionSelect();
         }
         break;
@@ -1265,30 +1807,66 @@ export class GameManager {
   private getEffectDescriptions(card: any): string[] {
     const descriptions: string[] = [];
 
-    if (card.type === 'Magic' && card.effects) {
-      card.effects.forEach((effect: any) => {
-        if (effect.type === 'draw-cards') {
-          descriptions.push(`Draw ${effect.value || 1} card(s)`);
-        } else if (effect.type === 'heal') {
-          descriptions.push(`Heal ${effect.value || 0}`);
-        } else if (effect.type === 'modify-stats') {
-          descriptions.push(`Modify stats by ${effect.attack || 0}/${effect.health || 0}`);
-        } else if (effect.type === 'gain-nectar') {
-          descriptions.push(`Gain ${effect.value || 1} nectar`);
-        } else {
-          descriptions.push(effect.description || 'Special effect');
-        }
-      });
-    } else if (card.type === 'Trap' && card.effects) {
-      card.effects.forEach((effect: any) => {
-        descriptions.push(effect.description || 'Trap effect');
-      });
-    } else if (card.type === 'Habitat') {
-      if (card.onPlayEffects) {
-        descriptions.push('On Play: Special effects');
+    // Try to get the actual card definition for more accurate info
+    const allCardDefs = getAllCards();
+    // card.cardId exists if this is a CardInstance, card.id exists if it's the original definition
+    const lookupId = card.cardId || card.id;
+    const cardDef = allCardDefs.find((c: any) => c && c.id === lookupId);
+
+    if (card.type === 'Magic') {
+      // Check if card definition has a description first (preferred method)
+      if (cardDef && (cardDef as any).description) {
+        descriptions.push((cardDef as any).description);
+      } else {
+        // Fallback to parsing effects
+        const effects = (cardDef as any)?.effects || card.effects || [];
+        effects.forEach((effect: any) => {
+          const effectType = effect.type || '';
+          if (effectType === 'draw-cards' || effectType === 'DrawCards') {
+            descriptions.push(`Draw ${effect.value || 1} card(s)`);
+          } else if (effectType === 'heal' || effectType === 'Heal') {
+            descriptions.push(`Heal ${effect.value || 0}`);
+          } else if (effectType === 'deal-damage' || effectType === 'Damage') {
+            descriptions.push(`Deal ${effect.value || 0} damage`);
+          } else if (effectType === 'modify-stats' || effectType === 'ModifyStats') {
+            descriptions.push(`Modify stats by ${effect.attack || 0}/${effect.health || 0}`);
+          } else if (effectType === 'gain-resource' || effectType === 'GainResource') {
+            descriptions.push(`Gain ${effect.value || 1} ${effect.resource || 'nectar'}`);
+          } else if (effectType === 'remove-counter' || effectType === 'RemoveCounter') {
+            descriptions.push(`Remove ${effect.counter || 'all'} counters`);
+          } else if (effectType === 'destroy' || effectType === 'Destroy') {
+            descriptions.push(`Destroy target`);
+          } else {
+            // Try to create a readable description from the effect type
+            const typeStr = effectType.toString().replace(/([A-Z])/g, ' $1').replace(/-/g, ' ').trim();
+            descriptions.push(typeStr || 'Special effect');
+          }
+        });
       }
-      if (card.ongoingEffects) {
-        descriptions.push('Ongoing: Field effects');
+    } else if (card.type === 'Trap') {
+      // For trap cards, use the card's description if available
+      if (cardDef && (cardDef as any).description) {
+        // Already handled in showInventory, but include here for completeness
+        descriptions.push((cardDef as any).description);
+      } else {
+        const effects = (cardDef as any)?.effects || card.effects || [];
+        effects.forEach((effect: any) => {
+          if (effect.type === 'nullify-effect' || effect.type === 'NullifyEffect') {
+            descriptions.push('Counter and negate effect');
+          } else if (effect.type === 'damage' || effect.type === 'Damage') {
+            descriptions.push(`Deal ${effect.value || 0} damage`);
+          } else {
+            const typeStr = (effect.type || '').toString().replace(/([A-Z])/g, ' $1').trim();
+            descriptions.push(typeStr || 'Trap effect');
+          }
+        });
+      }
+    } else if (card.type === 'Habitat') {
+      if (card.onPlayEffects || (cardDef as any)?.onPlayEffects) {
+        descriptions.push('On Play: Field transformation');
+      }
+      if (card.ongoingEffects || (cardDef as any)?.ongoingEffects) {
+        descriptions.push('Ongoing: Field bonuses');
       }
     }
 

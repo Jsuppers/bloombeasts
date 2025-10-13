@@ -67,8 +67,8 @@ export class MenuScreen {
             const buttonX = sideMenuPositions.buttonStartPosition.x;
             const buttonSpacing = 10;
 
-            // Filter to only show missions and inventory
-            const menuOptions = options.filter(opt => opt === 'missions' || opt === 'inventory');
+            // Filter to only show missions, inventory, and settings
+            const menuOptions = options.filter(opt => opt === 'missions' || opt === 'inventory' || opt === 'settings');
 
             menuOptions.forEach((option, index) => {
                 const y = sideMenuPositions.buttonStartPosition.y + index * (sideMenuButtonDimensions.height + buttonSpacing);
@@ -99,22 +99,15 @@ export class MenuScreen {
     private renderFrame(): void {
         this.renderer.clear();
 
-        // Draw background
+        // Draw common UI (background and side menu)
         const bgImg = this.assets.getImage('background');
-        if (bgImg) {
-            this.renderer.drawImage(bgImg);
-        }
+        const sideMenuImg = this.assets.getImage('sideMenu');
+        this.renderer.drawCommonUI(bgImg, sideMenuImg);
 
         // Draw current animation frame at original size at position (143, 25)
         const frameImg = this.assets.getImage(`menuFrame${this.currentFrame}`);
         if (frameImg) {
             this.renderer.ctx.drawImage(frameImg, 143, 25);
-        }
-
-        // Draw side menu background
-        const sideMenuImg = this.assets.getImage('sideMenu');
-        if (sideMenuImg) {
-            this.renderer.drawSideMenuBackground(sideMenuImg);
         }
 
         // Draw text on side menu
@@ -186,7 +179,7 @@ export class MenuScreen {
                 // Menu buttons
                 const buttonX = sideMenuPositions.buttonStartPosition.x;
                 const buttonSpacing = 10;
-                const menuOptions = options.filter(opt => opt === 'missions' || opt === 'inventory');
+                const menuOptions = options.filter(opt => opt === 'missions' || opt === 'inventory' || opt === 'settings');
 
                 menuOptions.forEach((option, index) => {
                     const y = sideMenuPositions.buttonStartPosition.y + index * (sideMenuButtonDimensions.height + buttonSpacing);
@@ -251,7 +244,7 @@ export class MenuScreen {
             // Menu buttons
             const buttonX = sideMenuPositions.buttonStartPosition.x;
             const buttonSpacing = 10;
-            const menuOptions = options.filter(opt => opt === 'missions' || opt === 'inventory');
+            const menuOptions = options.filter(opt => opt === 'missions' || opt === 'inventory' || opt === 'settings');
 
             menuOptions.forEach((option, index) => {
                 const y = sideMenuPositions.buttonStartPosition.y + index * (sideMenuButtonDimensions.height + buttonSpacing);

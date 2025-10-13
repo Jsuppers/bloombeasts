@@ -22,6 +22,8 @@ export class MissionBattleUI {
   private gameEngine: GameEngine;
   private currentBattle: BattleUIState | null = null;
   private renderCallback: (() => void) | null = null;
+  private opponentActionCallback: ((action: string) => void) | null = null;
+  private playerLowHealthTriggered: boolean = false; // Track if low health sound already played
 
   constructor(missionManager: MissionManager, gameEngine: GameEngine) {
     this.missionManager = missionManager;
@@ -33,6 +35,13 @@ export class MissionBattleUI {
    */
   setRenderCallback(callback: () => void): void {
     this.renderCallback = callback;
+  }
+
+  /**
+   * Set a callback for opponent actions (for sound effects, etc.)
+   */
+  setOpponentActionCallback(callback: (action: string) => void): void {
+    this.opponentActionCallback = callback;
   }
 
   /**
@@ -225,10 +234,13 @@ export class MissionBattleUI {
           slotIndex: player.field.length,
           summoningSickness: true, // Can't attack on first turn
           usedAbilityThisTurn: false, // Track ability usage
-          // Store original card data for display
+          // Store original card data for display (needed for unified rendering)
+          type: 'Bloom',
           name: bloomCard.name,
           affinity: bloomCard.affinity,
+          cost: bloomCard.cost,
           baseAttack: bloomCard.baseAttack,
+          baseHealth: bloomCard.baseHealth,
           ability: bloomCard.ability,
         };
 
@@ -275,7 +287,17 @@ export class MissionBattleUI {
         player.trapZone.push(trapCard);
 
         console.log(`Set trap: ${trapCard.name}`);
-        return { success: true, message: `Set ${trapCard.name}` };
+
+        // TODO: Trap Activation Logic
+        // Traps should activate based on specific triggers (e.g., when opponent attacks, casts spell, etc.)
+        // When a trap activates:
+        //   1. Process the trap's effects from trapCard.effects
+        //   2. Trigger callback: if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
+        //   3. This will play the sfx/trapCardActivated.wav sound in GameManager
+        //   4. Remove the trap from trapZone and move to graveyard
+        // Implementation needed in: processOpponentTurn(), attackBeast(), attackPlayer(), processMagicEffect()
+
+        return { success: true, message: `Set ${trapCard.name}`, isTrap: true };
 
       case 'Habitat':
         // Remove card from hand
@@ -522,7 +544,7 @@ export class MissionBattleUI {
   private processMagicEffect(effect: any, player: any, opponent: any): void {
     switch (effect.type) {
       case 'deal-damage':
-        const damageTarget = this.getEffectTargets(effect.target, player, opponent);
+        const damageTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition);
         damageTarget.forEach((target: any) => {
           if (target.currentHealth !== undefined) {
             // It's a beast
@@ -545,7 +567,7 @@ export class MissionBattleUI {
         break;
 
       case 'heal':
-        const healTarget = this.getEffectTargets(effect.target, player, opponent);
+        const healTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition);
         healTarget.forEach((target: any) => {
           if (target.currentHealth !== undefined && target.maxHealth !== undefined) {
             // It's a beast
@@ -564,7 +586,7 @@ export class MissionBattleUI {
         break;
 
       case 'destroy':
-        const destroyTarget = this.getEffectTargets(effect.target, player, opponent);
+        const destroyTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition);
         destroyTarget.forEach((target: any) => {
           if (target.currentHealth !== undefined) {
             // It's a beast - remove it
@@ -578,7 +600,7 @@ export class MissionBattleUI {
         break;
 
       case 'modify-stats':
-        const statTarget = this.getEffectTargets(effect.target, player, opponent);
+        const statTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition);
         statTarget.forEach((target: any) => {
           if (target.currentAttack !== undefined) {
             if (effect.stat === 'attack' || effect.stat === 'both') {
@@ -598,6 +620,25 @@ export class MissionBattleUI {
           player.currentNectar += effect.value || 1;
           console.log(`Gained ${effect.value || 1} nectar`);
         }
+        break;
+
+      case 'remove-counter':
+        // Handle counter removal effects (like Cleansing Downpour)
+        const removeTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        removeTargets.forEach((target: any) => {
+          if (target.counters && Array.isArray(target.counters)) {
+            if (effect.counter) {
+              // Remove specific counter type
+              target.counters = target.counters.filter((c: any) => c.type !== effect.counter);
+              console.log(`Removed ${effect.counter} counters from ${target.name || 'target'}`);
+            } else {
+              // Remove all counters
+              const counterCount = target.counters.length;
+              target.counters = [];
+              console.log(`Removed all counters from ${target.name || 'target'} (${counterCount} counters)`);
+            }
+          }
+        });
         break;
 
       default:
@@ -640,6 +681,47 @@ export class MissionBattleUI {
         }
         break;
 
+      case 'remove-counter':
+        // Handle counter removal for habitat onPlayEffects (like Ancient Forest)
+        const removeTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        removeTargets.forEach((target: any) => {
+          if (target.counters && Array.isArray(target.counters)) {
+            if (effect.counter) {
+              // Remove specific counter type
+              target.counters = target.counters.filter((c: any) => c.type !== effect.counter);
+              console.log(`Removed ${effect.counter} counters from ${target.name || 'target'}`);
+            } else {
+              // Remove all counters
+              const counterCount = target.counters.length;
+              target.counters = [];
+              console.log(`Removed all counters from ${target.name || 'target'} (${counterCount} counters)`);
+            }
+          }
+        });
+        break;
+
+      case 'deal-damage':
+        // Handle damage effects for habitat onPlayEffects (like Volcanic Scar)
+        const damageTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        damageTargets.forEach((target: any) => {
+          if (target.currentHealth !== undefined) {
+            // It's a beast
+            target.currentHealth -= effect.value || 0;
+            if (target.currentHealth <= 0) {
+              // Remove dead beast
+              const ownerField = player.field.includes(target) ? player.field : opponent.field;
+              const index = ownerField.indexOf(target);
+              if (index > -1) {
+                ownerField.splice(index, 1);
+              }
+            }
+          } else if (target.health !== undefined) {
+            // It's a player
+            target.health -= effect.value || 0;
+          }
+        });
+        break;
+
       default:
         console.log(`Unhandled habitat effect type: ${effect.type}`);
     }
@@ -648,24 +730,97 @@ export class MissionBattleUI {
   /**
    * Helper to get effect targets based on target type
    */
-  private getEffectTargets(targetType: string, player: any, opponent: any): any[] {
+  private getEffectTargets(targetType: string, player: any, opponent: any, condition?: any): any[] {
+    let targets: any[] = [];
+
     switch (targetType) {
       case 'all-enemies':
-        return [...opponent.field];
+        targets = [...opponent.field];
+        break;
       case 'all-allies':
-        return [...player.field];
+        targets = [...player.field];
+        break;
       case 'random-enemy':
-        return opponent.field.length > 0
+        targets = opponent.field.length > 0
           ? [opponent.field[Math.floor(Math.random() * opponent.field.length)]]
           : [];
+        break;
       case 'opponent-gardener':
-        return [opponent];
+        targets = [opponent];
+        break;
       case 'player-gardener':
-        return [player];
+        targets = [player];
+        break;
       case 'all-units':
-        return [...player.field, ...opponent.field];
+        targets = [...player.field, ...opponent.field];
+        break;
       default:
-        return [];
+        targets = [];
+    }
+
+    // Apply condition filtering if provided
+    if (condition) {
+      targets = targets.filter(target => this.checkCondition(target, condition));
+    }
+
+    return targets;
+  }
+
+  /**
+   * Check if a target passes a condition
+   */
+  private checkCondition(target: any, condition: any): boolean {
+    if (!condition || !condition.type) return true;
+
+    switch (condition.type) {
+      case 'affinity-matches':
+        return target.affinity === condition.value;
+
+      case 'affinity-not-matches':
+        return target.affinity !== condition.value;
+
+      case 'health-below':
+        if (target.currentHealth === undefined) return false;
+        const comparison = condition.comparison || 'less';
+        if (comparison === 'less') {
+          return target.currentHealth < (condition.value || 0);
+        } else if (comparison === 'less-equal') {
+          return target.currentHealth <= (condition.value || 0);
+        }
+        return false;
+
+      case 'health-above':
+        if (target.currentHealth === undefined) return false;
+        return target.currentHealth > (condition.value || 0);
+
+      case 'is-damaged':
+        return target.currentHealth !== undefined &&
+               target.maxHealth !== undefined &&
+               target.currentHealth < target.maxHealth;
+
+      case 'is-wilting':
+        // Wilting = health below 50%
+        if (target.currentHealth === undefined || target.maxHealth === undefined) return false;
+        return target.currentHealth < (target.maxHealth / 2);
+
+      case 'cost-above':
+        return target.cost > (condition.value || 0);
+
+      case 'cost-below':
+        return target.cost < (condition.value || 0);
+
+      case 'has-counter':
+        if (!target.counters || !Array.isArray(target.counters)) return false;
+        if (condition.value) {
+          // Check for specific counter type
+          return target.counters.some((c: any) => c.type === condition.value);
+        }
+        // Check if has any counters
+        return target.counters.length > 0;
+
+      default:
+        console.log(`Unknown condition type: ${condition.type}`);
+        return true;
     }
   }
 
@@ -697,6 +852,23 @@ export class MissionBattleUI {
     // Switch back to player
     gameState.activePlayer = 0;
     gameState.turn++;
+
+    // Apply deathmatch damage after turn 30 (prevents stalemate)
+    // Damage escalates every 5 turns: 30-34 = 1 dmg, 35-39 = 2 dmg, 40-44 = 3 dmg, etc.
+    if (gameState.turn >= 30) {
+      const opponent = gameState.players[1];
+      const deathmatchDamage = Math.floor((gameState.turn - 30) / 5) + 1;
+      console.log(`Deathmatch! Both players lose ${deathmatchDamage} health`);
+      player.health -= deathmatchDamage;
+      opponent.health -= deathmatchDamage;
+
+      // Check if either player died from deathmatch damage
+      if (player.health <= 0 || opponent.health <= 0) {
+        // Trigger render to show the damage
+        if (this.renderCallback) this.renderCallback();
+        // Battle will end after this function returns
+      }
+    }
 
     // Draw a card for player at start of their turn
     this.drawCard(player);
@@ -760,37 +932,111 @@ export class MissionBattleUI {
     for (let i = opponent.hand.length - 1; i >= 0; i--) {
       const card: any = opponent.hand[i];
 
-      if (card.type === 'Bloom' && card.cost <= opponent.currentNectar && opponent.field.length < 3) {
-        // Play the card
-        const playedCard: any = opponent.hand.splice(i, 1)[0];
-        opponent.currentNectar -= playedCard.cost;
+      if (card.cost <= opponent.currentNectar) {
+        if (card.type === 'Bloom' && opponent.field.length < 3) {
+          // Play Bloom card
+          const playedCard: any = opponent.hand.splice(i, 1)[0];
+          opponent.currentNectar -= playedCard.cost;
 
-        const beastInstance: any = {
-          cardId: playedCard.id,
-          instanceId: playedCard.instanceId || `${playedCard.id}-${Date.now()}`,
-          currentLevel: 1 as any,
-          currentXP: 0,
-          currentAttack: playedCard.baseAttack,
-          currentHealth: playedCard.baseHealth,
-          maxHealth: playedCard.baseHealth,
-          counters: [],
-          statusEffects: [],
-          slotIndex: opponent.field.length,
-          summoningSickness: true, // Can't attack on the turn they're summoned
-          usedAbilityThisTurn: false, // Track ability usage
-          // Store original card data for display
-          name: playedCard.name,
-          affinity: playedCard.affinity,
-          baseAttack: playedCard.baseAttack,
-          ability: playedCard.ability,
-        };
+          const beastInstance: any = {
+            cardId: playedCard.id,
+            instanceId: playedCard.instanceId || `${playedCard.id}-${Date.now()}`,
+            currentLevel: 1 as any,
+            currentXP: 0,
+            currentAttack: playedCard.baseAttack,
+            currentHealth: playedCard.baseHealth,
+            maxHealth: playedCard.baseHealth,
+            counters: [],
+            statusEffects: [],
+            slotIndex: opponent.field.length,
+            summoningSickness: true, // Can't attack on the turn they're summoned
+            usedAbilityThisTurn: false, // Track ability usage
+            // Store original card data for display (needed for unified rendering)
+            type: 'Bloom',
+            name: playedCard.name,
+            affinity: playedCard.affinity,
+            cost: playedCard.cost,
+            baseAttack: playedCard.baseAttack,
+            baseHealth: playedCard.baseHealth,
+            ability: playedCard.ability,
+          };
 
-        opponent.field.push(beastInstance);
-        console.log(`Opponent played ${playedCard.name}`);
+          opponent.field.push(beastInstance);
+          console.log(`Opponent played ${playedCard.name}`);
 
-        // Render and delay after playing card
-        if (this.renderCallback) this.renderCallback();
-        await delay(1200);
+          // Notify action callback for sound effects
+          if (this.opponentActionCallback) this.opponentActionCallback('play-card');
+
+          // Render and delay after playing card
+          if (this.renderCallback) this.renderCallback();
+          await delay(1200);
+        } else if (card.type === 'Magic') {
+          // Play Magic card
+          const playedCard: any = opponent.hand.splice(i, 1)[0];
+          opponent.currentNectar -= playedCard.cost;
+
+          // Process magic card effects immediately
+          if (playedCard.effects && Array.isArray(playedCard.effects)) {
+            for (const effect of playedCard.effects) {
+              this.processMagicEffect(effect, opponent, player);
+            }
+          }
+
+          // Magic cards go to graveyard after use
+          opponent.graveyard.push(playedCard);
+          console.log(`Opponent played magic card: ${playedCard.name}`);
+
+          // Notify action callback with card details for popup
+          if (this.opponentActionCallback) {
+            this.opponentActionCallback(`play-magic-card:${JSON.stringify(playedCard)}`);
+          }
+
+          // Render and delay after playing card
+          if (this.renderCallback) this.renderCallback();
+          await delay(3500); // Longer delay to allow popup to show
+        } else if (card.type === 'Trap' && opponent.trapZone.length < 3) {
+          // Play Trap card
+          const playedCard: any = opponent.hand.splice(i, 1)[0];
+          opponent.currentNectar -= playedCard.cost;
+
+          // Add to trap zone
+          opponent.trapZone.push(playedCard);
+          console.log(`Opponent set trap: ${playedCard.name}`);
+
+          // Notify action callback with card details for popup
+          if (this.opponentActionCallback) {
+            this.opponentActionCallback(`play-trap-card:${JSON.stringify(playedCard)}`);
+          }
+
+          // Render and delay after playing card
+          if (this.renderCallback) this.renderCallback();
+          await delay(3500); // Longer delay to allow popup to show
+        } else if (card.type === 'Habitat' && !this.currentBattle.gameState.habitatZone) {
+          // Play Habitat card (only if no habitat is currently active)
+          const playedCard: any = opponent.hand.splice(i, 1)[0];
+          opponent.currentNectar -= playedCard.cost;
+
+          // Set habitat zone
+          this.currentBattle.gameState.habitatZone = playedCard;
+
+          // Process on-play effects
+          if (playedCard.onPlayEffects && Array.isArray(playedCard.onPlayEffects)) {
+            for (const effect of playedCard.onPlayEffects) {
+              this.processHabitatEffect(effect, opponent, player);
+            }
+          }
+
+          console.log(`Opponent played habitat: ${playedCard.name}`);
+
+          // Notify action callback with card details for popup
+          if (this.opponentActionCallback) {
+            this.opponentActionCallback(`play-habitat-card:${JSON.stringify(playedCard)}`);
+          }
+
+          // Render and delay after playing card
+          if (this.renderCallback) this.renderCallback();
+          await delay(3500); // Longer delay to allow popup to show
+        }
       }
     }
 
@@ -806,6 +1052,11 @@ export class MissionBattleUI {
 
           if (target) {
             console.log(`Opponent's ${beast.name} attacks ${target.name}`);
+
+            // Notify action callback with detailed attack info
+            if (this.opponentActionCallback) {
+              this.opponentActionCallback(`attack-beast-opponent-${index}-player-${targetIndex}`);
+            }
 
             // Deal damage to each other
             target.currentHealth -= beast.currentAttack || 0;
@@ -828,12 +1079,31 @@ export class MissionBattleUI {
         } else {
           // No beasts to attack - attack player directly
           const damage = beast.currentAttack || 0;
+          const previousHealth = player.health;
           player.health -= damage;
           console.log(`Opponent's ${beast.name} attacks you directly for ${damage} damage!`);
+
+          // Check if player health dropped below 10% threshold
+          const healthPercentage = (player.health / player.maxHealth) * 100;
+          if (healthPercentage <= 10 && previousHealth > player.health && !this.playerLowHealthTriggered) {
+            this.playerLowHealthTriggered = true;
+            if (this.opponentActionCallback) this.opponentActionCallback('player-low-health');
+          }
+
+          // Notify action callback with detailed attack info (opponent attacking player health)
+          if (this.opponentActionCallback) {
+            this.opponentActionCallback(`attack-player-opponent-${index}`);
+          }
 
           // Render and delay after direct attack
           if (this.renderCallback) this.renderCallback();
           await delay(1000);
+
+          // Check if player health reached 0 - end battle immediately
+          if (player.health <= 0) {
+            this.endBattle();
+            return; // Stop opponent turn processing
+          }
         }
       }
     }
@@ -1149,5 +1419,6 @@ export class MissionBattleUI {
   clearBattle(): void {
     this.currentBattle = null;
     this.renderCallback = null; // Clear callback to prevent race conditions
+    this.playerLowHealthTriggered = false; // Reset low health flag
   }
 }

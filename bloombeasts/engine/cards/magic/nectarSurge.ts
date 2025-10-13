@@ -23,6 +23,7 @@ export const NECTAR_SURGE: MagicCard = {
   id: 'nectar-surge',
   name: 'Nectar Surge',
   type: 'Magic',
+  description: 'Gain 3 temporary Nectar this turn and draw 1 card.',
   cost: 1,
   effects: [gainNectar, drawCard],
   targetRequired: false

@@ -9,7 +9,7 @@ export interface ClickableRegion {
     y: number;
     width: number;
     height: number;
-    callback: () => void;
+    callback: (clickX?: number, clickY?: number) => void;
 }
 
 export class ClickRegionManager {
@@ -32,7 +32,7 @@ export class ClickRegionManager {
             for (let i = this.regions.length - 1; i >= 0; i--) {
                 const region = this.regions[i];
                 if (this.isPointInRegion(x, y, region)) {
-                    region.callback();
+                    region.callback(x, y);
                     break;
                 }
             }

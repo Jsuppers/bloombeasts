@@ -66,6 +66,7 @@ export interface TrapActivation {
  */
 export interface MagicCard extends Card {
   type: 'Magic';
+  description: string;
   effects: AbilityEffect[];  // Structured effects instead of string
   targetRequired?: boolean;  // Whether the card needs a target
 }
@@ -85,6 +86,7 @@ export interface TrapCard extends Card {
  */
 export interface HabitatCard extends Card {
   type: 'Habitat';
+  description: string;
   affinity: Affinity;
   ongoingEffects: AbilityEffect[];  // Effects that persist while habitat is active
   onPlayEffects?: AbilityEffect[];  // One-time effects when played

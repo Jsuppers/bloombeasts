@@ -5,17 +5,17 @@
 import { MagicCard, TrapCard } from '../../types/core';
 import { DeckCardEntry } from '../BaseDeck';
 
-// Import all shared cards
-import { NECTAR_BLOCK } from './nectarBlock';
-import { NECTAR_SURGE } from './nectarSurge';
-import { CLEANSING_DOWNPOUR } from './cleansingDownpour';
-import { HABITAT_LOCK } from './habitatLock';
+// Import all shared cards from their new locations
+import { NECTAR_BLOCK } from '../magic/nectarBlock';
+import { NECTAR_SURGE } from '../magic/nectarSurge';
+import { CLEANSING_DOWNPOUR } from '../magic/cleansingDownpour';
+import { HABITAT_LOCK } from '../trap/habitatLock';
 
 // Re-export all cards
-export { NECTAR_BLOCK } from './nectarBlock';
-export { NECTAR_SURGE } from './nectarSurge';
-export { CLEANSING_DOWNPOUR } from './cleansingDownpour';
-export { HABITAT_LOCK } from './habitatLock';
+export { NECTAR_BLOCK } from '../magic/nectarBlock';
+export { NECTAR_SURGE } from '../magic/nectarSurge';
+export { CLEANSING_DOWNPOUR } from '../magic/cleansingDownpour';
+export { HABITAT_LOCK } from '../trap/habitatLock';
 
 /**
  * Get all shared core cards with quantities

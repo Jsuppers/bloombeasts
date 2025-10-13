@@ -14,7 +14,9 @@
       "Bash(npm run serve:*)",
       "Bash(curl:*)",
       "Bash(netstat:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(identify:*)",
+      "Read(//c/Users/joris/**)"
     ],
     "deny": [],
     "ask": []

@@ -6,8 +6,8 @@ import { BattleDisplay } from '../../../../bloombeasts/gameManager';
 import { CanvasRenderer } from '../utils/canvasRenderer';
 import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
-import { battleBoardAssetPositions, uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions } from '../../../../shared/constants/positions';
-import { standardCardDimensions, sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
+import { battleBoardAssetPositions, uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions, playboardImagePositions } from '../../../../shared/constants/positions';
+import { standardCardDimensions, sideMenuButtonDimensions, habitatShiftCardDimensions } from '../../../../shared/constants/dimensions';
 import { nectarEmoji, deckEmoji } from '../../../../shared/constants/emojis';
 
 export class BattleScreen {
@@ -33,10 +33,22 @@ export class BattleScreen {
         this.clickManager.clearRegions();
         this.renderer.clear();
 
-        // Draw playboard background
+        // Draw background image (full screen)
+        const backgroundImg = this.assets.getImage('background');
+        if (backgroundImg) {
+            this.renderer.drawImage(backgroundImg);
+        }
+
+        // Draw playboard on top at specific position
         const playboardImg = this.assets.getImage('playboard');
         if (playboardImg) {
-            this.renderer.drawImage(playboardImg);
+            this.renderer.ctx.drawImage(
+                playboardImg,
+                playboardImagePositions.x,
+                playboardImagePositions.y,
+                1073,
+                572
+            );
         }
 
         // Draw side menu background
@@ -50,20 +62,38 @@ export class BattleScreen {
         this.renderer.drawText('Battle', textPos.x, textPos.y, 20, '#fff', 'left');
         this.renderer.drawText(`Turn ${battleState.currentTurn}`, textPos.x, textPos.y + 25, 18, '#fff', 'left');
 
+        // Show "Deathmatch!" warning after turn 30 with escalating damage
+        if (battleState.currentTurn >= 30) {
+            const deathmatchDamage = Math.floor((battleState.currentTurn - 30) / 5) + 1;
+            this.renderer.drawText(`Deathmatch! -${deathmatchDamage} HP`, textPos.x, textPos.y + 50, 16, '#ff6b6b', 'left');
+        }
+
         // Get positions from constants
         const opponentInfoPos = battleBoardAssetPositions.playOneInfoPosition;
         const playerInfoPos = battleBoardAssetPositions.playerTwoInfoPosition;
         const opponentHealthPos = battleBoardAssetPositions.playerOne.health;
         const playerHealthPos = battleBoardAssetPositions.playerTwo.health;
 
+        // Draw opponent health
+        const opponentHealthText = `${battleState.opponentHealth}/${battleState.opponentMaxHealth}`;
         this.renderer.drawText(
-            `${battleState.opponentHealth}/${battleState.opponentMaxHealth}`,
+            opponentHealthText,
             opponentHealthPos.x,
             opponentHealthPos.y,
             20,
             '#fff',
             'center'
         );
+
+        // Draw red blink overlay if opponent health is being attacked by player
+        if (battleState.attackAnimation &&
+            battleState.attackAnimation.targetPlayer === 'health' &&
+            battleState.attackAnimation.attackerPlayer === 'player') {
+            const textWidth = this.renderer.ctx.measureText(opponentHealthText).width;
+            const overlayX = opponentHealthPos.x - textWidth / 2 - 10;
+            const overlayY = opponentHealthPos.y - 10;
+            this.renderer.drawCardBlinkOverlay(overlayX, overlayY, textWidth + 20, 30, 'rgba(255, 0, 0, 0.4)');
+        }
 
         // Draw opponent info (top)
         this.renderer.drawText(
@@ -91,14 +121,26 @@ export class BattleScreen {
             'left'
         );
 
+        // Draw player health
+        const playerHealthText = `${battleState.playerHealth}/${battleState.playerMaxHealth}`;
         this.renderer.drawText(
-            `${battleState.playerHealth}/${battleState.playerMaxHealth}`,
+            playerHealthText,
             playerHealthPos.x,
             playerHealthPos.y,
             20,
             '#fff',
             'center'
         );
+
+        // Draw red blink overlay if player health is being attacked by opponent
+        if (battleState.attackAnimation &&
+            battleState.attackAnimation.targetPlayer === 'health' &&
+            battleState.attackAnimation.attackerPlayer === 'opponent') {
+            const textWidth = this.renderer.ctx.measureText(playerHealthText).width;
+            const overlayX = playerHealthPos.x - textWidth / 2 - 10;
+            const overlayY = playerHealthPos.y - 10;
+            this.renderer.drawCardBlinkOverlay(overlayX, overlayY, textWidth + 20, 30, 'rgba(255, 0, 0, 0.4)');
+        }
 
         // Draw player info (bottom)
         this.renderer.drawText(
@@ -212,6 +254,13 @@ export class BattleScreen {
         if (battleState.playerHand.length > 0) {
             await this.renderPlayerHand(battleState.playerHand, battleState.playerNectar, onButtonClick, this.showHand);
         }
+
+        // Render card popup if present (should be last so it's on top)
+        if (battleState.cardPopup) {
+            const card = battleState.cardPopup.card;
+            const assets = await this.assets.loadCardAssets(card, 'default');
+            await this.renderer.drawCenteredCardPopup(card, assets);
+        }
     }
 
     private async renderBattleField(player: 'player' | 'opponent', beasts: any[], onButtonClick?: (buttonId: string) => void): Promise<void> {
@@ -225,23 +274,60 @@ export class BattleScreen {
             const beast = beasts[index];
             if (beast && slots[index]) {
                 const pos = slots[index];
-                const cardWidth = 210;
-                const cardHeight = 260;
+                const cardWidth = standardCardDimensions.width;
+                const cardHeight = standardCardDimensions.height;
 
-                // Load card images separately
-                const beastImage = await this.assets.loadBeastImage(beast.name, beast.affinity);
-                const baseCardImage = await this.assets.loadBaseCardImage(beast.affinity);
-                const affinityIcon = beast.affinity ? await this.assets.loadAffinityIcon(beast.affinity) : null;
+                // Load card assets using the unified method (beasts are always Bloom type)
+                const beastCard = { ...beast, type: 'Bloom' }; // Ensure type is set
+                const assets = await this.assets.loadCardAssets(beastCard, 'default');
+
+                // Draw the card with layered images (without icons yet)
+                this.renderer.drawBeastCard(pos.x, pos.y, beast, assets.mainImage, assets.baseCardImage, assets.affinityIcon, null, null);
 
                 // Highlight if selected (player beasts only)
                 if (player === 'player' && this.currentBattleState && this.currentBattleState.selectedBeastIndex === index) {
-                    this.renderer.ctx.strokeStyle = '#FFD700'; // Gold highlight
-                    this.renderer.ctx.lineWidth = 5;
-                    this.renderer.ctx.strokeRect(pos.x - 3, pos.y - 3, cardWidth + 6, cardHeight + 6);
+                    this.renderer.drawCardSelectionHighlight(pos.x, pos.y, cardWidth, cardHeight, '#FFD700', 5);
                 }
 
-                // Draw the card with layered images
-                this.renderer.drawBeastCard(pos.x, pos.y, beast, beastImage, baseCardImage, affinityIcon);
+                // Draw attack animation overlay if this card is attacking or being attacked
+                if (this.currentBattleState && this.currentBattleState.attackAnimation) {
+                    const anim = this.currentBattleState.attackAnimation;
+
+                    // Check if this is the attacker (green overlay)
+                    if (anim.attackerPlayer === player && anim.attackerIndex === index) {
+                        this.renderer.drawCardBlinkOverlay(pos.x, pos.y, cardWidth, cardHeight, 'rgba(0, 255, 0, 0.4)');
+                    }
+                    // Check if this is the target (red overlay)
+                    else if (anim.targetPlayer === player && anim.targetIndex === index) {
+                        this.renderer.drawCardBlinkOverlay(pos.x, pos.y, cardWidth, cardHeight, 'rgba(255, 0, 0, 0.4)');
+                    }
+                }
+
+                // Draw action icons on top of everything (for both player and opponent beasts)
+                const attackIcon = this.assets.getImage('attackIcon');
+                const abilityIcon = this.assets.getImage('abilityIcon');
+
+                // Draw attack icon if beast can attack
+                if (attackIcon && beast.summoningSickness === false) {
+                    this.renderer.ctx.drawImage(
+                        attackIcon,
+                        pos.x + 17,
+                        pos.y + 44,
+                        26,
+                        26
+                    );
+                }
+
+                // Draw ability icon if beast has activated ability available
+                if (abilityIcon && beast.ability && beast.ability.trigger === 'Activated' && !beast.usedAbilityThisTurn) {
+                    this.renderer.ctx.drawImage(
+                        abilityIcon,
+                        pos.x + 157,
+                        pos.y + 44,
+                        26,
+                        26
+                    );
+                }
 
                 // Add click regions - show card details
                 this.clickManager.addRegion({
@@ -268,11 +354,13 @@ export class BattleScreen {
                 : battleBoardAssetPositions.playerOne;
         const trapSlots = [positions.trapOne, positions.trapTwo, positions.trapThree];
 
-        const trapWidth = 75;
-        const trapHeight = 95;
+        const trapWidth = 85;
+        const trapHeight = 85;
 
-        // Load trap card template once for all trap cards
-        const trapTemplate = await this.assets.loadTrapCardPlayboardTemplate();
+        // Load trap card template once for all trap cards (face-down cards)
+        const dummyTrap = { type: 'Trap', name: 'Unknown' };
+        const trapAssets = await this.assets.loadCardAssets(dummyTrap, 'battle');
+        const trapTemplate = trapAssets.templateImage;
 
         for (let index = 0; index < trapSlots.length; index++) {
             const pos = trapSlots[index];
@@ -281,6 +369,22 @@ export class BattleScreen {
             if (trap) {
                 // Use the TrapCardPlayboard template for face-down trap cards
                 this.renderer.drawTrapCardPlayboard(pos.x, pos.y, trapWidth, trapHeight, trapTemplate);
+
+                // Add click region for player's own trap cards only
+                if (player === 'player') {
+                    this.clickManager.addRegion({
+                        id: `view-trap-card-${player}-${index}`,
+                        x: pos.x,
+                        y: pos.y,
+                        width: trapWidth,
+                        height: trapHeight,
+                        callback: () => {
+                            if (this.currentButtonCallback) {
+                                this.currentButtonCallback(`view-trap-card-${player}-${index}`);
+                            }
+                        },
+                    });
+                }
             } else {
                 // Draw empty trap slot (dashed outline)
                 this.renderer.ctx.strokeStyle = '#666';
@@ -294,13 +398,14 @@ export class BattleScreen {
 
     private async renderHabitatZone(habitat: any): Promise<void> {
         const pos = battleBoardAssetPositions.habitatZone;
-        const habitatWidth = 150;
-        const habitatHeight = 185; // Increased height to match card proportions
+        const habitatWidth = habitatShiftCardDimensions.width;
+        const habitatHeight = habitatShiftCardDimensions.height;
 
-        // Load the habitat card image and template
-        const affinity = habitat.affinity || 'Forest';
-        const habitatImage = await this.assets.loadHabitatImage(habitat.name, affinity);
-        const playboardTemplate = await this.assets.loadHabitatCardPlayboardTemplate(affinity);
+        // Load the habitat card assets using unified method
+        const habitatCard = { ...habitat, type: 'Habitat', affinity: habitat.affinity || 'Forest' };
+        const habitatAssets = await this.assets.loadCardAssets(habitatCard, 'battle');
+        const habitatImage = habitatAssets.mainImage;
+        const playboardTemplate = habitatAssets.templateImage;
 
         // Use the new drawHabitatCardPlayboard method
         this.renderer.drawHabitatCardPlayboard(pos.x, pos.y, habitatWidth, habitatHeight, habitatImage, playboardTemplate);
@@ -385,41 +490,32 @@ export class BattleScreen {
             const x = startX + col * (cardWidth + spacing);
             const y = startY + row * (cardHeight + spacing);
 
-            // Load card images separately for layered rendering
-            const beastImage = card.type === 'Bloom' ? await this.assets.loadBeastImage(card.name, card.affinity) : null;
-            const baseCardImage = await this.assets.loadBaseCardImage(card.affinity);
-            // Only load affinity icon for Bloom cards (Magic and Trap cards don't have affinity)
-            const affinityIcon = card.type === 'Bloom' && card.affinity ? await this.assets.loadAffinityIcon(card.affinity) : null;
-
-            // For Magic/Trap/Habitat cards, load the specific image and template
-            const magicCardTemplate = card.type === 'Magic' ? await this.assets.loadMagicCardTemplate() : null;
-            const trapCardTemplate = card.type === 'Trap' ? await this.assets.loadTrapCardTemplate() : null;
-            const habitatCardTemplate = card.type === 'Habitat' && card.affinity ? await this.assets.loadHabitatCardTemplate(card.affinity) : null;
-            const habitatImage = card.type === 'Habitat' && card.affinity ? await this.assets.loadHabitatImage(card.name, card.affinity) : null;
-            const cardImage = (card.type === 'Magic' || card.type === 'Trap') ? await this.assets.loadCardImage(card.name, card.affinity, card.type) : null;
+            // Load all card assets using the unified method
+            const assets = await this.assets.loadCardAssets(card, 'default');
 
             // Check if affordable
             const canAfford = card.cost <= playerNectar;
 
             // Use appropriate rendering method based on card type
             if (card.type === 'Bloom') {
-                this.renderer.drawBeastCard(x, y, card, beastImage, baseCardImage, affinityIcon);
+                // Load action icons for beast cards in hand
+                const attackIcon = this.assets.getImage('attackIcon');
+                const abilityIcon = this.assets.getImage('abilityIcon');
+                this.renderer.drawBeastCard(x, y, card, assets.mainImage, assets.baseCardImage, assets.affinityIcon, attackIcon, abilityIcon);
             } else if (card.type === 'Magic') {
-                this.renderer.drawMagicCard(x, y, card, cardImage, magicCardTemplate, baseCardImage);
+                this.renderer.drawMagicCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
             } else if (card.type === 'Trap') {
-                this.renderer.drawTrapCard(x, y, card, cardImage, trapCardTemplate, baseCardImage);
+                this.renderer.drawTrapCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
             } else if (card.type === 'Habitat') {
-                this.renderer.drawHabitatCard(x, y, card, habitatImage, habitatCardTemplate, baseCardImage);
+                this.renderer.drawHabitatCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
             } else {
                 // Other card types (fallback)
-                this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, cardImage, false);
+                this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, assets.mainImage, false);
             }
 
-            // Highlight if affordable
+            // Highlight if affordable or dim if not
             if (canAfford) {
-                this.renderer.ctx.strokeStyle = '#43e97b';
-                this.renderer.ctx.lineWidth = 4;
-                this.renderer.ctx.strokeRect(x, y, cardWidth, cardHeight);
+                this.renderer.drawCardSelectionHighlight(x, y, cardWidth, cardHeight, '#43e97b', 4);
             } else {
                 // Dim if not affordable
                 this.renderer.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';

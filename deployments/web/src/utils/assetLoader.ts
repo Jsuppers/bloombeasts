@@ -21,6 +21,10 @@ export class AssetLoader {
             await this.loadImage('sideMenuGreenButton', '/shared/images/SideMenuGreenButton.png');
             await this.loadImage('sideMenuStandardButton', '/shared/images/SideMenuStandardButton.png');
 
+            // Load action icons
+            await this.loadImage('attackIcon', '/shared/images/icons/attack.png');
+            await this.loadImage('abilityIcon', '/shared/images/icons/ability.png');
+
             // Load menu animation frames
             for (let i = 1; i <= 10; i++) {
                 await this.loadImage(`menuFrame${i}`, `/shared/images/menu/Frame${i}.png`);
@@ -306,5 +310,87 @@ export class AssetLoader {
             console.warn(`Failed to load habitat image: ${imagePath}`);
             return null;
         }
+    }
+
+    /**
+     * Unified method to load all necessary images for a card
+     * @param card The card object containing type, name, affinity, etc.
+     * @param renderType 'default' for hand/inventory, 'battle' for playboard
+     * @returns Object containing all necessary images for rendering the card
+     */
+    async loadCardAssets(
+        card: any,
+        renderType: 'default' | 'battle' = 'default'
+    ): Promise<{
+        mainImage: HTMLImageElement | null;
+        baseCardImage: HTMLImageElement | null;
+        templateImage: HTMLImageElement | null;
+        affinityIcon: HTMLImageElement | null;
+    }> {
+        const result = {
+            mainImage: null as HTMLImageElement | null,
+            baseCardImage: null as HTMLImageElement | null,
+            templateImage: null as HTMLImageElement | null,
+            affinityIcon: null as HTMLImageElement | null,
+        };
+
+        switch (card.type) {
+            case 'Bloom':
+                // Load beast image
+                result.mainImage = await this.loadBeastImage(card.name, card.affinity);
+                // Only Bloom cards need the base card frame
+                result.baseCardImage = await this.loadBaseCardImage(card.affinity);
+                // Load affinity icon if available
+                if (card.affinity) {
+                    result.affinityIcon = await this.loadAffinityIcon(card.affinity);
+                }
+                break;
+
+            case 'Magic':
+                // Load magic card image
+                result.mainImage = await this.loadCardImage(card.name, card.affinity, 'Magic');
+                // Load appropriate template based on render type
+                if (renderType === 'battle') {
+                    result.templateImage = await this.loadMagicCardPlayboardTemplate();
+                } else {
+                    result.templateImage = await this.loadMagicCardTemplate();
+                    // Magic cards in hand/inventory don't need base card
+                }
+                break;
+
+            case 'Trap':
+                // Load appropriate template based on render type
+                if (renderType === 'battle') {
+                    // For battlefield, traps are face-down - only need template, not the actual card image
+                    result.templateImage = await this.loadTrapCardPlayboardTemplate();
+                } else {
+                    // For hand/inventory, load the actual trap card image
+                    result.mainImage = await this.loadCardImage(card.name, card.affinity, 'Trap');
+                    result.templateImage = await this.loadTrapCardTemplate();
+                    // Trap cards in hand/inventory don't need base card
+                }
+                break;
+
+            case 'Habitat':
+                // Load habitat image
+                if (card.affinity) {
+                    result.mainImage = await this.loadHabitatImage(card.name, card.affinity);
+                    // Load appropriate template based on render type
+                    if (renderType === 'battle') {
+                        result.templateImage = await this.loadHabitatCardPlayboardTemplate(card.affinity);
+                    } else {
+                        result.templateImage = await this.loadHabitatCardTemplate(card.affinity);
+                        // Habitat cards in hand/inventory don't need base card
+                    }
+                }
+                break;
+
+            default:
+                // For any other card types, just load the card image
+                result.mainImage = await this.loadCardImage(card.name, card.affinity, card.type);
+                break;
+        }
+
+        return result;
     }
 }

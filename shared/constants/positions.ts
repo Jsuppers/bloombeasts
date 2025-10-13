@@ -1,4 +1,4 @@
-import { BattleBoardAssetPositions, CardTextPositions, SideMenuPositions, UIButtonPositions, UITextSafeZone } from "../types/positions";
+import { BattleBoardAssetPositions, CardTextPositions, SideMenuPositions, SimplePosition, UIButtonPositions, UITextSafeZone } from "../types/positions";
 
 export const standardCardPositions: CardTextPositions = {
   cost: { x: 20, y: 10, size: 26, textAlign: 'center', textBaseline: 'top' },
@@ -9,6 +9,15 @@ export const standardCardPositions: CardTextPositions = {
   ability: { x: 21, y: 212, size: 12, textAlign: 'left', textBaseline: 'top' },
   attack: { x: 20, y: 176, size: 26, textAlign: 'center', textBaseline: 'top' },
   health: { x: 188, y: 176, size: 26, textAlign: 'center', textBaseline: 'top' },
+  icons: {
+    attack: { x: 17, y: 44, size: 26, textAlign: 'center', textBaseline: 'top' },
+    ability: { x: 157, y: 44, size: 26, textAlign: 'center', textBaseline: 'top' },
+  }
+};
+
+export const playboardImagePositions: SimplePosition = {
+  x: 64,
+  y: 72,
 };
 
 // Safe zone for UI buttons and interactive elements

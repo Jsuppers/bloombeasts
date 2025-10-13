@@ -30,8 +30,10 @@ export { GALE_GLIDER } from './engine/cards/sky/galeGlider';
 export { STAR_BLOOM } from './engine/cards/sky/starBloom';
 export { CLEAR_ZENITH } from './engine/cards/sky/clearZenith';
 
-// Shared Cards
-export { HABITAT_LOCK } from './engine/cards/shared/habitatLock';
-export { NECTAR_SURGE } from './engine/cards/shared/nectarSurge';
-export { CLEANSING_DOWNPOUR } from './engine/cards/shared/cleansingDownpour';
-export { NECTAR_BLOCK } from './engine/cards/shared/nectarBlock';
+// Magic Cards
+export { NECTAR_SURGE } from './engine/cards/magic/nectarSurge';
+export { CLEANSING_DOWNPOUR } from './engine/cards/magic/cleansingDownpour';
+export { NECTAR_BLOCK } from './engine/cards/magic/nectarBlock';
+
+// Trap Cards
+export { HABITAT_LOCK } from './engine/cards/trap/habitatLock';

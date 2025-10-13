@@ -6,6 +6,8 @@ import { FireDeck } from './fire';
 import { WaterDeck } from './water';
 import { ForestDeck } from './forest';
 import { SkyDeck } from './sky';
+import { MagicCards } from './magic';
+import { TrapCards } from './trap';
 import { BloomBeastCard, HabitatCard, TrapCard, MagicCard, AnyCard } from '../types/core';
 import { SimpleMap, arrayFrom } from '../../utils/polyfills';
 
@@ -14,6 +16,10 @@ export { FireDeck } from './fire';
 export { WaterDeck } from './water';
 export { ForestDeck } from './forest';
 export { SkyDeck } from './sky';
+
+// Export magic and trap cards
+export * from './magic';
+export * from './trap';
 
 /**
  * Get all cards from all decks
@@ -33,6 +39,7 @@ export function getAllCards(): AnyCard[] {
   // Collect all unique cards
   const cardMap = new SimpleMap<string, AnyCard>();
 
+  // Add cards from decks (Bloom beasts and Habitats)
   decks.forEach(deck => {
     const deckCards = deck.getAllCards();
     deckCards.forEach(card => {
@@ -55,6 +62,22 @@ export function getAllCards(): AnyCard[] {
         cardMap.set(card.id, card);
       }
     });
+  });
+
+  // Add Magic cards
+  MagicCards.forEach(card => {
+    if (!cardMap.has(card.id)) {
+      (card as any).rarity = 'common';
+      cardMap.set(card.id, card);
+    }
+  });
+
+  // Add Trap cards
+  TrapCards.forEach(card => {
+    if (!cardMap.has(card.id)) {
+      (card as any).rarity = 'common';
+      cardMap.set(card.id, card);
+    }
   });
 
   return cardMap.values();
