@@ -146,9 +146,13 @@ export class MissionSelectionUI {
       '🎯 Objectives:',
     ];
 
-    mission.objectives.forEach(obj => {
-      details.push(`  • ${obj.description}`);
-    });
+    if (mission.objectives && mission.objectives.length > 0) {
+      mission.objectives.forEach(obj => {
+        details.push(`  • ${obj.description}`);
+      });
+    } else {
+      details.push(`  • Defeat the opponent`);
+    }
 
     if (mission.specialRules && mission.specialRules.length > 0) {
       details.push('');
@@ -190,7 +194,9 @@ export class MissionSelectionUI {
     }
 
     console.log(`Starting mission: ${mission.name}`);
-    console.log(`Opponent: ${mission.opponentAI.name}`);
+    if (mission.opponentAI) {
+      console.log(`Opponent: ${mission.opponentAI.name}`);
+    }
     console.log(`Difficulty: ${mission.difficulty}`);
 
     return true;
@@ -214,15 +220,19 @@ export class MissionSelectionUI {
       'Objectives Progress:',
     ];
 
-    mission.objectives.forEach(obj => {
-      const key = `${obj.type}-${obj.target || 0}`;
-      const currentProgress = progress.objectiveProgress.get(key) || 0;
-      const target = obj.target || 1;
-      const isComplete = currentProgress >= target;
-      const status = isComplete ? '✅' : '⬜';
+    if (mission.objectives && mission.objectives.length > 0) {
+      mission.objectives.forEach(obj => {
+        const key = `${obj.type}-${obj.target || 0}`;
+        const currentProgress = progress.objectiveProgress.get(key) || 0;
+        const target = obj.target || 1;
+        const isComplete = currentProgress >= target;
+        const status = isComplete ? '✅' : '⬜';
 
-      display.push(`  ${status} ${obj.description} (${Math.min(currentProgress, target)}/${target})`);
-    });
+        display.push(`  ${status} ${obj.description} (${Math.min(currentProgress, target)}/${target})`);
+      });
+    } else {
+      display.push(`  ⬜ Defeat the opponent`);
+    }
 
     if (mission.turnLimit) {
       display.push('');

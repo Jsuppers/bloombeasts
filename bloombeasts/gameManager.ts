@@ -82,6 +82,8 @@ export interface MissionDisplay {
   isAvailable: boolean;
   isCompleted: boolean;
   description: string;
+  affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
+  beastId?: string;
 }
 
 export interface CardDisplay {
@@ -417,6 +419,8 @@ export class GameManager {
       isAvailable: m.isAvailable,
       isCompleted: m.completionCount > 0,
       description: m.mission.description,
+      affinity: m.mission.affinity,
+      beastId: m.mission.beastId,
     }));
 
     this.platform.renderMissionSelect(displayMissions);

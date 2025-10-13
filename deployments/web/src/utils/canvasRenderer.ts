@@ -346,29 +346,137 @@ export class CanvasRenderer {
         y: number,
         width: number,
         height: number,
-        mission: any
+        mission: any,
+        cardsContainerImage?: HTMLImageElement | null,
+        missionImage?: HTMLImageElement | null,
+        beastImage?: HTMLImageElement | null
     ): void {
-        // Mission card background
-        if (mission.isAvailable) {
-            this.ctx.fillStyle = 'rgba(102, 126, 234, 0.8)';
-        } else {
-            this.ctx.fillStyle = 'rgba(100, 100, 100, 0.5)';
+        // Only draw CardsContainer background if provided (for backwards compatibility)
+        // When cardsContainerImage is null, we assume it's already drawn at container level
+        if (cardsContainerImage) {
+            this.ctx.drawImage(cardsContainerImage, x, y, width, height);
         }
-        this.ctx.fillRect(x, y, width, height);
 
-        // Border
-        this.ctx.strokeStyle = mission.isCompleted ? '#43e97b' : DEFAULT_TEXT_COLOR;
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x, y, width, height);
+        // Draw mission-specific background image (ForestMission, WaterMission, etc.) as FULL card background
+        if (missionImage) {
+            this.ctx.drawImage(missionImage, x, y, width, height);
+        }
 
-        // Mission info
-        this.drawTextWithFont(mission.name, x + 15, y + 15, 20, DEFAULT_TEXT_COLOR, 'left', 'top', true);
-        this.drawTextWithFont(`Level ${mission.level} - ${mission.difficulty}`, x + 15, y + 45, 14, DEFAULT_TEXT_COLOR, 'left', 'top', false);
-        this.drawTextWithFont(mission.description.substring(0, 40) + '...', x + 15, y + 70, 14, DEFAULT_TEXT_COLOR, 'left', 'top', false);
+        // Draw text using missionCardPositions
+        const namePos = {x: 97, y: 10}; // From missionCardPositions
+        const levelPos = {x: 97, y: 43};
+        const difficultyPos = {x: 97, y: 66};
+        const descriptionPos = {x: 13, y: 98};
 
+        // Mission name
+        this.drawTextWithFont(
+            mission.name,
+            x + namePos.x,
+            y + namePos.y,
+            24,
+            DEFAULT_TEXT_COLOR,
+            'left',
+            'top',
+            true
+        );
+
+        // Level
+        this.drawTextWithFont(
+            `Level ${mission.level}`,
+            x + levelPos.x,
+            y + levelPos.y,
+            12,
+            DEFAULT_TEXT_COLOR,
+            'left',
+            'top',
+            false
+        );
+
+        // Difficulty
+        const difficultyColor = this.getDifficultyColor(mission.difficulty);
+        this.drawTextWithFont(
+            mission.difficulty.toUpperCase(),
+            x + difficultyPos.x,
+            y + difficultyPos.y,
+            12,
+            difficultyColor,
+            'left',
+            'top',
+            false
+        );
+
+        // Description (word-wrapped to 4 lines)
+        const maxDescWidth = width - 26; // Account for padding
+        this.drawWrappedText(
+            mission.description,
+            x + descriptionPos.x,
+            y + descriptionPos.y,
+            maxDescWidth,
+            12, // Smaller font for multi-line
+            DEFAULT_TEXT_COLOR,
+            'left'
+        );
+
+        // Show completed checkmark
         if (mission.isCompleted) {
-            this.drawTextWithFont('✅ Completed', x + 15, y + 95, 14, DEFAULT_TEXT_COLOR, 'left', 'top', false);
+            this.drawTextWithFont(
+                '✅',
+                x + width - 30,
+                y + 10,
+                20,
+                DEFAULT_TEXT_COLOR,
+                'left',
+                'top',
+                false
+            );
         }
+
+        // Draw beast image (70x70) LAST so it appears on top of everything
+        if (beastImage) {
+            const imagePos = {x: 16, y: 16};  // From missionCardPositions
+            const beastSize = 70; // Beast image size (70x70)
+
+            // Apply opacity if mission is locked
+            if (!mission.isAvailable) {
+                this.ctx.globalAlpha = 0.4;
+            }
+
+            this.ctx.drawImage(beastImage, x + imagePos.x, y + imagePos.y, beastSize, beastSize);
+
+            // Reset alpha
+            if (!mission.isAvailable) {
+                this.ctx.globalAlpha = 1.0;
+            }
+        }
+
+        // Add dark overlay for locked missions
+        if (!mission.isAvailable) {
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            this.ctx.fillRect(x, y, width, height);
+
+            // Draw lock icon
+            this.drawTextWithFont(
+                '🔒',
+                x + width / 2 - 15,
+                y + height / 2 - 15,
+                30,
+                DEFAULT_TEXT_COLOR,
+                'center',
+                'middle',
+                false
+            );
+        }
+    }
+
+    private getDifficultyColor(difficulty: string): string {
+        const colors: Record<string, string> = {
+            'beginner': '#90EE90',
+            'easy': '#87CEEB',
+            'normal': '#FFD700',
+            'hard': '#FF6347',
+            'expert': '#8B008B',
+        };
+        return colors[difficulty.toLowerCase()] || DEFAULT_TEXT_COLOR;
     }
 
     drawInventoryCard(

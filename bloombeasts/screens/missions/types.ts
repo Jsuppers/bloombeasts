@@ -39,14 +39,16 @@ export interface Mission {
   storyText?: string;           // Lore/flavor text
   difficulty: MissionDifficulty;
   level: number;                // Mission level (1-10)
+  affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss'; // Mission affinity for visuals
+  beastId: string;              // Beast card ID for mission image (e.g., 'Rootling')
 
   // Battle configuration
   playerDeck?: DeckList;        // Optional fixed deck for player
   opponentDeck: DeckList;       // AI opponent's deck
-  opponentAI: AIProfile;        // AI behavior profile
+  opponentAI?: AIProfile;        // AI behavior profile (optional)
 
-  // Mission specifics
-  objectives: MissionObjective[];
+  // Mission specifics (all optional now)
+  objectives?: MissionObjective[];
   turnLimit?: number;           // Optional turn limit
   specialRules?: SpecialRule[]; // Special battle rules
 

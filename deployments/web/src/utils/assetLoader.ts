@@ -21,6 +21,41 @@ export class AssetLoader {
             await this.loadImage('sideMenuGreenButton', '/shared/images/SideMenuGreenButton.png');
             await this.loadImage('sideMenuStandardButton', '/shared/images/SideMenuStandardButton.png');
             await this.loadImage('cardsContainer', '/shared/images/CardsContainer.png');
+            await this.loadImage('CardsContainer', '/shared/images/CardsContainer.png');
+
+            // Load mission images
+            await this.loadImage('ForestMission', '/shared/images/cards/Forest/ForestMission.png');
+            await this.loadImage('WaterMission', '/shared/images/cards/Water/WaterMission.png');
+            await this.loadImage('FireMission', '/shared/images/cards/Fire/FireMission.png');
+            await this.loadImage('SkyMission', '/shared/images/cards/Sky/SkyMission.png');
+            await this.loadImage('BossMission', '/shared/images/cards/BossMission.png');
+
+            // Load beast images for missions (Forest beasts - missions 1-4)
+            await this.loadImage('Rootling', '/shared/images/cards/Forest/Rootling.png');
+            await this.loadImage('Mushroomancer', '/shared/images/cards/Forest/Mushroomancer.png');
+            await this.loadImage('Mosslet', '/shared/images/cards/Forest/Mosslet.png');
+            await this.loadImage('Leaf Sprite', '/shared/images/cards/Forest/LeafSprite.png');
+
+            // Load Water beasts - missions 5-8
+            await this.loadImage('Bubblefin', '/shared/images/cards/Water/Bubblefin.png');
+            await this.loadImage('Dewdrop Drake', '/shared/images/cards/Water/DewdropDrake.png');
+            await this.loadImage('Kelp Cub', '/shared/images/cards/Water/KelpCub.png');
+            await this.loadImage('Aqua Pebble', '/shared/images/cards/Water/AquaPebble.png');
+
+            // Load Fire beasts - missions 9-12
+            await this.loadImage('Magmite', '/shared/images/cards/Fire/Magmite.png');
+            await this.loadImage('Cinder Pup', '/shared/images/cards/Fire/CinderPup.png');
+            await this.loadImage('Charcoil', '/shared/images/cards/Fire/Charcoil.png');
+            await this.loadImage('Blazefinch', '/shared/images/cards/Fire/Blazefinch.png');
+
+            // Load Sky beasts - missions 13-16
+            await this.loadImage('Cirrus Floof', '/shared/images/cards/Sky/CirrusFloof.png');
+            await this.loadImage('Gale Glider', '/shared/images/cards/Sky/GaleGlider.png');
+            await this.loadImage('Star Bloom', '/shared/images/cards/Sky/StarBloom.png');
+            await this.loadImage('Aero Moth', '/shared/images/cards/Sky/AeroMoth.png');
+
+            // Load Boss beast - mission 17
+            await this.loadImage('The Bloom Master', '/shared/images/cards/TheBloomMaster.png');
 
             // Load action icons
             await this.loadImage('attackIcon', '/shared/images/icons/attack.png');

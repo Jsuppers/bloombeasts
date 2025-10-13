@@ -12,6 +12,13 @@ import { mission07 } from './mission07';
 import { mission08 } from './mission08';
 import { mission09 } from './mission09';
 import { mission10 } from './mission10';
+import { mission11 } from './mission11';
+import { mission12 } from './mission12';
+import { mission13 } from './mission13';
+import { mission14 } from './mission14';
+import { mission15 } from './mission15';
+import { mission16 } from './mission16';
+import { mission17 } from './mission17';
 import { Mission } from '../types';
 
 export const missions: Mission[] = [
@@ -25,6 +32,13 @@ export const missions: Mission[] = [
   mission08,
   mission09,
   mission10,
+  mission11,
+  mission12,
+  mission13,
+  mission14,
+  mission15,
+  mission16,
+  mission17,
 ];
 
 export const getMissionById = (id: string): Mission | undefined => {
@@ -32,13 +46,9 @@ export const getMissionById = (id: string): Mission | undefined => {
 };
 
 export const getAvailableMissions = (playerLevel: number): Mission[] => {
-  return missions.filter(mission => {
-    // Mission is available if player level is within 2 levels of mission level
-    // or if the mission has been completed before
-    return mission.unlocked ||
-           mission.timesCompleted > 0 ||
-           Math.abs(playerLevel - mission.level) <= 2;
-  });
+  // Return all missions - allow the UI to decide which ones are playable
+  // This ensures all 17 missions are visible in the mission select screen
+  return missions;
 };
 
 export const getCompletedMissions = (): Mission[] => {
@@ -56,4 +66,11 @@ export {
   mission08,
   mission09,
   mission10,
+  mission11,
+  mission12,
+  mission13,
+  mission14,
+  mission15,
+  mission16,
+  mission17,
 };

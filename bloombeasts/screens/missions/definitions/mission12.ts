@@ -1,41 +1,41 @@
 /**
- * Mission 09: Magmite
+ * Mission 12: Blazefinch
  * Fire Affinity Mission
  */
 
 import { Mission } from '../types';
 import { buildFireDeck } from '../../../engine/utils/deckBuilder';
 
-export const mission09: Mission = {
-  id: 'mission-09',
-  name: 'Magmite',
-  description: 'Brave the flames to challenge the fierce Magmite.',
-  difficulty: 'hard',
-  level: 9,
+export const mission12: Mission = {
+  id: 'mission-12',
+  name: 'Blazefinch',
+  description: 'Soar through the flames to face the swift Blazefinch.',
+  difficulty: 'expert',
+  level: 12,
   affinity: 'Fire',
-  beastId: 'Magmite',
+  beastId: 'Blazefinch',
 
   opponentDeck: buildFireDeck(),
 
   rewards: {
-    guaranteedXP: 130,
-    bonusXPChance: 0.5,
-    bonusXPAmount: 65,
+    guaranteedXP: 160,
+    bonusXPChance: 0.6,
+    bonusXPAmount: 80,
     cardRewards: [
       {
-        cardPool: 'common',
+        cardPool: 'uncommon',
         minAmount: 1,
         maxAmount: 2,
         dropChance: 0.7,
       },
       {
-        cardPool: 'uncommon',
+        cardPool: 'rare',
         minAmount: 1,
         maxAmount: 1,
-        dropChance: 0.5,
+        dropChance: 0.4,
       },
     ],
-    nectarReward: 50,
+    nectarReward: 65,
   },
 
   timesCompleted: 0,

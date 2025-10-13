@@ -74,7 +74,7 @@ export class MissionBattleUI {
     // Create AI opponent with mission-specific configuration
     const opponent: Player = {
       id: 'opponent',
-      name: mission.opponentAI.name,
+      name: mission.opponentAI?.name || 'Opponent',
       health: 30,
       maxHealth: 30,
       deck: mission.opponentDeck.cards,
@@ -1832,7 +1832,7 @@ export class MissionBattleUI {
 
     // Add objective progress
     const progressDisplay = this.missionManager.getProgress();
-    if (progressDisplay) {
+    if (progressDisplay && this.currentBattle.mission.objectives) {
       display.push('');
       display.push('Objectives:');
 

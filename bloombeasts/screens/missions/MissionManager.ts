@@ -56,11 +56,13 @@ export class MissionManager {
       opponentHealth: 30,
     };
 
-    // Initialize objective tracking
-    mission.objectives.forEach(obj => {
-      const key = this.getObjectiveKey(obj);
-      this.progress!.objectiveProgress.set(key, 0);
-    });
+    // Initialize objective tracking (if objectives exist)
+    if (mission.objectives) {
+      mission.objectives.forEach(obj => {
+        const key = this.getObjectiveKey(obj);
+        this.progress!.objectiveProgress.set(key, 0);
+      });
+    }
 
     return mission;
   }
@@ -112,6 +114,15 @@ export class MissionManager {
    */
   private checkMissionCompletion(): void {
     if (!this.currentMission || !this.progress) return;
+
+    // If no objectives, just check if opponent is defeated (default win condition)
+    if (!this.currentMission.objectives || this.currentMission.objectives.length === 0) {
+      // Mission complete when opponent health reaches 0
+      if (this.progress.opponentHealth <= 0) {
+        this.progress.isCompleted = true;
+      }
+      return;
+    }
 
     const allObjectivesComplete = this.currentMission.objectives.every(obj => {
       const key = this.getObjectiveKey(obj);
