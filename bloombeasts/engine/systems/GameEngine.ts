@@ -80,6 +80,7 @@ export class GameEngine {
       hand: [],
       field: [null, null, null],
       trapZone: [null, null, null],
+      buffZone: [null, null],
       graveyard: [],
       summonsThisTurn: 0,
       habitatCounters: new SimpleMap(),

@@ -8,6 +8,16 @@ export const standardCardDimensions = {
   height: 280,
 };
 
+export const missionCardDimensions = {
+  width: 290,
+  height: 185,
+};
+
+export const cardsUIContainerDimensions = {
+  width: 950,
+  height: 640,
+};
+
 export const standardCardBeastImageDimensions = {
   width: 185,
   height: 185,

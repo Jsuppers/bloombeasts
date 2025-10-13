@@ -18,7 +18,8 @@ import {
   buildWaterDeck,
   buildForestDeck,
   buildSkyDeck,
-  DeckList
+  DeckList,
+  getStarterDeck
 } from './engine/utils/deckBuilder';
 import { BloomBeastCard, AnyCard } from './engine/types/core';
 import { Mission } from './screens/missions/types';
@@ -98,6 +99,7 @@ export interface CardDisplay {
   baseHealth?: number;
   currentHealth?: number;
   ability?: { name: string; description: string; };
+  description?: string; // Description for Magic/Trap/Habitat/Buff cards
 }
 
 export interface BattleDisplay {
@@ -107,12 +109,14 @@ export interface BattleDisplay {
   playerNectar: number;
   playerHand: any[];
   playerTrapZone: any[]; // Player's trap cards (face-down)
+  playerBuffZone: any[]; // Player's active buff cards
   opponentHealth: number;
   opponentMaxHealth: number;
   opponentDeckCount: number;
   opponentNectar: number;
   opponentField: any[];
   opponentTrapZone: any[]; // Opponent's trap cards (face-down)
+  opponentBuffZone: any[]; // Opponent's active buff cards
   playerField: any[];
   currentTurn: number;
   turnPlayer: string;
@@ -126,7 +130,7 @@ export interface BattleDisplay {
     targetPlayer: 'player' | 'opponent' | 'health';
     targetIndex?: number; // undefined if targeting health
   } | null;
-  cardPopup?: { // Card popup display (for magic/trap cards)
+  cardPopup?: { // Card popup display (for magic/trap/buff cards)
     card: any;
     player: 'player' | 'opponent';
   } | null;
@@ -325,6 +329,13 @@ export class GameManager {
         else if (buttonId === 'view-habitat-card') {
           await this.handleViewHabitatCard();
         }
+        // Handle viewing buff cards in battle
+        else if (buttonId.startsWith('view-buff-card-')) {
+          const parts = buttonId.substring(15).split('-');
+          const player = parts[0]; // 'player' or 'opponent'
+          const index = parseInt(parts[1]);
+          await this.handleViewBuffCard(player, index);
+        }
         // Handle action buttons in battle
         else if (buttonId.startsWith('action-')) {
           await this.handleBattleAction(buttonId.substring(7));
@@ -340,6 +351,7 @@ export class GameManager {
     if (buttonId.startsWith('view-hand-card-') ||
         buttonId.startsWith('view-field-card-') ||
         buttonId.startsWith('view-trap-card-') ||
+        buttonId.startsWith('view-buff-card-') ||
         buttonId === 'view-habitat-card' ||
         buttonId.startsWith('action-')) {
       return false;
@@ -478,6 +490,13 @@ export class GameManager {
             name: card.type + ' Card',
             description: effectDescs.join('. ')
           };
+        }
+      } else if (card.type === 'Buff') {
+        // For Buff cards, find the original card definition to get the description
+        const allCardDefs = getAllCards();
+        const buffDef = allCardDefs.find((c: any) => c && c.id === card.cardId);
+        if (buffDef && (buffDef as any).description) {
+          displayCard.description = (buffDef as any).description;
         }
       }
 
@@ -914,9 +933,77 @@ export class GameManager {
   }
 
   /**
-   * Enrich field beasts with card definition data for display
+   * Calculate stat bonuses for a beast from habitat and buff zones
    */
-  private enrichFieldBeasts(field: any[]): any[] {
+  private calculateStatBonuses(beast: any, gameState: any): { attackBonus: number; healthBonus: number } {
+    let attackBonus = 0;
+    let healthBonus = 0;
+
+    // Helper to check if effect applies to this beast
+    const checkCondition = (condition: any): boolean => {
+      if (!condition) return true; // No condition means applies to all
+
+      switch (condition.type) {
+        case 'affinity-matches':
+        case 'AffinityMatches':
+          return beast.affinity === condition.value;
+        // Add more condition types as needed
+        default:
+          return true;
+      }
+    };
+
+    // Helper to process ongoing effects
+    const processOngoingEffects = (effects: any[]) => {
+      if (!effects || !Array.isArray(effects)) return;
+
+      effects.forEach((effect: any) => {
+        // Only process stat modification effects with WhileOnField duration
+        if (effect.type === 'modify-stats' || effect.type === 'ModifyStats') {
+          if (effect.duration === 'while-on-field' || effect.duration === 'WhileOnField') {
+            // Check if effect applies to this beast
+            if (checkCondition(effect.condition)) {
+              // Apply the bonus based on stat type
+              if (effect.stat === 'attack' || effect.stat === 'Attack') {
+                attackBonus += effect.value || 0;
+              } else if (effect.stat === 'health' || effect.stat === 'Health') {
+                healthBonus += effect.value || 0;
+              } else if (effect.stat === 'both' || effect.stat === 'Both') {
+                attackBonus += effect.value || 0;
+                healthBonus += effect.value || 0;
+              }
+            }
+          }
+        }
+      });
+    };
+
+    // Process habitat zone ongoing effects
+    if (gameState.habitatZone && gameState.habitatZone.ongoingEffects) {
+      processOngoingEffects(gameState.habitatZone.ongoingEffects);
+    }
+
+    // Process buff zones for both players (need to determine which player this beast belongs to)
+    // For now, we'll process all buff zones since buffs typically only affect their own player
+    if (gameState.players) {
+      gameState.players.forEach((player: any) => {
+        if (player.buffZone && Array.isArray(player.buffZone)) {
+          player.buffZone.forEach((buff: any) => {
+            if (buff && buff.ongoingEffects) {
+              processOngoingEffects(buff.ongoingEffects);
+            }
+          });
+        }
+      });
+    }
+
+    return { attackBonus, healthBonus };
+  }
+
+  /**
+   * Enrich field beasts with card definition data and apply bonuses for display
+   */
+  private enrichFieldBeasts(field: any[], gameState?: any): any[] {
     // Create a card lookup map from all card definitions
     const cardMap = new Map<string, BloomBeastCard>();
     const allCards = getAllCards();
@@ -934,7 +1021,10 @@ export class GameManager {
 
       if (!cardDef) return beast; // Return as-is if card not found
 
-      // Merge instance data with card definition data
+      // Calculate stat bonuses from habitat and buffs
+      const bonuses = gameState ? this.calculateStatBonuses(beast, gameState) : { attackBonus: 0, healthBonus: 0 };
+
+      // Merge instance data with card definition data and apply bonuses
       // Only add abilities if they're not already present
       return {
         ...beast,
@@ -942,6 +1032,10 @@ export class GameManager {
         affinity: beast.affinity || cardDef.affinity,
         cost: beast.cost || cardDef.cost,
         ability: beast.ability || cardDef.ability,
+        // Apply bonuses to display stats (don't modify the actual beast in game engine)
+        currentAttack: (beast.currentAttack || 0) + bonuses.attackBonus,
+        currentHealth: (beast.currentHealth || 0) + bonuses.healthBonus,
+        maxHealth: (beast.maxHealth || 0) + bonuses.healthBonus,
       };
     });
   }
@@ -975,13 +1069,15 @@ export class GameManager {
       playerNectar: player.currentNectar,
       playerHand: player.hand,
       playerTrapZone: player.trapZone || [null, null, null],
+      playerBuffZone: player.buffZone || [null, null],
       opponentHealth: opponent.health,
       opponentMaxHealth: opponent.maxHealth || 30, // Default to 30 if undefined
       opponentDeckCount: opponent.deck.length,
       opponentNectar: opponent.currentNectar,
-      opponentField: this.enrichFieldBeasts(opponent.field),
+      opponentField: this.enrichFieldBeasts(opponent.field, battleState.gameState),
       opponentTrapZone: opponent.trapZone || [null, null, null],
-      playerField: this.enrichFieldBeasts(player.field),
+      opponentBuffZone: opponent.buffZone || [null, null],
+      playerField: this.enrichFieldBeasts(player.field, battleState.gameState),
       currentTurn: battleState.gameState.turn,
       turnPlayer: battleState.gameState.activePlayer === 0 ? 'player' : 'opponent',
       turnTimeRemaining: 60, // TODO: Implement actual timer
@@ -1177,7 +1273,7 @@ export class GameManager {
     // Debug: Check raw field data
     console.log('Raw field beast:', playerObj.field[index]);
 
-    const field = player === 'player' ? this.enrichFieldBeasts(playerObj.field) : this.enrichFieldBeasts(playerObj.field);
+    const field = player === 'player' ? this.enrichFieldBeasts(playerObj.field, battleState.gameState) : this.enrichFieldBeasts(playerObj.field, battleState.gameState);
     const beast = field[index];
 
     // Debug: Check enriched data
@@ -1434,6 +1530,59 @@ export class GameManager {
   }
 
   /**
+   * Handle viewing a buff card in the buff zone
+   */
+  private async handleViewBuffCard(player: string, index: number): Promise<void> {
+    const battleState = this.battleUI.getCurrentBattle();
+    if (!battleState || !battleState.gameState) return;
+
+    const playerObj = player === 'player' ? battleState.gameState.players[0] : battleState.gameState.players[1];
+    const buffZone = playerObj.buffZone || [];
+
+    // Check if buff exists at this index
+    if (index < 0 || index >= buffZone.length || !buffZone[index]) {
+      return;
+    }
+
+    const buffCard: any = buffZone[index];
+
+    // Format buff card details
+    const details = [
+      `Name: ${buffCard.name}`,
+      `Type: Buff`,
+      `Cost: ${buffCard.cost || 0}`,
+    ];
+
+    // Add buff description if available
+    if (buffCard.description) {
+      details.push(`Effect: ${buffCard.description}`);
+    } else {
+      // Try to get description from card definition
+      const allCardDefs = getAllCards();
+      const buffDef = allCardDefs.find((c: any) => c && c.id === buffCard.id);
+      if (buffDef && (buffDef as any).description) {
+        details.push(`Effect: ${(buffDef as any).description}`);
+      } else {
+        // Fallback to effect descriptions
+        if (buffCard.ongoingEffects && Array.isArray(buffCard.ongoingEffects)) {
+          details.push('Ongoing Effects:');
+          buffCard.ongoingEffects.forEach((effect: any) => {
+            if (typeof effect === 'string') {
+              details.push(`  • ${effect}`);
+            } else if (effect.type) {
+              const typeStr = (effect.type || '').toString().replace(/([A-Z])/g, ' $1').trim();
+              details.push(`  • ${typeStr}`);
+            }
+          });
+        }
+      }
+    }
+
+    // Only show Close button (buff cards are informational only once played)
+    await this.platform.showDialog('Buff Card', details.join('\n'), ['Close']);
+  }
+
+  /**
    * Handle battle actions
    */
   private async handleBattleAction(action: string): Promise<void> {
@@ -1556,13 +1705,15 @@ export class GameManager {
       playerNectar: playerObj.currentNectar,
       playerHand: playerObj.hand,
       playerTrapZone: playerObj.trapZone || [null, null, null],
+      playerBuffZone: playerObj.buffZone || [null, null],
       opponentHealth: opponent.health,
       opponentMaxHealth: opponent.maxHealth || 30,
       opponentDeckCount: opponent.deck.length,
       opponentNectar: opponent.currentNectar,
-      opponentField: this.enrichFieldBeasts(opponent.field),
+      opponentField: this.enrichFieldBeasts(opponent.field, battleState.gameState),
       opponentTrapZone: opponent.trapZone || [null, null, null],
-      playerField: this.enrichFieldBeasts(playerObj.field),
+      opponentBuffZone: opponent.buffZone || [null, null],
+      playerField: this.enrichFieldBeasts(playerObj.field, battleState.gameState),
       currentTurn: battleState.gameState.turn,
       turnPlayer: battleState.gameState.activePlayer === 0 ? 'player' : 'opponent',
       turnTimeRemaining: 60,
@@ -1598,6 +1749,95 @@ export class GameManager {
   }
 
   /**
+   * Award experience to all cards in the player's deck after battle victory
+   */
+  private awardDeckExperience(xpAmount: number = 10): void {
+    const allCardDefs = getAllCards();
+
+    // Award XP to each card in the deck
+    for (const cardId of this.playerDeck) {
+      const cardInstance = this.cardCollection.getCard(cardId);
+
+      if (!cardInstance) continue;
+
+      // Add XP
+      cardInstance.currentXP = (cardInstance.currentXP || 0) + xpAmount;
+
+      // Check for level up
+      let leveledUp = false;
+
+      if (cardInstance.type === 'Bloom') {
+        // For Bloom beasts, use the LevelingSystem
+        const cardDef = allCardDefs.find((c: any) => c && c.id === cardInstance.cardId) as BloomBeastCard | undefined;
+
+        if (cardDef) {
+          let currentLevel = cardInstance.level || 1;
+          let currentXP = cardInstance.currentXP;
+
+          // Keep leveling up while possible
+          while (currentLevel < 9) {
+            const nextLevel = (currentLevel + 1) as any;
+            const xpRequired = LevelingSystem.getXPRequirement(currentLevel as any, cardDef);
+
+            if (xpRequired !== null && currentXP >= xpRequired) {
+              // Level up!
+              currentXP -= xpRequired;
+              currentLevel = nextLevel;
+
+              // Apply stat gains
+              const statGain = LevelingSystem.getStatGain(currentLevel as any, cardDef);
+              cardInstance.currentAttack = (cardInstance.currentAttack || 0) + statGain.attackGain;
+              cardInstance.currentHealth = (cardInstance.currentHealth || 0) + statGain.healthGain;
+              cardInstance.baseAttack = (cardInstance.baseAttack || 0) + statGain.attackGain;
+              cardInstance.baseHealth = (cardInstance.baseHealth || 0) + statGain.healthGain;
+
+              leveledUp = true;
+            } else {
+              break;
+            }
+          }
+
+          // Update the card instance
+          cardInstance.level = currentLevel;
+          cardInstance.currentXP = currentXP;
+
+          // Update ability if there's an upgrade at this level
+          if (leveledUp) {
+            const abilities = this.getAbilitiesForLevel(cardInstance);
+            cardInstance.ability = abilities.ability;
+          }
+        }
+      } else {
+        // For Magic/Trap/Habitat/Buff cards, use simple leveling (level * 100 XP required)
+        let currentLevel = cardInstance.level || 1;
+        let currentXP = cardInstance.currentXP;
+
+        // Keep leveling up while possible
+        while (currentLevel < 9) {
+          const xpRequired = currentLevel * 100;
+
+          if (currentXP >= xpRequired) {
+            // Level up!
+            currentXP -= xpRequired;
+            currentLevel++;
+            leveledUp = true;
+          } else {
+            break;
+          }
+        }
+
+        // Update the card instance
+        cardInstance.level = currentLevel;
+        cardInstance.currentXP = currentXP;
+      }
+
+      if (leveledUp) {
+        console.log(`${cardInstance.name} leveled up to level ${cardInstance.level}!`);
+      }
+    }
+  }
+
+  /**
    * Handle battle completion
    */
   private async handleBattleComplete(battleState: any): Promise<void> {
@@ -1605,6 +1845,9 @@ export class GameManager {
       // Apply rewards
       this.playerData.totalXP += battleState.rewards.xpGained;
       this.playerData.nectar += battleState.rewards.nectarGained;
+
+      // Award experience to all cards in the player's deck
+      this.awardDeckExperience(10); // Award 10 XP per victory
 
       // Add cards to collection
       battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
@@ -1742,7 +1985,7 @@ export class GameManager {
    */
   private async initializeStartingCollection(): Promise<void> {
     // Give player one starter deck worth of cards - default to Forest
-    const starterDeck = buildForestDeck();
+    const starterDeck = getStarterDeck('Forest');
 
     starterDeck.cards.forEach((card, index) => {
       const baseId = `${card.id}-${Date.now()}-${index}`;

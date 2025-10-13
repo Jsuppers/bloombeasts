@@ -180,6 +180,10 @@ export class BattleScreen {
         await this.renderTrapZone('player', battleState.playerTrapZone);
         await this.renderTrapZone('opponent', battleState.opponentTrapZone);
 
+        // Render buff zones
+        await this.renderBuffZone('player', battleState.playerBuffZone);
+        await this.renderBuffZone('opponent', battleState.opponentBuffZone);
+
         // Render habitat zone
         if (battleState.habitatZone) {
             await this.renderHabitatZone(battleState.habitatZone);
@@ -259,7 +263,8 @@ export class BattleScreen {
         if (battleState.cardPopup) {
             const card = battleState.cardPopup.card;
             const assets = await this.assets.loadCardAssets(card, 'default');
-            await this.renderer.drawCenteredCardPopup(card, assets);
+            const experienceBarImg = this.assets.getImage('experienceBar');
+            await this.renderer.drawCenteredCardPopup(card, assets, experienceBarImg);
         }
     }
 
@@ -281,8 +286,11 @@ export class BattleScreen {
                 const beastCard = { ...beast, type: 'Bloom' }; // Ensure type is set
                 const assets = await this.assets.loadCardAssets(beastCard, 'default');
 
+                // Get experience bar image
+                const experienceBarImg = this.assets.getImage('experienceBar');
+
                 // Draw the card with layered images (without icons yet)
-                this.renderer.drawBeastCard(pos.x, pos.y, beast, assets.mainImage, assets.baseCardImage, assets.affinityIcon, null, null);
+                this.renderer.drawBeastCard(pos.x, pos.y, beast, assets.mainImage, assets.baseCardImage, assets.affinityIcon, null, null, experienceBarImg);
 
                 // Highlight if selected (player beasts only)
                 if (player === 'player' && this.currentBattleState && this.currentBattleState.selectedBeastIndex === index) {
@@ -385,14 +393,59 @@ export class BattleScreen {
                         },
                     });
                 }
-            } else {
-                // Draw empty trap slot (dashed outline)
-                this.renderer.ctx.strokeStyle = '#666';
-                this.renderer.ctx.lineWidth = 1;
-                this.renderer.ctx.setLineDash([5, 5]);
-                this.renderer.ctx.strokeRect(pos.x, pos.y, trapWidth, trapHeight);
-                this.renderer.ctx.setLineDash([]); // Reset dash pattern
             }
+            // Empty slot - no visual indicator needed
+        }
+    }
+
+    private async renderBuffZone(player: 'player' | 'opponent', buffs: any[]): Promise<void> {
+        const positions =
+            player === 'player'
+                ? battleBoardAssetPositions.playerTwo
+                : battleBoardAssetPositions.playerOne;
+        const buffSlots = [positions.buffOne, positions.buffTwo];
+
+        const buffWidth = 118;
+        const buffHeight = 118;
+
+        for (let index = 0; index < buffSlots.length; index++) {
+            const pos = buffSlots[index];
+            const buff = buffs[index];
+
+            if (buff) {
+                // Load buff card assets (face-up, showing the card)
+                const buffCard = { ...buff, type: 'Buff' };
+                const buffAssets = await this.assets.loadCardAssets(buffCard, 'default');
+
+                // Render the buff card face-up on playboard (100x100 image with BuffCardPlayboard template)
+                this.renderer.drawBuffCardPlayboard(pos.x, pos.y, buffWidth, buffHeight, buff, buffAssets.mainImage, buffAssets.templateImage);
+
+                // Add a glowing border to indicate active buff
+                this.renderer.ctx.strokeStyle = '#FFD700'; // Gold color
+                this.renderer.ctx.lineWidth = 3;
+                this.renderer.ctx.shadowColor = '#FFD700';
+                this.renderer.ctx.shadowBlur = 8;
+                this.renderer.ctx.strokeRect(pos.x, pos.y, buffWidth, buffHeight);
+
+                // Reset shadow
+                this.renderer.ctx.shadowColor = 'transparent';
+                this.renderer.ctx.shadowBlur = 0;
+
+                // Add click region to view buff details
+                this.clickManager.addRegion({
+                    id: `view-buff-card-${player}-${index}`,
+                    x: pos.x,
+                    y: pos.y,
+                    width: buffWidth,
+                    height: buffHeight,
+                    callback: () => {
+                        if (this.currentButtonCallback) {
+                            this.currentButtonCallback(`view-buff-card-${player}-${index}`);
+                        }
+                    },
+                });
+            }
+            // Empty slot - no visual indicator needed
         }
     }
 
@@ -410,6 +463,55 @@ export class BattleScreen {
         // Use the new drawHabitatCardPlayboard method
         this.renderer.drawHabitatCardPlayboard(pos.x, pos.y, habitatWidth, habitatHeight, habitatImage, playboardTemplate);
 
+        // Draw counters on habitat if any
+        if (habitat.counters && Array.isArray(habitat.counters) && habitat.counters.length > 0) {
+            // Use the drawCounterBadges method (need to make it public)
+            // For now, manually draw counter badges
+            const counterMap = new Map<string, number>();
+            habitat.counters.forEach((counter: any) => {
+                const current = counterMap.get(counter.type) || 0;
+                counterMap.set(counter.type, current + counter.amount);
+            });
+
+            const counterIcons: Record<string, { emoji: string; color: string }> = {
+                'Spore': { emoji: '🍄', color: '#51cf66' },
+            };
+
+            // Draw counter badges in a row at the top right of the habitat card
+            let badgeX = pos.x + habitatWidth - 10; // Start from right side
+            const badgeY = pos.y + 5;
+            const badgeSize = 28;
+            const badgeSpacing = 32;
+
+            let index = 0;
+            counterMap.forEach((amount, type) => {
+                if (amount > 0) {
+                    const config = counterIcons[type] || { emoji: '●', color: '#868e96' };
+                    const offsetX = badgeX - (index * badgeSpacing);
+
+                    // Draw badge background circle
+                    this.renderer.ctx.fillStyle = config.color;
+                    this.renderer.ctx.beginPath();
+                    this.renderer.ctx.arc(offsetX, badgeY + badgeSize / 2, badgeSize / 2, 0, Math.PI * 2);
+                    this.renderer.ctx.fill();
+
+                    // Draw border
+                    this.renderer.ctx.strokeStyle = '#fff';
+                    this.renderer.ctx.lineWidth = 2;
+                    this.renderer.ctx.stroke();
+
+                    // Draw amount text
+                    this.renderer.ctx.fillStyle = '#fff';
+                    this.renderer.ctx.font = 'bold 16px monospace';
+                    this.renderer.ctx.textAlign = 'center';
+                    this.renderer.ctx.textBaseline = 'middle';
+                    this.renderer.ctx.fillText(`${config.emoji} ${amount}`, offsetX, badgeY + badgeSize / 2);
+
+                    index++;
+                }
+            });
+        }
+
         // Add glowing border to indicate active habitat
         this.renderer.ctx.strokeStyle = '#4caf50'; // Green glow
         this.renderer.ctx.lineWidth = 4;
@@ -420,9 +522,6 @@ export class BattleScreen {
         // Reset shadow
         this.renderer.ctx.shadowColor = 'transparent';
         this.renderer.ctx.shadowBlur = 0;
-
-        // Add "HABITAT ACTIVE" label below the card
-        this.renderer.drawText('HABITAT ACTIVE', pos.x + habitatWidth / 2, pos.y + habitatHeight + 15, 12, '#4caf50', 'center');
 
         // Add click region to view habitat details
         this.clickManager.addRegion({
@@ -501,13 +600,16 @@ export class BattleScreen {
                 // Load action icons for beast cards in hand
                 const attackIcon = this.assets.getImage('attackIcon');
                 const abilityIcon = this.assets.getImage('abilityIcon');
-                this.renderer.drawBeastCard(x, y, card, assets.mainImage, assets.baseCardImage, assets.affinityIcon, attackIcon, abilityIcon);
+                const experienceBarImg = this.assets.getImage('experienceBar');
+                this.renderer.drawBeastCard(x, y, card, assets.mainImage, assets.baseCardImage, assets.affinityIcon, attackIcon, abilityIcon, experienceBarImg);
             } else if (card.type === 'Magic') {
                 this.renderer.drawMagicCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
             } else if (card.type === 'Trap') {
                 this.renderer.drawTrapCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
             } else if (card.type === 'Habitat') {
                 this.renderer.drawHabitatCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
+            } else if (card.type === 'Buff') {
+                this.renderer.drawBuffCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
             } else {
                 // Other card types (fallback)
                 this.renderer.drawInventoryCard(x, y, cardWidth, cardHeight, card, assets.mainImage, false);

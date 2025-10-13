@@ -249,7 +249,7 @@ export class CanvasRenderer {
         this.ctx.strokeRect(x, y, width, height);
     }
 
-    drawBeastCard(x: number, y: number, beast: any, beastImage?: HTMLImageElement | null, baseCardImage?: HTMLImageElement | null, affinityImage?: HTMLImageElement | null, attackIcon?: HTMLImageElement | null, abilityIcon?: HTMLImageElement | null): void {
+    drawBeastCard(x: number, y: number, beast: any, beastImage?: HTMLImageElement | null, baseCardImage?: HTMLImageElement | null, affinityImage?: HTMLImageElement | null, attackIcon?: HTMLImageElement | null, abilityIcon?: HTMLImageElement | null, experienceBarImage?: HTMLImageElement | null): void {
         const cardWidth = standardCardDimensions.width;
         const cardHeight = standardCardDimensions.height;
         const beastImageWidth = standardCardBeastImageDimensions.width;
@@ -260,8 +260,9 @@ export class CanvasRenderer {
         // 1. Draw beast artwork in the beast image area
         // 2. Draw base card frame on top
         // 3. Draw affinity icon
-        // 4. Draw text overlay
-        // 5. Draw action icons (attack/ability)
+        // 4. Draw experience bar (if applicable)
+        // 5. Draw text overlay
+        // 6. Draw action icons (attack/ability)
 
         // Step 1: Draw beast image as background artwork
         if (beastImage) {
@@ -293,10 +294,30 @@ export class CanvasRenderer {
             );
         }
 
-        // Step 4: Draw text overlay for dynamic values
+        // Step 4: Draw experience bar (between level text and card image)
+        if (experienceBarImage) {
+            const level = beast.currentLevel || beast.level || 1;
+            const currentExp = beast.currentXP || beast.experience || 0;
+            const expNeeded = beast.experienceRequired || (level * 100);
+            const expPercentage = Math.min(1, currentExp / expNeeded);
+            const maxBarWidth = 122;
+            const barWidth = maxBarWidth * expPercentage;
+
+            // Draw the experience bar with dynamic width
+            this.ctx.drawImage(
+                experienceBarImage,
+                0, 0, // Source x, y (start from left edge of source image)
+                barWidth, experienceBarImage.height, // Source width, height (crop based on percentage)
+                x + positions.experienceBar.x, // Destination x
+                y + positions.experienceBar.y, // Destination y
+                barWidth, experienceBarImage.height // Destination width, height
+            );
+        }
+
+        // Step 5: Draw text overlay for dynamic values
         this.drawCardTextOverlay(x, y, beast);
 
-        // Step 5: Draw action icons if beast can perform actions
+        // Step 6: Draw action icons if beast can perform actions
         // Attack icon - show when beast can attack (no summoning sickness)
         if (attackIcon && beast.summoningSickness === false) {
             this.ctx.drawImage(
@@ -492,6 +513,42 @@ export class CanvasRenderer {
     }
 
     /**
+     * Draw Buff card with layered rendering (for inventory/hand)
+     */
+    drawBuffCard(x: number, y: number, card: any, buffImage?: HTMLImageElement | null, templateImage?: HTMLImageElement | null, baseCardImage?: HTMLImageElement | null): void {
+        const cardWidth = standardCardDimensions.width;
+        const cardHeight = standardCardDimensions.height;
+
+        // Layered rendering:
+        // 1. Draw buff artwork (185x185)
+        // 2. Draw BaseCard frame
+        // 3. Draw BuffCard template overlay
+        // 4. Draw text overlay
+
+        // Step 1: Draw buff image if available
+        if (buffImage) {
+            // Buff images are 185x185, positioned at offset (12, 13)
+            const buffImageSize = 185;
+            const imageX = x + 12;
+            const imageY = y + 13;
+            this.ctx.drawImage(buffImage, imageX, imageY, buffImageSize, buffImageSize);
+        }
+
+        // Step 2: Draw base card frame
+        if (baseCardImage) {
+            this.ctx.drawImage(baseCardImage, x, y, cardWidth, cardHeight);
+        }
+
+        // Step 3: Draw BuffCard template overlay
+        if (templateImage) {
+            this.ctx.drawImage(templateImage, x, y, cardWidth, cardHeight);
+        }
+
+        // Step 4: Draw text overlay
+        this.drawCardTextOverlay(x, y, card);
+    }
+
+    /**
      * Draw Trap card for playboard (face-down)
      */
     drawTrapCardPlayboard(x: number, y: number, width: number, height: number, trapTemplate?: HTMLImageElement | null): void {
@@ -507,6 +564,31 @@ export class CanvasRenderer {
             this.ctx.strokeRect(x, y, width, height);
             this.drawText('TRAP', x + width / 2, y + height / 2 - 5, 14, '#fff', 'center');
         }
+    }
+
+    /**
+     * Draw Buff card for playboard (smaller size with centered image)
+     */
+    drawBuffCardPlayboard(x: number, y: number, width: number, height: number, card: any, buffImage?: HTMLImageElement | null, playboardTemplate?: HTMLImageElement | null): void {
+        // Draw playboard template background
+        if (playboardTemplate) {
+            this.ctx.drawImage(playboardTemplate, x, y, width, height);
+        }
+
+        // Draw buff image centered and resized to 100x100
+        if (buffImage) {
+            const imageSize = 100;
+            const imageX = x + (width - imageSize) / 2;
+            const imageY = y + (height - imageSize) / 2;
+            this.ctx.drawImage(buffImage, imageX, imageY, imageSize, imageSize);
+        }
+
+        // Minimal text overlay for playboard
+        // Just show cost
+        this.ctx.fillStyle = '#fff';
+        this.ctx.font = 'bold 14px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText(`${card.cost || 0}`, x + 15, y + 20);
     }
 
     /**
@@ -585,52 +667,25 @@ export class CanvasRenderer {
             );
         }
 
-        // Check if this is a Bloom beast (either card definition or beast instance)
-        const isBloomBeast = card.type === 'Bloom' || card.currentLevel !== undefined || card.level !== undefined;
+        // Check if this is a Bloom beast - ONLY check type, not level properties
+        // (Magic/Trap/Habitat cards should never show level/attack/health)
+        const isBloomBeast = card.type === 'Bloom';
 
-        // Only show level/experience for Bloom beasts
-        if (isBloomBeast) {
-            // Level and Experience - check both currentLevel (beast instance) and level (card definition)
-            const level = card.currentLevel || card.level || 1;
-            const currentExp = card.currentXP || card.experience || 0;
-            const expNeeded = card.experienceRequired || (level * 100); // Default exp formula if not provided
+        // Show level for ALL card types (Bloom, Magic, Trap, Buff, Habitat)
+        // Level - check both currentLevel (beast instance) and level (card definition)
+        const level = card.currentLevel || card.level || 1;
 
-            // Draw "Level X" text
-            this.drawTextWithFont(
-                `Level ${level}`,
-                x + positions.level.x,
-                y + positions.level.y,
-                positions.level.size,
-                DEFAULT_TEXT_COLOR,
-                positions.level.textAlign || 'center',
-                positions.level.textBaseline || 'alphabetic',
-                false
-            );
-
-            // Draw experience below level (smaller text)
-            this.drawTextWithFont(
-                `${currentExp}/${expNeeded}`,
-                x + positions.level.x,
-                y + positions.level.y + 14,
-                positions.level.size - 2,
-                '#aaa',
-                positions.level.textAlign || 'center',
-                positions.level.textBaseline || 'alphabetic',
-                false
-            );
-        } else if (card.type) {
-            // For non-Bloom cards, show the card type
-            this.drawTextWithFont(
-                card.type,
-                x + positions.level.x,
-                y + positions.level.y,
-                positions.level.size + 2,
-                DEFAULT_TEXT_COLOR,
-                positions.level.textAlign || 'center',
-                positions.level.textBaseline || 'alphabetic',
-                true
-            );
-        }
+        // Draw "Level X" text
+        this.drawTextWithFont(
+            `Level ${level}`,
+            x + positions.level.x,
+            y + positions.level.y,
+            positions.level.size,
+            DEFAULT_TEXT_COLOR,
+            positions.level.textAlign || 'center',
+            positions.level.textBaseline || 'alphabetic',
+            false
+        );
 
         // Name (bottom left area) - truncate if too long
         this.setFont(positions.name.size, true);
@@ -641,7 +696,7 @@ export class CanvasRenderer {
         this.ctx.fillText(truncatedName, x + positions.name.x, y + positions.name.y);
 
         // Ability/Description - show full text with wrapping
-        // For Bloom beasts, show ability. For Magic/Trap/Habitat, show description
+        // For Bloom beasts, show ability. For Magic/Trap/Habitat/Buff, show description
         const hasAbility = card.ability;
         const hasDescription = card.description;
 
@@ -674,9 +729,8 @@ export class CanvasRenderer {
             );
         }
 
-        // Only show attack/health for Bloom beasts (check multiple property patterns)
-        const hasAttackHealth = isBloomBeast || card.baseAttack !== undefined || card.currentAttack !== undefined;
-        if (hasAttackHealth) {
+        // Only show attack/health for Bloom beasts (not for Magic, Trap, or Habitat cards)
+        if (isBloomBeast) {
             // Attack (bottom left) - prioritize current values for beast instances
             const attack = card.currentAttack ?? card.baseAttack ?? card.attack ?? 0;
             this.drawTextWithFont(
@@ -942,7 +996,7 @@ export class CanvasRenderer {
      * Draw a centered card popup with full details
      * Used when magic/trap cards are played/activated
      */
-    async drawCenteredCardPopup(card: any, assets: any): Promise<void> {
+    async drawCenteredCardPopup(card: any, assets: any, experienceBarImage?: HTMLImageElement | null): Promise<void> {
         // Draw dark overlay first
         this.drawScreenOverlay(0.7);
 
@@ -957,11 +1011,13 @@ export class CanvasRenderer {
             this.drawMagicCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
         } else if (card.type === 'Trap') {
             this.drawTrapCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
+        } else if (card.type === 'Buff') {
+            this.drawBuffCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
         } else if (card.type === 'Habitat') {
             this.drawHabitatCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
         } else if (card.type === 'Bloom') {
             // Don't show action icons in popup (this is just for viewing)
-            this.drawBeastCard(x, y, card, assets.mainImage, assets.baseCardImage, assets.affinityIcon, null, null);
+            this.drawBeastCard(x, y, card, assets.mainImage, assets.baseCardImage, assets.affinityIcon, null, null, experienceBarImage);
         } else {
             // Fallback for any other card type
             this.drawInventoryCard(x, y, cardWidth, cardHeight, card, assets.mainImage, false);

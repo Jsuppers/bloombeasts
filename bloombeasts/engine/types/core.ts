@@ -6,7 +6,7 @@ import type { StructuredAbility, AbilityEffect } from './abilities';
 
 export type Affinity = 'Forest' | 'Fire' | 'Water' | 'Sky' | 'Generic';
 
-export type CardType = 'Magic' | 'Trap' | 'Bloom' | 'Habitat';
+export type CardType = 'Magic' | 'Trap' | 'Bloom' | 'Habitat' | 'Buff';
 
 export type CounterType = 'XP' | 'Spore' | 'Burn' | 'Freeze' | 'Soot' | 'Entangle';
 
@@ -66,6 +66,7 @@ export interface TrapActivation {
  */
 export interface MagicCard extends Card {
   type: 'Magic';
+  level: number;
   description: string;
   effects: AbilityEffect[];  // Structured effects instead of string
   targetRequired?: boolean;  // Whether the card needs a target
@@ -76,6 +77,7 @@ export interface MagicCard extends Card {
  */
 export interface TrapCard extends Card {
   type: 'Trap';
+  level: number;
   description: string;
   activation: TrapActivation;  // Structured activation instead of string
   effects: AbilityEffect[];     // Structured effects instead of string
@@ -86,10 +88,24 @@ export interface TrapCard extends Card {
  */
 export interface HabitatCard extends Card {
   type: 'Habitat';
+  level: number;
   description: string;
   affinity: Affinity;
   ongoingEffects: AbilityEffect[];  // Effects that persist while habitat is active
   onPlayEffects?: AbilityEffect[];  // One-time effects when played
+}
+
+/**
+ * Buff card - stays on board and provides ongoing effects
+ */
+export interface BuffCard extends Card {
+  type: 'Buff';
+  level: number;
+  description: string;
+  affinity?: Affinity;  // Optional affinity for buff cards
+  ongoingEffects: AbilityEffect[];  // Effects that persist while buff is active
+  onPlayEffects?: AbilityEffect[];  // One-time effects when played
+  duration?: number;  // Optional turn duration (undefined = permanent)
 }
 
 /**
@@ -142,4 +158,4 @@ export type Ability = SimpleAbility | StructuredAbility;
 /**
  * Union type for all cards
  */
-export type AnyCard = MagicCard | TrapCard | HabitatCard | BloomBeastCard;
+export type AnyCard = MagicCard | TrapCard | HabitatCard | BloomBeastCard | BuffCard;

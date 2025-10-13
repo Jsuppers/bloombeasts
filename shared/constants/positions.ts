@@ -5,6 +5,7 @@ export const standardCardPositions: CardTextPositions = {
   affinity: { x: 175, y: 7 },
   beastImage: { x: 12, y: 13 },
   level: { x: 105, y: 182, size: 12, textAlign: 'center', textBaseline: 'top' },
+  experienceBar: { x: 44, y: 182 },
   name: { x: 105, y: 13, size: 18, textAlign: 'center', textBaseline: 'top' },
   ability: { x: 21, y: 212, size: 12, textAlign: 'left', textBaseline: 'top' },
   attack: { x: 20, y: 176, size: 26, textAlign: 'center', textBaseline: 'top' },
@@ -13,6 +14,19 @@ export const standardCardPositions: CardTextPositions = {
     attack: { x: 17, y: 44, size: 26, textAlign: 'center', textBaseline: 'top' },
     ability: { x: 157, y: 44, size: 26, textAlign: 'center', textBaseline: 'top' },
   }
+};
+
+export const missionCardPositions = {
+  name: { x: 97, y: 10, size: 24, textAlign: 'left', textBaseline: 'top' },
+  image: { x: 16, y: 16 },
+  level: { x: 97, y: 43, size: 12, textAlign: 'left', textBaseline: 'top' },
+  difficulty: { x: 97, y: 66, size: 12, textAlign: 'left', textBaseline: 'top' },
+  description: { x: 13, y: 98, size: 14, textAlign: 'left', textBaseline: 'top' },
+};
+
+export const cardsUIContainerPosition: SimplePosition = {
+  x: 103,
+  y: 41,
 };
 
 export const playboardImagePositions: SimplePosition = {
@@ -51,8 +65,8 @@ export const battleBoardAssetPositions: BattleBoardAssetPositions = {
     beastOne: { x: 64, y: 72 },
     beastTwo: { x: 284, y: 72 },
     beastThree: { x: 504, y: 72 },
-    magicOne: { x: 724, y: 72 },
-    magicTwo: { x: 861, y: 72 },
+    buffOne: { x: 724, y: 72 },
+    buffTwo: { x: 861, y: 72 },
     trapOne: { x: 725, y: 212 },
     trapTwo: { x: 814, y: 212 },
     trapThree: { x: 903, y: 212 },
@@ -63,8 +77,8 @@ export const battleBoardAssetPositions: BattleBoardAssetPositions = {
     beastOne: { x: 64, y: 363 },
     beastTwo: { x: 284, y: 363 },
     beastThree: { x: 504, y: 363 },
-    magicOne: { x: 724, y: 514 },
-    magicTwo: { x: 861, y: 514 },
+    buffOne: { x: 724, y: 514 },
+    buffTwo: { x: 861, y: 514 },
     trapOne: { x: 725, y: 420 },
     trapTwo: { x: 814, y: 420 },
     trapThree: { x: 903, y: 420 },

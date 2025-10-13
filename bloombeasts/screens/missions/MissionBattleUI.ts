@@ -65,6 +65,7 @@ export class MissionBattleUI {
       field: [],
       graveyard: [],
       trapZone: [],
+      buffZone: [],
       currentNectar: 1,
       summonsThisTurn: 0,
       habitatCounters: new SimpleMap(),
@@ -81,6 +82,7 @@ export class MissionBattleUI {
       field: [],
       graveyard: [],
       trapZone: [],
+      buffZone: [],
       currentNectar: 1,
       summonsThisTurn: 0,
       habitatCounters: new SimpleMap(),
@@ -247,6 +249,12 @@ export class MissionBattleUI {
         // Add to field
         player.field.push(beastInstance);
 
+        // Apply buff effects to newly summoned beast
+        this.applyStatBuffEffects(player);
+
+        // Process OnSummon trigger
+        this.processOnSummonTrigger(beastInstance, player, opponent);
+
         console.log(`Played ${bloomCard.name} - Nectar: ${player.currentNectar}`);
         return { success: true, message: `Played ${bloomCard.name}` };
 
@@ -298,6 +306,28 @@ export class MissionBattleUI {
         // Implementation needed in: processOpponentTurn(), attackBeast(), attackPlayer(), processMagicEffect()
 
         return { success: true, message: `Set ${trapCard.name}`, isTrap: true };
+
+      case 'Buff':
+        // Check if buff zone has space (max 2 buffs)
+        if (player.buffZone.length >= 2) {
+          console.log('Buff zone is full');
+          return { success: false, message: 'Buff zone is full' };
+        }
+
+        // Remove card from hand
+        const buffCard: any = player.hand.splice(cardIndex, 1)[0];
+
+        // Deduct nectar cost
+        player.currentNectar -= buffCard.cost;
+
+        // Add to buff zone (buff cards stay on board and provide ongoing effects)
+        player.buffZone.push(buffCard);
+
+        // Apply initial stat buff effects immediately (Battle Fury, Mystic Shield)
+        this.applyStatBuffEffects(player);
+
+        console.log(`Played buff: ${buffCard.name}`);
+        return { success: true, message: `Played ${buffCard.name}` };
 
       case 'Habitat':
         // Remove card from hand
@@ -355,6 +385,12 @@ export class MissionBattleUI {
 
     console.log(`${attacker.name} attacks ${target.name}!`);
 
+    // Process OnAttack trigger for the attacker
+    this.processOnAttackTrigger(attacker, player, opponent);
+
+    // Check for trap activation (opponent's traps)
+    this.checkAndActivateTraps(opponent, player, 'attack');
+
     // Deal damage to each other
     const attackerDamage = attacker.currentAttack || 0;
     const targetDamage = target.currentAttack || 0;
@@ -362,12 +398,24 @@ export class MissionBattleUI {
     target.currentHealth -= attackerDamage;
     attacker.currentHealth -= targetDamage;
 
+    // Process OnDamage triggers for beasts that took damage
+    if (attackerDamage > 0) {
+      this.processOnDamageTrigger(target, opponent, player);
+    }
+    if (targetDamage > 0) {
+      this.processOnDamageTrigger(attacker, player, opponent);
+    }
+
     // Remove dead beasts
     if (target.currentHealth <= 0) {
+      // Process OnDestroy trigger before removing
+      this.processOnDestroyTrigger(target, opponent, player);
       opponent.field.splice(targetIndex, 1);
       console.log(`${target.name} was defeated!`);
     }
     if (attacker.currentHealth <= 0) {
+      // Process OnDestroy trigger before removing
+      this.processOnDestroyTrigger(attacker, player, opponent);
       player.field.splice(attackerIndex, 1);
       console.log(`${attacker.name} was defeated!`);
     }
@@ -411,6 +459,13 @@ export class MissionBattleUI {
     }
 
     const damage = attacker.currentAttack || 0;
+
+    // Process OnAttack trigger for the attacker
+    this.processOnAttackTrigger(attacker, player, opponent);
+
+    // Check for trap activation (opponent's traps)
+    this.checkAndActivateTraps(opponent, player, 'attack');
+
     opponent.health -= damage;
 
     console.log(`${attacker.name} attacks opponent for ${damage} damage!`);
@@ -480,8 +535,20 @@ export class MissionBattleUI {
           }
           break;
         case 'remove-counter':
-          // TODO: Implement counter removal from habitat
-          console.log('Counter removal not yet implemented');
+          // Remove counters from habitat zone
+          if (this.currentBattle && this.currentBattle.gameState && this.currentBattle.gameState.habitatZone) {
+            const habitat = this.currentBattle.gameState.habitatZone as any;
+            if (habitat.counters && Array.isArray(habitat.counters)) {
+              const counterCost = ability.cost.value || 1;
+              const removedCount = Math.min(counterCost, habitat.counters.length);
+              habitat.counters.splice(0, removedCount);
+              console.log(`Removed ${removedCount} counter(s) from ${habitat.name}`);
+            } else {
+              return { success: false, message: 'No counters available on habitat' };
+            }
+          } else {
+            return { success: false, message: 'No habitat on field' };
+          }
           break;
       }
     }
@@ -524,13 +591,87 @@ export class MissionBattleUI {
         break;
 
       case 'damage':
-        // TODO: Implement damage targeting
-        console.log(`Damage effect: ${effect.value}`);
+        // Deal damage based on target
+        const damageTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        damageTargets.forEach((target: any) => {
+          if (target.currentHealth !== undefined) {
+            // It's a beast
+            target.currentHealth -= effect.value || 0;
+            if (target.currentHealth <= 0) {
+              // Remove dead beast
+              const ownerField = player.field.includes(target) ? player.field : opponent.field;
+              const owner = player.field.includes(target) ? player : opponent;
+              const otherPlayer = player.field.includes(target) ? opponent : player;
+              const index = ownerField.indexOf(target);
+              if (index > -1) {
+                // Process OnDestroy trigger before removing
+                this.processOnDestroyTrigger(target, owner, otherPlayer);
+                ownerField.splice(index, 1);
+                console.log(`${target.name} was destroyed by ${source.name}'s ability!`);
+              }
+            }
+          } else if (target.health !== undefined) {
+            // It's a player
+            target.health -= effect.value || 0;
+            console.log(`${effect.value} damage dealt to ${target.name}`);
+          }
+        });
         break;
 
       case 'immunity':
-        // TODO: Implement immunity tracking
-        console.log(`Immunity effect: ${effect.immuneTo}`);
+        // Implement immunity tracking
+        if (effect.target === 'self') {
+          if (!source.statusEffects) source.statusEffects = [];
+          // Add immunity status effect
+          const immunityEffect = {
+            type: 'immunity',
+            immuneTo: effect.immuneTo || 'all',
+            duration: effect.duration || 'permanent'
+          };
+          source.statusEffects.push(immunityEffect);
+          console.log(`${source.name} gained immunity to ${effect.immuneTo || 'all'}`);
+        }
+        break;
+
+      case 'apply-counter':
+        // Apply counters to habitat zone or beasts
+        if (effect.counter === 'Spore' && this.currentBattle && this.currentBattle.gameState) {
+          // Spore counters go on the habitat zone
+          const habitatZone = this.currentBattle.gameState.habitatZone as any;
+          if (habitatZone) {
+            if (!habitatZone.counters) {
+              habitatZone.counters = [];
+            }
+            // Find existing Spore counter or create new one
+            const existingCounter = habitatZone.counters.find((c: any) => c.type === effect.counter);
+            if (existingCounter) {
+              existingCounter.amount += effect.value || 1;
+            } else {
+              habitatZone.counters.push({
+                type: effect.counter,
+                amount: effect.value || 1,
+              });
+            }
+            console.log(`Added ${effect.value || 1} ${effect.counter} counter(s) to ${habitatZone.name}`);
+          } else {
+            console.log('No habitat zone to apply counters to');
+          }
+        } else {
+          // Other counters (Burn, Freeze, etc.) go on the beast itself
+          if (!source.counters) {
+            source.counters = [];
+          }
+          const existingCounter = source.counters.find((c: any) => c.type === effect.counter);
+          if (existingCounter) {
+            existingCounter.amount += effect.value || 1;
+          } else {
+            source.counters.push({
+              type: effect.counter,
+              amount: effect.value || 1,
+            });
+          }
+          console.log(`Added ${effect.value || 1} ${effect.counter} counter(s) to ${source.name}`);
+        }
         break;
 
       default:
@@ -554,8 +695,12 @@ export class MissionBattleUI {
               const ownerField = target === player.field.find((b: any) => b === target)
                 ? player.field
                 : opponent.field;
+              const owner = player.field.includes(target) ? player : opponent;
+              const otherPlayer = player.field.includes(target) ? opponent : player;
               const index = ownerField.indexOf(target);
               if (index > -1) {
+                // Process OnDestroy trigger before removing
+                this.processOnDestroyTrigger(target, owner, otherPlayer);
                 ownerField.splice(index, 1);
               }
             }
@@ -591,8 +736,12 @@ export class MissionBattleUI {
           if (target.currentHealth !== undefined) {
             // It's a beast - remove it
             const ownerField = player.field.includes(target) ? player.field : opponent.field;
+            const owner = player.field.includes(target) ? player : opponent;
+            const otherPlayer = player.field.includes(target) ? opponent : player;
             const index = ownerField.indexOf(target);
             if (index > -1) {
+              // Process OnDestroy trigger before removing
+              this.processOnDestroyTrigger(target, owner, otherPlayer);
               ownerField.splice(index, 1);
             }
           }
@@ -710,8 +859,12 @@ export class MissionBattleUI {
             if (target.currentHealth <= 0) {
               // Remove dead beast
               const ownerField = player.field.includes(target) ? player.field : opponent.field;
+              const owner = player.field.includes(target) ? player : opponent;
+              const otherPlayer = player.field.includes(target) ? opponent : player;
               const index = ownerField.indexOf(target);
               if (index > -1) {
+                // Process OnDestroy trigger before removing
+                this.processOnDestroyTrigger(target, owner, otherPlayer);
                 ownerField.splice(index, 1);
               }
             }
@@ -825,6 +978,269 @@ export class MissionBattleUI {
   }
 
   /**
+   * Process OnSummon triggers for a beast that was just summoned
+   * @param beast The beast that was summoned
+   * @param owner The player who owns the beast
+   * @param opponent The opponent player
+   */
+  private processOnSummonTrigger(beast: any, owner: any, opponent: any): void {
+    if (!beast.ability) return;
+
+    const ability = beast.ability as any;
+
+    // Check if ability has OnSummon trigger
+    if (ability.trigger === 'OnSummon') {
+      console.log(`OnSummon trigger activated for ${beast.name}!`);
+
+      // Process ability effects
+      if (ability.effects && Array.isArray(ability.effects)) {
+        for (const effect of ability.effects) {
+          this.processAbilityEffect(effect, beast, owner, opponent);
+        }
+      }
+    }
+
+    // Also check for Passive abilities that apply on summon (like RemoveSummoningSickness)
+    if (ability.trigger === 'Passive') {
+      if (ability.effects && Array.isArray(ability.effects)) {
+        for (const effect of ability.effects) {
+          if (effect.type === 'remove-summoning-sickness') {
+            // Remove summoning sickness immediately for Passive abilities like Quick Strike
+            beast.summoningSickness = false;
+            console.log(`${beast.name} can attack immediately (Passive: RemoveSummoningSickness)!`);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Process OnAttack triggers for a beast that is attacking
+   * @param beast The beast that is attacking
+   * @param owner The player who owns the beast
+   * @param opponent The opponent player
+   */
+  private processOnAttackTrigger(beast: any, owner: any, opponent: any): void {
+    if (!beast.ability) return;
+
+    const ability = beast.ability as any;
+
+    // Check if ability has OnAttack trigger
+    if (ability.trigger === 'OnAttack') {
+      console.log(`OnAttack trigger activated for ${beast.name}!`);
+
+      // Process ability effects
+      if (ability.effects && Array.isArray(ability.effects)) {
+        for (const effect of ability.effects) {
+          this.processAbilityEffect(effect, beast, owner, opponent);
+        }
+      }
+    }
+  }
+
+  /**
+   * Process OnDamage triggers for a beast that took damage
+   * @param beast The beast that took damage
+   * @param owner The player who owns the beast
+   * @param opponent The opponent player
+   */
+  private processOnDamageTrigger(beast: any, owner: any, opponent: any): void {
+    if (!beast.ability) return;
+
+    const ability = beast.ability as any;
+
+    // Check if ability has OnDamage trigger
+    if (ability.trigger === 'OnDamage') {
+      console.log(`OnDamage trigger activated for ${beast.name}!`);
+
+      // Process ability effects
+      if (ability.effects && Array.isArray(ability.effects)) {
+        for (const effect of ability.effects) {
+          this.processAbilityEffect(effect, beast, owner, opponent);
+        }
+      }
+    }
+  }
+
+  /**
+   * Process OnDestroy triggers for a beast that is about to be destroyed
+   * @param beast The beast that is being destroyed
+   * @param owner The player who owns the beast
+   * @param opponent The opponent player
+   */
+  private processOnDestroyTrigger(beast: any, owner: any, opponent: any): void {
+    if (!beast.ability) return;
+
+    const ability = beast.ability as any;
+
+    // Check if ability has OnDestroy trigger
+    if (ability.trigger === 'OnDestroy') {
+      console.log(`OnDestroy trigger activated for ${beast.name}!`);
+
+      // Process ability effects
+      if (ability.effects && Array.isArray(ability.effects)) {
+        for (const effect of ability.effects) {
+          this.processAbilityEffect(effect, beast, owner, opponent);
+        }
+      }
+    }
+  }
+
+  /**
+   * Process StartOfTurn triggers for all beasts on the field
+   * @param player The player whose turn is starting
+   * @param opponent The opponent player
+   */
+  private processStartOfTurnTriggers(player: any, opponent: any): void {
+    // Process triggers for all beasts on the player's field
+    player.field.forEach((beast: any) => {
+      if (!beast || !beast.ability) return;
+
+      const ability = beast.ability as any;
+
+      // Check if ability has StartOfTurn trigger
+      if (ability.trigger === 'StartOfTurn') {
+        console.log(`StartOfTurn trigger activated for ${beast.name}!`);
+
+        // Process ability effects
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            this.processAbilityEffect(effect, beast, player, opponent);
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Process EndOfTurn triggers for all beasts on the field
+   * @param player The player whose turn is ending
+   * @param opponent The opponent player
+   */
+  private processEndOfTurnTriggers(player: any, opponent: any): void {
+    // Process triggers for all beasts on the player's field
+    player.field.forEach((beast: any) => {
+      if (!beast || !beast.ability) return;
+
+      const ability = beast.ability as any;
+
+      // Check if ability has EndOfTurn trigger
+      if (ability.trigger === 'EndOfTurn') {
+        console.log(`EndOfTurn trigger activated for ${beast.name}!`);
+
+        // Process ability effects
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            this.processAbilityEffect(effect, beast, player, opponent);
+          }
+        }
+      }
+    });
+  }
+
+  /**
+   * Check and activate traps based on trigger event
+   * @param defender The player whose traps might activate
+   * @param attacker The player performing the action that triggers traps
+   * @param triggerType The type of action that might trigger traps ('attack', 'spell', 'summon', etc.)
+   */
+  private checkAndActivateTraps(defender: any, attacker: any, triggerType: string): void {
+    if (!defender.trapZone || defender.trapZone.length === 0) return;
+
+    // Check each trap to see if it should activate
+    for (let i = defender.trapZone.length - 1; i >= 0; i--) {
+      const trap: any = defender.trapZone[i];
+
+      // Check if trap triggers on this event type
+      // For now, we'll activate traps on 'attack' events
+      if (triggerType === 'attack' && trap.trigger === 'OnAttack') {
+        console.log(`Trap activated: ${trap.name}!`);
+
+        // Trigger sound effect callback
+        if (this.opponentActionCallback) {
+          this.opponentActionCallback('trap-activated');
+        }
+
+        // Process trap effects
+        if (trap.effects && Array.isArray(trap.effects)) {
+          for (const effect of trap.effects) {
+            this.processMagicEffect(effect, defender, attacker);
+          }
+        }
+
+        // Remove trap from zone and send to graveyard
+        const activatedTrap = defender.trapZone.splice(i, 1)[0];
+        defender.graveyard.push(activatedTrap);
+      }
+    }
+  }
+
+  /**
+   * Apply stat modification effects from active buff cards
+   * Called when buffs are played or when beasts are summoned
+   */
+  private applyStatBuffEffects(player: any): void {
+    if (!player.buffZone || player.buffZone.length === 0) return;
+
+    player.buffZone.forEach((buff: any) => {
+      if (!buff.ongoingEffects) return;
+
+      buff.ongoingEffects.forEach((effect: any) => {
+        if (effect.type === 'modify-stats') {
+          // Apply stat modifications to all ally beasts
+          if (effect.target === 'all-allies') {
+            player.field.forEach((beast: any) => {
+              if (effect.stat === 'attack') {
+                beast.currentAttack = (beast.baseAttack || 0) + (effect.value || 0);
+              } else if (effect.stat === 'health') {
+                const healthBoost = effect.value || 0;
+                beast.maxHealth = (beast.baseHealth || 0) + healthBoost;
+                beast.currentHealth = Math.min(beast.currentHealth + healthBoost, beast.maxHealth);
+              }
+            });
+          }
+        }
+      });
+    });
+  }
+
+  /**
+   * Apply start-of-turn effects from active buff cards
+   * Called at the beginning of each player's turn
+   */
+  private applyBuffStartOfTurnEffects(player: any, opponent: any): void {
+    if (!player.buffZone || player.buffZone.length === 0) return;
+
+    player.buffZone.forEach((buff: any) => {
+      if (!buff.ongoingEffects) return;
+
+      buff.ongoingEffects.forEach((effect: any) => {
+        switch (effect.type) {
+          case 'gain-resource':
+            // Swift Wind: Gain 1 extra Nectar at start of turn
+            if (effect.resource === 'nectar') {
+              player.currentNectar += effect.value || 1;
+              console.log(`${buff.name}: Gained ${effect.value || 1} nectar`);
+            }
+            break;
+
+          case 'heal':
+            // Nature's Blessing: Heal all your Beasts for 1 HP at start of turn
+            if (effect.target === 'all-allies') {
+              player.field.forEach((beast: any) => {
+                if (beast.currentHealth < beast.maxHealth) {
+                  beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth + (effect.value || 1));
+                }
+              });
+              console.log(`${buff.name}: Healed all beasts for ${effect.value || 1} HP`);
+            }
+            break;
+        }
+      });
+    });
+  }
+
+  /**
    * End player's turn and start opponent's turn
    */
   private async endPlayerTurn(): Promise<any> {
@@ -836,12 +1252,16 @@ export class MissionBattleUI {
 
     // Remove summoning sickness and reset ability usage for all player beasts
     const player = gameState.players[0];
+    const opponent = gameState.players[1];
     player.field.forEach((beast: any) => {
       if (beast) {
         beast.summoningSickness = false;
         beast.usedAbilityThisTurn = false; // Reset ability usage
       }
     });
+
+    // Process EndOfTurn triggers for player beasts before ending turn
+    this.processEndOfTurnTriggers(player, opponent);
 
     // Switch to opponent turn
     gameState.activePlayer = 1;
@@ -875,6 +1295,15 @@ export class MissionBattleUI {
 
     // Increase player nectar (max 10)
     player.currentNectar = Math.min(10, gameState.turn);
+
+    // Apply buff card start-of-turn effects (Swift Wind, Nature's Blessing)
+    this.applyBuffStartOfTurnEffects(player, opponent);
+
+    // Process StartOfTurn triggers for player beasts
+    this.processStartOfTurnTriggers(player, opponent);
+
+    // Reapply stat buffs to all beasts (Battle Fury, Mystic Shield)
+    this.applyStatBuffEffects(player);
 
     // Reset summoning counter
     player.summonsThisTurn = 0;
@@ -919,6 +1348,15 @@ export class MissionBattleUI {
     if (this.renderCallback) this.renderCallback();
     await delay(500);
 
+    // Apply buff card start-of-turn effects for opponent (Swift Wind, Nature's Blessing)
+    this.applyBuffStartOfTurnEffects(opponent, player);
+
+    // Process StartOfTurn triggers for opponent beasts
+    this.processStartOfTurnTriggers(opponent, player);
+
+    // Reapply stat buffs to all opponent beasts (Battle Fury, Mystic Shield)
+    this.applyStatBuffEffects(opponent);
+
     // Remove summoning sickness from beasts that were already on the field at start of turn
     // (Don't remove from beasts that will be summoned this turn)
     opponent.field.forEach((beast: any) => {
@@ -962,6 +1400,13 @@ export class MissionBattleUI {
           };
 
           opponent.field.push(beastInstance);
+
+          // Apply buff effects to newly summoned beast
+          this.applyStatBuffEffects(opponent);
+
+          // Process OnSummon trigger
+          this.processOnSummonTrigger(beastInstance, opponent, player);
+
           console.log(`Opponent played ${playedCard.name}`);
 
           // Notify action callback for sound effects
@@ -1011,6 +1456,27 @@ export class MissionBattleUI {
           // Render and delay after playing card
           if (this.renderCallback) this.renderCallback();
           await delay(3500); // Longer delay to allow popup to show
+        } else if (card.type === 'Buff' && opponent.buffZone.length < 2) {
+          // Play Buff card
+          const playedCard: any = opponent.hand.splice(i, 1)[0];
+          opponent.currentNectar -= playedCard.cost;
+
+          // Add to buff zone
+          opponent.buffZone.push(playedCard);
+
+          // Apply initial stat buff effects immediately (Battle Fury, Mystic Shield)
+          this.applyStatBuffEffects(opponent);
+
+          console.log(`Opponent played buff: ${playedCard.name}`);
+
+          // Notify action callback with card details for popup
+          if (this.opponentActionCallback) {
+            this.opponentActionCallback(`play-buff-card:${JSON.stringify(playedCard)}`);
+          }
+
+          // Render and delay after playing card
+          if (this.renderCallback) this.renderCallback();
+          await delay(3500); // Longer delay to allow popup to show
         } else if (card.type === 'Habitat' && !this.currentBattle.gameState.habitatZone) {
           // Play Habitat card (only if no habitat is currently active)
           const playedCard: any = opponent.hand.splice(i, 1)[0];
@@ -1053,21 +1519,39 @@ export class MissionBattleUI {
           if (target) {
             console.log(`Opponent's ${beast.name} attacks ${target.name}`);
 
+            // Process OnAttack trigger for the attacker
+            this.processOnAttackTrigger(beast, opponent, player);
+
             // Notify action callback with detailed attack info
             if (this.opponentActionCallback) {
               this.opponentActionCallback(`attack-beast-opponent-${index}-player-${targetIndex}`);
             }
 
             // Deal damage to each other
-            target.currentHealth -= beast.currentAttack || 0;
-            beast.currentHealth -= target.currentAttack || 0;
+            const opponentBeastDamage = beast.currentAttack || 0;
+            const playerBeastDamage = target.currentAttack || 0;
+
+            target.currentHealth -= opponentBeastDamage;
+            beast.currentHealth -= playerBeastDamage;
+
+            // Process OnDamage triggers for beasts that took damage
+            if (opponentBeastDamage > 0) {
+              this.processOnDamageTrigger(target, player, opponent);
+            }
+            if (playerBeastDamage > 0) {
+              this.processOnDamageTrigger(beast, opponent, player);
+            }
 
             // Remove dead beasts
             if (target.currentHealth <= 0) {
+              // Process OnDestroy trigger before removing
+              this.processOnDestroyTrigger(target, player, opponent);
               player.field.splice(targetIndex, 1);
               console.log(`${target.name} was defeated!`);
             }
             if (beast.currentHealth <= 0) {
+              // Process OnDestroy trigger before removing
+              this.processOnDestroyTrigger(beast, opponent, player);
               opponent.field.splice(index, 1);
               console.log(`Opponent's ${beast.name} was defeated!`);
             }
@@ -1079,6 +1563,10 @@ export class MissionBattleUI {
         } else {
           // No beasts to attack - attack player directly
           const damage = beast.currentAttack || 0;
+
+          // Process OnAttack trigger for the attacker
+          this.processOnAttackTrigger(beast, opponent, player);
+
           const previousHealth = player.health;
           player.health -= damage;
           console.log(`Opponent's ${beast.name} attacks you directly for ${damage} damage!`);
@@ -1107,6 +1595,9 @@ export class MissionBattleUI {
         }
       }
     }
+
+    // Process EndOfTurn triggers for opponent beasts before ending turn
+    this.processEndOfTurnTriggers(opponent, player);
 
     console.log('Opponent turn ended');
   }

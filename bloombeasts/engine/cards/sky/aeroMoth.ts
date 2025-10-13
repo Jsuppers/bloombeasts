@@ -109,7 +109,7 @@ const aeroMothBloom9: StructuredAbility = {
 
 export const AERO_MOTH: BloomBeastCard = {
   id: 'aero-moth',
-  name: 'Aero-Moth',
+  name: 'Aero Moth',
   type: 'Bloom',
   affinity: 'Sky',
   cost: 2,

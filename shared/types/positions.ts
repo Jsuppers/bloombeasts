@@ -7,8 +7,8 @@ interface PlayerCardPositions {
   beastOne: SimplePosition;
   beastTwo: SimplePosition;
   beastThree: SimplePosition;
-  magicOne: SimplePosition;
-  magicTwo: SimplePosition;
+  buffOne: SimplePosition;
+  buffTwo: SimplePosition;
   trapOne: SimplePosition;
   trapTwo: SimplePosition;
   trapThree: SimplePosition;
@@ -25,6 +25,7 @@ export interface CardTextPositions {
   cost: CardTextInfo;
   affinity: SimplePosition;
   level: CardTextInfo;
+  experienceBar: SimplePosition;
   name: CardTextInfo;
   ability: CardTextInfo;
   attack: CardTextInfo;

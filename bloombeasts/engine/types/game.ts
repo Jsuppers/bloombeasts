@@ -28,6 +28,7 @@ export interface Player {
   graveyard: AnyCard[];  // Cards that have been destroyed
   field: (BloomBeastInstance | null)[]; // Nullable for empty slots
   trapZone: (AnyCard | null)[]; // Face-down trap cards (max 3)
+  buffZone: (AnyCard | null)[]; // Active buff cards (max 2)
   habitatCounters: SimpleMap<string, number>; // Counters specific to this player's habitat
 }
 

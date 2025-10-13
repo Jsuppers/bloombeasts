@@ -20,10 +20,14 @@ export class AssetLoader {
             await this.loadImage('sideMenu', '/shared/images/SideMenu.png');
             await this.loadImage('sideMenuGreenButton', '/shared/images/SideMenuGreenButton.png');
             await this.loadImage('sideMenuStandardButton', '/shared/images/SideMenuStandardButton.png');
+            await this.loadImage('cardsContainer', '/shared/images/CardsContainer.png');
 
             // Load action icons
             await this.loadImage('attackIcon', '/shared/images/icons/attack.png');
             await this.loadImage('abilityIcon', '/shared/images/icons/ability.png');
+
+            // Load experience bar
+            await this.loadImage('experienceBar', '/shared/images/cards/ExperienceBar.png');
 
             // Load menu animation frames
             for (let i = 1; i <= 10; i++) {
@@ -73,8 +77,8 @@ export class AssetLoader {
             return this.images.get(cacheKey)!;
         }
 
-        // Remove spaces from card name to match file naming convention
-        const sanitizedCardName = cardName.replace(/\s+/g, '');
+        // Remove spaces and apostrophes from card name to match file naming convention
+        const sanitizedCardName = cardName.replace(/[\s']/g, '');
 
         // Determine the folder based on card type
         let folder: string;
@@ -82,6 +86,8 @@ export class AssetLoader {
             folder = 'Magic';
         } else if (cardType === 'Trap') {
             folder = 'Trap';
+        } else if (cardType === 'Buff') {
+            folder = 'Buff';
         } else {
             // Default to affinity-based folder for Bloom and other cards
             folder = affinity || 'Shared';
@@ -109,7 +115,7 @@ export class AssetLoader {
         // For now, beast images are the same as card images
         // In the future, this could load separate beast artwork
         // Try to load from cards folder first (current structure)
-        const sanitizedCardName = cardName.replace(/\s+/g, '');
+        const sanitizedCardName = cardName.replace(/[\s']/g, '');
         const affinityFolder = affinity || 'Shared';
         const cardImagePath = `/shared/images/cards/${affinityFolder}/${sanitizedCardName}.png`;
 
@@ -209,6 +215,26 @@ export class AssetLoader {
         }
     }
 
+    async loadBuffCardTemplate(): Promise<HTMLImageElement | null> {
+        const cacheKey = `buff-card-template`;
+
+        // Return cached image if available
+        if (this.images.has(cacheKey)) {
+            return this.images.get(cacheKey)!;
+        }
+
+        // BuffCard.png template for inventory/hand display
+        const imagePath = `/shared/images/cards/BuffCard.png`;
+
+        try {
+            await this.loadImage(cacheKey, imagePath);
+            return this.images.get(cacheKey)!;
+        } catch (error) {
+            console.warn(`Failed to load buff card template: ${imagePath}`);
+            return null;
+        }
+    }
+
     async loadMagicCardPlayboardTemplate(): Promise<HTMLImageElement | null> {
         const cacheKey = `magic-card-playboard-template`;
 
@@ -245,6 +271,26 @@ export class AssetLoader {
             return this.images.get(cacheKey)!;
         } catch (error) {
             console.warn(`Failed to load trap card playboard template: ${imagePath}`);
+            return null;
+        }
+    }
+
+    async loadBuffCardPlayboardTemplate(): Promise<HTMLImageElement | null> {
+        const cacheKey = `buff-card-playboard-template`;
+
+        // Return cached image if available
+        if (this.images.has(cacheKey)) {
+            return this.images.get(cacheKey)!;
+        }
+
+        // BuffCardPlayboard.png template for playboard display
+        const imagePath = `/shared/images/cards/BuffCardPlayboard.png`;
+
+        try {
+            await this.loadImage(cacheKey, imagePath);
+            return this.images.get(cacheKey)!;
+        } catch (error) {
+            console.warn(`Failed to load buff card playboard template: ${imagePath}`);
             return null;
         }
     }
@@ -297,8 +343,8 @@ export class AssetLoader {
             return this.images.get(cacheKey)!;
         }
 
-        // Remove spaces from card name to match file naming convention
-        const sanitizedCardName = cardName.replace(/\s+/g, '');
+        // Remove spaces and apostrophes from card name to match file naming convention
+        const sanitizedCardName = cardName.replace(/[\s']/g, '');
 
         // Habitat images are in the affinity folder
         const imagePath = `/shared/images/cards/${affinity}/${sanitizedCardName}.png`;
@@ -368,6 +414,18 @@ export class AssetLoader {
                     result.mainImage = await this.loadCardImage(card.name, card.affinity, 'Trap');
                     result.templateImage = await this.loadTrapCardTemplate();
                     // Trap cards in hand/inventory don't need base card
+                }
+                break;
+
+            case 'Buff':
+                // Load buff card image
+                result.mainImage = await this.loadCardImage(card.name, card.affinity, 'Buff');
+                // Load appropriate template based on render type
+                if (renderType === 'battle') {
+                    result.templateImage = await this.loadBuffCardPlayboardTemplate();
+                } else {
+                    result.templateImage = await this.loadBuffCardTemplate();
+                    // Buff cards in hand/inventory don't need base card
                 }
                 break;
 

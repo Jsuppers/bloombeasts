@@ -29,6 +29,7 @@ export const DEEP_SEA_GROTTO: HabitatCard = {
   id: 'deep-sea-grotto',
   name: 'Deep Sea Grotto',
   type: 'Habitat',
+  level: 1,
   description: 'Water Beasts gain +1 Attack.',
   affinity: 'Water',
   cost: 1,

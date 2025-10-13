@@ -20,6 +20,7 @@ export const CLEAR_ZENITH: HabitatCard = {
   id: 'clear-zenith',
   name: 'Clear Zenith',
   type: 'Habitat',
+  level: 1,
   description: 'Draw 1 card when played.',
   affinity: 'Sky',
   cost: 1,

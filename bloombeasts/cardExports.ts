@@ -37,3 +37,9 @@ export { NECTAR_BLOCK } from './engine/cards/magic/nectarBlock';
 
 // Trap Cards
 export { HABITAT_LOCK } from './engine/cards/trap/habitatLock';
+
+// Buff Cards
+export { BATTLE_FURY } from './engine/cards/buff/battleFury';
+export { SWIFT_WIND } from './engine/cards/buff/swiftWind';
+export { MYSTIC_SHIELD } from './engine/cards/buff/mysticShield';
+export { NATURES_BLESSING } from './engine/cards/buff/naturesBlessing';

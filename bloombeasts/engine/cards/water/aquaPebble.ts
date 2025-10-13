@@ -106,7 +106,7 @@ const aquaPebbleBloom9: StructuredAbility = {
 
 export const AQUA_PEBBLE: BloomBeastCard = {
   id: 'aqua-pebble',
-  name: 'Aqua-Pebble',
+  name: 'Aqua Pebble',
   type: 'Bloom',
   affinity: 'Water',
   cost: 1,

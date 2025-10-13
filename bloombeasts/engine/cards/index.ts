@@ -8,7 +8,8 @@ import { ForestDeck } from './forest';
 import { SkyDeck } from './sky';
 import { MagicCards } from './magic';
 import { TrapCards } from './trap';
-import { BloomBeastCard, HabitatCard, TrapCard, MagicCard, AnyCard } from '../types/core';
+import * as BuffCards from './buff';
+import { BloomBeastCard, HabitatCard, TrapCard, MagicCard, BuffCard, AnyCard } from '../types/core';
 import { SimpleMap, arrayFrom } from '../../utils/polyfills';
 
 // Export deck classes
@@ -17,9 +18,10 @@ export { WaterDeck } from './water';
 export { ForestDeck } from './forest';
 export { SkyDeck } from './sky';
 
-// Export magic and trap cards
+// Export magic, trap, and buff cards
 export * from './magic';
 export * from './trap';
+export * from './buff';
 
 /**
  * Get all cards from all decks
@@ -77,6 +79,16 @@ export function getAllCards(): AnyCard[] {
     if (!cardMap.has(card.id)) {
       (card as any).rarity = 'common';
       cardMap.set(card.id, card);
+    }
+  });
+
+  // Add Buff cards
+  Object.values(BuffCards).forEach(card => {
+    if (card && typeof card === 'object' && 'id' in card) {
+      if (!cardMap.has(card.id)) {
+        (card as any).rarity = 'common';
+        cardMap.set(card.id, card as BuffCard);
+      }
     }
   });
 

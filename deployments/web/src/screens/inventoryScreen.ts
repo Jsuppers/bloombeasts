@@ -6,13 +6,13 @@ import { CardDisplay } from '../../../../bloombeasts/gameManager';
 import { CanvasRenderer } from '../utils/canvasRenderer';
 import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
-import { standardCardDimensions, sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
-import { uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions } from '../../../../shared/constants/positions';
+import { standardCardDimensions, sideMenuButtonDimensions, cardsUIContainerDimensions } from '../../../../shared/constants/dimensions';
+import { uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions, cardsUIContainerPosition } from '../../../../shared/constants/positions';
 import { deckEmoji } from '../../../../shared/constants/emojis';
 
 export class InventoryScreen {
     private scrollOffset: number = 0;
-    private cardsPerRow: number = 5;
+    private cardsPerRow: number = 4; // Changed from 5 to 4
     private rowsPerPage: number = 2; // Show 2 rows at a time
     private playSfx: (src: string) => void = () => {};
 
@@ -41,21 +41,39 @@ export class InventoryScreen {
         const sideMenuImg = this.assets.getImage('sideMenu');
         this.renderer.drawCommonUI(bgImg, sideMenuImg);
 
+        // Draw CardsContainer.png
+        const cardsContainerImg = this.assets.getImage('cardsContainer');
+        if (cardsContainerImg) {
+            this.renderer.ctx.drawImage(
+                cardsContainerImg,
+                cardsUIContainerPosition.x,
+                cardsUIContainerPosition.y,
+                cardsUIContainerDimensions.width,
+                cardsUIContainerDimensions.height
+            );
+        }
+
         // Draw title and deck info on side menu
         const textPos = sideMenuPositions.textStartPosition;
         this.renderer.drawText('Inventory', textPos.x, textPos.y, 20, '#fff', 'left');
         this.renderer.drawText(`${deckEmoji} ${deckSize}/30`, textPos.x, textPos.y + 25, 18, '#fff', 'left');
 
         if (cards.length === 0) {
-            this.renderer.drawText('No cards in your collection yet.', 400, 350, 24, '#fff', 'center');
+            const centerX = cardsUIContainerPosition.x + cardsUIContainerDimensions.width / 2;
+            const centerY = cardsUIContainerPosition.y + cardsUIContainerDimensions.height / 2;
+            this.renderer.drawText('No cards in your collection yet.', centerX, centerY, 24, '#fff', 'center');
         } else {
-            // Draw cards in a grid using standardCardDimensions
+            // Draw cards in a grid within the container (4 cards per row)
             const cardWidth = standardCardDimensions.width;
             const cardHeight = standardCardDimensions.height;
-            const startX = 40;
-            const startY = 100;
-            const spacingX = cardWidth + 10;  // 10px gap between cards
-            const spacingY = cardHeight + 10;
+            const marginX = 30; // Left/right margin inside container
+            const marginY = 30; // Top/bottom margin inside container
+            const gapX = 15; // Gap between cards horizontally
+            const gapY = 15; // Gap between cards vertically
+            const startX = cardsUIContainerPosition.x + marginX;
+            const startY = cardsUIContainerPosition.y + marginY;
+            const spacingX = cardWidth + gapX;
+            const spacingY = cardHeight + gapY;
 
             // Calculate visible card range based on scroll (show 2 rows at a time)
             const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
@@ -78,11 +96,14 @@ export class InventoryScreen {
 
                 // Use appropriate rendering method based on card type
                 if (card.type === 'Bloom') {
-                    this.renderer.drawBeastCard(x, y, card, assets.mainImage, assets.baseCardImage, assets.affinityIcon);
+                    const experienceBarImg = this.assets.getImage('experienceBar');
+                    this.renderer.drawBeastCard(x, y, card, assets.mainImage, assets.baseCardImage, assets.affinityIcon, undefined, undefined, experienceBarImg);
                 } else if (card.type === 'Magic') {
                     this.renderer.drawMagicCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
                 } else if (card.type === 'Trap') {
                     this.renderer.drawTrapCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
+                } else if (card.type === 'Buff') {
+                    this.renderer.drawBuffCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
                 } else if (card.type === 'Habitat') {
                     this.renderer.drawHabitatCard(x, y, card, assets.mainImage, assets.templateImage, assets.baseCardImage);
                 } else {

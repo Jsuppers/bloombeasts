@@ -8,6 +8,7 @@ import { ForestDeck } from '../cards/forest';
 import { FireDeck } from '../cards/fire';
 import { WaterDeck } from '../cards/water';
 import { SkyDeck } from '../cards/sky';
+import { BATTLE_FURY, NATURES_BLESSING, MYSTIC_SHIELD, SWIFT_WIND } from '../cards/buff';
 
 export type DeckType = 'Forest' | 'Fire' | 'Water' | 'Sky';
 
@@ -108,7 +109,69 @@ export function getAllStarterDecks(): DeckList[] {
  * Get a specific starter deck by type
  */
 export function getStarterDeck(type: DeckType): DeckList {
-  return buildDeck(type);
+  // TESTING: Use testing deck with 1 of each card
+  return getTestingDeck(type);
+
+  // ORIGINAL: Starter deck with multiple copies
+  // return buildDeck(type);
+}
+
+/**
+ * Get a testing deck with 1 of each card (for easy testing)
+ * This includes 1 of every card in the game across all affinities
+ */
+export function getTestingDeck(type: DeckType): DeckList {
+  const deck = DECK_INSTANCES[type];
+
+  // Get 1 of each card from all affinities
+  const allCards: AnyCard[] = [];
+
+  // Add shared cards (Magic, Trap) - 1 of each
+  const sharedCards = getSharedCoreCards();
+  sharedCards.forEach(({ card }) => {
+    allCards.push({
+      ...card,
+      instanceId: `${card.id}-1`,
+    } as unknown as AnyCard);
+  });
+
+  // Add buff cards - 1 of each
+  const buffCards = [BATTLE_FURY, NATURES_BLESSING, MYSTIC_SHIELD, SWIFT_WIND];
+  buffCards.forEach(card => {
+    allCards.push({
+      ...card,
+      instanceId: `${card.id}-1`,
+    } as unknown as AnyCard);
+  });
+
+  // Add all beasts from all affinities - 1 of each
+  (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).forEach(affinity => {
+    const affinityDeck = DECK_INSTANCES[affinity];
+    const cards = affinityDeck.getDeckCards();
+
+    // Add beasts
+    cards.beasts.forEach(({ card }) => {
+      allCards.push({
+        ...card,
+        instanceId: `${card.id}-1`,
+      } as unknown as AnyCard);
+    });
+
+    // Add habitats
+    cards.habitats.forEach(({ card }) => {
+      allCards.push({
+        ...card,
+        instanceId: `${card.id}-1`,
+      } as unknown as AnyCard);
+    });
+  });
+
+  return {
+    name: `${deck.deckName} (Testing)`,
+    affinity: type,
+    cards: allCards,
+    totalCards: allCards.length,
+  };
 }
 
 /**
