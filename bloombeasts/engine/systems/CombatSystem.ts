@@ -9,6 +9,7 @@ import { SimpleMap } from '../../utils/polyfills';
 import { Logger } from '../utils/Logger';
 import { STARTING_HEALTH, MAX_TURNS } from '../constants/gameRules';
 import { getAliveBeasts } from '../utils/fieldUtils';
+import { ICombatSystem } from './interfaces';
 
 export interface CombatResult {
   winner: 'player1' | 'player2' | 'draw';
@@ -23,13 +24,15 @@ export interface CombatResult {
   };
 }
 
-export class CombatSystem {
+export class CombatSystem implements ICombatSystem {
   private abilityProcessor: AbilityProcessor;
+  private levelingSystem: LevelingSystem;
   private currentTurn: number = 0;
   private maxTurns: number = MAX_TURNS;
 
   constructor() {
     this.abilityProcessor = new AbilityProcessor();
+    this.levelingSystem = new LevelingSystem();
   }
 
   /**
@@ -98,7 +101,7 @@ export class CombatSystem {
 
     if (victor) {
       // Award combat XP
-      LevelingSystem.addCombatXP(victor);
+      this.levelingSystem.addCombatXP(victor);
     }
 
     // Note: On-destroy abilities and field removal are handled by GameEngine:

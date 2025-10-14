@@ -32,8 +32,10 @@ export interface CardDisplay {
 }
 
 export class CardCollectionManager {
+  private levelingSystem: LevelingSystem;
+
   constructor() {
-    // No dependencies needed - cardCollection is passed to methods
+    this.levelingSystem = new LevelingSystem();
   }
 
   /**
@@ -85,7 +87,7 @@ export class CardCollectionManager {
 
     if (card.type === 'Bloom') {
       // For Bloom beasts, use the LevelingSystem
-      return LevelingSystem.getXPRequirement(card.level as any, cardDef as BloomBeastCard | undefined) || 0;
+      return this.levelingSystem.getXPRequirement(card.level as any, cardDef as BloomBeastCard | undefined) || 0;
     } else {
       // For Magic/Trap/Habitat/Buff cards, use simple formula (level * 100)
       return card.level * 100;
@@ -304,7 +306,7 @@ export class CardCollectionManager {
           // Keep leveling up while possible
           while (currentLevel < 9) {
             const nextLevel = (currentLevel + 1) as any;
-            const xpRequired = LevelingSystem.getXPRequirement(currentLevel as any, cardDef);
+            const xpRequired = this.levelingSystem.getXPRequirement(currentLevel as any, cardDef);
 
             if (xpRequired !== null && currentXP >= xpRequired) {
               // Level up!
@@ -312,7 +314,7 @@ export class CardCollectionManager {
               currentLevel = nextLevel;
 
               // Apply stat gains
-              const statGain = LevelingSystem.getStatGain(currentLevel as any, cardDef);
+              const statGain = this.levelingSystem.getStatGain(currentLevel as any, cardDef);
               cardInstance.currentAttack = (cardInstance.currentAttack || 0) + statGain.attackGain;
               cardInstance.currentHealth = (cardInstance.currentHealth || 0) + statGain.healthGain;
               cardInstance.baseAttack = (cardInstance.baseAttack || 0) + statGain.attackGain;

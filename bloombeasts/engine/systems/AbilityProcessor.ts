@@ -7,6 +7,7 @@ import { GameState, Player } from '../types/game';
 import { BloomBeastCard, Counter, CounterType } from '../types/core';
 import { getAllBeasts, getAdjacentBeasts } from '../utils/fieldUtils';
 import { pickRandom } from '../utils/random';
+import { IAbilityProcessor } from './interfaces';
 import {
   AbilityEffect,
   AbilityTarget,
@@ -51,11 +52,11 @@ export interface EffectResult {
   modifiedUnits?: BloomBeastInstance[];
 }
 
-export class AbilityProcessor {
+export class AbilityProcessor implements IAbilityProcessor {
   /**
    * Process a structured ability
    */
-  static processAbility(
+  processAbility(
     ability: StructuredAbility,
     context: AbilityContext
   ): EffectResult[] {
@@ -77,7 +78,7 @@ export class AbilityProcessor {
   /**
    * Check if ability can be used
    */
-  private static canUseAbility(
+  private canUseAbility(
     ability: StructuredAbility,
     context: AbilityContext
   ): boolean {
@@ -111,7 +112,7 @@ export class AbilityProcessor {
   /**
    * Process a single effect
    */
-  private static processEffect(
+  private processEffect(
     effect: AbilityEffect,
     context: AbilityContext
   ): EffectResult {
@@ -165,7 +166,7 @@ export class AbilityProcessor {
   /**
    * Resolve targets based on target type
    */
-  private static resolveTargets(
+  private resolveTargets(
     targetType: AbilityTarget,
     context: AbilityContext
   ): BloomBeastInstance[] {
@@ -245,7 +246,7 @@ export class AbilityProcessor {
   /**
    * Check if a condition is met
    */
-  private static checkCondition(
+  private checkCondition(
     condition: AbilityCondition,
     context: AbilityContext
   ): boolean {
@@ -272,7 +273,7 @@ export class AbilityProcessor {
   /**
    * Process stat modification effect
    */
-  private static processStatModification(
+  private processStatModification(
     effect: StatModificationEffect,
     targets: BloomBeastInstance[],
     context: AbilityContext
@@ -321,7 +322,7 @@ export class AbilityProcessor {
   /**
    * Process damage effect
    */
-  private static processDamage(
+  private processDamage(
     effect: DamageEffect,
     targets: BloomBeastInstance[],
     context: AbilityContext
@@ -371,7 +372,7 @@ export class AbilityProcessor {
   /**
    * Process heal effect
    */
-  private static processHeal(
+  private processHeal(
     effect: HealEffect,
     targets: BloomBeastInstance[],
     context: AbilityContext
@@ -401,7 +402,7 @@ export class AbilityProcessor {
   /**
    * Process draw cards effect
    */
-  private static processDrawCards(
+  private processDrawCards(
     effect: DrawCardEffect,
     context: AbilityContext
   ): EffectResult {
@@ -418,7 +419,7 @@ export class AbilityProcessor {
   /**
    * Process apply counter effect
    */
-  private static processApplyCounter(
+  private processApplyCounter(
     effect: ApplyCounterEffect,
     targets: BloomBeastInstance[],
     context: AbilityContext
@@ -468,7 +469,7 @@ export class AbilityProcessor {
   /**
    * Process immunity effect
    */
-  private static processImmunity(
+  private processImmunity(
     effect: ImmunityEffect,
     targets: BloomBeastInstance[],
     context: AbilityContext
@@ -492,7 +493,7 @@ export class AbilityProcessor {
   /**
    * Process cannot be targeted effect
    */
-  private static processCannotBeTargeted(
+  private processCannotBeTargeted(
     effect: CannotBeTargetedEffect,
     targets: BloomBeastInstance[],
     context: AbilityContext
@@ -520,7 +521,7 @@ export class AbilityProcessor {
   /**
    * Process attack modification effect
    */
-  private static processAttackModification(
+  private processAttackModification(
     effect: AttackModificationEffect,
     context: AbilityContext
   ): EffectResult {
@@ -538,7 +539,7 @@ export class AbilityProcessor {
   /**
    * Process move unit effect
    */
-  private static processMoveUnit(
+  private processMoveUnit(
     effect: MoveEffect,
     targets: BloomBeastInstance[],
     context: AbilityContext
@@ -559,7 +560,7 @@ export class AbilityProcessor {
   /**
    * Process resource gain effect
    */
-  private static processResourceGain(
+  private processResourceGain(
     effect: ResourceGainEffect,
     context: AbilityContext
   ): EffectResult {
@@ -602,7 +603,7 @@ export class AbilityProcessor {
   /**
    * Process prevent effect
    */
-  private static processPrevent(
+  private processPrevent(
     effect: PreventEffect,
     targets: BloomBeastInstance[],
     context: AbilityContext
@@ -629,7 +630,7 @@ export class AbilityProcessor {
   /**
    * Process search deck effect
    */
-  private static processSearchDeck(
+  private processSearchDeck(
     effect: SearchDeckEffect,
     context: AbilityContext
   ): EffectResult {
@@ -649,7 +650,7 @@ export class AbilityProcessor {
   /**
    * Process destroy effect
    */
-  private static processDestroy(
+  private processDestroy(
     effect: DestroyEffect,
     targets: BloomBeastInstance[],
     context: AbilityContext
@@ -672,7 +673,7 @@ export class AbilityProcessor {
   /**
    * Process temporary HP effect
    */
-  private static processTemporaryHP(
+  private processTemporaryHP(
     effect: TemporaryHPEffect,
     targets: BloomBeastInstance[],
     context: AbilityContext

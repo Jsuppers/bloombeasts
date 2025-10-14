@@ -505,7 +505,7 @@ export class GameEngine {
 
     const beastCard = cardDef as any;
     if (beastCard.ability && beastCard.ability.trigger === 'OnSummon') {
-      AbilityProcessor.processAbility(beastCard.ability, {
+      this.abilityProcessor.processAbility(beastCard.ability, {
         source: beast,
         sourceCard: beastCard,
         trigger: 'OnSummon',
@@ -532,7 +532,7 @@ export class GameEngine {
 
       const beastCard = cardDef as any;
       if (beastCard.ability && beastCard.ability.trigger === trigger) {
-        AbilityProcessor.processAbility(beastCard.ability, {
+        this.abilityProcessor.processAbility(beastCard.ability, {
           source: beast,
           sourceCard: beastCard,
           trigger,
@@ -660,7 +660,7 @@ export class GameEngine {
 
     // Activate the ability
     const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
-    AbilityProcessor.processAbility(ability, {
+    this.abilityProcessor.processAbility(ability, {
       source: beast,
       sourceCard: beastCard,
       trigger: 'Activated',
@@ -780,7 +780,7 @@ export class GameEngine {
 
     const beastCard = cardDef as BloomBeastCard;
     if (beastCard.ability && beastCard.ability.trigger === trigger) {
-      AbilityProcessor.processAbility(beastCard.ability as any, {
+      this.abilityProcessor.processAbility(beastCard.ability as any, {
         source: beast,
         sourceCard: beastCard,
         trigger,

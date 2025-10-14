@@ -5,12 +5,13 @@
 import { BloomBeastInstance, Level, XPSource } from '../types/leveling';
 import { BloomBeastCard, Counter } from '../types/core';
 import { XP_REQUIREMENTS, STAT_PROGRESSION, MAX_LEVEL, NECTAR_XP_COST } from '../constants/leveling';
+import { ILevelingSystem } from './interfaces';
 
-export class LevelingSystem {
+export class LevelingSystem implements ILevelingSystem {
   /**
    * Add XP to a Bloom Beast
    */
-  static addXP(
+  addXP(
     beast: BloomBeastInstance,
     amount: number,
     source: XPSource,
@@ -30,14 +31,14 @@ export class LevelingSystem {
   /**
    * Add XP from combat victory
    */
-  static addCombatXP(beast: BloomBeastInstance, card?: BloomBeastCard): BloomBeastInstance {
+addCombatXP(beast: BloomBeastInstance, card?: BloomBeastCard): BloomBeastInstance {
     return this.addXP(beast, 1, 'Combat', card);
   }
 
   /**
    * Add XP from nectar sacrifice
    */
-  static addNectarXP(beast: BloomBeastInstance, nectarSpent: number, card?: BloomBeastCard): BloomBeastInstance {
+addNectarXP(beast: BloomBeastInstance, nectarSpent: number, card?: BloomBeastCard): BloomBeastInstance {
     const xpGained = nectarSpent / NECTAR_XP_COST;
     return this.addXP(beast, xpGained, 'NectarSacrifice', card);
   }
@@ -45,7 +46,7 @@ export class LevelingSystem {
   /**
    * Get XP requirement for a specific level, considering custom config
    */
-  private static getXPRequirementForLevel(level: Level, card?: BloomBeastCard): number {
+  private getXPRequirementForLevel(level: Level, card?: BloomBeastCard): number {
     // Level 1 doesn't require XP
     if (level === 1) {
       return 0;
@@ -61,7 +62,7 @@ export class LevelingSystem {
   /**
    * Check if a beast can level up
    */
-  static canLevelUp(beast: BloomBeastInstance, card?: BloomBeastCard): boolean {
+canLevelUp(beast: BloomBeastInstance, card?: BloomBeastCard): boolean {
     if (beast.currentLevel >= MAX_LEVEL) {
       return false;
     }
@@ -75,7 +76,7 @@ export class LevelingSystem {
   /**
    * Level up a beast
    */
-  static levelUp(beast: BloomBeastInstance, card?: BloomBeastCard): BloomBeastInstance {
+levelUp(beast: BloomBeastInstance, card?: BloomBeastCard): BloomBeastInstance {
     if (!this.canLevelUp(beast, card)) {
       return beast;
     }
@@ -105,7 +106,7 @@ export class LevelingSystem {
   /**
    * Get stat gains for leveling from previous level to current level
    */
-  static getStatGain(
+getStatGain(
     newLevel: Level,
     card?: BloomBeastCard
   ): { attackGain: number; healthGain: number } {
@@ -135,7 +136,7 @@ export class LevelingSystem {
   /**
    * Get total stat bonus at a given level
    */
-  static getTotalStatBonus(level: Level, card?: BloomBeastCard): { hp: number; atk: number } {
+getTotalStatBonus(level: Level, card?: BloomBeastCard): { hp: number; atk: number } {
     // Check for custom stat gains
     const customStats = card?.levelingConfig?.statGains?.[level];
     if (customStats) {
@@ -156,7 +157,7 @@ export class LevelingSystem {
   /**
    * Calculate current stats for a beast based on base stats and level
    */
-  static calculateCurrentStats(
+calculateCurrentStats(
     baseCard: BloomBeastCard,
     level: Level
   ): { attack: number; health: number } {
@@ -170,7 +171,7 @@ export class LevelingSystem {
   /**
    * Create a new beast instance from a card
    */
-  static createBeastInstance(
+createBeastInstance(
     card: BloomBeastCard,
     instanceId: string,
     slotIndex: number
@@ -195,7 +196,7 @@ export class LevelingSystem {
   /**
    * Get XP requirement for next level
    */
-  static getXPRequirement(currentLevel: Level, card?: BloomBeastCard): number | null {
+getXPRequirement(currentLevel: Level, card?: BloomBeastCard): number | null {
     if (currentLevel >= MAX_LEVEL) {
       return null;
     }
@@ -207,7 +208,7 @@ export class LevelingSystem {
   /**
    * Get current abilities for a beast based on its level
    */
-  static getCurrentAbilities(card: BloomBeastCard, level: Level) {
+getCurrentAbilities(card: BloomBeastCard, level: Level) {
     let ability = card.ability;
 
     // Check for ability upgrades at level milestones
@@ -231,7 +232,7 @@ export class LevelingSystem {
   /**
    * Check if a beast has an ability upgrade at the current level
    */
-  static hasAbilityUpgrade(card: BloomBeastCard, level: Level): boolean {
+hasAbilityUpgrade(card: BloomBeastCard, level: Level): boolean {
     if (level !== 4 && level !== 7 && level !== 9) return false;
     return card.levelingConfig?.abilityUpgrades?.[level as 4 | 7 | 9] !== undefined;
   }
