@@ -203,6 +203,8 @@ export class GameEngine {
     const instance: BloomBeastInstance = {
       instanceId: `${beastCard.id}-${Date.now()}`,
       cardId: beastCard.id,
+      name: beastCard.name,
+      affinity: (beastCard as any).affinity || 'Generic',
       currentLevel: 1,
       currentXP: 0,
       currentAttack: (beastCard as any).baseAttack || 0,

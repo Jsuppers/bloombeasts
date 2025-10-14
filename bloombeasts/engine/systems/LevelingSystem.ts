@@ -181,6 +181,8 @@ createBeastInstance(
     return {
       cardId: card.id,
       instanceId,
+      name: card.name,
+      affinity: card.affinity,
       currentLevel: 1,
       currentXP: 0,
       currentAttack: stats.attack,

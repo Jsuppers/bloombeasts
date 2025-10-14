@@ -408,7 +408,8 @@ export class MissionBattleUI {
     }
 
     // Check if player health dropped below 10% threshold (for low health sound)
-    const healthPercentage = (player.health / player.maxHealth) * 100;
+    const maxHealth = player.maxHealth || 30;
+    const healthPercentage = (player.health / maxHealth) * 100;
     if (healthPercentage <= 10 && !this.playerLowHealthTriggered) {
       this.playerLowHealthTriggered = true;
       if (this.opponentActionCallback) this.opponentActionCallback('player-low-health');

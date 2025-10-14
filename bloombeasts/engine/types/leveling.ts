@@ -52,6 +52,10 @@ export interface BloomBeastInstance {
   cardId: string;
   instanceId: string;
 
+  // Card properties (from blueprint)
+  name: string;
+  affinity: Affinity;
+
   // Current stats
   currentLevel: Level;
   currentXP: number;

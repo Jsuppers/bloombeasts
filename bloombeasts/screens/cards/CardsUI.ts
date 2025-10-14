@@ -84,7 +84,8 @@ export class CardsUI {
       const selected = idx === this.selectedCardIndex ? '>' : ' ';
       const stats = `ATK: ${card.currentAttack}/${card.baseAttack} | HP: ${card.currentHealth}/${card.baseHealth}`;
       const xp = card.currentXP > 0 ? `| XP: ${card.currentXP}` : '';
-      console.log(`${selected} ${card.name.padEnd(20)} ${card.affinity.padEnd(8)} Lv${card.level} ${stats} ${xp}`);
+      const affinity = (card.affinity || 'None').padEnd(8);
+      console.log(`${selected} ${card.name.padEnd(20)} ${affinity} Lv${card.level} ${stats} ${xp}`);
     });
   }
 
@@ -100,7 +101,7 @@ export class CardsUI {
     const card = cards[this.selectedCardIndex];
     console.log(`╔════════════════════════════════════════╗`);
     console.log(`║ ${card.name.padEnd(38)} ║`);
-    console.log(`║ ${card.affinity.padEnd(38)} ║`);
+    console.log(`║ ${(card.affinity || 'None').padEnd(38)} ║`);
     console.log(`╠════════════════════════════════════════╣`);
     console.log(`║ Level: ${String(card.level).padEnd(31)} ║`);
     console.log(`║ XP: ${String(card.currentXP).padEnd(34)} ║`);

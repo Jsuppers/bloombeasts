@@ -80,6 +80,7 @@ export interface TrapCard extends Card {
   description: string;
   activation: TrapActivation;  // Structured activation instead of string
   effects: AbilityEffect[];     // Structured effects instead of string
+  counters?: Counter[];  // Optional counters on the trap card
 }
 
 /**
@@ -91,6 +92,7 @@ export interface HabitatCard extends Card {
   affinity: Affinity;
   ongoingEffects: AbilityEffect[];  // Effects that persist while habitat is active
   onPlayEffects?: AbilityEffect[];  // One-time effects when played
+  counters?: Counter[];  // Optional counters on the habitat card
 }
 
 /**
@@ -103,6 +105,7 @@ export interface BuffCard extends Card {
   ongoingEffects: AbilityEffect[];  // Effects that persist while buff is active
   onPlayEffects?: AbilityEffect[];  // One-time effects when played
   duration?: number;  // Optional turn duration (undefined = permanent)
+  counters?: Counter[];  // Optional counters on the buff card
 }
 
 /**

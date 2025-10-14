@@ -61,7 +61,7 @@ export class CardCollection {
       const search = searchFilter.toLowerCase();
       filtered = filtered.filter(card =>
         card.name.toLowerCase().includes(search) ||
-        card.affinity.toLowerCase().includes(search)
+        (card.affinity && card.affinity.toLowerCase().includes(search))
       );
     }
 
@@ -95,13 +95,13 @@ export class CardCollection {
           comparison = a.level - b.level;
           break;
         case 'affinity':
-          comparison = a.affinity.localeCompare(b.affinity);
+          comparison = (a.affinity || '').localeCompare(b.affinity || '');
           break;
         case 'attack':
-          comparison = a.currentAttack - b.currentAttack;
+          comparison = (a.currentAttack || 0) - (b.currentAttack || 0);
           break;
         case 'health':
-          comparison = a.currentHealth - b.currentHealth;
+          comparison = (a.currentHealth || 0) - (b.currentHealth || 0);
           break;
         case 'xp':
           comparison = a.currentXP - b.currentXP;
@@ -132,7 +132,9 @@ export class CardCollection {
 
     let totalLevel = 0;
     for (const card of this.cards) {
-      stats.cardsByAffinity[card.affinity]++;
+      if (card.affinity) {
+        stats.cardsByAffinity[card.affinity]++;
+      }
       totalLevel += card.level;
       stats.totalXP += card.currentXP;
     }
