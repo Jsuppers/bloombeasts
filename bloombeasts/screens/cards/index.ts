@@ -1,18 +1,18 @@
 /**
- * Inventory System - Manage and view player's card collection
+ * Cards System - Manage and view player's card collection
  */
 
-import { InventoryUI } from './InventoryUI';
+import { CardsUI } from './CardsUI';
 import { CardCollection } from './CardCollection';
 import { InventoryFilters } from './InventoryFilters';
 
-export class Inventory {
-  private ui: InventoryUI;
+export class Cards {
+  private ui: CardsUI;
   private collection: CardCollection;
   private filters: InventoryFilters;
 
   constructor() {
-    this.ui = new InventoryUI();
+    this.ui = new CardsUI();
     this.collection = new CardCollection();
     this.filters = new InventoryFilters();
   }
@@ -25,7 +25,7 @@ export class Inventory {
   }
 
   /**
-   * Initialize and display the inventory
+   * Initialize and display the cards screen
    * Note: Cards should be set via collection.setCards() before calling initialize
    */
   public async initialize(): Promise<void> {
@@ -34,7 +34,7 @@ export class Inventory {
   }
 
   /**
-   * Setup event handlers for inventory interactions
+   * Setup event handlers for cards interactions
    */
   private setupEventHandlers(): void {
     // Handle card selection
@@ -56,7 +56,7 @@ export class Inventory {
 
     // Handle back button
     this.ui.onBackClick(() => {
-      this.closeInventory();
+      this.closeCards();
     });
   }
 
@@ -71,7 +71,7 @@ export class Inventory {
   }
 
   /**
-   * Refresh the inventory display
+   * Refresh the cards display
    */
   private refreshDisplay(): void {
     const filteredCards = this.collection.getFilteredCards(this.filters);
@@ -79,14 +79,14 @@ export class Inventory {
   }
 
   /**
-   * Close inventory and return to previous screen
+   * Close cards screen and return to previous screen
    */
-  private closeInventory(): void {
-    console.log('Closing inventory...');
+  private closeCards(): void {
+    console.log('Closing cards...');
     // TODO: Return to main menu or game
   }
 }
 
-export { InventoryUI } from './InventoryUI';
+export { CardsUI } from './CardsUI';
 export { CardCollection } from './CardCollection';
 export { InventoryFilters } from './InventoryFilters';

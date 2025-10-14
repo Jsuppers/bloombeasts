@@ -23,7 +23,7 @@ export const standardCardBeastImageDimensions = {
   height: 185,
 };
 
-export const magicCardDimensions = {
+export const buffCardDimensions = {
   width: 128,
   height: 130,
 };

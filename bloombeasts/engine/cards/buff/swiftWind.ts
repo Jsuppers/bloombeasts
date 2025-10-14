@@ -28,7 +28,6 @@ export const SWIFT_WIND: BuffCard = {
   id: 'swift-wind',
   name: 'Swift Wind',
   type: 'Buff',
-  level: 1,
   description: 'At the start of your turn, gain 1 Nectar.',
   affinity: 'Sky',
   cost: 2,

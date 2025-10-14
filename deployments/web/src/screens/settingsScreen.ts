@@ -3,11 +3,12 @@
  */
 
 import { SoundSettings } from '../../../../bloombeasts/systems/SoundManager';
+import { MenuStats } from '../../../../bloombeasts/gameManager';
 import { CanvasRenderer } from '../utils/canvasRenderer';
 import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
-import { sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
-import { sideMenuPositions } from '../../../../shared/constants/positions';
+import { cardsUIContainerDimensions, sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
+import { sideMenuPositions, cardsUIContainerPosition } from '../../../../shared/constants/positions';
 
 export class SettingsScreen {
     constructor(
@@ -19,15 +20,67 @@ export class SettingsScreen {
     async render(
         settings: SoundSettings,
         onSettingChange: (settingId: string, value: any) => void,
-        onBack: () => void
+        onBack: () => void,
+        stats?: MenuStats
     ): Promise<void> {
         this.clickManager.clearRegions();
         this.renderer.clear();
 
-        // Draw common UI (background and side menu)
+        // Calculate player info for display
+        let playerInfo = undefined;
+        if (stats) {
+            const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+            const currentLevel = stats.playerLevel;
+            const totalXP = stats.totalXP;
+            const xpForCurrentLevel = xpThresholds[currentLevel - 1];
+            const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
+            const currentXP = totalXP - xpForCurrentLevel;
+            const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+
+            playerInfo = {
+                name: 'Player',
+                level: currentLevel,
+                currentXP: currentXP,
+                xpForNextLevel: xpNeeded
+            };
+        }
+
+        // Draw common UI (background, side menu, and player info)
         const bgImg = this.assets.getImage('background');
         const sideMenuImg = this.assets.getImage('sideMenu');
-        this.renderer.drawCommonUI(bgImg, sideMenuImg);
+        const experienceBarImg = this.assets.getImage('experienceBar');
+        const { expBarBounds } = this.renderer.drawCommonUI(bgImg, sideMenuImg, playerInfo, experienceBarImg);
+
+        // Add click region for experience bar if it was drawn
+        if (expBarBounds && playerInfo && stats) {
+            this.clickManager.addRegion({
+                id: 'player-xp-bar',
+                x: expBarBounds.x,
+                y: expBarBounds.y,
+                width: expBarBounds.width,
+                height: Math.max(expBarBounds.height, 20),
+                callback: () => {
+                    const title = `Level ${playerInfo.level}`;
+                    const message = `Current XP: ${playerInfo.currentXP} / ${playerInfo.xpForNextLevel}\n\nTotal XP: ${stats.totalXP}`;
+                    const clickCallback = (this.clickManager as any).buttonCallback;
+                    if (clickCallback) {
+                        clickCallback(`show-counter-info:${title}:${message}`);
+                    }
+                },
+            });
+        }
+
+        // Draw CardsContainer.png
+        const cardsContainerImg = this.assets.getImage('cardsContainer');
+        if (cardsContainerImg) {
+            this.renderer.ctx.drawImage(
+                cardsContainerImg,
+                cardsUIContainerPosition.x,
+                cardsUIContainerPosition.y,
+                cardsUIContainerDimensions.width,
+                cardsUIContainerDimensions.height
+            );
+        }
 
         // Get button images
         const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
@@ -38,8 +91,8 @@ export class SettingsScreen {
         this.renderer.drawText('Settings', textPos.x, textPos.y, 20, '#fff', 'left');
 
         // Settings content area
-        const contentX = 100;
-        let contentY = 150;
+        const contentX = 180;
+        let contentY = 180;
         const lineHeight = 80;
 
         // Music Volume

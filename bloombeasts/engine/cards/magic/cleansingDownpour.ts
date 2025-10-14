@@ -21,7 +21,6 @@ export const CLEANSING_DOWNPOUR: MagicCard = {
   id: 'cleansing-downpour',
   name: 'Cleansing Downpour',
   type: 'Magic',
-  level: 1,
   description: 'Remove all counters from all beasts and draw 1 card.',
   cost: 2,
   effects: [removeAllCounters, drawCard],

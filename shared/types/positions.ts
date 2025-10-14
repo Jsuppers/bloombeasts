@@ -57,6 +57,9 @@ export interface SideMenuPositions {
   headerStartPosition: SimplePosition;
   textStartPosition: SimplePosition;
   buttonStartPosition: SimplePosition;
+  playerName: CardTextInfo;
+  playerLevel: CardTextInfo;
+  playerExperienceBar: SimplePosition & { maxWidth: number };
 }
 
 export interface BattleBoardAssetPositions {

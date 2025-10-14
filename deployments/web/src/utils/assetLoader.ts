@@ -19,6 +19,7 @@ export class AssetLoader {
             await this.loadImage('playboard', '/shared/images/Playboard.png');
             await this.loadImage('sideMenu', '/shared/images/SideMenu.png');
             await this.loadImage('sideMenuGreenButton', '/shared/images/SideMenuGreenButton.png');
+            await this.loadImage('sideMenuRedButton', '/shared/images/SideMenuRedButton.png');
             await this.loadImage('sideMenuStandardButton', '/shared/images/SideMenuStandardButton.png');
             await this.loadImage('cardsContainer', '/shared/images/CardsContainer.png');
             await this.loadImage('CardsContainer', '/shared/images/CardsContainer.png');

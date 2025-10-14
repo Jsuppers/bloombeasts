@@ -8,7 +8,7 @@ import { AssetLoader } from '../utils/assetLoader';
 import { gameDimensions, sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
 import { sideMenuPositions } from '../../../../shared/constants/positions';
 import { MenuStats } from '../../../../bloombeasts/gameManager';
-import { playerLevelEmoji, playerExperienceEmoji, missionEmoji } from '../../../../shared/constants/emojis';
+import { tokenEmoji, diamondEmoji, serumEmoji } from '../../../../shared/constants/emojis';
 
 export class MenuScreen {
     private currentFrame: number = 1;
@@ -22,6 +22,7 @@ export class MenuScreen {
     private readonly MAX_TEXT_WIDTH = 95;
     private readonly TEXT_SIZE = 18;
     private stats: MenuStats | null = null;
+    private onButtonClick: ((buttonId: string) => void) | null = null;
 
     constructor(
         private renderer: CanvasRenderer,
@@ -30,8 +31,9 @@ export class MenuScreen {
     ) {}
 
     render(options: string[], stats: MenuStats, onButtonClick: (buttonId: string) => void): void {
-        // Store stats for rendering
+        // Store stats for rendering and button callback
         this.stats = stats;
+        this.onButtonClick = onButtonClick;
 
         // Generate inspirational quotes/greetings for scrolling text (can be longer now)
         this.quotes = [
@@ -67,8 +69,8 @@ export class MenuScreen {
             const buttonX = sideMenuPositions.buttonStartPosition.x;
             const buttonSpacing = 10;
 
-            // Filter to only show missions, inventory, and settings
-            const menuOptions = options.filter(opt => opt === 'missions' || opt === 'inventory' || opt === 'settings');
+            // Filter to only show missions, cards, and settings
+            const menuOptions = options.filter(opt => opt === 'missions' || opt === 'cards' || opt === 'settings');
 
             menuOptions.forEach((option, index) => {
                 const y = sideMenuPositions.buttonStartPosition.y + index * (sideMenuButtonDimensions.height + buttonSpacing);
@@ -99,10 +101,51 @@ export class MenuScreen {
     private renderFrame(): void {
         this.renderer.clear();
 
-        // Draw common UI (background and side menu)
+        // Calculate player info for display
+        let playerInfo = undefined;
+        if (this.stats) {
+            const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+            const currentLevel = this.stats.playerLevel;
+            const totalXP = this.stats.totalXP;
+            const xpForCurrentLevel = xpThresholds[currentLevel - 1];
+            const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
+            const currentXP = totalXP - xpForCurrentLevel;
+            const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+
+            playerInfo = {
+                name: 'Player',
+                level: currentLevel,
+                currentXP: currentXP,
+                xpForNextLevel: xpNeeded
+            };
+        }
+
+        // Draw common UI (background, side menu, and player info)
         const bgImg = this.assets.getImage('background');
         const sideMenuImg = this.assets.getImage('sideMenu');
-        this.renderer.drawCommonUI(bgImg, sideMenuImg);
+        const experienceBarImg = this.assets.getImage('experienceBar');
+        const { expBarBounds } = this.renderer.drawCommonUI(bgImg, sideMenuImg, playerInfo, experienceBarImg);
+
+        // Add click region for experience bar if it was drawn
+        if (expBarBounds && playerInfo && this.stats && this.onButtonClick) {
+            this.clickManager.addRegion({
+                id: 'player-xp-bar',
+                x: expBarBounds.x,
+                y: expBarBounds.y,
+                width: expBarBounds.width,
+                height: Math.max(expBarBounds.height, 20), // Make it easier to click
+                callback: () => {
+                    // Format the XP information and trigger button callback
+                    const title = `Level ${playerInfo.level}`;
+                    const message = `Current XP: ${playerInfo.currentXP} / ${playerInfo.xpForNextLevel}\n\nTotal XP: ${this.stats?.totalXP || 0}`;
+
+                    // Use the same pattern as counter info: show-counter-info:title:message
+                    if (this.onButtonClick) {
+                        this.onButtonClick(`show-counter-info:${title}:${message}`);
+                    }
+                },
+            });
+        }
 
         // Draw current animation frame at original size at position (143, 25)
         const frameImg = this.assets.getImage(`menuFrame${this.currentFrame}`);
@@ -121,8 +164,8 @@ export class MenuScreen {
 
         // Draw static stats with emojis if available
         if (this.stats) {
-            // Line 5: Player level
-            const line5Text = `${playerLevelEmoji} ${this.stats.playerLevel}`;
+            // Line 5: Tokens
+            const line5Text = `${tokenEmoji} ${this.stats.tokens}`;
             const truncatedLine5 = this.truncateToWidth(line5Text, this.MAX_TEXT_WIDTH);
             this.renderer.drawText(
                 truncatedLine5,
@@ -133,8 +176,8 @@ export class MenuScreen {
                 'left'
             );
 
-            // Line 6: Player experience
-            const line6Text = `${playerExperienceEmoji} ${this.stats.totalXP}`;
+            // Line 6: Diamonds
+            const line6Text = `${diamondEmoji} ${this.stats.diamonds}`;
             const truncatedLine6 = this.truncateToWidth(line6Text, this.MAX_TEXT_WIDTH);
             this.renderer.drawText(
                 truncatedLine6,
@@ -145,8 +188,8 @@ export class MenuScreen {
                 'left'
             );
 
-            // Line 7: Missions completed
-            const line7Text = `${missionEmoji} ${this.stats.missionsCompleted}`;
+            // Line 7: Serums
+            const line7Text = `${serumEmoji} ${this.stats.serums}`;
             const truncatedLine7 = this.truncateToWidth(line7Text, this.MAX_TEXT_WIDTH);
             this.renderer.drawText(
                 truncatedLine7,
@@ -179,7 +222,7 @@ export class MenuScreen {
                 // Menu buttons
                 const buttonX = sideMenuPositions.buttonStartPosition.x;
                 const buttonSpacing = 10;
-                const menuOptions = options.filter(opt => opt === 'missions' || opt === 'inventory' || opt === 'settings');
+                const menuOptions = options.filter(opt => opt === 'missions' || opt === 'cards' || opt === 'settings');
 
                 menuOptions.forEach((option, index) => {
                     const y = sideMenuPositions.buttonStartPosition.y + index * (sideMenuButtonDimensions.height + buttonSpacing);
@@ -244,7 +287,7 @@ export class MenuScreen {
             // Menu buttons
             const buttonX = sideMenuPositions.buttonStartPosition.x;
             const buttonSpacing = 10;
-            const menuOptions = options.filter(opt => opt === 'missions' || opt === 'inventory' || opt === 'settings');
+            const menuOptions = options.filter(opt => opt === 'missions' || opt === 'cards' || opt === 'settings');
 
             menuOptions.forEach((option, index) => {
                 const y = sideMenuPositions.buttonStartPosition.y + index * (sideMenuButtonDimensions.height + buttonSpacing);
@@ -327,7 +370,7 @@ export class MenuScreen {
     private getMenuLabel(option: string): string {
         const labels: Record<string, string> = {
             missions: 'Missions',
-            inventory: 'Inventory',
+            cards: 'Cards',
             'deck-builder': 'Deck Builder',
             settings: 'Settings',
             quit: 'Quit',

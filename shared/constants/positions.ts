@@ -58,6 +58,9 @@ export const sideMenuPositions: SideMenuPositions = {
   headerStartPosition: { x: 1156, y: 139 },
   textStartPosition: { x: 1162, y: 188 },
   buttonStartPosition: { x: 1156, y: 369 },
+  playerName: { x: 10, y: 426, textAlign: 'left', textBaseline: 'top', size: 14 },
+  playerLevel: { x: 64, y: 445, textAlign: 'center', textBaseline: 'top', size: 12 },
+  playerExperienceBar: { x: 9, y: 445, maxWidth: 109 },
 };
 
 export const battleBoardAssetPositions: BattleBoardAssetPositions = {

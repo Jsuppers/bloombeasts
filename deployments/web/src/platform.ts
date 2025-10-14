@@ -7,6 +7,7 @@ import {
     PlatformCallbacks,
     MissionDisplay,
     CardDisplay,
+    CardDetailDisplay,
     BattleDisplay,
     RewardDisplay,
     MenuStats,
@@ -18,9 +19,10 @@ import { AssetLoader } from './utils/assetLoader';
 import { ClickRegionManager } from './utils/clickRegionManager';
 import { MenuScreen } from './screens/menuScreen';
 import { MissionScreen } from './screens/missionScreen';
-import { InventoryScreen } from './screens/inventoryScreen';
+import { CardsScreen } from './screens/cardsScreen';
 import { BattleScreen } from './screens/battleScreen';
 import { SettingsScreen } from './screens/settingsScreen';
+import { CardDetailScreen } from './screens/cardDetailScreen';
 
 export class WebPlatform implements PlatformCallbacks {
     private canvas: HTMLCanvasElement;
@@ -34,9 +36,10 @@ export class WebPlatform implements PlatformCallbacks {
     // Screen renderers
     private menuScreen: MenuScreen;
     private missionScreen: MissionScreen;
-    private inventoryScreen: InventoryScreen;
+    private cardsScreen: CardsScreen;
     private battleScreen: BattleScreen;
     private settingsScreen: SettingsScreen;
+    private cardDetailScreen: CardDetailScreen;
 
     // Audio
     private musicAudio: HTMLAudioElement | null = null;
@@ -73,9 +76,10 @@ export class WebPlatform implements PlatformCallbacks {
         // Initialize screen renderers
         this.menuScreen = new MenuScreen(this.renderer, this.clickManager, this.assets);
         this.missionScreen = new MissionScreen(this.renderer, this.clickManager, this.assets);
-        this.inventoryScreen = new InventoryScreen(this.renderer, this.clickManager, this.assets);
+        this.cardsScreen = new CardsScreen(this.renderer, this.clickManager, this.assets);
         this.battleScreen = new BattleScreen(this.renderer, this.clickManager, this.assets);
         this.settingsScreen = new SettingsScreen(this.renderer, this.clickManager, this.assets);
+        this.cardDetailScreen = new CardDetailScreen(this.renderer, this.clickManager, this.assets);
 
         // Initialize audio
         this.initializeAudio();
@@ -99,10 +103,10 @@ export class WebPlatform implements PlatformCallbacks {
     }
 
     /**
-     * Set the SFX callback for inventory screen scroll buttons
+     * Set the SFX callback for cards screen scroll buttons
      */
-    setInventorySfxCallback(callback: (src: string) => void): void {
-        this.inventoryScreen.setPlaySfxCallback(callback);
+    setCardsSfxCallback(callback: (src: string) => void): void {
+        this.cardsScreen.setPlaySfxCallback(callback);
     }
 
     // UI Rendering Methods
@@ -120,13 +124,17 @@ export class WebPlatform implements PlatformCallbacks {
         });
     }
 
-    renderMissionSelect(missions: MissionDisplay[]): void {
+    renderMissionSelect(missions: MissionDisplay[], stats: MenuStats): void {
         // Cleanup battle screen if switching from battle
         if (this.currentScreen === 'battle') {
             this.battleScreen.cleanup();
         }
 
         this.currentScreen = 'missions';
+
+        // Clear canvas before rendering new screen to prevent artifacts
+        this.renderer.clear();
+
         this.missionScreen.render(
             missions,
             (missionId) => {
@@ -138,19 +146,20 @@ export class WebPlatform implements PlatformCallbacks {
                 if (this.buttonClickCallback) {
                     this.buttonClickCallback('btn-back');
                 }
-            }
+            },
+            stats
         );
     }
 
-    renderInventory(cards: CardDisplay[], deckSize: number, deckCardIds: string[]): void {
+    renderCards(cards: CardDisplay[], deckSize: number, deckCardIds: string[], stats: MenuStats): void {
         // Cleanup battle screen if switching from battle
         if (this.currentScreen === 'battle') {
             this.battleScreen.cleanup();
         }
 
-        this.currentScreen = 'inventory';
+        this.currentScreen = 'cards';
         // Use async render but don't block (fire and forget)
-        this.inventoryScreen.render(
+        this.cardsScreen.render(
             cards,
             deckSize,
             deckCardIds,
@@ -163,9 +172,10 @@ export class WebPlatform implements PlatformCallbacks {
                 if (this.buttonClickCallback) {
                     this.buttonClickCallback('btn-back');
                 }
-            }
+            },
+            stats
         ).catch(error => {
-            console.error('Error rendering inventory:', error);
+            console.error('Error rendering cards:', error);
         });
     }
 
@@ -181,7 +191,7 @@ export class WebPlatform implements PlatformCallbacks {
         });
     }
 
-    renderSettings(settings: SoundSettings): void {
+    renderSettings(settings: SoundSettings, stats: MenuStats): void {
         // Cleanup battle screen if switching from battle
         if (this.currentScreen === 'battle') {
             this.battleScreen.cleanup();
@@ -202,9 +212,26 @@ export class WebPlatform implements PlatformCallbacks {
                 if (this.buttonClickCallback) {
                     this.buttonClickCallback('btn-back');
                 }
-            }
+            },
+            stats
         ).catch(error => {
             console.error('Error rendering settings:', error);
+        });
+    }
+
+    renderCardDetail(cardDetail: CardDetailDisplay, stats: MenuStats): void {
+        // Don't change currentScreen - we want to render on top of the current screen
+        // Use async render but don't block (fire and forget)
+        this.cardDetailScreen.render(
+            cardDetail,
+            stats,
+            (buttonId) => {
+                if (this.buttonClickCallback) {
+                    this.buttonClickCallback(buttonId);
+                }
+            }
+        ).catch(error => {
+            console.error('Error rendering card detail:', error);
         });
     }
 
@@ -366,7 +393,7 @@ export class WebPlatform implements PlatformCallbacks {
         });
     }
 
-    showRewards(rewards: RewardDisplay): void {
+    async showRewards(rewards: RewardDisplay): Promise<void> {
         let message = `🎉 Rewards Earned! 🎉\n\n`;
         message += `XP: +${rewards.xp}\n`;
 
@@ -385,7 +412,7 @@ export class WebPlatform implements PlatformCallbacks {
             message += `\n${rewards.message}`;
         }
 
-        this.showDialog('Mission Complete!', message, ['Awesome!']);
+        await this.showDialog('Mission Complete!', message, ['Awesome!']);
     }
 
     updatePlayerStats(playerData: any): void {

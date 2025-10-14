@@ -26,7 +26,6 @@ export const NATURES_BLESSING: BuffCard = {
   id: 'natures-blessing',
   name: "Nature's Blessing",
   type: 'Buff',
-  level: 1,
   description: 'At the start of your turn, heal all your Beasts for 1 HP.',
   affinity: 'Forest',
   cost: 4,

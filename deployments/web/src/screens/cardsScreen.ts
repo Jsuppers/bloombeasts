@@ -1,8 +1,8 @@
 /**
- * Inventory Screen Renderer
+ * Cards Screen Renderer
  */
 
-import { CardDisplay } from '../../../../bloombeasts/gameManager';
+import { CardDisplay, MenuStats } from '../../../../bloombeasts/gameManager';
 import { CanvasRenderer } from '../utils/canvasRenderer';
 import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
@@ -10,11 +10,17 @@ import { standardCardDimensions, sideMenuButtonDimensions, cardsUIContainerDimen
 import { uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions, cardsUIContainerPosition } from '../../../../shared/constants/positions';
 import { deckEmoji } from '../../../../shared/constants/emojis';
 
-export class InventoryScreen {
+export class CardsScreen {
     private scrollOffset: number = 0;
     private cardsPerRow: number = 4; // Changed from 5 to 4
     private rowsPerPage: number = 2; // Show 2 rows at a time
     private playSfx: (src: string) => void = () => {};
+    private currentCards: CardDisplay[] = [];
+    private currentDeckSize: number = 0;
+    private currentDeckCardIds: string[] = [];
+    private currentOnCardSelect: ((cardId: string) => void) | null = null;
+    private currentOnBack: (() => void) | null = null;
+    private currentStats: MenuStats | undefined = undefined;
 
     constructor(
         private renderer: CanvasRenderer,
@@ -31,15 +37,63 @@ export class InventoryScreen {
         deckSize: number,
         deckCardIds: string[],
         onCardSelect: (cardId: string) => void,
-        onBack: () => void
+        onBack: () => void,
+        stats?: MenuStats
     ): Promise<void> {
+        // Store current state for re-renders (e.g., when scrolling)
+        this.currentCards = cards;
+        this.currentDeckSize = deckSize;
+        this.currentDeckCardIds = deckCardIds;
+        this.currentOnCardSelect = onCardSelect;
+        this.currentOnBack = onBack;
+        this.currentStats = stats;
+
         this.clickManager.clearRegions();
         this.renderer.clear();
 
-        // Draw common UI (background and side menu)
+        // Calculate player info for display
+        let playerInfo = undefined;
+        if (stats) {
+            const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+            const currentLevel = stats.playerLevel;
+            const totalXP = stats.totalXP;
+            const xpForCurrentLevel = xpThresholds[currentLevel - 1];
+            const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
+            const currentXP = totalXP - xpForCurrentLevel;
+            const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+
+            playerInfo = {
+                name: 'Player',
+                level: currentLevel,
+                currentXP: currentXP,
+                xpForNextLevel: xpNeeded
+            };
+        }
+
+        // Draw common UI (background, side menu, and player info)
         const bgImg = this.assets.getImage('background');
         const sideMenuImg = this.assets.getImage('sideMenu');
-        this.renderer.drawCommonUI(bgImg, sideMenuImg);
+        const experienceBarImg = this.assets.getImage('experienceBar');
+        const { expBarBounds } = this.renderer.drawCommonUI(bgImg, sideMenuImg, playerInfo, experienceBarImg);
+
+        // Add click region for experience bar if it was drawn
+        if (expBarBounds && playerInfo && stats) {
+            this.clickManager.addRegion({
+                id: 'player-xp-bar',
+                x: expBarBounds.x,
+                y: expBarBounds.y,
+                width: expBarBounds.width,
+                height: Math.max(expBarBounds.height, 20),
+                callback: () => {
+                    const title = `Level ${playerInfo.level}`;
+                    const message = `Current XP: ${playerInfo.currentXP} / ${playerInfo.xpForNextLevel}\n\nTotal XP: ${stats.totalXP}`;
+                    const clickCallback = (this.clickManager as any).buttonCallback;
+                    if (clickCallback) {
+                        clickCallback(`show-counter-info:${title}:${message}`);
+                    }
+                },
+            });
+        }
 
         // Draw CardsContainer.png
         const cardsContainerImg = this.assets.getImage('cardsContainer');
@@ -55,7 +109,7 @@ export class InventoryScreen {
 
         // Draw title and deck info on side menu
         const textPos = sideMenuPositions.textStartPosition;
-        this.renderer.drawText('Inventory', textPos.x, textPos.y, 20, '#fff', 'left');
+        this.renderer.drawText('Cards', textPos.x, textPos.y, 20, '#fff', 'left');
         this.renderer.drawText(`${deckEmoji} ${deckSize}/30`, textPos.x, textPos.y + 25, 18, '#fff', 'left');
 
         if (cards.length === 0) {
@@ -154,7 +208,7 @@ export class InventoryScreen {
                             this.playSfx('sfx/menuButtonSelect.wav');
                             this.scrollOffset = Math.max(0, this.scrollOffset - 1);
                             // Re-render with new offset
-                            this.render(cards, deckSize, deckCardIds, onCardSelect, onBack);
+                            this.render(this.currentCards, this.currentDeckSize, this.currentDeckCardIds, this.currentOnCardSelect!, this.currentOnBack!, this.currentStats);
                         },
                     });
                 } else {
@@ -175,7 +229,7 @@ export class InventoryScreen {
                             this.playSfx('sfx/menuButtonSelect.wav');
                             this.scrollOffset = Math.min(totalPages - 1, this.scrollOffset + 1);
                             // Re-render with new offset
-                            this.render(cards, deckSize, deckCardIds, onCardSelect, onBack);
+                            this.render(this.currentCards, this.currentDeckSize, this.currentDeckCardIds, this.currentOnCardSelect!, this.currentOnBack!, this.currentStats);
                         },
                     });
                 } else {

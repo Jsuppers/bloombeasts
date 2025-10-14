@@ -23,6 +23,7 @@ export interface Card {
   name: string;
   type: CardType;
   cost: number;
+  titleColor?: string;  // Optional custom color for card title (hex color, e.g., '#000000')
 }
 
 /**
@@ -66,7 +67,6 @@ export interface TrapActivation {
  */
 export interface MagicCard extends Card {
   type: 'Magic';
-  level: number;
   description: string;
   effects: AbilityEffect[];  // Structured effects instead of string
   targetRequired?: boolean;  // Whether the card needs a target
@@ -77,7 +77,6 @@ export interface MagicCard extends Card {
  */
 export interface TrapCard extends Card {
   type: 'Trap';
-  level: number;
   description: string;
   activation: TrapActivation;  // Structured activation instead of string
   effects: AbilityEffect[];     // Structured effects instead of string
@@ -88,7 +87,6 @@ export interface TrapCard extends Card {
  */
 export interface HabitatCard extends Card {
   type: 'Habitat';
-  level: number;
   description: string;
   affinity: Affinity;
   ongoingEffects: AbilityEffect[];  // Effects that persist while habitat is active
@@ -100,7 +98,6 @@ export interface HabitatCard extends Card {
  */
 export interface BuffCard extends Card {
   type: 'Buff';
-  level: number;
   description: string;
   affinity?: Affinity;  // Optional affinity for buff cards
   ongoingEffects: AbilityEffect[];  // Effects that persist while buff is active
@@ -138,6 +135,9 @@ export interface BloomBeastCard extends Card {
   ability: Ability;  // Single ability field (trigger determines if passive/active)
   /** Optional custom leveling configuration */
   levelingConfig?: LevelingConfig;
+  // Note: Card definitions are blueprints. All cards (Bloom, Magic, Trap, Habitat, Buff)
+  // start at level 1 with 0 XP when added to player's collection as CardInstance objects.
+  // Level and XP tracking is handled by the CardInstance interface, not the card definitions.
 }
 
 /**

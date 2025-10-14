@@ -7,7 +7,7 @@ import { CanvasRenderer } from '../utils/canvasRenderer';
 import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
 import { battleBoardAssetPositions, uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions, playboardImagePositions } from '../../../../shared/constants/positions';
-import { standardCardDimensions, sideMenuButtonDimensions, habitatShiftCardDimensions } from '../../../../shared/constants/dimensions';
+import { standardCardDimensions, sideMenuButtonDimensions, habitatShiftCardDimensions, buffCardDimensions } from '../../../../shared/constants/dimensions';
 import { nectarEmoji, deckEmoji } from '../../../../shared/constants/emojis';
 
 export class BattleScreen {
@@ -405,8 +405,8 @@ export class BattleScreen {
                 : battleBoardAssetPositions.playerOne;
         const buffSlots = [positions.buffOne, positions.buffTwo];
 
-        const buffWidth = 118;
-        const buffHeight = 118;
+        const buffWidth = buffCardDimensions.width;
+        const buffHeight = buffCardDimensions.height;
 
         for (let index = 0; index < buffSlots.length; index++) {
             const pos = buffSlots[index];
@@ -473,8 +473,12 @@ export class BattleScreen {
                 counterMap.set(counter.type, current + counter.amount);
             });
 
-            const counterIcons: Record<string, { emoji: string; color: string }> = {
-                'Spore': { emoji: '🍄', color: '#51cf66' },
+            const counterIcons: Record<string, { emoji: string; color: string; description: string }> = {
+                'Spore': {
+                    emoji: '🍄',
+                    color: '#51cf66',
+                    description: 'Spore counters can be consumed by certain Forest abilities to activate powerful effects.'
+                },
             };
 
             // Draw counter badges in a row at the top right of the habitat card
@@ -486,7 +490,7 @@ export class BattleScreen {
             let index = 0;
             counterMap.forEach((amount, type) => {
                 if (amount > 0) {
-                    const config = counterIcons[type] || { emoji: '●', color: '#868e96' };
+                    const config = counterIcons[type] || { emoji: '●', color: '#868e96', description: 'Special counter' };
                     const offsetX = badgeX - (index * badgeSpacing);
 
                     // Draw badge background circle
@@ -506,6 +510,24 @@ export class BattleScreen {
                     this.renderer.ctx.textAlign = 'center';
                     this.renderer.ctx.textBaseline = 'middle';
                     this.renderer.ctx.fillText(`${config.emoji} ${amount}`, offsetX, badgeY + badgeSize / 2);
+
+                    // Add click region for counter badge
+                    this.clickManager.addRegion({
+                        id: `view-counter-${type}-${index}`,
+                        x: offsetX - badgeSize / 2,
+                        y: badgeY,
+                        width: badgeSize,
+                        height: badgeSize,
+                        callback: () => {
+                            if (this.currentButtonCallback) {
+                                // Show dialog explaining the counter
+                                const title = `${config.emoji} ${type} Counter`;
+                                const message = `${type}: ${amount}\n\n${config.description}`;
+                                // Use a special button ID format that gameManager will handle
+                                this.currentButtonCallback(`show-counter-info:${title}:${message}`);
+                            }
+                        },
+                    });
 
                     index++;
                 }

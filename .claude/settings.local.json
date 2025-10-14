@@ -16,7 +16,9 @@
       "Bash(netstat:*)",
       "Bash(npm run:*)",
       "Bash(identify:*)",
-      "Read(//c/Users/joris/**)"
+      "Read(//c/Users/joris/**)",
+      "Bash(npx tsc:*)",
+      "Bash(git mv:*)"
     ],
     "deny": [],
     "ask": []

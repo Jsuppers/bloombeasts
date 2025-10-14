@@ -307,4 +307,30 @@ export class MissionManager {
   getCompletedCount(missionId: string): number {
     return this.completedMissions.get(missionId) || 0;
   }
+
+  /**
+   * Load completed missions from saved data
+   */
+  loadCompletedMissions(completedMissionsData: { [missionId: string]: number }): void {
+    // Clear current data
+    this.completedMissions = new SimpleMap();
+
+    // Load saved completion data
+    for (const missionId in completedMissionsData) {
+      if (completedMissionsData.hasOwnProperty(missionId)) {
+        this.completedMissions.set(missionId, completedMissionsData[missionId]);
+      }
+    }
+  }
+
+  /**
+   * Get all completed missions as a plain object for saving
+   */
+  getCompletedMissionsData(): { [missionId: string]: number } {
+    const data: { [missionId: string]: number } = {};
+    this.completedMissions.forEach((count, missionId) => {
+      data[missionId] = count;
+    });
+    return data;
+  }
 }

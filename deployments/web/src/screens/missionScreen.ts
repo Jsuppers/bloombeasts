@@ -2,7 +2,7 @@
  * Mission Select Screen Renderer
  */
 
-import { MissionDisplay } from '../../../../bloombeasts/gameManager';
+import { MissionDisplay, MenuStats } from '../../../../bloombeasts/gameManager';
 import { CanvasRenderer } from '../utils/canvasRenderer';
 import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
@@ -14,6 +14,10 @@ export class MissionScreen {
     private scrollOffset: number = 0;
     private missionsPerRow: number = 3;
     private rowsPerPage: number = 3; // Show 3 rows at a time
+    private currentMissions: MissionDisplay[] = [];
+    private currentOnMissionSelect: ((missionId: string) => void) | null = null;
+    private currentOnBack: (() => void) | null = null;
+    private currentStats: MenuStats | undefined = undefined;
 
     constructor(
         private renderer: CanvasRenderer,
@@ -24,15 +28,62 @@ export class MissionScreen {
     render(
         missions: MissionDisplay[],
         onMissionSelect: (missionId: string) => void,
-        onBack: () => void
+        onBack: () => void,
+        stats?: MenuStats
     ): void {
+        // Store current state for re-renders (e.g., when scrolling)
+        this.currentMissions = missions;
+        this.currentOnMissionSelect = onMissionSelect;
+        this.currentOnBack = onBack;
+        this.currentStats = stats;
+
         this.clickManager.clearRegions();
         this.renderer.clear();
 
-        // Draw common UI (background and side menu)
+        // Calculate player info for display
+        let playerInfo = undefined;
+        if (stats) {
+            const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+            const currentLevel = stats.playerLevel;
+            const totalXP = stats.totalXP;
+            const xpForCurrentLevel = xpThresholds[currentLevel - 1];
+            const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
+            const currentXP = totalXP - xpForCurrentLevel;
+            const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+
+            playerInfo = {
+                name: 'Player',
+                level: currentLevel,
+                currentXP: currentXP,
+                xpForNextLevel: xpNeeded
+            };
+        }
+
+        // Draw common UI (background, side menu, and player info)
         const bgImg = this.assets.getImage('background');
         const sideMenuImg = this.assets.getImage('sideMenu');
-        this.renderer.drawCommonUI(bgImg, sideMenuImg);
+        const experienceBarImg = this.assets.getImage('experienceBar');
+        const { expBarBounds } = this.renderer.drawCommonUI(bgImg, sideMenuImg, playerInfo, experienceBarImg);
+
+        // Add click region for experience bar if it was drawn
+        if (expBarBounds && playerInfo && stats) {
+            this.clickManager.addRegion({
+                id: 'player-xp-bar',
+                x: expBarBounds.x,
+                y: expBarBounds.y,
+                width: expBarBounds.width,
+                height: Math.max(expBarBounds.height, 20),
+                callback: () => {
+                    const title = `Level ${playerInfo.level}`;
+                    const message = `Current XP: ${playerInfo.currentXP} / ${playerInfo.xpForNextLevel}\n\nTotal XP: ${stats.totalXP}`;
+                    // This will be handled through the click manager's button callback
+                    const clickCallback = (this.clickManager as any).buttonCallback;
+                    if (clickCallback) {
+                        clickCallback(`show-counter-info:${title}:${message}`);
+                    }
+                },
+            });
+        }
 
         // Draw CardsContainer.png once as the main container
         const cardsContainerImg = this.assets.getImage('cardsContainer');
@@ -142,7 +193,7 @@ export class MissionScreen {
                         callback: () => {
                             this.scrollOffset = Math.max(0, this.scrollOffset - 1);
                             // Re-render with new offset
-                            this.render(missions, onMissionSelect, onBack);
+                            this.render(this.currentMissions, this.currentOnMissionSelect!, this.currentOnBack!, this.currentStats);
                         },
                     });
                 } else {
@@ -162,7 +213,7 @@ export class MissionScreen {
                         callback: () => {
                             this.scrollOffset = Math.min(totalPages - 1, this.scrollOffset + 1);
                             // Re-render with new offset
-                            this.render(missions, onMissionSelect, onBack);
+                            this.render(this.currentMissions, this.currentOnMissionSelect!, this.currentOnBack!, this.currentStats);
                         },
                     });
                 } else {

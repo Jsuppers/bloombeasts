@@ -1,5 +1,5 @@
 /**
- * Inventory UI - Visual presentation of the card collection
+ * Cards UI - Visual presentation of the card collection
  */
 
 import { CardInstance } from './types';
@@ -11,7 +11,7 @@ export interface DisplayOptions {
   currentPage: number;
 }
 
-export class InventoryUI {
+export class CardsUI {
   private displayOptions: DisplayOptions;
   private callbacks: SimpleMap<string, Function> = new SimpleMap();
   private selectedCardIndex: number = 0;

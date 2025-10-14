@@ -29,7 +29,6 @@ export const BATTLE_FURY: BuffCard = {
   id: 'battle-fury',
   name: 'Battle Fury',
   type: 'Buff',
-  level: 1,
   description: 'All your Beasts gain +2 Attack.',
   cost: 3,
   ongoingEffects: [attackBoost],

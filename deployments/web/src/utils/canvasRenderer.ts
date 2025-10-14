@@ -7,7 +7,7 @@ import {
     gameDimensions,
     standardCardDimensions,
     standardCardBeastImageDimensions,
-    magicCardDimensions,
+    buffCardDimensions,
     trapCardDimensions,
     sideMenuDimensions,
     sideMenuButtonDimensions,
@@ -301,16 +301,20 @@ export class CanvasRenderer {
             const expNeeded = beast.experienceRequired || (level * 100);
             const expPercentage = Math.min(1, currentExp / expNeeded);
             const maxBarWidth = 122;
-            const barWidth = maxBarWidth * expPercentage;
+
+            // Calculate how much of the source image to use (based on percentage)
+            const sourceWidth = experienceBarImage.width * expPercentage;
+            // Calculate display width (based on max bar width and percentage)
+            const displayWidth = maxBarWidth * expPercentage;
 
             // Draw the experience bar with dynamic width
             this.ctx.drawImage(
                 experienceBarImage,
                 0, 0, // Source x, y (start from left edge of source image)
-                barWidth, experienceBarImage.height, // Source width, height (crop based on percentage)
+                sourceWidth, experienceBarImage.height, // Source width, height (crop based on percentage)
                 x + positions.experienceBar.x, // Destination x
                 y + positions.experienceBar.y, // Destination y
-                barWidth, experienceBarImage.height // Destination width, height
+                displayWidth, experienceBarImage.height // Destination width, height
             );
         }
 
@@ -691,12 +695,7 @@ export class CanvasRenderer {
             this.ctx.drawImage(buffImage, imageX, imageY, imageSize, imageSize);
         }
 
-        // Minimal text overlay for playboard
-        // Just show cost
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = 'bold 14px monospace';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(`${card.cost || 0}`, x + 15, y + 20);
+        // No text overlay needed for buff cards on playboard
     }
 
     /**
@@ -796,7 +795,10 @@ export class CanvasRenderer {
         );
 
         // Name (bottom left area) - truncate if too long
+        // Use custom titleColor if provided, otherwise use default
+        const titleColor = card.titleColor || DEFAULT_TEXT_COLOR;
         this.setFont(positions.name.size, true);
+        this.ctx.fillStyle = titleColor;
         this.ctx.textAlign = positions.name.textAlign || 'left';
         this.ctx.textBaseline = positions.name.textBaseline || 'alphabetic';
         const maxNameWidth = 115;
@@ -1032,10 +1034,16 @@ export class CanvasRenderer {
     }
 
     /**
-     * Draw common UI elements: background and side menu
+     * Draw common UI elements: background, side menu, and optional player info
      * Call this at the start of each screen render
+     * Returns the experience bar bounds if player info was drawn
      */
-    drawCommonUI(backgroundImg?: HTMLImageElement | null, sideMenuImg?: HTMLImageElement | null): void {
+    drawCommonUI(
+        backgroundImg?: HTMLImageElement | null,
+        sideMenuImg?: HTMLImageElement | null,
+        playerInfo?: { name: string; level: number; currentXP: number; xpForNextLevel: number },
+        experienceBarImg?: HTMLImageElement | null
+    ): { expBarBounds?: { x: number; y: number; width: number; height: number } } {
         // Draw background image (full screen)
         if (backgroundImg) {
             this.drawImage(backgroundImg);
@@ -1045,6 +1053,20 @@ export class CanvasRenderer {
         if (sideMenuImg) {
             this.drawSideMenuBackground(sideMenuImg);
         }
+
+        // Draw player info if provided
+        let expBarBounds = undefined;
+        if (playerInfo) {
+            expBarBounds = this.drawSideMenuPlayerInfo(
+                playerInfo.name,
+                playerInfo.level,
+                playerInfo.currentXP,
+                playerInfo.xpForNextLevel,
+                experienceBarImg
+            );
+        }
+
+        return { expBarBounds };
     }
 
     /**
@@ -1185,5 +1207,90 @@ export class CanvasRenderer {
         this.ctx.drawImage(buttonImg, x, y, sideMenuButtonDimensions.width, sideMenuButtonDimensions.height);
         this.ctx.globalAlpha = 1.0;
         this.drawSideMenuButtonText(text, x, y, DISABLED_TEXT_COLOR);
+    }
+
+    /**
+     * Draw player info on side menu (name, level, experience bar)
+     * This should be called after drawing the side menu background
+     * Returns the bounds of the experience bar for click handling
+     */
+    drawSideMenuPlayerInfo(playerName: string, playerLevel: number, currentXP: number, xpForNextLevel: number, experienceBarImage?: HTMLImageElement | null): { x: number; y: number; width: number; height: number } {
+        const baseX = sideMenuPositions.x;
+        const baseY = sideMenuPositions.y;
+
+        // Player Name
+        const namePos = sideMenuPositions.playerName;
+        this.drawTextWithFont(
+            playerName,
+            baseX + namePos.x,
+            baseY + namePos.y,
+            namePos.size,
+            DEFAULT_TEXT_COLOR,
+            namePos.textAlign || 'left',
+            namePos.textBaseline || 'top',
+            false
+        );
+
+        // Experience Bar (draw BEFORE level text so text appears on top)
+        const expBarPos = sideMenuPositions.playerExperienceBar;
+        const expBarX = baseX + expBarPos.x;
+        const expBarY = baseY + expBarPos.y;
+        const maxBarWidth = expBarPos.maxWidth;
+        let barHeight = 4;
+
+        if (experienceBarImage) {
+            // Calculate XP percentage for current level
+            const expPercentage = Math.min(1, currentXP / xpForNextLevel);
+
+            // Calculate how much of the source image to use (based on percentage)
+            const sourceWidth = experienceBarImage.width * expPercentage;
+            // Calculate display width (based on max bar width and percentage)
+            const displayWidth = maxBarWidth * expPercentage;
+
+            // Draw the experience bar with dynamic width
+            this.ctx.drawImage(
+                experienceBarImage,
+                0, 0, // Source x, y
+                sourceWidth, experienceBarImage.height, // Source width, height (crop based on percentage)
+                expBarX, // Destination x
+                expBarY, // Destination y
+                displayWidth, experienceBarImage.height // Destination width, height
+            );
+            barHeight = experienceBarImage.height;
+        } else {
+            // Fallback: draw simple bar
+            const expPercentage = Math.min(1, currentXP / xpForNextLevel);
+            barHeight = 4;
+
+            // Background
+            this.ctx.fillStyle = '#333';
+            this.ctx.fillRect(expBarX, expBarY, maxBarWidth, barHeight);
+
+            // Progress fill
+            const fillWidth = maxBarWidth * expPercentage;
+            this.ctx.fillStyle = '#43e97b';
+            this.ctx.fillRect(expBarX, expBarY, fillWidth, barHeight);
+        }
+
+        // Player Level (draw AFTER experience bar so it appears on top)
+        const levelPos = sideMenuPositions.playerLevel;
+        this.drawTextWithFont(
+            `Level ${playerLevel}`,
+            baseX + levelPos.x,
+            baseY + levelPos.y,
+            levelPos.size,
+            DEFAULT_TEXT_COLOR,
+            levelPos.textAlign || 'center',
+            levelPos.textBaseline || 'top',
+            true
+        );
+
+        // Return bounds for click handling
+        return {
+            x: expBarX,
+            y: expBarY,
+            width: maxBarWidth,
+            height: barHeight
+        };
     }
 }
