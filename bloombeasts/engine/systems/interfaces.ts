@@ -6,7 +6,7 @@
  */
 
 import { BloomBeastInstance, Level, XPSource } from '../types/leveling';
-import { BloomBeastCard } from '../types/core';
+import { BloomBeastCard, Ability } from '../types/core';
 import { GameState, Player } from '../types/game';
 import { StructuredAbility } from '../types/abilities';
 import { AbilityContext, EffectResult } from './AbilityProcessor';
@@ -143,7 +143,7 @@ export interface ILevelingSystem {
   /**
    * Get current abilities for a beast based on its level
    */
-  getCurrentAbilities(card: BloomBeastCard, level: Level): { ability: any };
+  getCurrentAbilities(card: BloomBeastCard, level: Level): { ability: Ability };
 
   /**
    * Check if a beast has an ability upgrade at the current level

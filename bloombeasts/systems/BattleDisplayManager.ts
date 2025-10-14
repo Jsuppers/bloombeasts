@@ -102,28 +102,6 @@ export class BattleDisplayManager {
   }
 
   /**
-   * Create a battle display with card popup overlay
-   */
-  createBattleDisplayWithPopup(
-    battleState: any,
-    selectedBeastIndex: number | null,
-    card: any,
-    player: 'player' | 'opponent'
-  ): BattleDisplay | null {
-    const display = this.createBattleDisplay(battleState, selectedBeastIndex, null);
-
-    if (!display) return null;
-
-    // Add card popup
-    display.cardPopup = {
-      card,
-      player,
-    };
-
-    return display;
-  }
-
-  /**
    * Get objective display for current battle
    */
   private getObjectiveDisplay(battleState: any): ObjectiveDisplay[] {

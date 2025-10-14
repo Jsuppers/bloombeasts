@@ -1249,15 +1249,20 @@ export class GameManager {
     const battleState = this.battleUI.getCurrentBattle();
     if (!battleState || !battleState.gameState) return;
 
-    // Create display with popup
-    const display = this.battleDisplayManager.createBattleDisplayWithPopup(
+    // Create display without popup first
+    const display = this.battleDisplayManager.createBattleDisplay(
       battleState,
       this.selectedBeastIndex,
-      card,
-      player
+      null
     );
 
     if (!display) return;
+
+    // Add popup to display
+    display.cardPopup = {
+      card,
+      player,
+    };
 
     // Show popup
     this.platform.renderBattle(display);

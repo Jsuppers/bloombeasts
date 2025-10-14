@@ -161,17 +161,6 @@ export class BattleField {
   }
 
   /**
-   * Get adjacent beasts to a beast instance
-   */
-  getAdjacentTo(beast: BloomBeastInstance): BloomBeastInstance[] {
-    const result = this.findBeast(beast.instanceId);
-    if (result) {
-      return this.getAdjacent(result.index);
-    }
-    return [];
-  }
-
-  /**
    * Clear all dead beasts from field
    */
   clearDead(): BloomBeastInstance[] {
@@ -210,13 +199,6 @@ export class BattleField {
   }
 
   /**
-   * Swap two beasts' positions
-   */
-  swap(index1: number, index2: number): boolean {
-    return this.moveBeast(index1, index2);
-  }
-
-  /**
    * Get beasts by affinity
    */
   getBeastsByAffinity(affinity: string): BloomBeastInstance[] {
@@ -228,13 +210,6 @@ export class BattleField {
    */
   filter(predicate: (beast: BloomBeastInstance) => boolean): BloomBeastInstance[] {
     return this.getAllBeasts().filter(predicate);
-  }
-
-  /**
-   * Find first beast matching a predicate
-   */
-  find(predicate: (beast: BloomBeastInstance) => boolean): BloomBeastInstance | undefined {
-    return this.getAllBeasts().find(predicate);
   }
 
   /**
@@ -254,53 +229,6 @@ export class BattleField {
    */
   forEachSlot(callback: (beast: BloomBeastInstance | null, index: number) => void): void {
     this.slots.forEach(callback);
-  }
-
-  /**
-   * Map over all beasts
-   */
-  map<T>(callback: (beast: BloomBeastInstance, index: number) => T): T[] {
-    const results: T[] = [];
-    this.forEach((beast, index) => {
-      results.push(callback(beast, index));
-    });
-    return results;
-  }
-
-  /**
-   * Check if any beast matches a predicate
-   */
-  some(predicate: (beast: BloomBeastInstance) => boolean): boolean {
-    return this.getAllBeasts().some(predicate);
-  }
-
-  /**
-   * Check if all beasts match a predicate
-   */
-  every(predicate: (beast: BloomBeastInstance) => boolean): boolean {
-    const beasts = this.getAllBeasts();
-    return beasts.length > 0 && beasts.every(predicate);
-  }
-
-  /**
-   * Get total attack power of all alive beasts
-   */
-  getTotalAttack(): number {
-    return this.getAliveBeasts().reduce((total, beast) => total + beast.currentAttack, 0);
-  }
-
-  /**
-   * Get total health of all alive beasts
-   */
-  getTotalHealth(): number {
-    return this.getAliveBeasts().reduce((total, beast) => total + beast.currentHealth, 0);
-  }
-
-  /**
-   * Get total max health of all beasts
-   */
-  getTotalMaxHealth(): number {
-    return this.getAllBeasts().reduce((total, beast) => total + beast.maxHealth, 0);
   }
 
   /**
