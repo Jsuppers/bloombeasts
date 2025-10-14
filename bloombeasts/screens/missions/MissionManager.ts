@@ -20,12 +20,21 @@ export interface MissionRunProgress {
   abilitiesUsed: number;
   playerHealth: number;
   opponentHealth: number;
+  startTime: number;           // Timestamp when mission started (milliseconds)
+  endTime?: number;             // Timestamp when mission ended (milliseconds)
+}
+
+export interface ItemRewardResult {
+  itemId: string;
+  quantity: number;
 }
 
 export interface RewardResult {
   xpGained: number;
+  beastXP: number;              // XP earned by beasts
   cardsReceived: (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[];
-  nectarGained: number;
+  itemsReceived: ItemRewardResult[];
+  completionTimeSeconds: number; // Time taken to complete mission
   bonusRewards?: string[];
 }
 
@@ -55,6 +64,7 @@ export class MissionManager {
       abilitiesUsed: 0,
       playerHealth: 30,
       opponentHealth: 30,
+      startTime: Date.now(),
     };
 
     // Initialize objective tracking (if objectives exist)
@@ -157,6 +167,9 @@ export class MissionManager {
       return null;
     }
 
+    // Mark mission end time
+    this.progress.endTime = Date.now();
+
     const rewards = this.generateRewards(this.currentMission.rewards);
 
     // Track completion
@@ -181,10 +194,19 @@ export class MissionManager {
    * Generate rewards based on mission configuration
    */
   private generateRewards(rewardConfig: MissionRewards): RewardResult {
+    // Calculate completion time
+    const completionTimeMs = (this.progress!.endTime || Date.now()) - this.progress!.startTime;
+    const completionTimeSeconds = Math.floor(completionTimeMs / 1000);
+
+    // Calculate beast XP (same as player XP for now)
+    const beastXP = rewardConfig.guaranteedXP;
+
     const result: RewardResult = {
       xpGained: rewardConfig.guaranteedXP,
+      beastXP: beastXP,
       cardsReceived: [],
-      nectarGained: rewardConfig.nectarReward || 0,
+      itemsReceived: [],
+      completionTimeSeconds: completionTimeSeconds,
       bonusRewards: [],
     };
 
@@ -214,6 +236,23 @@ export class MissionManager {
       });
     }
 
+    // Generate item rewards
+    if (rewardConfig.itemRewards) {
+      rewardConfig.itemRewards.forEach(itemReward => {
+        if (Math.random() < itemReward.dropChance) {
+          const amount = Math.floor(
+            Math.random() * (itemReward.maxAmount - itemReward.minAmount + 1) +
+            itemReward.minAmount
+          );
+
+          result.itemsReceived.push({
+            itemId: itemReward.itemId,
+            quantity: amount,
+          });
+        }
+      });
+    }
+
     // Apply special rule rewards (like double rewards for mission 10)
     if (this.currentMission?.specialRules) {
       const hasDoubleRewards = this.currentMission.specialRules.some(
@@ -221,7 +260,6 @@ export class MissionManager {
       );
       if (hasDoubleRewards) {
         result.xpGained *= 2;
-        result.nectarGained *= 2;
         result.bonusRewards?.push('Double rewards earned!');
       }
     }

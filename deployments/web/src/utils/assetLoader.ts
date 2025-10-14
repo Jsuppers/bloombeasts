@@ -65,6 +65,20 @@ export class AssetLoader {
             // Load experience bar
             await this.loadImage('experienceBar', '/shared/images/cards/ExperienceBar.png');
 
+            // Load mission complete popup images
+            await this.loadImage('MissionCompleteContainer', '/shared/images/MissionCompleteContainer.png');
+            await this.loadImage('LongGreenButton', '/shared/images/LongGreenButton.png');
+
+            // Load chest images (all affinities, closed and opened)
+            await this.loadImage('ForestChestClosed', '/shared/images/chests/ForestChestClosed.png');
+            await this.loadImage('ForestChestOpened', '/shared/images/chests/ForestChestOpened.png');
+            await this.loadImage('WaterChestClosed', '/shared/images/chests/WaterChestClosed.png');
+            await this.loadImage('WaterChestOpened', '/shared/images/chests/WaterChestOpened.png');
+            await this.loadImage('FireChestClosed', '/shared/images/chests/FireChestClosed.png');
+            await this.loadImage('FireChestOpened', '/shared/images/chests/FireChestOpened.png');
+            await this.loadImage('SkyChestClosed', '/shared/images/chests/SkyChestClosed.png');
+            await this.loadImage('SkyChestOpened', '/shared/images/chests/SkyChestOpened.png');
+
             // Load menu animation frames
             for (let i = 1; i <= 10; i++) {
                 await this.loadImage(`menuFrame${i}`, `/shared/images/menu/Frame${i}.png`);
@@ -486,5 +500,17 @@ export class AssetLoader {
         }
 
         return result;
+    }
+
+    /**
+     * Get all loaded images as a plain object
+     * Used for passing to rendering components
+     */
+    getAllImages(): Record<string, HTMLImageElement> {
+        const imagesObj: Record<string, HTMLImageElement> = {};
+        this.images.forEach((img, key) => {
+            imagesObj[key] = img;
+        });
+        return imagesObj;
     }
 }

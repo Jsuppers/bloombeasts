@@ -30,12 +30,14 @@ export class GameEngine {
   private gameState: GameState;
   private combatSystem: CombatSystem;
   private abilityProcessor: AbilityProcessor;
+  private levelingSystem: LevelingSystem;
   private cardDatabase: Map<string, AnyCard>;
 
   constructor() {
     this.gameState = this.createInitialState();
     this.combatSystem = new CombatSystem();
     this.abilityProcessor = new AbilityProcessor();
+    this.levelingSystem = new LevelingSystem();
     this.cardDatabase = this.buildCardDatabase();
   }
 
@@ -315,6 +317,20 @@ export class GameEngine {
           player.graveyard.push(card);
         }
         break;
+
+      case 'Buff':
+        // Place buff card in buff zone
+        const emptyBuffSlot = player.buffZone.findIndex(slot => slot === null);
+        if (emptyBuffSlot !== -1) {
+          player.buffZone[emptyBuffSlot] = card;
+          Logger.debug(`Played buff card: ${card.name}`);
+          // TODO: Apply ongoing buff effects to beasts
+        } else {
+          // No buff slots available, send to graveyard
+          Logger.debug('No buff slots available');
+          player.graveyard.push(card);
+        }
+        break;
     }
 
     return true;
@@ -509,12 +525,14 @@ export class GameEngine {
     const cardDef = this.getCardDefinition(beast.cardId);
     if (!cardDef || cardDef.type !== 'Bloom') return;
 
-    const beastCard = cardDef as any;
-    if (beastCard.ability && beastCard.ability.trigger === 'Passive') {
+    const beastCard = cardDef as BloomBeastCard;
+    const ability = this.getCurrentAbility(beast, beastCard);
+
+    if (ability && ability.trigger === 'Passive') {
       const activePlayer = this.gameState.players[this.gameState.activePlayer];
       const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
 
-      const results = this.abilityProcessor.processAbility(beastCard.ability, {
+      const results = this.abilityProcessor.processAbility(ability, {
         source: beast,
         sourceCard: beastCard,
         trigger: 'Passive',
@@ -539,9 +557,11 @@ export class GameEngine {
     const cardDef = this.getCardDefinition(beast.cardId);
     if (!cardDef || cardDef.type !== 'Bloom') return;
 
-    const beastCard = cardDef as any;
-    if (beastCard.ability && beastCard.ability.trigger === 'OnSummon') {
-      const results = this.abilityProcessor.processAbility(beastCard.ability, {
+    const beastCard = cardDef as BloomBeastCard;
+    const ability = this.getCurrentAbility(beast, beastCard);
+
+    if (ability && ability.trigger === 'OnSummon') {
+      const results = this.abilityProcessor.processAbility(ability, {
         source: beast,
         sourceCard: beastCard,
         trigger: 'OnSummon',
@@ -571,9 +591,11 @@ export class GameEngine {
       const cardDef = this.getCardDefinition(beast.cardId);
       if (!cardDef || cardDef.type !== 'Bloom') continue;
 
-      const beastCard = cardDef as any;
-      if (beastCard.ability && beastCard.ability.trigger === 'OnAllySummon') {
-        const results = this.abilityProcessor.processAbility(beastCard.ability, {
+      const beastCard = cardDef as BloomBeastCard;
+      const ability = this.getCurrentAbility(beast, beastCard);
+
+      if (ability && ability.trigger === 'OnAllySummon') {
+        const results = this.abilityProcessor.processAbility(ability, {
           source: beast,
           sourceCard: beastCard,
           trigger: 'OnAllySummon',
@@ -603,9 +625,11 @@ export class GameEngine {
       const cardDef = this.getCardDefinition(beast.cardId);
       if (!cardDef || cardDef.type !== 'Bloom') continue;
 
-      const beastCard = cardDef as any;
-      if (beastCard.ability && beastCard.ability.trigger === trigger) {
-        const results = this.abilityProcessor.processAbility(beastCard.ability, {
+      const beastCard = cardDef as BloomBeastCard;
+      const ability = this.getCurrentAbility(beast, beastCard);
+
+      if (ability && ability.trigger === trigger) {
+        const results = this.abilityProcessor.processAbility(ability, {
           source: beast,
           sourceCard: beastCard,
           trigger,
@@ -704,6 +728,49 @@ export class GameEngine {
   }
 
   /**
+   * Get current ability for a beast based on its level
+   * Takes into account ability upgrades from leveling
+   */
+  private getCurrentAbility(beast: BloomBeastInstance, beastCard: BloomBeastCard): any {
+    const { ability } = this.levelingSystem.getCurrentAbilities(beastCard, beast.currentLevel);
+    return ability;
+  }
+
+  /**
+   * Check if a beast has a specific attack modification
+   */
+  private hasAttackModification(
+    beast: BloomBeastInstance,
+    modification: 'attack-first' | 'cannot-counterattack' | 'double-damage' | 'triple-damage' | 'attack-twice' | 'instant-destroy' | 'piercing' | 'lifesteal'
+  ): boolean {
+    const cardDef = this.getCardDefinition(beast.cardId);
+    if (!cardDef || cardDef.type !== 'Bloom') return false;
+
+    const beastCard = cardDef as BloomBeastCard;
+    const ability = this.getCurrentAbility(beast, beastCard);
+
+    // Only StructuredAbility has effects
+    if (!ability || !('effects' in ability)) return false;
+
+    // Check if any effect is an AttackModification with the specified modification
+    for (const effect of ability.effects) {
+      if (effect.type === EffectType.AttackModification && (effect as any).modification === modification) {
+        // Check condition if present
+        const attackModEffect = effect as any;
+        if (attackModEffect.condition) {
+          // TODO: Implement condition checking
+          // For now, if there's a condition we need to evaluate it
+          // Example: Dewdrop Drake only has attack-first when it's the only unit on field
+          Logger.debug(`Attack modification '${modification}' has condition, assuming true for now`);
+        }
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Activate ability for a beast
    */
   public activateAbility(
@@ -730,14 +797,15 @@ export class GameEngine {
     }
 
     const beastCard = cardDef as BloomBeastCard;
+    const ability = this.getCurrentAbility(beast, beastCard);
+
     // Check if the ability is activated type
-    if (!beastCard.ability || beastCard.ability.trigger !== 'Activated') {
+    if (!ability || ability.trigger !== 'Activated') {
       Logger.error('Beast has no activated ability');
       return false;
     }
 
     // Check if ability has cost
-    const ability = beastCard.ability as any;
     if (ability.cost) {
       switch (ability.cost.type) {
         case 'nectar':
@@ -835,22 +903,96 @@ export class GameEngine {
         return false;
       }
 
-      // Process attack
-      const damage = attacker.currentAttack;
-      defender.currentHealth = Math.max(0, defender.currentHealth - damage);
+      // Check for attack modifications
+      const attackerHasFirstStrike = this.hasAttackModification(attacker, 'attack-first');
+      const attackerCannotBeCountered = this.hasAttackModification(attacker, 'cannot-counterattack');
 
-      // Trigger OnDamage abilities on defender (pass attacker context)
-      this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer, undefined, attacker);
+      const attackerDamage = attacker.currentAttack;
+      const defenderDamage = defender.currentAttack;
 
-      Logger.debug(`${attacker.cardId} attacked ${defender.cardId} for ${damage} damage`);
+      Logger.debug(`Combat: ${attacker.cardId} (${attackerDamage} ATK) vs ${defender.cardId} (${defenderDamage} ATK)${attackerHasFirstStrike ? ' [ATTACK-FIRST]' : ''}${attackerCannotBeCountered ? ' [NO-COUNTER]' : ''}`);
 
-      // Check if defender was destroyed
-      if (defender.currentHealth <= 0) {
-        this.triggerCombatAbilities('OnDestroy', defender, defendingPlayer, attackingPlayer);
-        const index = defendingPlayer.field.indexOf(defender);
-        if (index !== -1) {
-          defendingPlayer.field[index] = null;
-          defendingPlayer.graveyard.push(defender as any);
+      // Handle attack-first mechanic
+      if (attackerHasFirstStrike) {
+        // Attacker deals damage first
+        defender.currentHealth = Math.max(0, defender.currentHealth - attackerDamage);
+        Logger.debug(`${attacker.cardId} attacked first for ${attackerDamage} damage. ${defender.cardId} HP: ${defender.currentHealth}/${defender.maxHealth}`);
+
+        // Trigger OnDamage abilities on defender
+        this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer, undefined, attacker);
+
+        // Check if defender died from first strike
+        if (defender.currentHealth <= 0) {
+          Logger.debug(`${defender.cardId} was destroyed by first strike! No counter-attack.`);
+          this.triggerCombatAbilities('OnDestroy', defender, defendingPlayer, attackingPlayer);
+          const index = defendingPlayer.field.indexOf(defender);
+          if (index !== -1) {
+            defendingPlayer.field[index] = null;
+            defendingPlayer.graveyard.push(defender as any);
+          }
+          return true; // Combat ends, defender died before counter-attacking
+        }
+
+        // Defender survived, now counter-attacks (unless attacker has cannot-counterattack)
+        if (!attackerCannotBeCountered) {
+          attacker.currentHealth = Math.max(0, attacker.currentHealth - defenderDamage);
+          Logger.debug(`${defender.cardId} countered for ${defenderDamage} damage. ${attacker.cardId} HP: ${attacker.currentHealth}/${attacker.maxHealth}`);
+
+          // Trigger OnDamage abilities on attacker
+          this.triggerCombatAbilities('OnDamage', attacker, attackingPlayer, defendingPlayer, undefined, defender);
+
+          // Check if attacker died from counter
+          if (attacker.currentHealth <= 0) {
+            Logger.debug(`${attacker.cardId} was destroyed by counter-attack!`);
+            this.triggerCombatAbilities('OnDestroy', attacker, attackingPlayer, defendingPlayer);
+            const index = attackingPlayer.field.indexOf(attacker);
+            if (index !== -1) {
+              attackingPlayer.field[index] = null;
+              attackingPlayer.graveyard.push(attacker as any);
+            }
+          }
+        } else {
+          Logger.debug(`${defender.cardId} cannot counter-attack (attacker has cannot-counterattack)`);
+        }
+      } else {
+        // Normal simultaneous damage
+        defender.currentHealth = Math.max(0, defender.currentHealth - attackerDamage);
+
+        // Counter-attack happens unless prevented
+        if (!attackerCannotBeCountered) {
+          attacker.currentHealth = Math.max(0, attacker.currentHealth - defenderDamage);
+          Logger.debug(`Simultaneous combat: ${attacker.cardId} dealt ${attackerDamage}, ${defender.cardId} dealt ${defenderDamage}`);
+        } else {
+          Logger.debug(`${attacker.cardId} dealt ${attackerDamage} damage, ${defender.cardId} cannot counter`);
+        }
+
+        // Trigger OnDamage abilities
+        this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer, undefined, attacker);
+        if (!attackerCannotBeCountered) {
+          this.triggerCombatAbilities('OnDamage', attacker, attackingPlayer, defendingPlayer, undefined, defender);
+        }
+
+        // Check for deaths
+        let defenderDied = false;
+        if (defender.currentHealth <= 0) {
+          defenderDied = true;
+          Logger.debug(`${defender.cardId} was destroyed!`);
+          this.triggerCombatAbilities('OnDestroy', defender, defendingPlayer, attackingPlayer);
+          const index = defendingPlayer.field.indexOf(defender);
+          if (index !== -1) {
+            defendingPlayer.field[index] = null;
+            defendingPlayer.graveyard.push(defender as any);
+          }
+        }
+
+        if (attacker.currentHealth <= 0) {
+          Logger.debug(`${attacker.cardId} was destroyed!`);
+          this.triggerCombatAbilities('OnDestroy', attacker, attackingPlayer, defendingPlayer);
+          const index = attackingPlayer.field.indexOf(attacker);
+          if (index !== -1) {
+            attackingPlayer.field[index] = null;
+            attackingPlayer.graveyard.push(attacker as any);
+          }
         }
       }
     } else if (targetType === 'player') {
@@ -887,8 +1029,10 @@ export class GameEngine {
     if (!cardDef || cardDef.type !== 'Bloom') return;
 
     const beastCard = cardDef as BloomBeastCard;
-    if (beastCard.ability && beastCard.ability.trigger === trigger) {
-      const results = this.abilityProcessor.processAbility(beastCard.ability as any, {
+    const ability = this.getCurrentAbility(beast, beastCard);
+
+    if (ability && ability.trigger === trigger) {
+      const results = this.abilityProcessor.processAbility(ability, {
         source: beast,
         sourceCard: beastCard,
         trigger,
@@ -906,6 +1050,7 @@ export class GameEngine {
 
   /**
    * Check and trigger traps based on an event
+   * Only triggers the FIRST matching trap (in order)
    */
   private async checkTraps(
     triggerType: 'OnBloomPlay' | 'OnHabitatPlay' | 'OnAttack' | 'OnDamage',
@@ -916,7 +1061,7 @@ export class GameEngine {
       ? this.gameState.players[1]
       : this.gameState.players[0];
 
-    // Check opponent's traps
+    // Check opponent's traps - only activate FIRST matching trap
     for (let i = 0; i < opposingPlayer.trapZone.length; i++) {
       const trapCard = opposingPlayer.trapZone[i];
       if (!trapCard || trapCard.type !== 'Trap') continue;
@@ -949,6 +1094,9 @@ export class GameEngine {
         // Remove trap from zone and send to graveyard
         opposingPlayer.trapZone[i] = null;
         opposingPlayer.graveyard.push(trap);
+
+        // Only activate ONE trap per event
+        return;
       }
     }
   }

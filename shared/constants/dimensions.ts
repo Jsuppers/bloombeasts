@@ -13,9 +13,19 @@ export const missionCardDimensions = {
   height: 185,
 };
 
+export const missionCompleteCardDimensions = {
+  width: 550,
+  height: 330,
+};
+
 export const cardsUIContainerDimensions = {
   width: 950,
   height: 640,
+};
+
+export const chestImageMissionCompleteDimensions = {
+  width: 160,
+  height: 180,
 };
 
 export const standardCardBeastImageDimensions = {
@@ -46,4 +56,9 @@ export const sideMenuDimensions = {
 export const sideMenuButtonDimensions = {
   width: 105,
   height: 36,
+};
+
+export const longButtonDimensions = {
+  width: 201,
+  height: 35,
 };

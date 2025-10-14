@@ -20,7 +20,10 @@
       "Bash(npx tsc:*)",
       "Bash(git mv:*)",
       "Bash(cat:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(npm test:*)",
+      "Bash(npx jest:*)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "ask": []

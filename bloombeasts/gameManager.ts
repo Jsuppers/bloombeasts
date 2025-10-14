@@ -1307,49 +1307,80 @@ export class GameManager {
    */
   private async handleBattleComplete(battleState: any): Promise<void> {
     if (battleState.rewards) {
-      // Apply player XP (for player leveling)
-      this.saveLoadManager.addXP(battleState.rewards.xpGained);
-      // Note: Nectar is no longer persistent - it's only tracked during battle
+      // Get the mission object
+      const mission = battleState.mission || this.missionManager.getCurrentMission();
 
-      // Award card XP (distributed evenly across all cards in deck)
-      // Card XP is separate from player XP and comes from mission cardXP reward
-      const cardXP = battleState.rewards.cardXPGained || (battleState.rewards.xpGained / 2);
-      this.awardDeckExperience(cardXP);
+      // Check if platform has new showMissionComplete method
+      if (mission && (this.platform as any).showMissionComplete) {
+        // Stop battle rendering before showing popup
+        this.currentScreen = 'missions';
+        this.battleUI.clearBattle();
 
-      // Add cards to collection
-      battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
-        this.cardCollectionManager.addCardReward(card, this.cardCollection, index);
-      });
+        // Use new popup system - show popup first, then apply rewards after user claims
+        await (this.platform as any).showMissionComplete(mission, battleState.rewards);
 
-      // Track mission completion
-      if (this.currentBattleId) {
-        this.saveLoadManager.trackMissionCompletion(this.currentBattleId);
+        // Now apply rewards (after user has clicked through popup)
+        this.saveLoadManager.addXP(battleState.rewards.xpGained);
+
+        // Award card XP
+        const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
+        this.awardDeckExperience(cardXP);
+
+        // Add cards to collection
+        battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
+          this.cardCollectionManager.addCardReward(card, this.cardCollection, index);
+        });
+
+        // Add items to inventory
+        if (battleState.rewards.itemsReceived) {
+          battleState.rewards.itemsReceived.forEach((itemReward: any) => {
+            this.saveLoadManager.addItems(itemReward.itemId, itemReward.quantity);
+          });
+        }
+
+        // Track mission completion
+        if (this.currentBattleId) {
+          this.saveLoadManager.trackMissionCompletion(this.currentBattleId);
+        }
+
+        // Play win sound
+        this.soundManager.playSfx('sfx/win.ogg');
+
+        // Save game data
+        await this.saveGameData();
+      } else {
+        // Fallback to old dialog system
+        this.saveLoadManager.addXP(battleState.rewards.xpGained);
+        const cardXP = battleState.rewards.cardXPGained || (battleState.rewards.xpGained / 2);
+        this.awardDeckExperience(cardXP);
+
+        battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
+          this.cardCollectionManager.addCardReward(card, this.cardCollection, index);
+        });
+
+        if (this.currentBattleId) {
+          this.saveLoadManager.trackMissionCompletion(this.currentBattleId);
+        }
+
+        const rewardDisplay: RewardDisplay = {
+          xp: battleState.rewards.xpGained,
+          cards: battleState.rewards.cardsReceived.map((card: any) => ({
+            id: card.id,
+            name: card.name,
+            type: card.type,
+            affinity: card.affinity,
+            level: 1,
+            experience: 0,
+            count: 1,
+          })),
+          nectar: battleState.rewards.nectarGained,
+          message: 'Mission Complete!',
+        };
+
+        await this.platform.showRewards(rewardDisplay);
+        this.soundManager.playSfx('sfx/win.ogg');
+        await this.saveGameData();
       }
-
-      // Show rewards
-      const rewardDisplay: RewardDisplay = {
-        xp: battleState.rewards.xpGained,
-        cards: battleState.rewards.cardsReceived.map((card: any) => ({
-          id: card.id,
-          name: card.name,
-          type: card.type,
-          affinity: card.affinity,
-          level: 1,
-          experience: 0,
-          count: 1,
-        })),
-        nectar: battleState.rewards.nectarGained,
-        message: 'Mission Complete!',
-      };
-
-      // Show rewards and wait for user to dismiss dialog
-      await this.platform.showRewards(rewardDisplay);
-
-      // Play win sound
-      this.soundManager.playSfx('sfx/win.ogg');
-
-      // Save game data
-      await this.saveGameData();
     } else {
       // Mission failed - play lose sound before showing dialog
       this.soundManager.playSfx('sfx/lose.wav');

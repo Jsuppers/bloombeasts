@@ -63,6 +63,13 @@ export const sideMenuPositions: SideMenuPositions = {
   playerExperienceBar: { x: 9, y: 445, maxWidth: 109 },
 };
 
+export const missionCompleteCardPositions = {
+  title: { x: 275, y: 24, size: 36, textAlign: 'center', textBaseline: 'top' },
+  chestImage: { x: 73, y: 76 },
+  infoText: { x: 245, y: 98, size: 14, textAlign: 'left', textBaseline: 'top' },
+  claimRewardButton: { x: 175, y: 271 },
+};
+
 export const battleBoardAssetPositions: BattleBoardAssetPositions = {
   playerOne: {
     beastOne: { x: 64, y: 72 },

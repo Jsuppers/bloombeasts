@@ -23,6 +23,9 @@ import { CardsScreen } from './screens/cardsScreen';
 import { BattleScreen } from './screens/battleScreen';
 import { SettingsScreen } from './screens/settingsScreen';
 import { CardDetailScreen } from './screens/cardDetailScreen';
+import { MissionCompletePopup } from '../../../bloombeasts/screens/missions/MissionCompletePopup';
+import { Mission } from '../../../bloombeasts/screens/missions/types';
+import { RewardResult } from '../../../bloombeasts/screens/missions/MissionManager';
 
 export class WebPlatform implements PlatformCallbacks {
     private canvas: HTMLCanvasElement;
@@ -40,6 +43,7 @@ export class WebPlatform implements PlatformCallbacks {
     private battleScreen: BattleScreen;
     private settingsScreen: SettingsScreen;
     private cardDetailScreen: CardDetailScreen;
+    private missionCompletePopup: MissionCompletePopup;
 
     // Audio
     private musicAudio: HTMLAudioElement | null = null;
@@ -80,9 +84,15 @@ export class WebPlatform implements PlatformCallbacks {
         this.battleScreen = new BattleScreen(this.renderer, this.clickManager, this.assets);
         this.settingsScreen = new SettingsScreen(this.renderer, this.clickManager, this.assets);
         this.cardDetailScreen = new CardDetailScreen(this.renderer, this.clickManager, this.assets);
+        this.missionCompletePopup = new MissionCompletePopup();
 
         // Initialize audio
         this.initializeAudio();
+
+        // Setup popup render callback
+        this.missionCompletePopup.setRenderCallback(() => {
+            this.renderMissionCompletePopupInternal();
+        });
     }
 
     private initializeAudio(): void {
@@ -394,6 +404,8 @@ export class WebPlatform implements PlatformCallbacks {
     }
 
     async showRewards(rewards: RewardDisplay): Promise<void> {
+        // This method is now deprecated in favor of showMissionComplete
+        // Keep it for backwards compatibility, but use old dialog approach
         let message = `🎉 Rewards Earned! 🎉\n\n`;
         message += `XP: +${rewards.xp}\n`;
 
@@ -413,6 +425,62 @@ export class WebPlatform implements PlatformCallbacks {
         }
 
         await this.showDialog('Mission Complete!', message, ['Awesome!']);
+    }
+
+    /**
+     * Show mission complete popup with chest animation
+     */
+    async showMissionComplete(mission: Mission, rewards: RewardResult): Promise<void> {
+        return new Promise((resolve) => {
+            // Cleanup battle screen to stop timer and clear canvas
+            if (this.currentScreen === 'battle') {
+                this.battleScreen.cleanup();
+            }
+            this.currentScreen = 'mission-complete';
+
+            // Force clear canvas and click regions before showing popup
+            this.renderer.clear();
+            this.clickManager.clearRegions();
+
+            // Setup click handler for popup
+            const clickHandler = (event: MouseEvent) => {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+                const shouldClose = this.missionCompletePopup.handleClick(x, y);
+
+                if (shouldClose) {
+                    // Remove click handler
+                    this.canvas.removeEventListener('click', clickHandler);
+
+                    // Hide popup
+                    this.missionCompletePopup.hide();
+
+                    // Resolve promise
+                    resolve();
+                }
+            };
+
+            // Add click handler
+            this.canvas.addEventListener('click', clickHandler);
+
+            // Show the popup (this will trigger renderMissionCompletePopupInternal via callback)
+            this.missionCompletePopup.show(mission, rewards);
+        });
+    }
+
+    /**
+     * Internal method to render the mission complete popup
+     */
+    private renderMissionCompletePopupInternal(): void {
+        if (!this.missionCompletePopup.isVisible()) return;
+
+        // Clear the canvas
+        this.renderer.clear();
+
+        // Render the popup
+        this.missionCompletePopup.render(this.ctx, this.assets.getAllImages());
     }
 
     updatePlayerStats(playerData: any): void {

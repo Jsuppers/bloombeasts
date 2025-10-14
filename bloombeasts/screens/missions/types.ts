@@ -9,11 +9,19 @@ export type MissionDifficulty = 'beginner' | 'easy' | 'normal' | 'hard' | 'exper
 
 export type CardPool = 'common' | 'uncommon' | 'rare' | 'affinity' | 'any';
 
+export interface ItemReward {
+  itemId: string;               // Item ID from items.ts
+  minAmount: number;            // Minimum items to receive
+  maxAmount: number;            // Maximum items to receive
+  dropChance: number;           // Chance to receive (0-1)
+}
+
 export interface MissionRewards {
   guaranteedXP: number;        // Minimum XP earned
   bonusXPChance: number;        // Chance for bonus XP (0-1)
   bonusXPAmount: number;        // Amount of bonus XP if triggered
   cardRewards: CardReward[];    // Possible card rewards
+  itemRewards?: ItemReward[];   // Possible item rewards
   nectarReward?: number;        // Nectar currency reward
 }
 

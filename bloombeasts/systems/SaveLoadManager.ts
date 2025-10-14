@@ -240,4 +240,20 @@ export class SaveLoadManager {
     const currentCount = this.playerData.missions.completedMissions[missionId] || 0;
     this.playerData.missions.completedMissions[missionId] = currentCount + 1;
   }
+
+  /**
+   * Add items to player's inventory
+   */
+  addItems(itemId: string, quantity: number): void {
+    const existingItem = this.playerData.items.find(i => i.itemId === itemId);
+
+    if (existingItem) {
+      existingItem.quantity += quantity;
+    } else {
+      this.playerData.items.push({
+        itemId,
+        quantity,
+      });
+    }
+  }
 }

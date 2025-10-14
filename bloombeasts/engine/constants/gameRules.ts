@@ -14,8 +14,8 @@ export const MIN_DECK_SIZE = 30;
 export const MAX_DECK_SIZE = 30;
 
 // Health Configuration
-export const STARTING_HEALTH = 30;
-export const GARDENER_MAX_HEALTH = 30;
+export const STARTING_HEALTH = 10;
+export const GARDENER_MAX_HEALTH = 10;
 
 // Turn Configuration
 export const TURN_TIME_LIMIT = 60; // seconds

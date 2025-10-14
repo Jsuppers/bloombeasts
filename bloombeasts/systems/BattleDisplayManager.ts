@@ -129,7 +129,8 @@ export class BattleDisplayManager {
   }
 
   /**
-   * Enrich field beasts with card definition data and apply bonuses for display
+   * Enrich field beasts with card definition data
+   * NOTE: Do NOT apply bonuses here - the engine's StatModifierManager already handles this!
    */
   private enrichFieldBeasts(field: any[], gameState?: any, playerIndex?: number): any[] {
     // Create a card lookup map from all card definitions
@@ -149,90 +150,21 @@ export class BattleDisplayManager {
 
       if (!cardDef) return beast; // Return as-is if card not found
 
-      // Calculate stat bonuses from habitat and buffs (only if we have gameState and playerIndex)
-      const bonuses = (gameState && playerIndex !== undefined)
-        ? this.calculateStatBonuses(beast, gameState, playerIndex)
-        : { attackBonus: 0, healthBonus: 0 };
-
-      // Merge instance data with card definition data and apply bonuses
-      // Only add abilities if they're not already present
+      // Merge instance data with card definition data
+      // The engine's StatModifierManager already includes all bonuses in currentAttack/currentHealth/maxHealth
+      // We do NOT need to calculate or apply bonuses here
       return {
         ...beast,
         name: beast.name || cardDef.name,
         affinity: beast.affinity || cardDef.affinity,
         cost: beast.cost || cardDef.cost,
         ability: beast.ability || cardDef.ability,
-        // Apply bonuses to display stats (don't modify the actual beast in game engine)
-        currentAttack: (beast.currentAttack || 0) + bonuses.attackBonus,
-        currentHealth: (beast.currentHealth || 0) + bonuses.healthBonus,
-        maxHealth: (beast.maxHealth || 0) + bonuses.healthBonus,
+        // Use stats as-is from the engine (bonuses are already applied by StatModifierManager)
+        currentAttack: beast.currentAttack || 0,
+        currentHealth: beast.currentHealth || 0,
+        maxHealth: beast.maxHealth || 0,
       };
     });
   }
 
-  /**
-   * Calculate stat bonuses for a beast from habitat and buff zones
-   */
-  private calculateStatBonuses(beast: any, gameState: any, playerIndex: number): { attackBonus: number; healthBonus: number } {
-    let attackBonus = 0;
-    let healthBonus = 0;
-
-    // Helper to check if effect applies to this beast
-    const checkCondition = (condition: any): boolean => {
-      if (!condition) return true; // No condition means applies to all
-
-      switch (condition.type) {
-        case 'affinity-matches':
-        case 'AffinityMatches':
-          return beast.affinity === condition.value;
-        // Add more condition types as needed
-        default:
-          return true;
-      }
-    };
-
-    // Helper to process ongoing effects
-    const processOngoingEffects = (effects: any[]) => {
-      if (!effects || !Array.isArray(effects)) return;
-
-      effects.forEach((effect: any) => {
-        // Only process stat modification effects with WhileOnField duration
-        if (effect.type === 'modify-stats' || effect.type === 'ModifyStats') {
-          if (effect.duration === 'while-on-field' || effect.duration === 'WhileOnField') {
-            // Check if effect applies to this beast
-            if (checkCondition(effect.condition)) {
-              // Apply the bonus based on stat type
-              if (effect.stat === 'attack' || effect.stat === 'Attack') {
-                attackBonus += effect.value || 0;
-              } else if (effect.stat === 'health' || effect.stat === 'Health') {
-                healthBonus += effect.value || 0;
-              } else if (effect.stat === 'both' || effect.stat === 'Both') {
-                attackBonus += effect.value || 0;
-                healthBonus += effect.value || 0;
-              }
-            }
-          }
-        }
-      });
-    };
-
-    // Process habitat zone ongoing effects
-    if (gameState.habitatZone && gameState.habitatZone.ongoingEffects) {
-      processOngoingEffects(gameState.habitatZone.ongoingEffects);
-    }
-
-    // Process buff zones ONLY for the player who owns this beast
-    if (gameState.players && gameState.players[playerIndex]) {
-      const player = gameState.players[playerIndex];
-      if (player.buffZone && Array.isArray(player.buffZone)) {
-        player.buffZone.forEach((buff: any) => {
-          if (buff && buff.ongoingEffects) {
-            processOngoingEffects(buff.ongoingEffects);
-          }
-        });
-      }
-    }
-
-    return { attackBonus, healthBonus };
-  }
 }

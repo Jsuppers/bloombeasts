@@ -317,7 +317,7 @@ function getEffectText(effect: AbilityEffect): string {
       if (mod === 'triple-damage') return 'deal triple damage';
       if (mod === 'instant-destroy') return 'instantly destroy target';
       if (mod === 'attack-twice') return 'attack twice';
-      if (mod === 'attack-first') return 'attack first';
+      if (mod === 'attack-first') return 'strike first (defender cannot counter if killed)';
       if (mod === 'cannot-counterattack') return 'cannot be counterattacked';
       if (mod === 'piercing') return 'ignore defensive abilities';
       return mod;

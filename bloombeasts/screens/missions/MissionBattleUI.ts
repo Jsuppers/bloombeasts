@@ -87,12 +87,15 @@ export class MissionBattleUI {
       habitatCounters: new SimpleMap(),
     };
 
+    console.log('playerDeckCards', playerDeckCards);
+    console.log('mission.opponentDeck.cards', mission.opponentDeck.cards);
+
     // Create AI opponent with mission-specific configuration
     const opponent: Player = {
       id: 'opponent',
       name: mission.opponentAI?.name || 'Opponent',
-      health: 30,
-      maxHealth: 30,
+      health: 1,
+      maxHealth: 1,
       deck: mission.opponentDeck.cards,
       hand: [],
       field: [],
