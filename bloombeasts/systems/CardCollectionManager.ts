@@ -26,9 +26,14 @@ export interface CardDisplay {
   currentAttack?: number;
   baseHealth?: number;
   currentHealth?: number;
-  ability?: { name: string; description: string; };
+  ability?: any; // Full structured ability with effects for description generation
+  effects?: any[]; // For Magic/Trap/Buff cards
+  ongoingEffects?: any[]; // For Buff/Habitat cards
+  onPlayEffects?: any[]; // For Habitat cards
+  activation?: any; // For Trap cards
   description?: string;
   counters?: Array<{ type: string; amount: number }>;
+  titleColor?: string; // Custom title color (hex color)
 }
 
 export class CardCollectionManager {
@@ -123,24 +128,20 @@ export class CardCollectionManager {
     displayCard.currentAttack = card.currentAttack;
     displayCard.baseHealth = card.baseHealth;
     displayCard.currentHealth = card.currentHealth;
-    displayCard.ability = card.ability;
+
+    // Get the full ability from the card definition (with effects array)
+    const abilities = this.getAbilitiesForLevel(card);
+    displayCard.ability = abilities.ability;
   }
 
   /**
    * Add Trap-specific fields to card display
    */
   private addTrapCardFields(displayCard: CardDisplay, card: CardInstance, cardDef: any): void {
-    if (cardDef && cardDef.description) {
-      displayCard.ability = {
-        name: 'Trap Card',
-        description: cardDef.description
-      };
-    } else if (card.effects && card.effects.length > 0) {
-      // Fallback to effects if no description found
-      displayCard.ability = {
-        name: 'Trap Card',
-        description: card.effects.join('. ')
-      };
+    // Include full structured effect data for description generation
+    if (cardDef) {
+      displayCard.effects = cardDef.effects;
+      displayCard.activation = cardDef.activation;
     }
   }
 
@@ -148,12 +149,12 @@ export class CardCollectionManager {
    * Add Magic-specific fields to card display
    */
   private addMagicCardFields(displayCard: CardDisplay, card: CardInstance): void {
-    const effectDescs = this.getEffectDescriptions(card);
-    if (effectDescs.length > 0) {
-      displayCard.ability = {
-        name: card.type + ' Card',
-        description: effectDescs.join('. ')
-      };
+    // Include full structured effect data for description generation
+    const allCardDefs = getAllCards();
+    const cardDef = allCardDefs.find((c: any) => c && c.id === card.cardId);
+
+    if (cardDef) {
+      displayCard.effects = (cardDef as any).effects;
     }
   }
 
@@ -161,8 +162,10 @@ export class CardCollectionManager {
    * Add Habitat/Buff-specific fields to card display
    */
   private addHabitatBuffCardFields(displayCard: CardDisplay, cardDef: any): void {
-    if (cardDef && cardDef.description) {
-      displayCard.description = cardDef.description;
+    // Include full structured effect data for description generation
+    if (cardDef) {
+      displayCard.ongoingEffects = cardDef.ongoingEffects;
+      displayCard.onPlayEffects = cardDef.onPlayEffects;
     }
   }
 

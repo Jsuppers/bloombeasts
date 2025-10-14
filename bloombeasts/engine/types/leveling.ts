@@ -46,6 +46,30 @@ export interface TargetingRestrictions {
 }
 
 /**
+ * Source of a stat modification
+ */
+export enum StatModifierSource {
+  Base = 'base',              // Base stats from card + level
+  BuffZone = 'buff-zone',     // From buff cards in buff zone
+  Ability = 'ability',        // From triggered abilities (temporary)
+  Magic = 'magic',            // From magic card effects
+  Habitat = 'habitat',        // From habitat cards
+  Equipment = 'equipment'     // Future: From equipment
+}
+
+/**
+ * A single stat modifier
+ */
+export interface StatModifier {
+  source: StatModifierSource;
+  sourceId: string;           // ID of the card/ability that applied this
+  stat: 'attack' | 'health' | 'maxHealth';
+  value: number;              // Amount of modification (can be negative)
+  duration?: 'permanent' | 'end-of-turn' | 'while-active';
+  turnsRemaining?: number;    // For temporary effects
+}
+
+/**
  * Beast instance with leveling state
  */
 export interface BloomBeastInstance {
@@ -56,12 +80,19 @@ export interface BloomBeastInstance {
   name: string;
   affinity: Affinity;
 
-  // Current stats
+  // Base stats (card stats + level bonuses, never includes buffs/modifiers)
+  baseAttack: number;
+  baseHealth: number;
+
+  // Current stats (calculated from base + all modifiers)
   currentLevel: Level;
   currentXP: number;
   currentAttack: number;
   currentHealth: number;
   maxHealth: number;
+
+  // Stat modification tracking
+  statModifiers?: StatModifier[];
 
   // Counters and effects
   counters: Counter[];

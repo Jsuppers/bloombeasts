@@ -185,6 +185,8 @@ createBeastInstance(
       affinity: card.affinity,
       currentLevel: 1,
       currentXP: 0,
+      baseAttack: card.baseAttack,
+      baseHealth: card.baseHealth,
       currentAttack: stats.attack,
       currentHealth: stats.health,
       maxHealth: stats.health,

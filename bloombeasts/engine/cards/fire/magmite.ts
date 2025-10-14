@@ -8,7 +8,6 @@ import { CardBuilder } from '../CardBuilder';
 
 const magmitePassive: StructuredAbility = {
   name: 'Hardened Shell',
-  description: 'Magmite takes 1 less damage from all sources.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -22,7 +21,6 @@ const magmitePassive: StructuredAbility = {
 
 const magmiteBloom: StructuredAbility = {
   name: 'Volcanic Burst',
-  description: "When Magmite is destroyed, deal 3 damage to the opponent's Gardener.",
   trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
@@ -36,7 +34,6 @@ const magmiteBloom: StructuredAbility = {
 // Level 4 upgrades
 const magmitePassive4: StructuredAbility = {
   name: 'Molten Armor',
-  description: 'Magmite takes 2 less damage from all sources.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -51,7 +48,6 @@ const magmitePassive4: StructuredAbility = {
 // Level 7 upgrades
 const magmiteBloom7: StructuredAbility = {
   name: 'Eruption',
-  description: "When destroyed, deal 5 damage to opponent Gardener and 2 damage to all opponent Bloom Beasts.",
   trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
@@ -70,7 +66,6 @@ const magmiteBloom7: StructuredAbility = {
 // Level 9 upgrades
 const magmitePassive9: StructuredAbility = {
   name: 'Obsidian Carapace',
-  description: 'Takes 3 less damage. When attacked, deal 2 damage to attacker.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -89,7 +84,6 @@ const magmitePassive9: StructuredAbility = {
 
 const magmiteBloom9: StructuredAbility = {
   name: 'Cataclysm',
-  description: "When destroyed, deal 8 damage to opponent Gardener and destroy all Bloom Beasts with 3 HP or less.",
   trigger: AbilityTrigger.OnDestroy,
   effects: [
     {

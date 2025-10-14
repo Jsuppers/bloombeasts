@@ -106,6 +106,7 @@ export enum Comparison {
  */
 export enum AbilityTrigger {
   OnSummon = 'OnSummon',
+  OnAllySummon = 'OnAllySummon',      // When another ally is summoned
   OnAttack = 'OnAttack',
   OnDamage = 'OnDamage',
   OnDestroy = 'OnDestroy',
@@ -440,7 +441,6 @@ export interface AbilityCost {
  */
 export interface StructuredAbility {
   name: string;
-  description: string;
   trigger?: AbilityTrigger;
   cost?: AbilityCost;  // For activated abilities
   effects: AbilityEffect[];

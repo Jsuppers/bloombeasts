@@ -8,7 +8,6 @@ import { CardBuilder } from '../CardBuilder';
 
 const bubblefinPassive: StructuredAbility = {
   name: 'Emerge',
-  description: 'Bubblefin cannot be targeted by a Trap Card.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -21,7 +20,6 @@ const bubblefinPassive: StructuredAbility = {
 
 const bubblefinBloom: StructuredAbility = {
   name: 'Dampen',
-  description: "When Bubblefin is attacked, reduce the attacker's ATK by 1 until the end of the turn.",
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -37,7 +35,6 @@ const bubblefinBloom: StructuredAbility = {
 // Level 4 upgrades
 const bubblefinBloom4: StructuredAbility = {
   name: 'Tidal Shield',
-  description: "When attacked, reduce attacker's ATK by 2 until end of turn.",
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -53,7 +50,6 @@ const bubblefinBloom4: StructuredAbility = {
 // Level 7 upgrades
 const bubblefinPassive7: StructuredAbility = {
   name: 'Deep Dive',
-  description: 'Cannot be targeted by Trap Cards or Magic Cards.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -67,7 +63,6 @@ const bubblefinPassive7: StructuredAbility = {
 // Level 9 upgrades
 const bubblefinPassive9: StructuredAbility = {
   name: 'Ocean Sanctuary',
-  description: 'Cannot be targeted by any opponent cards or abilities.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -80,7 +75,6 @@ const bubblefinPassive9: StructuredAbility = {
 
 const bubblefinBloom9: StructuredAbility = {
   name: 'Crushing Depths',
-  description: "When attacked, reduce attacker's ATK by 3 permanently and heal self by 2 HP.",
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {

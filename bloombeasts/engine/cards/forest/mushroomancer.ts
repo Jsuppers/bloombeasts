@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType,
 
 const mushroomancerPassive: StructuredAbility = {
   name: 'Fungal Cloud',
-  description: 'When Summoned, give all adjacent Bloom Beasts -1 ATK until the start of your next turn.',
   trigger: AbilityTrigger.OnSummon,
   effects: [
     {
@@ -22,7 +21,6 @@ const mushroomancerPassive: StructuredAbility = {
 
 const mushroomancerBloom: StructuredAbility = {
   name: 'Life Spore',
-  description: 'Remove 1 Spore counter from the Habitat Card to heal Mushroomancer by 2 HP.',
   trigger: AbilityTrigger.Activated,
   cost: {
     type: CostType.RemoveCounter,
@@ -41,7 +39,6 @@ const mushroomancerBloom: StructuredAbility = {
 // Level 4 upgrades
 const mushroomancerPassive4: StructuredAbility = {
   name: 'Toxic Spores',
-  description: 'When Summoned, give all adjacent Bloom Beasts -2 ATK until the start of your next turn.',
   trigger: AbilityTrigger.OnSummon,
   effects: [
     {
@@ -57,7 +54,6 @@ const mushroomancerPassive4: StructuredAbility = {
 // Level 7 upgrades
 const mushroomancerBloom7: StructuredAbility = {
   name: 'Greater Life Spore',
-  description: 'Remove 1 Spore counter from the Habitat Card to heal Mushroomancer by 3 HP.',
   trigger: AbilityTrigger.Activated,
   cost: {
     type: CostType.RemoveCounter,
@@ -76,7 +72,6 @@ const mushroomancerBloom7: StructuredAbility = {
 // Level 9 upgrades
 const mushroomancerPassive9: StructuredAbility = {
   name: 'Parasitic Bloom',
-  description: 'When Summoned, give all opponent Bloom Beasts -2 ATK permanently.',
   trigger: AbilityTrigger.OnSummon,
   effects: [
     {
@@ -91,7 +86,6 @@ const mushroomancerPassive9: StructuredAbility = {
 
 const mushroomancerBloom9: StructuredAbility = {
   name: 'Spore Regeneration',
-  description: 'Remove 1 Spore counter to fully heal Mushroomancer and gain +1 ATK permanently.',
   trigger: AbilityTrigger.Activated,
   cost: {
     type: CostType.RemoveCounter,

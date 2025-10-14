@@ -14,7 +14,6 @@ import { CardBuilder } from '../CardBuilder';
 
 const blazefinchPassive: StructuredAbility = {
   name: 'Quick Strike',
-  description: 'Blazefinch can attack the turn it is summoned.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -26,7 +25,6 @@ const blazefinchPassive: StructuredAbility = {
 
 const blazefinchBloom: StructuredAbility = {
   name: 'Incinerate',
-  description: 'When Blazefinch attacks a Wilting Bloom Beast, its attack deals double damage.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -43,7 +41,6 @@ const blazefinchBloom: StructuredAbility = {
 // Level 4 upgrades
 const blazefinchBloom4: StructuredAbility = {
   name: 'Ember Strike',
-  description: 'When attacking a damaged Bloom Beast, deal triple damage.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -60,7 +57,6 @@ const blazefinchBloom4: StructuredAbility = {
 // Level 7 upgrades
 const blazefinchPassive7: StructuredAbility = {
   name: 'Lightning Speed',
-  description: 'Blazefinch can attack twice the turn it is summoned.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -78,7 +74,6 @@ const blazefinchPassive7: StructuredAbility = {
 // Level 9 upgrades
 const blazefinchPassive9: StructuredAbility = {
   name: 'Phoenix Form',
-  description: 'Blazefinch can attack twice per turn. When destroyed, return to hand.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -92,7 +87,6 @@ const blazefinchPassive9: StructuredAbility = {
 
 const blazefinchBloom9: StructuredAbility = {
   name: 'Annihilation',
-  description: 'When attacking a damaged Bloom Beast, instantly destroy it.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {

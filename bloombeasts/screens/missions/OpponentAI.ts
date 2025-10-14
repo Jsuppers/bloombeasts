@@ -171,6 +171,8 @@ export class OpponentAI {
           instanceId: playedCard.instanceId || `${playedCard.id}-${Date.now()}`,
           currentLevel: 1 as any,
           currentXP: 0,
+          baseAttack: playedCard.baseAttack,
+          baseHealth: playedCard.baseHealth,
           currentAttack: playedCard.baseAttack,
           currentHealth: playedCard.baseHealth,
           maxHealth: playedCard.baseHealth,
@@ -179,16 +181,16 @@ export class OpponentAI {
           slotIndex: opponent.field.length,
           summoningSickness: true,
           usedAbilityThisTurn: false,
+          statModifiers: [],
           // Store original card data for display
           type: 'Bloom',
           name: playedCard.name,
           affinity: playedCard.affinity,
           cost: playedCard.cost,
-          baseAttack: playedCard.baseAttack,
-          baseHealth: playedCard.baseHealth,
           ability: playedCard.ability,
         };
 
+        // Initialize stat system (beasts need this even before buffs are applied)
         opponent.field.push(beastInstance);
         effectProcessors.applyStatBuffEffects(opponent);
         effectProcessors.processOnSummonTrigger(beastInstance, opponent, player);

@@ -7,8 +7,7 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType,
 
 const aquaPebblePassive: StructuredAbility = {
   name: 'Tide Flow',
-  description: 'When you summon another Water Affinity Bloom Beast, Aqua-Pebble gains +1 ATK until the end of the turn.',
-  trigger: AbilityTrigger.OnSummon,
+  trigger: AbilityTrigger.OnAllySummon,
   effects: [
     {
       type: EffectType.ModifyStats,
@@ -26,7 +25,6 @@ const aquaPebblePassive: StructuredAbility = {
 
 const aquaPebbleBloom: StructuredAbility = {
   name: 'Hydration',
-  description: 'At the end of your turn, heal any other allied Bloom Beast by 1 HP.',
   trigger: AbilityTrigger.EndOfTurn,
   effects: [
     {
@@ -40,8 +38,7 @@ const aquaPebbleBloom: StructuredAbility = {
 // Level 4 upgrades
 const aquaPebblePassive4: StructuredAbility = {
   name: 'Tidal Surge',
-  description: 'When you summon another Water Beast, gain +2 ATK until end of turn.',
-  trigger: AbilityTrigger.OnSummon,
+  trigger: AbilityTrigger.OnAllySummon,
   effects: [
     {
       type: EffectType.ModifyStats,
@@ -60,7 +57,6 @@ const aquaPebblePassive4: StructuredAbility = {
 // Level 7 upgrades
 const aquaPebbleBloom7: StructuredAbility = {
   name: 'Rejuvenation',
-  description: 'At end of turn, heal all allied Bloom Beasts by 2 HP.',
   trigger: AbilityTrigger.EndOfTurn,
   effects: [
     {
@@ -74,8 +70,7 @@ const aquaPebbleBloom7: StructuredAbility = {
 // Level 9 upgrades
 const aquaPebblePassive9: StructuredAbility = {
   name: 'Tsunami Force',
-  description: 'When you summon another Water Beast, gain +3 ATK permanently.',
-  trigger: AbilityTrigger.OnSummon,
+  trigger: AbilityTrigger.OnAllySummon,
   effects: [
     {
       type: EffectType.ModifyStats,
@@ -93,7 +88,6 @@ const aquaPebblePassive9: StructuredAbility = {
 
 const aquaPebbleBloom9: StructuredAbility = {
   name: 'Fountain of Life',
-  description: 'At end of turn, fully heal all allied Bloom Beasts.',
   trigger: AbilityTrigger.EndOfTurn,
   effects: [
     {

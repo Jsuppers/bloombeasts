@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, ResourceT
 
 const leafSpritePassive: StructuredAbility = {
   name: 'Evasive',
-  description: 'Leaf Sprite can attack an opposing Bloom Beast directly, ignoring "Guard" or "Block" effects.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -20,7 +19,6 @@ const leafSpritePassive: StructuredAbility = {
 
 const leafSpriteBloom: StructuredAbility = {
   name: 'Pollen Haste',
-  description: 'If Leaf Sprite destroys a Bloom Beast, immediately play one additional Nectar Card this turn.',
   trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
@@ -35,7 +33,6 @@ const leafSpriteBloom: StructuredAbility = {
 // Level 4 upgrades
 const leafSpriteBloom4: StructuredAbility = {
   name: 'Pollen Rush',
-  description: 'If Leaf Sprite destroys a Bloom Beast, play 2 additional Nectar Cards this turn.',
   trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
@@ -50,7 +47,6 @@ const leafSpriteBloom4: StructuredAbility = {
 // Level 7 upgrades
 const leafSpritePassive7: StructuredAbility = {
   name: 'Master Evasion',
-  description: 'Leaf Sprite ignores all defensive abilities and can attack directly.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -70,7 +66,6 @@ const leafSpritePassive7: StructuredAbility = {
 // Level 9 upgrades
 const leafSpritePassive9: StructuredAbility = {
   name: 'Shadow Strike',
-  description: 'Leaf Sprite can attack twice per turn and ignores all defensive abilities.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -88,7 +83,6 @@ const leafSpritePassive9: StructuredAbility = {
 
 const leafSpriteBloom9: StructuredAbility = {
   name: 'Explosive Pollen',
-  description: 'When destroying a Bloom Beast, play 3 Nectar Cards and draw 1 card.',
   trigger: AbilityTrigger.OnDestroy,
   effects: [
     {

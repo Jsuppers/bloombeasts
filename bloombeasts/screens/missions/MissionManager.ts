@@ -322,6 +322,31 @@ export class MissionManager {
         this.completedMissions.set(missionId, completedMissionsData[missionId]);
       }
     }
+
+    // Restore mission unlock state and completion counts from saved data
+    this.restoreMissionState();
+  }
+
+  /**
+   * Restore mission unlock state and completion counts from saved data
+   * This updates the mission definition objects to reflect saved progress
+   */
+  private restoreMissionState(): void {
+    missions.forEach((mission, index) => {
+      // Restore completion count
+      const completionCount = this.completedMissions.get(mission.id) || 0;
+      mission.timesCompleted = completionCount;
+
+      // Unlock mission if it has been completed before
+      if (completionCount > 0) {
+        mission.unlocked = true;
+
+        // Also unlock the next mission
+        if (index + 1 < missions.length) {
+          missions[index + 1].unlocked = true;
+        }
+      }
+    });
   }
 
   /**

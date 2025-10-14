@@ -67,7 +67,6 @@ export interface TrapActivation {
  */
 export interface MagicCard extends Card {
   type: 'Magic';
-  description: string;
   effects: AbilityEffect[];  // Structured effects instead of string
   targetRequired?: boolean;  // Whether the card needs a target
 }
@@ -77,7 +76,6 @@ export interface MagicCard extends Card {
  */
 export interface TrapCard extends Card {
   type: 'Trap';
-  description: string;
   activation: TrapActivation;  // Structured activation instead of string
   effects: AbilityEffect[];     // Structured effects instead of string
   counters?: Counter[];  // Optional counters on the trap card
@@ -88,7 +86,6 @@ export interface TrapCard extends Card {
  */
 export interface HabitatCard extends Card {
   type: 'Habitat';
-  description: string;
   affinity: Affinity;
   ongoingEffects: AbilityEffect[];  // Effects that persist while habitat is active
   onPlayEffects?: AbilityEffect[];  // One-time effects when played
@@ -100,7 +97,6 @@ export interface HabitatCard extends Card {
  */
 export interface BuffCard extends Card {
   type: 'Buff';
-  description: string;
   affinity?: Affinity;  // Optional affinity for buff cards
   ongoingEffects: AbilityEffect[];  // Effects that persist while buff is active
   onPlayEffects?: AbilityEffect[];  // One-time effects when played
@@ -148,7 +144,6 @@ export interface BloomBeastCard extends Card {
  */
 export interface SimpleAbility {
   name: string;
-  description: string;
   trigger?: 'OnSummon' | 'OnAttack' | 'OnDamage' | 'OnDestroy' | 'StartOfTurn' | 'EndOfTurn' | 'Passive' | 'Activated';
 }
 

@@ -229,7 +229,6 @@ This checklist provides actionable refactoring recommendations to reduce codebas
 - **Impact**: Type safety
 
 #### Unused Code
-- [ ] Configure ESLint with no-unused-vars
 - [ ] Remove unused imports
 - [ ] Delete unused variables and functions
 - **Impact**: Cleaner codebase

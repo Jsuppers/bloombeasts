@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, EffectDur
 
 const cirrusFloofPassive: StructuredAbility = {
   name: 'Lightness',
-  description: 'Cirrus Floof cannot be targeted by Bloom Beasts with a Cost of 3 or higher.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -21,7 +20,6 @@ const cirrusFloofPassive: StructuredAbility = {
 
 const cirrusFloofBloom: StructuredAbility = {
   name: 'Cloud Cover',
-  description: 'All allied Bloom Beasts gain 1 temporary HP at the start of your turn.',
   trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
@@ -35,7 +33,6 @@ const cirrusFloofBloom: StructuredAbility = {
 // Level 4 upgrades
 const cirrusFloofBloom4: StructuredAbility = {
   name: 'Storm Shield',
-  description: 'All allied Bloom Beasts gain 2 temporary HP at start of turn.',
   trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
@@ -49,7 +46,6 @@ const cirrusFloofBloom4: StructuredAbility = {
 // Level 7 upgrades
 const cirrusFloofPassive7: StructuredAbility = {
   name: 'Ethereal Form',
-  description: 'Cannot be targeted by any Bloom Beast attacks.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -63,7 +59,6 @@ const cirrusFloofPassive7: StructuredAbility = {
 // Level 9 upgrades
 const cirrusFloofPassive9: StructuredAbility = {
   name: 'Celestial Protector',
-  description: 'Cannot be targeted by anything. Reduce all damage to allies by 1.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -82,7 +77,6 @@ const cirrusFloofPassive9: StructuredAbility = {
 
 const cirrusFloofBloom9: StructuredAbility = {
   name: 'Divine Barrier',
-  description: 'All allied Bloom Beasts gain 3 temporary HP and immunity to negative effects this turn.',
   trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {

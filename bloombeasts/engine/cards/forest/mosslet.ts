@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger } from '..
 
 const mossletPassive: StructuredAbility = {
   name: 'Spores of Defense',
-  description: 'When Mosslet takes damage, place a "Spore" counter on the Habitat Card.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -21,7 +20,6 @@ const mossletPassive: StructuredAbility = {
 
 const mossletBloom: StructuredAbility = {
   name: 'Rapid Growth',
-  description: 'At the start of your turn, Mosslet gains +1 Health for every 2 Spore counters on the Habitat Card.',
   trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
@@ -37,7 +35,6 @@ const mossletBloom: StructuredAbility = {
 // Level 4 upgrades
 const mossletPassive4: StructuredAbility = {
   name: 'Spore Burst',
-  description: 'When Mosslet takes damage, place 2 "Spore" counters on the Habitat Card.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -52,7 +49,6 @@ const mossletPassive4: StructuredAbility = {
 // Level 7 upgrades
 const mossletBloom7: StructuredAbility = {
   name: 'Accelerated Growth',
-  description: 'At the start of your turn, Mosslet gains +2 Health for every 2 Spore counters on the Habitat Card.',
   trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
@@ -67,7 +63,6 @@ const mossletBloom7: StructuredAbility = {
 // Level 9 upgrades
 const mossletPassive9: StructuredAbility = {
   name: 'Spore Dominance',
-  description: 'When Mosslet takes damage, place 2 "Spore" counters on the Habitat Card and heal 1 HP.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -86,7 +81,6 @@ const mossletPassive9: StructuredAbility = {
 
 const mossletBloom9: StructuredAbility = {
   name: 'Maximum Bloom',
-  description: 'At the start of your turn, Mosslet gains +3 Health for every 2 Spore counters. Adjacent allies gain +1 HP.',
   trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {

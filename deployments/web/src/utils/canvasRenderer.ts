@@ -13,6 +13,7 @@ import {
     sideMenuButtonDimensions,
 } from '../../../../shared/constants/dimensions';
 import { standardCardPositions, sideMenuPositions } from '../../../../shared/constants/positions';
+import { getCardDescription } from '../../../../bloombeasts/engine/utils/cardDescriptionGenerator';
 
 // Font constants
 const FONT_FAMILY = 'monospace';
@@ -805,31 +806,12 @@ export class CanvasRenderer {
         const truncatedName = this.truncateText(`${card.name}`, maxNameWidth);
         this.ctx.fillText(truncatedName, x + positions.name.x, y + positions.name.y);
 
-        // Ability/Description - show full text with wrapping
-        // For Bloom beasts, show ability. For Magic/Trap/Habitat/Buff, show description
-        const hasAbility = card.ability;
-        const hasDescription = card.description;
+        // Generate and display description for all card types
+        const cardDescription = getCardDescription(card);
 
-        if (hasAbility) {
-            const abilityText = typeof card.ability === 'object' ?
-                card.ability.description || card.ability.name || '' :
-                card.ability.toString();
-
-            if (abilityText) {
-                this.drawWrappedText(
-                    abilityText,
-                    x + positions.ability.x,
-                    y + positions.ability.y,
-                    180, // Max width for text wrapping
-                    positions.ability.size,
-                    DEFAULT_TEXT_COLOR,
-                    positions.ability.textAlign || 'left'
-                );
-            }
-        } else if (hasDescription) {
-            // For Magic, Trap, and Habitat cards, show description
+        if (cardDescription) {
             this.drawWrappedText(
-                card.description,
+                cardDescription,
                 x + positions.ability.x,
                 y + positions.ability.y,
                 180, // Max width for text wrapping

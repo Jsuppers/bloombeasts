@@ -29,7 +29,6 @@ export const MYSTIC_SHIELD: BuffCard = {
   id: 'mystic-shield',
   name: 'Mystic Shield',
   type: 'Buff',
-  description: 'All your Beasts gain +2 Health.',
   cost: 3,
   ongoingEffects: [defenseBoost],
 };

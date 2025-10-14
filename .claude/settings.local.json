@@ -18,7 +18,9 @@
       "Bash(identify:*)",
       "Read(//c/Users/joris/**)",
       "Bash(npx tsc:*)",
-      "Bash(git mv:*)"
+      "Bash(git mv:*)",
+      "Bash(cat:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

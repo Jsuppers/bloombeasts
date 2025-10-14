@@ -25,7 +25,6 @@ export const VOLCANIC_SCAR: HabitatCard = {
   id: 'volcanic-scar',
   name: 'Volcanic Scar',
   type: 'Habitat',
-  description: 'Deals 1 damage to all non-Fire beasts when played.',
   affinity: 'Fire',
   cost: 1,
   onPlayEffects: [damageNonFire],

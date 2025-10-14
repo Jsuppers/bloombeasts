@@ -8,7 +8,6 @@ import { CardBuilder } from '../CardBuilder';
 
 const cinderPupPassive: StructuredAbility = {
   name: 'Burning Passion',
-  description: 'When Cinder Pup attacks, place a Burn counter (1 damage per turn) on the target Bloom Beast.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -22,7 +21,6 @@ const cinderPupPassive: StructuredAbility = {
 
 const cinderPupBloom: StructuredAbility = {
   name: 'Spitfire',
-  description: "Discard one card to apply an additional Burn counter to any opponent's Bloom Beast.",
   trigger: AbilityTrigger.Activated,
   cost: {
     type: CostType.Discard,
@@ -41,7 +39,6 @@ const cinderPupBloom: StructuredAbility = {
 // Level 4 upgrades
 const cinderPupPassive4: StructuredAbility = {
   name: 'Inferno Bite',
-  description: 'When Cinder Pup attacks, place 2 Burn counters on the target.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -56,7 +53,6 @@ const cinderPupPassive4: StructuredAbility = {
 // Level 7 upgrades
 const cinderPupBloom7: StructuredAbility = {
   name: 'Flame Burst',
-  description: "Discard one card to apply 2 Burn counters to all opponent Bloom Beasts.",
   trigger: AbilityTrigger.Activated,
   cost: {
     type: CostType.Discard,
@@ -75,7 +71,6 @@ const cinderPupBloom7: StructuredAbility = {
 // Level 9 upgrades
 const cinderPupPassive9: StructuredAbility = {
   name: 'Wildfire Aura',
-  description: 'When Cinder Pup attacks, place 3 Burn counters on the target. Burn damage happens immediately.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -89,7 +84,6 @@ const cinderPupPassive9: StructuredAbility = {
 
 const cinderPupBloom9: StructuredAbility = {
   name: 'Apocalypse Flame',
-  description: "Apply 3 Burn counters to all opponent Bloom Beasts and deal 2 damage to opponent Gardener.",
   trigger: AbilityTrigger.Activated,
   effects: [
     {

@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType,
 
 const starBloomPassive: StructuredAbility = {
   name: 'Aura',
-  description: 'All allied Bloom Beasts gain +1 ATK.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -22,7 +21,6 @@ const starBloomPassive: StructuredAbility = {
 
 const starBloomBloom: StructuredAbility = {
   name: 'Celestial Alignment',
-  description: 'Once per game, during the Main Phase, you may search your deck for one Bloom Card and add it to your hand.',
   trigger: AbilityTrigger.Activated,
   maxUsesPerGame: 1,
   effects: [
@@ -38,7 +36,6 @@ const starBloomBloom: StructuredAbility = {
 // Level 4 upgrades
 const starBloomPassive4: StructuredAbility = {
   name: 'Radiant Aura',
-  description: 'All allied Bloom Beasts gain +2 ATK.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -54,7 +51,6 @@ const starBloomPassive4: StructuredAbility = {
 // Level 7 upgrades
 const starBloomBloom7: StructuredAbility = {
   name: 'Cosmic Guidance',
-  description: 'Once per turn, search deck for any card and add it to hand.',
   trigger: AbilityTrigger.Activated,
   maxUsesPerTurn: 1,
   effects: [
@@ -70,7 +66,6 @@ const starBloomBloom7: StructuredAbility = {
 // Level 9 upgrades
 const starBloomPassive9: StructuredAbility = {
   name: 'Astral Dominance',
-  description: 'All allied Bloom Beasts gain +3 ATK and +2 HP.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -92,7 +87,6 @@ const starBloomPassive9: StructuredAbility = {
 
 const starBloomBloom9: StructuredAbility = {
   name: 'Universal Harmony',
-  description: 'Draw 3 cards, search deck for any 2 cards, and all allies gain +2/+2.',
   trigger: AbilityTrigger.Activated,
   effects: [
     {

@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, ResourceT
 
 const rootlingPassive: StructuredAbility = {
   name: 'Deep Roots',
-  description: 'This Bloom Beast cannot be targeted by Magic Cards.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -20,7 +19,6 @@ const rootlingPassive: StructuredAbility = {
 
 const rootlingBloom: StructuredAbility = {
   name: 'Nourish',
-  description: 'When Rootling destroys a Bloom Beast, immediately gain +1 Nectar.',
   trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
@@ -35,7 +33,6 @@ const rootlingBloom: StructuredAbility = {
 // Level 4 upgrades
 const rootlingBloom4: StructuredAbility = {
   name: 'Abundant Nourish',
-  description: 'When Rootling destroys a Bloom Beast, gain +2 Nectar.',
   trigger: AbilityTrigger.OnDestroy,
   effects: [
     {
@@ -50,7 +47,6 @@ const rootlingBloom4: StructuredAbility = {
 // Level 7 upgrades
 const rootlingPassive7: StructuredAbility = {
   name: 'Ancient Roots',
-  description: 'Cannot be targeted by Magic Cards or Trap Cards.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -64,7 +60,6 @@ const rootlingPassive7: StructuredAbility = {
 // Level 9 upgrades
 const rootlingPassive9: StructuredAbility = {
   name: 'Eternal Roots',
-  description: 'Cannot be targeted by Magic, Trap, or opponent Bloom abilities.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -77,7 +72,6 @@ const rootlingPassive9: StructuredAbility = {
 
 const rootlingBloom9: StructuredAbility = {
   name: 'Harvest Feast',
-  description: 'When Rootling destroys a Bloom Beast, gain +2 Nectar and draw 1 card.',
   trigger: AbilityTrigger.OnDestroy,
   effects: [
     {

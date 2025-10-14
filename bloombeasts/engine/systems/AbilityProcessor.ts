@@ -54,6 +54,23 @@ export interface EffectResult {
 
 export class AbilityProcessor implements IAbilityProcessor {
   /**
+   * Deep clone a beast instance to avoid reference issues
+   */
+  private cloneBeast(beast: BloomBeastInstance): BloomBeastInstance {
+    return {
+      ...beast,
+      counters: beast.counters.map(c => ({ ...c })),
+      temporaryEffects: beast.temporaryEffects?.map(e => ({ ...e })) || [],
+      statusEffects: [...beast.statusEffects],
+      immunities: beast.immunities ? [...beast.immunities] : undefined,
+      cannotBeTargetedBy: beast.cannotBeTargetedBy ? [...beast.cannotBeTargetedBy] : undefined,
+      attackModifications: beast.attackModifications ? [...beast.attackModifications] : undefined,
+      preventions: beast.preventions?.map(p => ({ ...p })) || undefined,
+      targetingRestrictions: beast.targetingRestrictions ? { ...beast.targetingRestrictions } : undefined,
+    };
+  }
+
+  /**
    * Process a structured ability
    */
   processAbility(
@@ -185,6 +202,11 @@ export class AbilityProcessor implements IAbilityProcessor {
       case AbilityTarget.AllAllies:
         targets.push(...getAllBeasts(context.controllingPlayer.field));
         break;
+      case AbilityTarget.OtherAlly:
+        // Get all allies except self
+        targets.push(...getAllBeasts(context.controllingPlayer.field)
+          .filter(beast => beast.instanceId !== context.source.instanceId));
+        break;
       case AbilityTarget.AllEnemies:
         targets.push(...getAllBeasts(context.opposingPlayer.field));
         break;
@@ -262,7 +284,11 @@ export class AbilityProcessor implements IAbilityProcessor {
       case ConditionType.IsWilting:
         return context.source.currentHealth === 1;
       case ConditionType.AffinityMatches:
-        // Check if source beast's affinity matches the condition value
+        // For OnAllySummon trigger, check the target (summoned beast)'s affinity
+        // For other triggers, check the source beast's affinity
+        if (context.trigger === 'OnAllySummon' && context.target) {
+          return context.target.affinity === condition.value;
+        }
         const cardDef = context.sourceCard;
         return !!(cardDef && 'affinity' in cardDef && cardDef.affinity === condition.value);
       default:
@@ -281,7 +307,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     const modifiedUnits: BloomBeastInstance[] = [];
 
     for (const target of targets) {
-      const modified = { ...target };
+      const modified = this.cloneBeast(target);
 
       if (effect.stat === StatType.Attack || effect.stat === StatType.Both) {
         modified.currentAttack = Math.max(0, modified.currentAttack + effect.value);
@@ -335,7 +361,7 @@ export class AbilityProcessor implements IAbilityProcessor {
         ? context.source.currentAttack
         : effect.value;
 
-      const modified = { ...target };
+      const modified = this.cloneBeast(target);
       modified.currentHealth = Math.max(0, modified.currentHealth - damage);
       totalDamage += damage;
       modifiedUnits.push(modified);
@@ -380,7 +406,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     const modifiedUnits: BloomBeastInstance[] = [];
 
     for (const target of targets) {
-      const modified = { ...target };
+      const modified = this.cloneBeast(target);
       if (effect.value === 'full') {
         modified.currentHealth = modified.maxHealth;
       } else {
@@ -427,7 +453,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     const modifiedUnits: BloomBeastInstance[] = [];
 
     for (const target of targets) {
-      const modified = { ...target };
+      const modified = this.cloneBeast(target);
       const existingCounter = modified.counters.find(c => c.type === effect.counter);
 
       if (existingCounter) {
@@ -477,7 +503,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     const modifiedUnits: BloomBeastInstance[] = [];
 
     for (const target of targets) {
-      const modified = { ...target };
+      const modified = this.cloneBeast(target);
       modified.immunities = modified.immunities || [];
       modified.immunities.push(...effect.immuneTo);
       modifiedUnits.push(modified);
@@ -501,7 +527,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     const modifiedUnits: BloomBeastInstance[] = [];
 
     for (const target of targets) {
-      const modified = { ...target };
+      const modified = this.cloneBeast(target);
       modified.cannotBeTargetedBy = modified.cannotBeTargetedBy || [];
       modified.cannotBeTargetedBy.push(...effect.by);
       if (effect.costThreshold !== undefined) {
@@ -525,7 +551,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     effect: AttackModificationEffect,
     context: AbilityContext
   ): EffectResult {
-    const modified = { ...context.source };
+    const modified = this.cloneBeast(context.source);
     modified.attackModifications = modified.attackModifications || [];
     modified.attackModifications.push(effect.modification);
 
@@ -611,7 +637,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     const modifiedUnits: BloomBeastInstance[] = [];
 
     for (const target of targets) {
-      const modified = { ...target };
+      const modified = this.cloneBeast(target);
       modified.preventions = modified.preventions || [];
       modified.preventions.push({
         type: effect.type,
@@ -658,7 +684,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     const modifiedUnits: BloomBeastInstance[] = [];
 
     for (const target of targets) {
-      const modified = { ...target };
+      const modified = this.cloneBeast(target);
       modified.currentHealth = 0;
       modifiedUnits.push(modified);
     }
@@ -681,7 +707,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     const modifiedUnits: BloomBeastInstance[] = [];
 
     for (const target of targets) {
-      const modified = { ...target };
+      const modified = this.cloneBeast(target);
       modified.temporaryHP = (modified.temporaryHP || 0) + effect.value;
       modifiedUnits.push(modified);
     }

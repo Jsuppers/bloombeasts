@@ -14,6 +14,8 @@
 import { Player, GameState } from '../../engine/types/game';
 import { Logger } from '../../engine/utils/Logger';
 import { pickRandom } from '../../engine/utils/random';
+import { StatModifierManager } from '../../engine/utils/StatModifierManager';
+import { StatModifierSource } from '../../engine/types/leveling';
 
 export interface PlayCardResult {
   success: boolean;
@@ -99,6 +101,8 @@ export class BattleStateManager {
       instanceId: bloomCard.instanceId || `${bloomCard.id}-${Date.now()}`,
       currentLevel: (bloomCard as any).level || 1,
       currentXP: 0,
+      baseAttack: bloomCard.baseAttack,
+      baseHealth: bloomCard.baseHealth,
       currentAttack: bloomCard.baseAttack,
       currentHealth: bloomCard.baseHealth,
       maxHealth: bloomCard.baseHealth,
@@ -107,15 +111,17 @@ export class BattleStateManager {
       slotIndex: player.field.length,
       summoningSickness: true,
       usedAbilityThisTurn: false,
+      statModifiers: [],
       // Store original card data for display
       type: 'Bloom',
       name: bloomCard.name,
       affinity: bloomCard.affinity,
       cost: bloomCard.cost,
-      baseAttack: bloomCard.baseAttack,
-      baseHealth: bloomCard.baseHealth,
       ability: bloomCard.ability,
     };
+
+    // Initialize stat system
+    StatModifierManager.initializeStatSystem(beastInstance);
 
     player.field.push(beastInstance);
 
@@ -435,11 +441,30 @@ export class BattleStateManager {
     switch (effect.type) {
       case 'modify-stats':
         if (effect.target === 'self') {
+          // Determine duration based on effect.duration or default to end-of-turn
+          const duration = effect.duration || 'end-of-turn';
+          const turnsRemaining = duration === 'end-of-turn' ? 1 : undefined;
+
           if (effect.stat === 'attack') {
-            source.currentAttack += effect.value || 0;
+            StatModifierManager.addModifier(
+              source,
+              StatModifierSource.Ability,
+              source.ability?.name || 'ability',
+              'attack',
+              effect.value || 0,
+              duration,
+              turnsRemaining
+            );
           } else if (effect.stat === 'health') {
-            source.currentHealth += effect.value || 0;
-            source.maxHealth += effect.value || 0;
+            StatModifierManager.addModifier(
+              source,
+              StatModifierSource.Ability,
+              source.ability?.name || 'ability',
+              'maxHealth',
+              effect.value || 0,
+              duration,
+              turnsRemaining
+            );
           }
         }
         break;
@@ -571,14 +596,28 @@ export class BattleStateManager {
 
       case 'modify-stats':
         const statTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        const magicDuration = effect.duration || 'permanent';
         statTarget.forEach((target: any) => {
           if (target.currentAttack !== undefined) {
             if (effect.stat === 'attack' || effect.stat === 'both') {
-              target.currentAttack += effect.value || 0;
+              StatModifierManager.addModifier(
+                target,
+                StatModifierSource.Magic,
+                'magic-card',
+                'attack',
+                effect.value || 0,
+                magicDuration
+              );
             }
             if (effect.stat === 'health' || effect.stat === 'both') {
-              target.currentHealth += effect.value || 0;
-              target.maxHealth += effect.value || 0;
+              StatModifierManager.addModifier(
+                target,
+                StatModifierSource.Magic,
+                'magic-card',
+                'maxHealth',
+                effect.value || 0,
+                magicDuration
+              );
             }
           }
         });
@@ -627,12 +666,26 @@ export class BattleStateManager {
         if (effect.affinity) {
           player.field.forEach((beast: any) => {
             if (beast.affinity === effect.affinity) {
+              const habitatDuration = effect.duration || 'while-active';
               if (effect.stat === 'attack' || effect.stat === 'both') {
-                beast.currentAttack += effect.value || 0;
+                StatModifierManager.addModifier(
+                  beast,
+                  StatModifierSource.Habitat,
+                  'habitat',
+                  'attack',
+                  effect.value || 0,
+                  habitatDuration
+                );
               }
               if (effect.stat === 'health' || effect.stat === 'both') {
-                beast.currentHealth += effect.value || 0;
-                beast.maxHealth += effect.value || 0;
+                StatModifierManager.addModifier(
+                  beast,
+                  StatModifierSource.Habitat,
+                  'habitat',
+                  'maxHealth',
+                  effect.value || 0,
+                  habitatDuration
+                );
               }
             }
           });
@@ -893,16 +946,22 @@ export class BattleStateManager {
    */
   processEndOfTurnTriggers(player: any, opponent: any): void {
     player.field.forEach((beast: any) => {
-      if (!beast || !beast.ability) return;
+      if (!beast) return;
 
-      const ability = beast.ability as any;
+      // Update stat modifiers (remove expired effects)
+      StatModifierManager.updateEndOfTurn(beast);
 
-      if (ability.trigger === 'EndOfTurn') {
-        Logger.debug(`EndOfTurn trigger activated for ${beast.name}!`);
+      // Process ability triggers
+      if (beast.ability) {
+        const ability = beast.ability as any;
 
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            this.processAbilityEffect(effect, beast, player, opponent);
+        if (ability.trigger === 'EndOfTurn') {
+          Logger.debug(`EndOfTurn trigger activated for ${beast.name}!`);
+
+          if (ability.effects && Array.isArray(ability.effects)) {
+            for (const effect of ability.effects) {
+              this.processAbilityEffect(effect, beast, player, opponent);
+            }
           }
         }
       }
@@ -946,26 +1005,48 @@ export class BattleStateManager {
 
   /**
    * Apply stat modification effects from active buff cards
+   * Uses the StatModifierManager to properly track buff zone modifications
+   *
+   * This should be called when:
+   * 1. A buff is played
+   * 2. A new beast is summoned (to apply existing buffs)
+   * 3. A buff is removed from the buff zone
    */
   applyStatBuffEffects(player: any): void {
+    // First, remove all existing buff-zone modifiers from all beasts
+    player.field.forEach((beast: any) => {
+      StatModifierManager.removeModifiersBySource(beast, StatModifierSource.BuffZone);
+    });
+
+    // Now apply current buff effects to all beasts
     if (!player.buffZone || player.buffZone.length === 0) return;
 
     player.buffZone.forEach((buff: any) => {
       if (!buff.ongoingEffects) return;
 
       buff.ongoingEffects.forEach((effect: any) => {
-        if (effect.type === 'modify-stats') {
-          if (effect.target === 'all-allies') {
-            player.field.forEach((beast: any) => {
-              if (effect.stat === 'attack') {
-                beast.currentAttack = (beast.baseAttack || 0) + (effect.value || 0);
-              } else if (effect.stat === 'health') {
-                const healthBoost = effect.value || 0;
-                beast.maxHealth = (beast.baseHealth || 0) + healthBoost;
-                beast.currentHealth = Math.min(beast.currentHealth + healthBoost, beast.maxHealth);
-              }
-            });
-          }
+        if (effect.type === 'modify-stats' && effect.target === 'all-allies') {
+          player.field.forEach((beast: any) => {
+            if (effect.stat === 'attack') {
+              StatModifierManager.addModifier(
+                beast,
+                StatModifierSource.BuffZone,
+                buff.id || buff.name,
+                'attack',
+                effect.value || 0,
+                'while-active'
+              );
+            } else if (effect.stat === 'health') {
+              StatModifierManager.addModifier(
+                beast,
+                StatModifierSource.BuffZone,
+                buff.id || buff.name,
+                'maxHealth',
+                effect.value || 0,
+                'while-active'
+              );
+            }
+          });
         }
       });
     });

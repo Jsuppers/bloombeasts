@@ -13,7 +13,6 @@ const counterHabitatEffect: NullifyEffectEffect = {
 export const HABITAT_LOCK: TrapCard = {
   id: 'habitat-lock',
   name: 'Habitat Lock',
-  description: 'Counter habitat play.',
   type: 'Trap',
   cost: 1,
   activation: {

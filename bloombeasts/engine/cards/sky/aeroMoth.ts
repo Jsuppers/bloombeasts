@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType,
 
 const aeroMothPassive: StructuredAbility = {
   name: 'Wing Flutter',
-  description: 'When Aero-Moth is summoned, draw one card.',
   trigger: AbilityTrigger.OnSummon,
   effects: [
     {
@@ -20,7 +19,6 @@ const aeroMothPassive: StructuredAbility = {
 
 const aeroMothBloom: StructuredAbility = {
   name: 'Gust',
-  description: "When Aero-Moth attacks, swap the position of two opponent's Bloom Beasts.",
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -33,7 +31,6 @@ const aeroMothBloom: StructuredAbility = {
 // Level 4 upgrades
 const aeroMothPassive4: StructuredAbility = {
   name: 'Hypnotic Wings',
-  description: 'When summoned, draw 2 cards.',
   trigger: AbilityTrigger.OnSummon,
   effects: [
     {
@@ -47,7 +44,6 @@ const aeroMothPassive4: StructuredAbility = {
 // Level 7 upgrades
 const aeroMothBloom7: StructuredAbility = {
   name: 'Cyclone',
-  description: 'When attacking, rearrange all opponent Bloom Beasts in any order.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -60,7 +56,6 @@ const aeroMothBloom7: StructuredAbility = {
 // Level 9 upgrades
 const aeroMothPassive9: StructuredAbility = {
   name: 'Rainbow Cascade',
-  description: 'When summoned, draw 3 cards and all allies gain +1/+1.',
   trigger: AbilityTrigger.OnSummon,
   effects: [
     {
@@ -87,7 +82,6 @@ const aeroMothPassive9: StructuredAbility = {
 
 const aeroMothBloom9: StructuredAbility = {
   name: 'Chaos Storm',
-  description: 'When attacking, rearrange opponent Beasts, return one to hand, and draw 2 cards.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {

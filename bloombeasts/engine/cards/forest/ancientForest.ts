@@ -43,7 +43,6 @@ export const ANCIENT_FOREST: HabitatCard = {
   id: 'ancient-forest',
   name: 'Ancient Forest',
   type: 'Habitat',
-  description: 'Forest Beasts gain +1 Health. Removes Burn and Freeze counters when played.',
   affinity: 'Forest',
   cost: 1,
   ongoingEffects: [forestBeastBonus],

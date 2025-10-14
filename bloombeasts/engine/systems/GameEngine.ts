@@ -207,6 +207,8 @@ export class GameEngine {
       affinity: (beastCard as any).affinity || 'Generic',
       currentLevel: 1,
       currentXP: 0,
+      baseAttack: (beastCard as any).baseAttack || 0,
+      baseHealth: (beastCard as any).baseHealth || 0,
       currentAttack: (beastCard as any).baseAttack || 0,
       currentHealth: (beastCard as any).baseHealth || 0,
       maxHealth: (beastCard as any).baseHealth || 0,
@@ -220,8 +222,14 @@ export class GameEngine {
     player.field[position] = instance;
     player.summonsThisTurn++;
 
-    // Trigger summon abilities
+    // Apply passive abilities immediately
+    this.applyPassiveAbilities(instance);
+
+    // Trigger summon abilities on the summoned beast
     this.triggerSummonAbilities(instance);
+
+    // Trigger OnAllySummon abilities on other beasts
+    this.triggerAllySummonAbilities(instance, player);
 
     return true;
   }
@@ -495,6 +503,32 @@ export class GameEngine {
   }
 
   /**
+   * Apply passive abilities to a beast when summoned
+   */
+  private applyPassiveAbilities(beast: BloomBeastInstance): void {
+    const cardDef = this.getCardDefinition(beast.cardId);
+    if (!cardDef || cardDef.type !== 'Bloom') return;
+
+    const beastCard = cardDef as any;
+    if (beastCard.ability && beastCard.ability.trigger === 'Passive') {
+      const activePlayer = this.gameState.players[this.gameState.activePlayer];
+      const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+
+      const results = this.abilityProcessor.processAbility(beastCard.ability, {
+        source: beast,
+        sourceCard: beastCard,
+        trigger: 'Passive',
+        gameState: this.gameState,
+        controllingPlayer: activePlayer,
+        opposingPlayer: opposingPlayer,
+      });
+
+      // Apply ability results to game state (e.g., cannot be targeted effects)
+      this.applyAbilityResults(results);
+    }
+  }
+
+  /**
    * Trigger summon abilities
    */
   private triggerSummonAbilities(beast: BloomBeastInstance): void {
@@ -507,7 +541,7 @@ export class GameEngine {
 
     const beastCard = cardDef as any;
     if (beastCard.ability && beastCard.ability.trigger === 'OnSummon') {
-      this.abilityProcessor.processAbility(beastCard.ability, {
+      const results = this.abilityProcessor.processAbility(beastCard.ability, {
         source: beast,
         sourceCard: beastCard,
         trigger: 'OnSummon',
@@ -515,6 +549,43 @@ export class GameEngine {
         controllingPlayer: activePlayer,
         opposingPlayer: opposingPlayer,
       });
+
+      // Apply ability results to game state
+      this.applyAbilityResults(results);
+    }
+  }
+
+  /**
+   * Trigger OnAllySummon abilities on other beasts when a new ally is summoned
+   */
+  private triggerAllySummonAbilities(summonedBeast: BloomBeastInstance, controllingPlayer: Player): void {
+    const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+
+    // Get the summoned beast's card definition for checking affinity condition
+    const summonedCardDef = this.getCardDefinition(summonedBeast.cardId);
+
+    // Check all other beasts on the same side
+    for (const beast of controllingPlayer.field) {
+      if (!beast || beast.instanceId === summonedBeast.instanceId) continue;
+
+      const cardDef = this.getCardDefinition(beast.cardId);
+      if (!cardDef || cardDef.type !== 'Bloom') continue;
+
+      const beastCard = cardDef as any;
+      if (beastCard.ability && beastCard.ability.trigger === 'OnAllySummon') {
+        const results = this.abilityProcessor.processAbility(beastCard.ability, {
+          source: beast,
+          sourceCard: beastCard,
+          trigger: 'OnAllySummon',
+          target: summonedBeast,  // Pass the summoned beast as target for condition checking
+          gameState: this.gameState,
+          controllingPlayer,
+          opposingPlayer,
+        });
+
+        // Apply ability results to game state
+        this.applyAbilityResults(results);
+      }
     }
   }
 
@@ -534,7 +605,7 @@ export class GameEngine {
 
       const beastCard = cardDef as any;
       if (beastCard.ability && beastCard.ability.trigger === trigger) {
-        this.abilityProcessor.processAbility(beastCard.ability, {
+        const results = this.abilityProcessor.processAbility(beastCard.ability, {
           source: beast,
           sourceCard: beastCard,
           trigger,
@@ -542,6 +613,9 @@ export class GameEngine {
           controllingPlayer,
           opposingPlayer,
         });
+
+        // Apply ability results to game state
+        this.applyAbilityResults(results);
       }
     }
   }
@@ -581,14 +655,41 @@ export class GameEngine {
   }
 
   /**
-   * Clear temporary effects from a beast
+   * Clear temporary effects from a beast and revert stat modifications
    */
   private clearTemporaryEffects(beast: BloomBeastInstance): void {
     if (!beast.temporaryEffects) return;
 
+    // Process effects that are expiring and revert their stat modifications
     beast.temporaryEffects = beast.temporaryEffects.filter(effect => {
       if (effect.turnsRemaining !== undefined) {
         effect.turnsRemaining--;
+
+        // If effect is expiring, revert its stat changes
+        if (effect.turnsRemaining <= 0 && effect.type === 'stat-mod') {
+          const statMod = effect as any;
+
+          // Revert attack modifications
+          if (statMod.stat === 'attack' || statMod.stat === 'both') {
+            beast.currentAttack = Math.max(0, beast.currentAttack - statMod.value);
+          }
+
+          // Revert health modifications (but don't reduce below current if it would "kill" the beast)
+          if (statMod.stat === 'health' || statMod.stat === 'both') {
+            // Only reduce current health if the beast had been healed by this effect
+            if (statMod.value > 0) {
+              beast.currentHealth = Math.max(1, Math.min(beast.maxHealth, beast.currentHealth - statMod.value));
+            }
+            // If it was a debuff (negative), restore health
+            else if (statMod.value < 0) {
+              beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth - statMod.value);
+            }
+          }
+
+          Logger.debug(`Cleared temporary ${statMod.stat} modification (${statMod.value}) from ${beast.instanceId}`);
+          return false; // Remove this effect
+        }
+
         return effect.turnsRemaining > 0;
       }
       return false;
@@ -662,7 +763,7 @@ export class GameEngine {
 
     // Activate the ability
     const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
-    this.abilityProcessor.processAbility(ability, {
+    const results = this.abilityProcessor.processAbility(ability, {
       source: beast,
       sourceCard: beastCard,
       trigger: 'Activated',
@@ -671,6 +772,9 @@ export class GameEngine {
       controllingPlayer: player,
       opposingPlayer: opposingPlayer,
     });
+
+    // Apply ability results to game state
+    this.applyAbilityResults(results);
 
     Logger.debug(`Activated ability: ${ability.name}`);
     return true;
@@ -735,8 +839,8 @@ export class GameEngine {
       const damage = attacker.currentAttack;
       defender.currentHealth = Math.max(0, defender.currentHealth - damage);
 
-      // Trigger OnDamage abilities on defender
-      this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer);
+      // Trigger OnDamage abilities on defender (pass attacker context)
+      this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer, undefined, attacker);
 
       Logger.debug(`${attacker.cardId} attacked ${defender.cardId} for ${damage} damage`);
 
@@ -775,21 +879,28 @@ export class GameEngine {
     trigger: 'OnAttack' | 'OnDamage' | 'OnDestroy',
     beast: BloomBeastInstance,
     controllingPlayer: Player,
-    opposingPlayer: Player
+    opposingPlayer: Player,
+    target?: BloomBeastInstance,
+    attacker?: BloomBeastInstance
   ): void {
     const cardDef = this.getCardDefinition(beast.cardId);
     if (!cardDef || cardDef.type !== 'Bloom') return;
 
     const beastCard = cardDef as BloomBeastCard;
     if (beastCard.ability && beastCard.ability.trigger === trigger) {
-      this.abilityProcessor.processAbility(beastCard.ability as any, {
+      const results = this.abilityProcessor.processAbility(beastCard.ability as any, {
         source: beast,
         sourceCard: beastCard,
         trigger,
+        target,
+        attacker,
         gameState: this.gameState,
         controllingPlayer,
         opposingPlayer,
       });
+
+      // Apply ability results to game state
+      this.applyAbilityResults(results);
     }
   }
 
@@ -895,6 +1006,50 @@ export class GameEngine {
         // Add more effect types as needed
         default:
           Logger.debug(`Unhandled trap effect type: ${effect.type}`);
+      }
+    }
+  }
+
+  /**
+   * Apply ability results to game state
+   */
+  private applyAbilityResults(results: any[]): void {
+    for (const result of results) {
+      if (!result.success) continue;
+
+      // Apply modified units back to the field
+      if (result.modifiedUnits && result.modifiedUnits.length > 0) {
+        for (const modifiedUnit of result.modifiedUnits) {
+          // Find and update the unit in both players' fields
+          for (const player of this.gameState.players) {
+            const index = player.field.findIndex(
+              u => u && u.instanceId === modifiedUnit.instanceId
+            );
+            if (index !== -1) {
+              player.field[index] = modifiedUnit;
+              break;
+            }
+          }
+        }
+      }
+
+      // Apply modified state
+      if (result.modifiedState) {
+        if (result.modifiedState.players) {
+          this.gameState.players = result.modifiedState.players;
+        }
+        if (result.modifiedState.habitatCounters) {
+          this.gameState.habitatCounters = result.modifiedState.habitatCounters;
+        }
+        if (result.modifiedState.drawCardsQueued !== undefined) {
+          const activePlayer = this.gameState.players[this.gameState.activePlayer];
+          this.drawCards(activePlayer, result.modifiedState.drawCardsQueued);
+        }
+      }
+
+      // Log the result message if available
+      if (result.message) {
+        Logger.debug(result.message);
       }
     }
   }

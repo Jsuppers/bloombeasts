@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, EffectDur
 
 const kelpCubPassive: StructuredAbility = {
   name: 'Entangle',
-  description: 'When Kelp Cub attacks, the target Bloom Beast cannot attack next turn.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -20,7 +19,6 @@ const kelpCubPassive: StructuredAbility = {
 
 const kelpCubBloom: StructuredAbility = {
   name: 'Anchor',
-  description: "Kelp Cub cannot be returned to the hand or deck by an opponent's card effect.",
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -35,7 +33,6 @@ const kelpCubBloom: StructuredAbility = {
 // Level 4 upgrades
 const kelpCubPassive4: StructuredAbility = {
   name: 'Binding Vines',
-  description: 'When attacking, target cannot attack or use abilities next turn.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -54,7 +51,6 @@ const kelpCubPassive4: StructuredAbility = {
 // Level 7 upgrades
 const kelpCubBloom7: StructuredAbility = {
   name: 'Deep Anchor',
-  description: 'Cannot be affected by any opponent card effects.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -69,7 +65,6 @@ const kelpCubBloom7: StructuredAbility = {
 // Level 9 upgrades
 const kelpCubPassive9: StructuredAbility = {
   name: 'Strangling Grasp',
-  description: 'When attacking, permanently disable target Bloom Beast (it cannot attack or use abilities).',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -87,7 +82,6 @@ const kelpCubPassive9: StructuredAbility = {
 
 const kelpCubBloom9: StructuredAbility = {
   name: 'Immovable Force',
-  description: 'Cannot be affected by anything. When attacked, entangle the attacker permanently.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {

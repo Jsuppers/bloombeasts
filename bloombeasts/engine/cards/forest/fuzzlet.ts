@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger } from '..
 
 const fuzzletPassive: StructuredAbility = {
   name: 'Spores of Defense',
-  description: 'When Fuzzlet takes damage, place a "Spore" counter on the Habitat Card.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -21,7 +20,6 @@ const fuzzletPassive: StructuredAbility = {
 
 const fuzzletBloom: StructuredAbility = {
   name: 'Rapid Growth',
-  description: 'At the start of your turn, Fuzzlet gains +1 Health for every 2 Spore counters on the Habitat Card.',
   trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
@@ -37,7 +35,6 @@ const fuzzletBloom: StructuredAbility = {
 // Level 4 upgrades
 const fuzzletPassive4: StructuredAbility = {
   name: 'Spore Burst',
-  description: 'When Fuzzlet takes damage, place 2 "Spore" counters on the Habitat Card.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -52,7 +49,6 @@ const fuzzletPassive4: StructuredAbility = {
 // Level 7 upgrades
 const fuzzletBloom7: StructuredAbility = {
   name: 'Accelerated Growth',
-  description: 'At the start of your turn, Fuzzlet gains +2 Health for every 2 Spore counters on the Habitat Card.',
   trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {
@@ -67,7 +63,6 @@ const fuzzletBloom7: StructuredAbility = {
 // Level 9 upgrades
 const fuzzletPassive9: StructuredAbility = {
   name: 'Spore Dominance',
-  description: 'When Fuzzlet takes damage, place 2 "Spore" counters on the Habitat Card and heal 1 HP.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -86,7 +81,6 @@ const fuzzletPassive9: StructuredAbility = {
 
 const fuzzletBloom9: StructuredAbility = {
   name: 'Maximum Bloom',
-  description: 'At the start of your turn, Fuzzlet gains +3 Health for every 2 Spore counters. Adjacent allies gain +1 HP.',
   trigger: AbilityTrigger.StartOfTurn,
   effects: [
     {

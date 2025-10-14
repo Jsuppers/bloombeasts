@@ -103,11 +103,6 @@ export class MagicCardBuilder {
     return this;
   }
 
-  description(description: string): this {
-    this.card.description = description;
-    return this;
-  }
-
   effects(effects: AbilityEffect[]): this {
     this.card.effects = effects;
     return this;
@@ -135,7 +130,6 @@ export class MagicCardBuilder {
     if (!this.card.id) throw new Error('Card ID is required');
     if (!this.card.name) throw new Error('Card name is required');
     if (this.card.cost === undefined) throw new Error('Card cost is required');
-    if (!this.card.description) throw new Error('Card description is required');
     if (!this.card.effects || this.card.effects.length === 0) {
       throw new Error('Card must have at least one effect');
     }
@@ -159,11 +153,6 @@ export class TrapCardBuilder {
 
   cost(cost: number): this {
     this.card.cost = cost;
-    return this;
-  }
-
-  description(description: string): this {
-    this.card.description = description;
     return this;
   }
 
@@ -194,7 +183,6 @@ export class TrapCardBuilder {
     if (!this.card.id) throw new Error('Card ID is required');
     if (!this.card.name) throw new Error('Card name is required');
     if (this.card.cost === undefined) throw new Error('Card cost is required');
-    if (!this.card.description) throw new Error('Card description is required');
     if (!this.card.activation) throw new Error('Card activation is required');
     if (!this.card.effects || this.card.effects.length === 0) {
       throw new Error('Card must have at least one effect');
@@ -227,11 +215,6 @@ export class HabitatCardBuilder {
     return this;
   }
 
-  description(description: string): this {
-    this.card.description = description;
-    return this;
-  }
-
   ongoingEffects(effects: AbilityEffect[]): this {
     this.card.ongoingEffects = effects;
     return this;
@@ -252,7 +235,6 @@ export class HabitatCardBuilder {
     if (!this.card.name) throw new Error('Card name is required');
     if (this.card.cost === undefined) throw new Error('Card cost is required');
     if (!this.card.affinity) throw new Error('Card affinity is required');
-    if (!this.card.description) throw new Error('Card description is required');
     if (!this.card.ongoingEffects || this.card.ongoingEffects.length === 0) {
       throw new Error('Habitat must have at least one ongoing effect');
     }
@@ -284,11 +266,6 @@ export class BuffCardBuilder {
     return this;
   }
 
-  description(description: string): this {
-    this.card.description = description;
-    return this;
-  }
-
   ongoingEffects(effects: AbilityEffect[]): this {
     this.card.ongoingEffects = effects;
     return this;
@@ -313,7 +290,6 @@ export class BuffCardBuilder {
     if (!this.card.id) throw new Error('Card ID is required');
     if (!this.card.name) throw new Error('Card name is required');
     if (this.card.cost === undefined) throw new Error('Card cost is required');
-    if (!this.card.description) throw new Error('Card description is required');
     if (!this.card.ongoingEffects || this.card.ongoingEffects.length === 0) {
       throw new Error('Buff must have at least one ongoing effect');
     }

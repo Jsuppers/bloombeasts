@@ -8,7 +8,6 @@ import { CardBuilder } from '../CardBuilder';
 
 const charcoilPassive: StructuredAbility = {
   name: 'Sooty Defense',
-  description: 'If Charcoil is targeted by a Magic Card, place a "Soot" counter on the Magic Card.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -22,7 +21,6 @@ const charcoilPassive: StructuredAbility = {
 
 const charcoilBloom: StructuredAbility = {
   name: 'Flame Retaliation',
-  description: 'When Charcoil is attacked, if it survives, return 1 damage to the attacking Bloom Beast.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -36,7 +34,6 @@ const charcoilBloom: StructuredAbility = {
 // Level 4 upgrades
 const charcoilBloom4: StructuredAbility = {
   name: 'Burning Retaliation',
-  description: 'When attacked and survives, return 2 damage and apply 1 Burn counter to attacker.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -56,7 +53,6 @@ const charcoilBloom4: StructuredAbility = {
 // Level 7 upgrades
 const charcoilPassive7: StructuredAbility = {
   name: 'Smoke Screen',
-  description: 'If targeted by Magic or Trap, nullify it and place 2 Soot counters.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -77,7 +73,6 @@ const charcoilPassive7: StructuredAbility = {
 // Level 9 upgrades
 const charcoilPassive9: StructuredAbility = {
   name: 'Blazing Vengeance',
-  description: 'Immune to Magic and Trap cards. When targeted by anything, place 3 Burn counters on the source.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {
@@ -97,7 +92,6 @@ const charcoilPassive9: StructuredAbility = {
 
 const charcoilBloom9: StructuredAbility = {
   name: 'Infernal Reflection',
-  description: 'When attacked, reflect all damage back to attacker and apply 2 Burn counters.',
   trigger: AbilityTrigger.OnDamage,
   effects: [
     {

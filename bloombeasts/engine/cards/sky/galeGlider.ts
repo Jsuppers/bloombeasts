@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType,
 
 const galeGliderPassive: StructuredAbility = {
   name: 'First Wind',
-  description: 'Gale Glider always attacks first in a conflict phase.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -20,7 +19,6 @@ const galeGliderPassive: StructuredAbility = {
 
 const galeGliderBloom: StructuredAbility = {
   name: 'Air Current',
-  description: 'When Gale Glider attacks, you may move it to an adjacent empty Beast Slot.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -34,7 +32,6 @@ const galeGliderBloom: StructuredAbility = {
 // Level 4 upgrades
 const galeGliderBloom4: StructuredAbility = {
   name: 'Wind Dance',
-  description: 'After attacking, move to any empty Beast Slot.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
@@ -48,7 +45,6 @@ const galeGliderBloom4: StructuredAbility = {
 // Level 7 upgrades
 const galeGliderPassive7: StructuredAbility = {
   name: 'Storm Blade',
-  description: 'Always attacks first and deals +2 damage if attacking first.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -69,7 +65,6 @@ const galeGliderPassive7: StructuredAbility = {
 // Level 9 upgrades
 const galeGliderPassive9: StructuredAbility = {
   name: 'Tempest Strike',
-  description: 'Attacks first with triple damage. Cannot be counterattacked.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -92,7 +87,6 @@ const galeGliderPassive9: StructuredAbility = {
 
 const galeGliderBloom9: StructuredAbility = {
   name: 'Hurricane Assault',
-  description: 'After attacking, attack again and move to any slot.',
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {

@@ -103,9 +103,14 @@ export interface CardDisplay {
   currentAttack?: number;
   baseHealth?: number;
   currentHealth?: number;
-  ability?: { name: string; description: string; };
+  ability?: any; // Full structured ability with effects for description generation
+  effects?: any[]; // For Magic/Trap/Buff cards
+  ongoingEffects?: any[]; // For Buff/Habitat cards
+  onPlayEffects?: any[]; // For Habitat cards
+  activation?: any; // For Trap cards
   description?: string; // Description for Magic/Trap/Habitat/Buff cards
   counters?: Array<{ type: string; amount: number }>; // Counters on the card
+  titleColor?: string; // Custom title color (hex color)
 }
 
 export interface CardDetailDisplay {
@@ -342,7 +347,7 @@ export class GameManager {
       case 'btn-card-close':
         // Close the card detail overlay based on current screen
         if (this.currentScreen === 'battle') {
-          // Just refresh the battle display to remove the overlay
+          // Refresh battle display
           await this.updateBattleDisplay();
         } else {
           // In cards screen, refresh to remove the overlay

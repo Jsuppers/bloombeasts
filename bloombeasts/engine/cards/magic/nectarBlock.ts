@@ -17,7 +17,6 @@ export const NECTAR_BLOCK: MagicCard = {
   id: 'nectar-block',
   name: 'Nectar Block',
   type: 'Magic',
-  description: 'Gain 2 temporary Nectar this turn.',
   cost: 0,
   effects: [nectarGainEffect],
   targetRequired: false  // No target needed, automatically applies to player

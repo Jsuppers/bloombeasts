@@ -7,7 +7,6 @@ import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, EffectDur
 
 const dewdropDrakePassive: StructuredAbility = {
   name: 'Mist Screen',
-  description: "Opponent's Bloom Beasts can only attack Dewdrop Drake if it is the only beast on the field.",
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -25,7 +24,6 @@ const dewdropDrakePassive: StructuredAbility = {
 
 const dewdropDrakeBloom: StructuredAbility = {
   name: 'Torrent',
-  description: "You may pay 1 Nectar to deal 2 damage to the opponent's Gardener when Dewdrop Drake attacks.",
   trigger: AbilityTrigger.OnAttack,
   cost: {
     type: CostType.Nectar,
@@ -43,7 +41,6 @@ const dewdropDrakeBloom: StructuredAbility = {
 // Level 4 upgrades
 const dewdropDrakeBloom4: StructuredAbility = {
   name: 'Deluge',
-  description: "Pay 1 Nectar to deal 3 damage to opponent Gardener when attacking.",
   trigger: AbilityTrigger.OnAttack,
   cost: {
     type: CostType.Nectar,
@@ -61,7 +58,6 @@ const dewdropDrakeBloom4: StructuredAbility = {
 // Level 7 upgrades
 const dewdropDrakePassive7: StructuredAbility = {
   name: 'Fog Veil',
-  description: 'Opponents must attack Dewdrop Drake first. Reduce all damage taken by 1.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -81,7 +77,6 @@ const dewdropDrakePassive7: StructuredAbility = {
 // Level 9 upgrades
 const dewdropDrakePassive9: StructuredAbility = {
   name: 'Storm Guardian',
-  description: 'All opponents must attack Dewdrop Drake first. Reduce all damage by 2.',
   trigger: AbilityTrigger.Passive,
   effects: [
     {
@@ -100,7 +95,6 @@ const dewdropDrakePassive9: StructuredAbility = {
 
 const dewdropDrakeBloom9: StructuredAbility = {
   name: 'Maelstrom',
-  description: "When attacking, deal 5 damage to opponent Gardener and freeze one opponent Bloom Beast.",
   trigger: AbilityTrigger.OnAttack,
   effects: [
     {
