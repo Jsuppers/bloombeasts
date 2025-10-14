@@ -4,6 +4,7 @@
 
 import { BloomBeastCard } from '../../types/core';
 import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, EffectDuration, ConditionType, Comparison } from '../../types/abilities';
+import { CardBuilder } from '../CardBuilder';
 
 const magmitePassive: StructuredAbility = {
   name: 'Hardened Shell',
@@ -108,16 +109,12 @@ const magmiteBloom9: StructuredAbility = {
   ],
 };
 
-export const MAGMITE: BloomBeastCard = {
-  id: 'magmite',
-  name: 'Magmite',
-  type: 'Bloom',
-  affinity: 'Fire',
-  cost: 3,
-  baseAttack: 4,
-  baseHealth: 6,
-  ability: magmitePassive,
-  levelingConfig: {
+export const MAGMITE: BloomBeastCard = CardBuilder.bloomBeast('magmite', 'Magmite')
+  .affinity('Fire')
+  .cost(3)
+  .stats(4, 6)
+  .ability(magmitePassive)
+  .leveling({
     statGains: {
       1: { hp: 0, atk: 0 },
       2: { hp: 2, atk: 1 },
@@ -140,5 +137,5 @@ export const MAGMITE: BloomBeastCard = {
         ability: magmitePassive9,
       },
     },
-  },
-};
+  })
+  .build();

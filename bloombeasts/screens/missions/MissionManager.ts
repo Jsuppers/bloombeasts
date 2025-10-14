@@ -8,6 +8,7 @@ import { BloomBeastCard, HabitatCard, TrapCard, MagicCard } from '../../engine/t
 import { GameState } from '../../engine/types/game';
 import { getAllCards } from '../../engine/cards';
 import { SimpleMap } from '../../utils/polyfills';
+import { Logger } from '../../engine/utils/Logger';
 
 export interface MissionRunProgress {
   missionId: string;
@@ -39,7 +40,7 @@ export class MissionManager {
   startMission(missionId: string): Mission | null {
     const mission = getMissionById(missionId);
     if (!mission) {
-      console.error(`Mission ${missionId} not found`);
+      Logger.error(`Mission ${missionId} not found`);
       return null;
     }
 

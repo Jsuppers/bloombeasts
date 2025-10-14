@@ -4,6 +4,7 @@
 
 import { BloomBeastCard } from '../../types/core';
 import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, ImmunityType, EffectDuration } from '../../types/abilities';
+import { CardBuilder } from '../CardBuilder';
 
 const charcoilPassive: StructuredAbility = {
   name: 'Sooty Defense',
@@ -113,16 +114,12 @@ const charcoilBloom9: StructuredAbility = {
   ],
 };
 
-export const CHARCOIL: BloomBeastCard = {
-  id: 'charcoil',
-  name: 'Charcoil',
-  type: 'Bloom',
-  affinity: 'Fire',
-  cost: 2,
-  baseAttack: 3,
-  baseHealth: 4,
-  ability: charcoilBloom,
-  levelingConfig: {
+export const CHARCOIL: BloomBeastCard = CardBuilder.bloomBeast('charcoil', 'Charcoil')
+  .affinity('Fire')
+  .cost(2)
+  .stats(3, 4)
+  .ability(charcoilBloom)
+  .leveling({
     statGains: {
       1: { hp: 0, atk: 0 },
       2: { hp: 1, atk: 1 },
@@ -145,5 +142,5 @@ export const CHARCOIL: BloomBeastCard = {
         ability: charcoilPassive9,
       },
     },
-  },
-};
+  })
+  .build();

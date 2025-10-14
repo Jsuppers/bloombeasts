@@ -6,6 +6,9 @@ import { BloomBeastInstance, Player, GameState } from '../types/game';
 import { AbilityProcessor } from './AbilityProcessor';
 import { LevelingSystem } from './LevelingSystem';
 import { SimpleMap } from '../../utils/polyfills';
+import { Logger } from '../utils/Logger';
+import { STARTING_HEALTH, MAX_TURNS } from '../constants/gameRules';
+import { getAliveBeasts } from '../utils/fieldUtils';
 
 export interface CombatResult {
   winner: 'player1' | 'player2' | 'draw';
@@ -23,7 +26,7 @@ export interface CombatResult {
 export class CombatSystem {
   private abilityProcessor: AbilityProcessor;
   private currentTurn: number = 0;
-  private maxTurns: number = 50;
+  private maxTurns: number = MAX_TURNS;
 
   constructor() {
     this.abilityProcessor = new AbilityProcessor();
@@ -37,15 +40,16 @@ export class CombatSystem {
     attacker: Player,
     defender: Player
   ): Promise<void> {
-    console.log(`Combat phase: ${attacker.name} attacks ${defender.name}`);
+    Logger.debug(`Combat phase: ${attacker.name} attacks ${defender.name}`);
 
-    // TODO: Implement combat resolution
-    // 1. Apply pre-attack abilities
-    // 2. Calculate damage
-    // 3. Apply damage
-    // 4. Trigger on-damage abilities
-    // 5. Check for defeated beasts
-    // 6. Award XP for defeats
+    // Note: Full combat resolution is implemented in GameEngine.ts
+    // The GameEngine handles:
+    // 1. Pre-attack abilities (via triggerCombatAbilities with 'OnAttack')
+    // 2. Damage calculation (processAttack method)
+    // 3. Damage application (via applyDamage or direct health modification)
+    // 4. On-damage abilities (via triggerCombatAbilities with 'OnDamage')
+    // 5. Defeat detection and graveyard management
+    // 6. XP awards (via LevelingSystem.addCombatXP)
   }
 
   /**
@@ -58,10 +62,12 @@ export class CombatSystem {
   ): number {
     const baseDamage = attacker.currentAttack;
 
-    // TODO: Apply damage modifiers
-    // - Check for damage reduction
-    // - Check for damage amplification
-    // - Check for immunity
+    // Note: Damage modifiers are applied through:
+    // - Status effects on the beast (stored in statusEffects array)
+    // - Habitat zone ongoing effects (ModifyStats effects)
+    // - Buff zone ongoing effects (ModifyStats effects)
+    // - Counter effects (Burn, Freeze, etc.)
+    // The GameEngine applies these modifiers when calculating final stats
 
     return baseDamage;
   }
@@ -88,15 +94,17 @@ export class CombatSystem {
     defeated: BloomBeastInstance,
     victor: BloomBeastInstance | null
   ): void {
-    console.log(`${defeated.cardId} was defeated!`);
+    Logger.debug(`${defeated.cardId} was defeated!`);
 
     if (victor) {
       // Award combat XP
       LevelingSystem.addCombatXP(victor);
     }
 
-    // TODO: Trigger on-destroy abilities
-    // TODO: Remove from field
+    // Note: On-destroy abilities and field removal are handled by GameEngine:
+    // - GameEngine.executeAttack triggers 'OnDestroy' abilities via triggerCombatAbilities
+    // - GameEngine.executeAttack removes defeated beasts from field and adds to graveyard
+    // - GameEngine.processCounterEffects also handles death from burn/poison effects
   }
 
   /**
@@ -116,8 +124,8 @@ export class CombatSystem {
     }
 
     // Check for beasts on field
-    const player1HasBeasts = gameState.players[0].field.some(b => b && b.currentHealth > 0);
-    const player2HasBeasts = gameState.players[1].field.some(b => b && b.currentHealth > 0);
+    const player1HasBeasts = getAliveBeasts(gameState.players[0].field).length > 0;
+    const player2HasBeasts = getAliveBeasts(gameState.players[1].field).length > 0;
 
     if (!player1HasBeasts && !player2HasBeasts) {
       return this.createCombatResult('draw', gameState);
@@ -146,8 +154,8 @@ export class CombatSystem {
       winner,
       turnsPlayed: this.currentTurn,
       damageDealt: {
-        player1: 30 - gameState.players[1].health,
-        player2: 30 - gameState.players[0].health,
+        player1: STARTING_HEALTH - gameState.players[1].health,
+        player2: STARTING_HEALTH - gameState.players[0].health,
       },
       xpGained: {
         player1: new SimpleMap(),

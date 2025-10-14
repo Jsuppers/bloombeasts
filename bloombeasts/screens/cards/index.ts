@@ -83,7 +83,8 @@ export class Cards {
    */
   private closeCards(): void {
     console.log('Closing cards...');
-    // TODO: Return to main menu or game
+    // Note: Navigation integration point - return to previous screen (menu or game)
+    // Future: Implement screen stack or navigation manager
   }
 }
 

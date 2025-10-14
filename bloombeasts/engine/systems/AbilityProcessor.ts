@@ -5,6 +5,8 @@
 import { BloomBeastInstance } from '../types/leveling';
 import { GameState, Player } from '../types/game';
 import { BloomBeastCard, Counter, CounterType } from '../types/core';
+import { getAllBeasts, getAdjacentBeasts } from '../utils/fieldUtils';
+import { pickRandom } from '../utils/random';
 import {
   AbilityEffect,
   AbilityTarget,
@@ -180,19 +182,14 @@ export class AbilityProcessor {
         if (context.attacker) targets.push(context.attacker);
         break;
       case AbilityTarget.AllAllies:
-        targets.push(...context.controllingPlayer.field.filter(u => u !== null) as BloomBeastInstance[]);
+        targets.push(...getAllBeasts(context.controllingPlayer.field));
         break;
       case AbilityTarget.AllEnemies:
-        targets.push(...context.opposingPlayer.field.filter(u => u !== null) as BloomBeastInstance[]);
+        targets.push(...getAllBeasts(context.opposingPlayer.field));
         break;
       case AbilityTarget.AdjacentAllies:
-        const sourceIndex = context.source.slotIndex;
-        if (sourceIndex > 0 && context.controllingPlayer.field[sourceIndex - 1]) {
-          targets.push(context.controllingPlayer.field[sourceIndex - 1]!);
-        }
-        if (sourceIndex < 4 && context.controllingPlayer.field[sourceIndex + 1]) {
-          targets.push(context.controllingPlayer.field[sourceIndex + 1]!);
-        }
+        const adjacentAllies = getAdjacentBeasts(context.controllingPlayer.field, context.source.slotIndex);
+        targets.push(...adjacentAllies);
         break;
       case AbilityTarget.AdjacentEnemies:
         const adjacentIndices = [context.source.slotIndex - 1, context.source.slotIndex, context.source.slotIndex + 1]
@@ -204,9 +201,10 @@ export class AbilityProcessor {
         }
         break;
       case AbilityTarget.RandomEnemy:
-        const enemies = context.opposingPlayer.field.filter(u => u !== null) as BloomBeastInstance[];
-        if (enemies.length > 0) {
-          targets.push(enemies[Math.floor(Math.random() * enemies.length)]);
+        const enemies = getAllBeasts(context.opposingPlayer.field);
+        const randomEnemy = pickRandom(enemies);
+        if (randomEnemy) {
+          targets.push(randomEnemy);
         }
         break;
       case AbilityTarget.DamagedEnemies:

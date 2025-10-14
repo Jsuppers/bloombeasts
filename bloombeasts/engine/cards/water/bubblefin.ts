@@ -4,6 +4,7 @@
 
 import { BloomBeastCard } from '../../types/core';
 import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, StatType, EffectDuration } from '../../types/abilities';
+import { CardBuilder } from '../CardBuilder';
 
 const bubblefinPassive: StructuredAbility = {
   name: 'Emerge',
@@ -97,16 +98,12 @@ const bubblefinBloom9: StructuredAbility = {
   ],
 };
 
-export const BUBBLEFIN: BloomBeastCard = {
-  id: 'bubblefin',
-  name: 'Bubblefin',
-  type: 'Bloom',
-  affinity: 'Water',
-  cost: 2,
-  baseAttack: 2,
-  baseHealth: 5,
-  ability: bubblefinPassive,
-  levelingConfig: {
+export const BUBBLEFIN: BloomBeastCard = CardBuilder.bloomBeast('bubblefin', 'Bubblefin')
+  .affinity('Water')
+  .cost(2)
+  .stats(2, 5)
+  .ability(bubblefinPassive)
+  .leveling({
     statGains: {
       1: { hp: 0, atk: 0 },
       2: { hp: 2, atk: 0 },
@@ -129,5 +126,5 @@ export const BUBBLEFIN: BloomBeastCard = {
         ability: bubblefinPassive9,
       },
     },
-  },
-};
+  })
+  .build();

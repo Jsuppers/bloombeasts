@@ -5,6 +5,7 @@
 import { Mission } from './types';
 import { getAvailableMissions, getCompletedMissions } from './definitions';
 import { MissionManager } from './MissionManager';
+import { Logger } from '../../engine/utils/Logger';
 
 export interface MissionDisplayData {
   mission: Mission;
@@ -189,15 +190,15 @@ export class MissionSelectionUI {
     const mission = this.missionManager.startMission(missionId);
 
     if (!mission) {
-      console.error('Failed to start mission:', missionId);
+      Logger.error('Failed to start mission:', missionId);
       return false;
     }
 
-    console.log(`Starting mission: ${mission.name}`);
+    Logger.debug(`Starting mission: ${mission.name}`);
     if (mission.opponentAI) {
-      console.log(`Opponent: ${mission.opponentAI.name}`);
+      Logger.debug(`Opponent: ${mission.opponentAI.name}`);
     }
-    console.log(`Difficulty: ${mission.difficulty}`);
+    Logger.debug(`Difficulty: ${mission.difficulty}`);
 
     return true;
   }

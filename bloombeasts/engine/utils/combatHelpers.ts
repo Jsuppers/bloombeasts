@@ -4,6 +4,9 @@
 
 import { BloomBeastInstance, Player, GameState } from '../types/game';
 import { AbilityEffect } from '../types/abilities';
+import { Logger } from './Logger';
+import { FIELD_SIZE } from '../constants/gameRules';
+import { getAllBeasts, getAliveBeasts } from './fieldUtils';
 
 /**
  * Calculate damage after applying modifiers
@@ -74,22 +77,17 @@ export function getValidTargets(
   const targets: BloomBeastInstance[] = [];
 
   // Check for taunt effects
-  const taunters = opponent.field.filter(b =>
-    b && b.statusEffects?.some(e => e.type === 'taunt')
-  ) as BloomBeastInstance[];
+  const allOpponentBeasts = getAllBeasts(opponent.field);
+  const taunters = allOpponentBeasts.filter(b =>
+    b.statusEffects?.some(e => e.type === 'taunt')
+  );
 
   if (taunters.length > 0) {
     return taunters;
   }
 
-  // Otherwise all opponent beasts are valid targets
-  opponent.field.forEach(beast => {
-    if (beast && beast.currentHealth > 0) {
-      targets.push(beast);
-    }
-  });
-
-  return targets;
+  // Otherwise all alive opponent beasts are valid targets
+  return getAliveBeasts(opponent.field);
 }
 
 /**
@@ -115,7 +113,7 @@ export function applyStatusEffect(
 
   // Check for immunity
   if (hasAbilityEffect(beast, 'immunity')) {
-    console.log(`${beast.cardId} is immune to status effects`);
+    Logger.debug(`${beast.cardId} is immune to status effects`);
     return;
   }
 
@@ -185,7 +183,7 @@ export function isAdjacent(pos1: number, pos2: number): boolean {
 export function getAdjacentPositions(position: number): number[] {
   const adjacent: number[] = [];
   if (position > 0) adjacent.push(position - 1);
-  if (position < 2) adjacent.push(position + 1);
+  if (position < FIELD_SIZE - 1) adjacent.push(position + 1);
   return adjacent;
 }
 
@@ -193,7 +191,7 @@ export function getAdjacentPositions(position: number): number[] {
  * Check if player has lost (no beasts on field and no cards in hand)
  */
 export function hasPlayerLost(player: Player): boolean {
-  const hasFieldBeasts = player.field.some(b => b && b.currentHealth > 0);
+  const hasFieldBeasts = getAliveBeasts(player.field).length > 0;
   const hasPlayableCards = player.hand.length > 0 || player.deck.length > 0;
 
   return !hasFieldBeasts && !hasPlayableCards;

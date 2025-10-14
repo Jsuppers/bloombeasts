@@ -16,6 +16,8 @@ import {
   AbilityTarget,
   ResourceType
 } from '../types/abilities';
+import { Logger } from '../utils/Logger';
+import { STARTING_HEALTH, MAX_NECTAR, FIELD_SIZE } from '../constants/gameRules';
 
 export interface MatchOptions {
   player1Name?: string;
@@ -74,12 +76,12 @@ export class GameEngine {
   private createPlayer(name: string): Player {
     return {
       name,
-      health: 30,
+      health: STARTING_HEALTH,
       currentNectar: 0,
       deck: [],
       hand: [],
-      field: [null, null, null],
-      trapZone: [null, null, null],
+      field: Array(FIELD_SIZE).fill(null),
+      trapZone: Array(FIELD_SIZE).fill(null),
       buffZone: [null, null],
       graveyard: [],
       summonsThisTurn: 0,
@@ -95,7 +97,7 @@ export class GameEngine {
     player2Deck: DeckList,
     options: MatchOptions = {}
   ): Promise<void> {
-    console.log('Starting new match...');
+    Logger.debug('Starting new match...');
 
     // Set player names
     if (options.player1Name) {
@@ -128,7 +130,7 @@ export class GameEngine {
   private async startTurn(): Promise<void> {
     const activePlayer = this.gameState.players[this.gameState.activePlayer];
 
-    console.log(`Turn ${this.gameState.turn}: ${activePlayer.name}'s turn`);
+    Logger.debug(`Turn ${this.gameState.turn}: ${activePlayer.name}'s turn`);
 
     // Reset turn counters
     activePlayer.summonsThisTurn = 0;
@@ -139,7 +141,7 @@ export class GameEngine {
     }
 
     // Gain nectar
-    activePlayer.currentNectar = Math.min(10, this.gameState.turn);
+    activePlayer.currentNectar = Math.min(MAX_NECTAR, this.gameState.turn);
 
     // Trigger start of turn abilities
     await this.triggerStartOfTurnAbilities();
@@ -183,17 +185,17 @@ export class GameEngine {
     position: number
   ): boolean {
     if (position < 0 || position > 2) {
-      console.error('Invalid field position');
+      Logger.error('Invalid field position');
       return false;
     }
 
     if (player.field[position] !== null) {
-      console.error('Field position already occupied');
+      Logger.error('Field position already occupied');
       return false;
     }
 
     if (player.summonsThisTurn >= 1) {
-      console.error('Already summoned this turn');
+      Logger.error('Already summoned this turn');
       return false;
     }
 
@@ -231,7 +233,7 @@ export class GameEngine {
     target?: any
   ): Promise<boolean> {
     if (cardIndex < 0 || cardIndex >= player.hand.length) {
-      console.error('Invalid card index');
+      Logger.error('Invalid card index');
       return false;
     }
 
@@ -239,7 +241,7 @@ export class GameEngine {
 
     // Check nectar cost
     if (card.cost > player.currentNectar) {
-      console.error('Not enough nectar');
+      Logger.error('Not enough nectar');
       return false;
     }
 
@@ -275,7 +277,7 @@ export class GameEngine {
             player.graveyard.push(this.gameState.habitatZone);
           }
           this.gameState.habitatZone = card;
-          console.log(`Played habitat: ${card.name}`);
+          Logger.debug(`Played habitat: ${card.name}`);
           // Apply habitat effects
           this.applyHabitatEffects();
         } else {
@@ -288,7 +290,7 @@ export class GameEngine {
         // Execute magic card effect immediately
         this.processMagicCard(card as MagicCard, player, target);
         player.graveyard.push(card);
-        console.log(`Played magic card: ${card.name}`);
+        Logger.debug(`Played magic card: ${card.name}`);
         break;
 
       case 'Trap':
@@ -296,10 +298,10 @@ export class GameEngine {
         const emptyTrapSlot = player.trapZone.findIndex(slot => slot === null);
         if (emptyTrapSlot !== -1) {
           player.trapZone[emptyTrapSlot] = card;
-          console.log(`Set trap card: ${card.name}`);
+          Logger.debug(`Set trap card: ${card.name}`);
         } else {
           // No trap slots available, send to graveyard
-          console.log('No trap slots available');
+          Logger.debug('No trap slots available');
           player.graveyard.push(card);
         }
         break;
@@ -319,7 +321,7 @@ export class GameEngine {
       switch (effect.type) {
         case EffectType.GainResource:
           if (effect.resource === ResourceType.Nectar) {
-            player.currentNectar = Math.min(10, player.currentNectar + effect.value);
+            player.currentNectar = Math.min(MAX_NECTAR, player.currentNectar + effect.value);
           }
           break;
 
@@ -356,7 +358,7 @@ export class GameEngine {
 
         // Add more effect types as needed
         default:
-          console.log(`Unhandled magic card effect type: ${effect.type}`);
+          Logger.debug(`Unhandled magic card effect type: ${effect.type}`);
       }
     }
   }
@@ -379,7 +381,7 @@ export class GameEngine {
     }
 
     // Ongoing effects are applied continuously and checked during combat/ability processing
-    console.log(`Habitat ${habitat.name} active with ${habitat.ongoingEffects?.length || 0} ongoing effects`);
+    Logger.debug(`Habitat ${habitat.name} active with ${habitat.ongoingEffects?.length || 0} ongoing effects`);
   }
 
   /**
@@ -413,11 +415,11 @@ export class GameEngine {
 
       // Ongoing effects like stat boosts are handled by the AbilityProcessor during combat
       case EffectType.ModifyStats:
-        console.log(`Habitat provides ongoing stat modifications`);
+        Logger.debug(`Habitat provides ongoing stat modifications`);
         break;
 
       default:
-        console.log(`Unhandled habitat effect type: ${effect.type}`);
+        Logger.debug(`Unhandled habitat effect type: ${effect.type}`);
     }
   }
 
@@ -553,7 +555,7 @@ export class GameEngine {
       const burnCounter = beast.counters.find(c => c.type === 'Burn');
       if (burnCounter && burnCounter.amount > 0) {
         beast.currentHealth = Math.max(0, beast.currentHealth - burnCounter.amount);
-        console.log(`${beast.instanceId} took ${burnCounter.amount} burn damage`);
+        Logger.debug(`${beast.instanceId} took ${burnCounter.amount} burn damage`);
       }
 
       // Process freeze counters (reduce by 1 each turn)
@@ -607,27 +609,27 @@ export class GameEngine {
     target?: any
   ): boolean {
     if (beastIndex < 0 || beastIndex >= player.field.length) {
-      console.error('Invalid beast index');
+      Logger.error('Invalid beast index');
       return false;
     }
 
     const beast = player.field[beastIndex];
     if (!beast) {
-      console.error('No beast at this position');
+      Logger.error('No beast at this position');
       return false;
     }
 
     // Get card definition
     const cardDef = this.getCardDefinition(beast.cardId);
     if (!cardDef || cardDef.type !== 'Bloom') {
-      console.error('Invalid beast card');
+      Logger.error('Invalid beast card');
       return false;
     }
 
     const beastCard = cardDef as BloomBeastCard;
     // Check if the ability is activated type
     if (!beastCard.ability || beastCard.ability.trigger !== 'Activated') {
-      console.error('Beast has no activated ability');
+      Logger.error('Beast has no activated ability');
       return false;
     }
 
@@ -637,14 +639,14 @@ export class GameEngine {
       switch (ability.cost.type) {
         case 'nectar':
           if (player.currentNectar < (ability.cost.value || 1)) {
-            console.error('Not enough nectar');
+            Logger.error('Not enough nectar');
             return false;
           }
           player.currentNectar -= ability.cost.value || 1;
           break;
         case 'discard':
           if (player.hand.length < (ability.cost.value || 1)) {
-            console.error('Not enough cards to discard');
+            Logger.error('Not enough cards to discard');
             return false;
           }
           // Discard cards
@@ -668,7 +670,7 @@ export class GameEngine {
       opposingPlayer: opposingPlayer,
     });
 
-    console.log(`Activated ability: ${ability.name}`);
+    Logger.debug(`Activated ability: ${ability.name}`);
     return true;
   }
 
@@ -676,7 +678,7 @@ export class GameEngine {
    * End the match
    */
   private endMatch(result: any): void {
-    console.log('Match ended!', result);
+    Logger.debug('Match ended!', result);
     // TODO: Handle match end, rewards, etc.
   }
 
@@ -690,18 +692,18 @@ export class GameEngine {
     targetIndex?: number
   ): Promise<boolean> {
     if (attackerIndex < 0 || attackerIndex >= attackingPlayer.field.length) {
-      console.error('Invalid attacker index');
+      Logger.error('Invalid attacker index');
       return false;
     }
 
     const attacker = attackingPlayer.field[attackerIndex];
     if (!attacker) {
-      console.error('No beast at attacker position');
+      Logger.error('No beast at attacker position');
       return false;
     }
 
     if (attacker.summoningSickness) {
-      console.error('Beast has summoning sickness');
+      Logger.error('Beast has summoning sickness');
       return false;
     }
 
@@ -713,7 +715,7 @@ export class GameEngine {
 
     // If attack was negated by trap, return
     if (attackData.attackNegated) {
-      console.log('Attack was negated by a trap');
+      Logger.debug('Attack was negated by a trap');
       return false;
     }
 
@@ -723,7 +725,7 @@ export class GameEngine {
     if (targetType === 'beast' && targetIndex !== undefined) {
       const defender = defendingPlayer.field[targetIndex];
       if (!defender) {
-        console.error('No beast at defender position');
+        Logger.error('No beast at defender position');
         return false;
       }
 
@@ -734,7 +736,7 @@ export class GameEngine {
       // Trigger OnDamage abilities on defender
       this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer);
 
-      console.log(`${attacker.cardId} attacked ${defender.cardId} for ${damage} damage`);
+      Logger.debug(`${attacker.cardId} attacked ${defender.cardId} for ${damage} damage`);
 
       // Check if defender was destroyed
       if (defender.currentHealth <= 0) {
@@ -749,11 +751,11 @@ export class GameEngine {
       // Direct attack to player
       const damage = attacker.currentAttack;
       defendingPlayer.health = Math.max(0, defendingPlayer.health - damage);
-      console.log(`${attacker.cardId} attacked player for ${damage} damage`);
+      Logger.debug(`${attacker.cardId} attacked player for ${damage} damage`);
 
       // Check if player was defeated
       if (defendingPlayer.health <= 0) {
-        console.log(`${defendingPlayer.name} was defeated!`);
+        Logger.debug(`${defendingPlayer.name} was defeated!`);
         const result = this.combatSystem.checkWinCondition(this.gameState);
         if (result) {
           this.endMatch(result);
@@ -826,7 +828,7 @@ export class GameEngine {
       }
 
       if (shouldTrigger) {
-        console.log(`Trap activated: ${trap.name}`);
+        Logger.debug(`Trap activated: ${trap.name}`);
 
         // Process trap effect
         await this.processTrapEffect(trap, opposingPlayer, triggeringPlayer, data);
@@ -853,12 +855,12 @@ export class GameEngine {
         case EffectType.NullifyEffect:
           // Counter/nullify the triggering effect
           if (data && data.habitatCard) {
-            console.log(`Habitat countered by ${trap.name}`);
+            Logger.debug(`Habitat countered by ${trap.name}`);
             data.countered = true;
           }
           if (data && data.attackNegated !== undefined) {
             data.attackNegated = true;
-            console.log(`Attack negated by ${trap.name}`);
+            Logger.debug(`Attack negated by ${trap.name}`);
           }
           break;
 
@@ -890,7 +892,7 @@ export class GameEngine {
 
         // Add more effect types as needed
         default:
-          console.log(`Unhandled trap effect type: ${effect.type}`);
+          Logger.debug(`Unhandled trap effect type: ${effect.type}`);
       }
     }
   }

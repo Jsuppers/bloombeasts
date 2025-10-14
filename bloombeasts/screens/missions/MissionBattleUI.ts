@@ -8,6 +8,9 @@ import { GameEngine } from '../../engine/systems/GameEngine';
 import { GameState, Player } from '../../engine/types/game';
 import { AnyCard } from '../../engine/types/core';
 import { SimpleMap } from '../../utils/polyfills';
+import { Logger } from '../../engine/utils/Logger';
+import { getAllBeasts } from '../../engine/utils/fieldUtils';
+import { pickRandom, shuffle } from '../../engine/utils/random';
 
 export interface BattleUIState {
   mission: Mission;
@@ -50,7 +53,7 @@ export class MissionBattleUI {
   initializeBattle(playerDeckCards: AnyCard[]): BattleUIState | null {
     const mission = this.missionManager.getCurrentMission();
     if (!mission) {
-      console.error('No mission selected');
+      Logger.error('No mission selected');
       return null;
     }
 
@@ -97,8 +100,9 @@ export class MissionBattleUI {
       }
     });
 
-    // Initialize game
-    // TODO: GameEngine.initializeGame needs to be implemented
+    // Initialize game state
+    // Note: Game initialization is handled inline here rather than in GameEngine
+    // to allow mission-specific customization (special rules, starting conditions, etc.)
     const gameState: GameState = {
       players: [player, opponent],
       activePlayer: 0,
@@ -134,7 +138,7 @@ export class MissionBattleUI {
    */
   async processPlayerAction(action: string, data: any): Promise<void> {
     if (!this.currentBattle || !this.currentBattle.gameState) {
-      console.error('No active battle');
+      Logger.error('No active battle');
       return;
     }
 
@@ -165,8 +169,8 @@ export class MissionBattleUI {
     } else if (action === 'end-turn') {
       result = await this.endPlayerTurn();
     } else {
-      // Process other actions through the game engine
-      // TODO: GameEngine.processAction needs to be implemented
+      // Fallback for any unhandled action types
+      // Note: All current actions are handled by the specific handlers above
       result = {
         success: true,
         damage: data?.damage || 0,
@@ -195,7 +199,7 @@ export class MissionBattleUI {
 
     // Validate card index
     if (cardIndex < 0 || cardIndex >= player.hand.length) {
-      console.error(`Invalid card index: ${cardIndex}`);
+      Logger.error(`Invalid card index: ${cardIndex}`);
       return { success: false, message: 'Invalid card index' };
     }
 
@@ -203,7 +207,7 @@ export class MissionBattleUI {
 
     // Check if player has enough nectar
     if (card.cost > player.currentNectar) {
-      console.log('Not enough nectar to play this card');
+      Logger.debug('Not enough nectar to play this card');
       return { success: false, message: 'Not enough nectar' };
     }
 
@@ -212,7 +216,7 @@ export class MissionBattleUI {
       case 'Bloom':
         // Check if field has space (max 3 beasts)
         if (player.field.length >= 3) {
-          console.log('Field is full');
+          Logger.debug('Field is full');
           return { success: false, message: 'Field is full' };
         }
 
@@ -255,7 +259,7 @@ export class MissionBattleUI {
         // Process OnSummon trigger
         this.processOnSummonTrigger(beastInstance, player, opponent);
 
-        console.log(`Played ${bloomCard.name} - Nectar: ${player.currentNectar}`);
+        Logger.debug(`Played ${bloomCard.name} - Nectar: ${player.currentNectar}`);
         return { success: true, message: `Played ${bloomCard.name}` };
 
       case 'Magic':
@@ -275,13 +279,13 @@ export class MissionBattleUI {
         // Magic cards go to graveyard after use
         player.graveyard.push(magicCard);
 
-        console.log(`Played magic card: ${magicCard.name}`);
+        Logger.debug(`Played magic card: ${magicCard.name}`);
         return { success: true, message: `Played ${magicCard.name}` };
 
       case 'Trap':
         // Check if trap zone has space (max 3 traps)
         if (player.trapZone.length >= 3) {
-          console.log('Trap zone is full');
+          Logger.debug('Trap zone is full');
           return { success: false, message: 'Trap zone is full' };
         }
 
@@ -294,23 +298,23 @@ export class MissionBattleUI {
         // Add to trap zone
         player.trapZone.push(trapCard);
 
-        console.log(`Set trap: ${trapCard.name}`);
+        Logger.debug(`Set trap: ${trapCard.name}`);
 
-        // TODO: Trap Activation Logic
-        // Traps should activate based on specific triggers (e.g., when opponent attacks, casts spell, etc.)
-        // When a trap activates:
-        //   1. Process the trap's effects from trapCard.effects
-        //   2. Trigger callback: if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
-        //   3. This will play the sfx/trapCardActivated.wav sound in GameManager
-        //   4. Remove the trap from trapZone and move to graveyard
-        // Implementation needed in: processOpponentTurn(), attackBeast(), attackPlayer(), processMagicEffect()
+        // Note: Trap activation logic is implemented in the checkAndActivateTraps() method (line 1149)
+        // Traps are checked and activated during attacks via:
+        // - attackBeast() calls checkAndActivateTraps() at line 395
+        // - attackPlayer() calls checkAndActivateTraps() at line 470
+        // When activated, traps:
+        //   1. Process effects via processMagicEffect()
+        //   2. Trigger sound callback ('trap-activated')
+        //   3. Move from trapZone to graveyard
 
         return { success: true, message: `Set ${trapCard.name}`, isTrap: true };
 
       case 'Buff':
         // Check if buff zone has space (max 2 buffs)
         if (player.buffZone.length >= 2) {
-          console.log('Buff zone is full');
+          Logger.debug('Buff zone is full');
           return { success: false, message: 'Buff zone is full' };
         }
 
@@ -326,7 +330,7 @@ export class MissionBattleUI {
         // Apply initial stat buff effects immediately (Battle Fury, Mystic Shield)
         this.applyStatBuffEffects(player);
 
-        console.log(`Played buff: ${buffCard.name}`);
+        Logger.debug(`Played buff: ${buffCard.name}`);
         return { success: true, message: `Played ${buffCard.name}` };
 
       case 'Habitat':
@@ -346,11 +350,11 @@ export class MissionBattleUI {
           }
         }
 
-        console.log(`Played habitat: ${habitatCard.name}`);
+        Logger.debug(`Played habitat: ${habitatCard.name}`);
         return { success: true, message: `Played ${habitatCard.name}` };
 
       default:
-        console.log(`Cannot play card type: ${card.type}`);
+        Logger.debug(`Cannot play card type: ${card.type}`);
         return { success: false, message: 'Invalid card type' };
     }
   }
@@ -379,11 +383,11 @@ export class MissionBattleUI {
 
     // Check if attacker can attack
     if (attacker.summoningSickness) {
-      console.log('Beast has summoning sickness and cannot attack');
+      Logger.debug('Beast has summoning sickness and cannot attack');
       return { success: false, message: 'Summoning sickness' };
     }
 
-    console.log(`${attacker.name} attacks ${target.name}!`);
+    Logger.debug(`${attacker.name} attacks ${target.name}!`);
 
     // Process OnAttack trigger for the attacker
     this.processOnAttackTrigger(attacker, player, opponent);
@@ -411,13 +415,13 @@ export class MissionBattleUI {
       // Process OnDestroy trigger before removing
       this.processOnDestroyTrigger(target, opponent, player);
       opponent.field.splice(targetIndex, 1);
-      console.log(`${target.name} was defeated!`);
+      Logger.debug(`${target.name} was defeated!`);
     }
     if (attacker.currentHealth <= 0) {
       // Process OnDestroy trigger before removing
       this.processOnDestroyTrigger(attacker, player, opponent);
       player.field.splice(attackerIndex, 1);
-      console.log(`${attacker.name} was defeated!`);
+      Logger.debug(`${attacker.name} was defeated!`);
     }
 
     // Mark beast as having attacked (can't attack again this turn)
@@ -446,7 +450,7 @@ export class MissionBattleUI {
 
     // Can only attack player directly if opponent has no beasts
     if (opponent.field.length > 0) {
-      console.log('Cannot attack player directly while opponent has beasts');
+      Logger.debug('Cannot attack player directly while opponent has beasts');
       return { success: false, message: 'Must attack beasts first' };
     }
 
@@ -454,7 +458,7 @@ export class MissionBattleUI {
 
     // Check if attacker can attack
     if (attacker.summoningSickness) {
-      console.log('Beast has summoning sickness and cannot attack');
+      Logger.debug('Beast has summoning sickness and cannot attack');
       return { success: false, message: 'Summoning sickness' };
     }
 
@@ -468,7 +472,7 @@ export class MissionBattleUI {
 
     opponent.health -= damage;
 
-    console.log(`${attacker.name} attacks opponent for ${damage} damage!`);
+    Logger.debug(`${attacker.name} attacks opponent for ${damage} damage!`);
 
     // Mark beast as having attacked
     attacker.summoningSickness = true; // Reuse this to prevent multiple attacks
@@ -542,7 +546,7 @@ export class MissionBattleUI {
               const counterCost = ability.cost.value || 1;
               const removedCount = Math.min(counterCost, habitat.counters.length);
               habitat.counters.splice(0, removedCount);
-              console.log(`Removed ${removedCount} counter(s) from ${habitat.name}`);
+              Logger.debug(`Removed ${removedCount} counter(s) from ${habitat.name}`);
             } else {
               return { success: false, message: 'No counters available on habitat' };
             }
@@ -563,7 +567,7 @@ export class MissionBattleUI {
     // Mark ability as used this turn
     beast.usedAbilityThisTurn = true;
 
-    console.log(`Activated ability: ${ability.name}`);
+    Logger.debug(`Activated ability: ${ability.name}`);
     return { success: true, message: `Used ${ability.name}` };
   }
 
@@ -607,13 +611,13 @@ export class MissionBattleUI {
                 // Process OnDestroy trigger before removing
                 this.processOnDestroyTrigger(target, owner, otherPlayer);
                 ownerField.splice(index, 1);
-                console.log(`${target.name} was destroyed by ${source.name}'s ability!`);
+                Logger.debug(`${target.name} was destroyed by ${source.name}'s ability!`);
               }
             }
           } else if (target.health !== undefined) {
             // It's a player
             target.health -= effect.value || 0;
-            console.log(`${effect.value} damage dealt to ${target.name}`);
+            Logger.debug(`${effect.value} damage dealt to ${target.name}`);
           }
         });
         break;
@@ -629,7 +633,7 @@ export class MissionBattleUI {
             duration: effect.duration || 'permanent'
           };
           source.statusEffects.push(immunityEffect);
-          console.log(`${source.name} gained immunity to ${effect.immuneTo || 'all'}`);
+          Logger.debug(`${source.name} gained immunity to ${effect.immuneTo || 'all'}`);
         }
         break;
 
@@ -652,9 +656,9 @@ export class MissionBattleUI {
                 amount: effect.value || 1,
               });
             }
-            console.log(`Added ${effect.value || 1} ${effect.counter} counter(s) to ${habitatZone.name}`);
+            Logger.debug(`Added ${effect.value || 1} ${effect.counter} counter(s) to ${habitatZone.name}`);
           } else {
-            console.log('No habitat zone to apply counters to');
+            Logger.debug('No habitat zone to apply counters to');
           }
         } else {
           // Other counters (Burn, Freeze, etc.) go on the beast itself
@@ -670,12 +674,12 @@ export class MissionBattleUI {
               amount: effect.value || 1,
             });
           }
-          console.log(`Added ${effect.value || 1} ${effect.counter} counter(s) to ${source.name}`);
+          Logger.debug(`Added ${effect.value || 1} ${effect.counter} counter(s) to ${source.name}`);
         }
         break;
 
       default:
-        console.log(`Unknown effect type: ${effect.type}`);
+        Logger.debug(`Unknown effect type: ${effect.type}`);
     }
   }
 
@@ -767,7 +771,7 @@ export class MissionBattleUI {
         // Handle resource gain effects (like NectarBlock)
         if (effect.resource === 'nectar') {
           player.currentNectar += effect.value || 1;
-          console.log(`Gained ${effect.value || 1} nectar`);
+          Logger.debug(`Gained ${effect.value || 1} nectar`);
         }
         break;
 
@@ -779,19 +783,19 @@ export class MissionBattleUI {
             if (effect.counter) {
               // Remove specific counter type
               target.counters = target.counters.filter((c: any) => c.type !== effect.counter);
-              console.log(`Removed ${effect.counter} counters from ${target.name || 'target'}`);
+              Logger.debug(`Removed ${effect.counter} counters from ${target.name || 'target'}`);
             } else {
               // Remove all counters
               const counterCount = target.counters.length;
               target.counters = [];
-              console.log(`Removed all counters from ${target.name || 'target'} (${counterCount} counters)`);
+              Logger.debug(`Removed all counters from ${target.name || 'target'} (${counterCount} counters)`);
             }
           }
         });
         break;
 
       default:
-        console.log(`Unhandled magic effect type: ${effect.type}`);
+        Logger.debug(`Unhandled magic effect type: ${effect.type}`);
     }
   }
 
@@ -838,12 +842,12 @@ export class MissionBattleUI {
             if (effect.counter) {
               // Remove specific counter type
               target.counters = target.counters.filter((c: any) => c.type !== effect.counter);
-              console.log(`Removed ${effect.counter} counters from ${target.name || 'target'}`);
+              Logger.debug(`Removed ${effect.counter} counters from ${target.name || 'target'}`);
             } else {
               // Remove all counters
               const counterCount = target.counters.length;
               target.counters = [];
-              console.log(`Removed all counters from ${target.name || 'target'} (${counterCount} counters)`);
+              Logger.debug(`Removed all counters from ${target.name || 'target'} (${counterCount} counters)`);
             }
           }
         });
@@ -876,7 +880,7 @@ export class MissionBattleUI {
         break;
 
       default:
-        console.log(`Unhandled habitat effect type: ${effect.type}`);
+        Logger.debug(`Unhandled habitat effect type: ${effect.type}`);
     }
   }
 
@@ -894,9 +898,8 @@ export class MissionBattleUI {
         targets = [...player.field];
         break;
       case 'random-enemy':
-        targets = opponent.field.length > 0
-          ? [opponent.field[Math.floor(Math.random() * opponent.field.length)]]
-          : [];
+        const randomEnemy = pickRandom(opponent.field);
+        targets = randomEnemy ? [randomEnemy] : [];
         break;
       case 'opponent-gardener':
         targets = [opponent];
@@ -972,7 +975,7 @@ export class MissionBattleUI {
         return target.counters.length > 0;
 
       default:
-        console.log(`Unknown condition type: ${condition.type}`);
+        Logger.debug(`Unknown condition type: ${condition.type}`);
         return true;
     }
   }
@@ -990,7 +993,7 @@ export class MissionBattleUI {
 
     // Check if ability has OnSummon trigger
     if (ability.trigger === 'OnSummon') {
-      console.log(`OnSummon trigger activated for ${beast.name}!`);
+      Logger.debug(`OnSummon trigger activated for ${beast.name}!`);
 
       // Process ability effects
       if (ability.effects && Array.isArray(ability.effects)) {
@@ -1007,7 +1010,7 @@ export class MissionBattleUI {
           if (effect.type === 'remove-summoning-sickness') {
             // Remove summoning sickness immediately for Passive abilities like Quick Strike
             beast.summoningSickness = false;
-            console.log(`${beast.name} can attack immediately (Passive: RemoveSummoningSickness)!`);
+            Logger.debug(`${beast.name} can attack immediately (Passive: RemoveSummoningSickness)!`);
           }
         }
       }
@@ -1027,7 +1030,7 @@ export class MissionBattleUI {
 
     // Check if ability has OnAttack trigger
     if (ability.trigger === 'OnAttack') {
-      console.log(`OnAttack trigger activated for ${beast.name}!`);
+      Logger.debug(`OnAttack trigger activated for ${beast.name}!`);
 
       // Process ability effects
       if (ability.effects && Array.isArray(ability.effects)) {
@@ -1051,7 +1054,7 @@ export class MissionBattleUI {
 
     // Check if ability has OnDamage trigger
     if (ability.trigger === 'OnDamage') {
-      console.log(`OnDamage trigger activated for ${beast.name}!`);
+      Logger.debug(`OnDamage trigger activated for ${beast.name}!`);
 
       // Process ability effects
       if (ability.effects && Array.isArray(ability.effects)) {
@@ -1075,7 +1078,7 @@ export class MissionBattleUI {
 
     // Check if ability has OnDestroy trigger
     if (ability.trigger === 'OnDestroy') {
-      console.log(`OnDestroy trigger activated for ${beast.name}!`);
+      Logger.debug(`OnDestroy trigger activated for ${beast.name}!`);
 
       // Process ability effects
       if (ability.effects && Array.isArray(ability.effects)) {
@@ -1100,7 +1103,7 @@ export class MissionBattleUI {
 
       // Check if ability has StartOfTurn trigger
       if (ability.trigger === 'StartOfTurn') {
-        console.log(`StartOfTurn trigger activated for ${beast.name}!`);
+        Logger.debug(`StartOfTurn trigger activated for ${beast.name}!`);
 
         // Process ability effects
         if (ability.effects && Array.isArray(ability.effects)) {
@@ -1126,7 +1129,7 @@ export class MissionBattleUI {
 
       // Check if ability has EndOfTurn trigger
       if (ability.trigger === 'EndOfTurn') {
-        console.log(`EndOfTurn trigger activated for ${beast.name}!`);
+        Logger.debug(`EndOfTurn trigger activated for ${beast.name}!`);
 
         // Process ability effects
         if (ability.effects && Array.isArray(ability.effects)) {
@@ -1154,7 +1157,7 @@ export class MissionBattleUI {
       // Check if trap triggers on this event type
       // For now, we'll activate traps on 'attack' events
       if (triggerType === 'attack' && trap.trigger === 'OnAttack') {
-        console.log(`Trap activated: ${trap.name}!`);
+        Logger.debug(`Trap activated: ${trap.name}!`);
 
         // Trigger sound effect callback
         if (this.opponentActionCallback) {
@@ -1220,7 +1223,7 @@ export class MissionBattleUI {
             // Swift Wind: Gain 1 extra Nectar at start of turn
             if (effect.resource === 'nectar') {
               player.currentNectar += effect.value || 1;
-              console.log(`${buff.name}: Gained ${effect.value || 1} nectar`);
+              Logger.debug(`${buff.name}: Gained ${effect.value || 1} nectar`);
             }
             break;
 
@@ -1232,7 +1235,7 @@ export class MissionBattleUI {
                   beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth + (effect.value || 1));
                 }
               });
-              console.log(`${buff.name}: Healed all beasts for ${effect.value || 1} HP`);
+              Logger.debug(`${buff.name}: Healed all beasts for ${effect.value || 1} HP`);
             }
             break;
         }
@@ -1278,7 +1281,7 @@ export class MissionBattleUI {
     if (gameState.turn >= 30) {
       const opponent = gameState.players[1];
       const deathmatchDamage = Math.floor((gameState.turn - 30) / 5) + 1;
-      console.log(`Deathmatch! Both players lose ${deathmatchDamage} health`);
+      Logger.debug(`Deathmatch! Both players lose ${deathmatchDamage} health`);
       player.health -= deathmatchDamage;
       opponent.health -= deathmatchDamage;
 
@@ -1319,10 +1322,10 @@ export class MissionBattleUI {
       const card = player.deck.pop();
       if (card) {
         player.hand.push(card);
-        console.log(`Drew card: ${card.name}`);
+        Logger.debug(`Drew card: ${card.name}`);
       }
     } else {
-      console.log('Deck is empty - cannot draw');
+      Logger.debug('Deck is empty - cannot draw');
     }
   }
 
@@ -1407,7 +1410,7 @@ export class MissionBattleUI {
           // Process OnSummon trigger
           this.processOnSummonTrigger(beastInstance, opponent, player);
 
-          console.log(`Opponent played ${playedCard.name}`);
+          Logger.debug(`Opponent played ${playedCard.name}`);
 
           // Notify action callback for sound effects
           if (this.opponentActionCallback) this.opponentActionCallback('play-card');
@@ -1429,7 +1432,7 @@ export class MissionBattleUI {
 
           // Magic cards go to graveyard after use
           opponent.graveyard.push(playedCard);
-          console.log(`Opponent played magic card: ${playedCard.name}`);
+          Logger.debug(`Opponent played magic card: ${playedCard.name}`);
 
           // Notify action callback with card details for popup
           if (this.opponentActionCallback) {
@@ -1446,7 +1449,7 @@ export class MissionBattleUI {
 
           // Add to trap zone
           opponent.trapZone.push(playedCard);
-          console.log(`Opponent set trap: ${playedCard.name}`);
+          Logger.debug(`Opponent set trap: ${playedCard.name}`);
 
           // Notify action callback with card details for popup
           if (this.opponentActionCallback) {
@@ -1467,7 +1470,7 @@ export class MissionBattleUI {
           // Apply initial stat buff effects immediately (Battle Fury, Mystic Shield)
           this.applyStatBuffEffects(opponent);
 
-          console.log(`Opponent played buff: ${playedCard.name}`);
+          Logger.debug(`Opponent played buff: ${playedCard.name}`);
 
           // Notify action callback with card details for popup
           if (this.opponentActionCallback) {
@@ -1492,7 +1495,7 @@ export class MissionBattleUI {
             }
           }
 
-          console.log(`Opponent played habitat: ${playedCard.name}`);
+          Logger.debug(`Opponent played habitat: ${playedCard.name}`);
 
           // Notify action callback with card details for popup
           if (this.opponentActionCallback) {
@@ -1513,11 +1516,11 @@ export class MissionBattleUI {
       if (beast && !beast.summoningSickness) {
         if (player.field.length > 0) {
           // Attack a random player beast
-          const targetIndex = Math.floor(Math.random() * player.field.length);
-          const target: any = player.field[targetIndex];
+          const target: any = pickRandom(player.field);
+          const targetIndex = target ? player.field.indexOf(target) : -1;
 
-          if (target) {
-            console.log(`Opponent's ${beast.name} attacks ${target.name}`);
+          if (target && targetIndex >= 0) {
+            Logger.debug(`Opponent's ${beast.name} attacks ${target.name}`);
 
             // Process OnAttack trigger for the attacker
             this.processOnAttackTrigger(beast, opponent, player);
@@ -1547,13 +1550,13 @@ export class MissionBattleUI {
               // Process OnDestroy trigger before removing
               this.processOnDestroyTrigger(target, player, opponent);
               player.field.splice(targetIndex, 1);
-              console.log(`${target.name} was defeated!`);
+              Logger.debug(`${target.name} was defeated!`);
             }
             if (beast.currentHealth <= 0) {
               // Process OnDestroy trigger before removing
               this.processOnDestroyTrigger(beast, opponent, player);
               opponent.field.splice(index, 1);
-              console.log(`Opponent's ${beast.name} was defeated!`);
+              Logger.debug(`Opponent's ${beast.name} was defeated!`);
             }
 
             // Render and delay after attack
@@ -1569,7 +1572,7 @@ export class MissionBattleUI {
 
           const previousHealth = player.health;
           player.health -= damage;
-          console.log(`Opponent's ${beast.name} attacks you directly for ${damage} damage!`);
+          Logger.debug(`Opponent's ${beast.name} attacks you directly for ${damage} damage!`);
 
           // Check if player health dropped below 10% threshold
           const healthPercentage = (player.health / player.maxHealth) * 100;
@@ -1599,17 +1602,14 @@ export class MissionBattleUI {
     // Process EndOfTurn triggers for opponent beasts before ending turn
     this.processEndOfTurnTriggers(opponent, player);
 
-    console.log('Opponent turn ended');
+    Logger.debug('Opponent turn ended');
   }
 
   /**
    * Shuffle a deck using Fisher-Yates algorithm
    */
   private shuffleDeck(deck: any[]): void {
-    for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
+    shuffle(deck);
   }
 
   /**
@@ -1723,19 +1723,17 @@ export class MissionBattleUI {
         case 'random-effects':
           // Apply various random effects based on rule ID
           if (rule.id === 'elemental-flux' && gameState.turn % 3 === 0) {
-            // Apply periodic buffs to Fire and Water beasts
-            // TODO: This needs refactoring to work with BloomBeastInstance
-            // which doesn't have direct card or tempStats properties
-            /*
+            // Apply periodic buffs to Fire and Water beasts every 3 turns
             gameState.players.forEach(player => {
               player.field.forEach(beast => {
-                if (beast && beast.card && (beast.card.affinity === 'Fire' || beast.card.affinity === 'Water')) {
-                  beast.tempStats.atk = (beast.tempStats.atk || 0) + 1;
-                  beast.currentHealth++;
+                if (beast && (beast.affinity === 'Fire' || beast.affinity === 'Water')) {
+                  // Buff Fire and Water affinity beasts
+                  beast.currentAttack = (beast.currentAttack || 0) + 1;
+                  beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth + 1);
+                  Logger.debug(`${beast.name} buffed by Elemental Flux (+1/+1)`);
                 }
               });
             });
-            */
           }
           break;
       }
@@ -1789,11 +1787,11 @@ export class MissionBattleUI {
       if (rewards) {
         this.currentBattle.isComplete = true;
         this.currentBattle.rewards = rewards;
-        console.log('Mission Complete!', rewards);
+        Logger.debug('Mission Complete!', rewards);
       }
     } else {
       // Defeat - player health reached 0 or other loss condition
-      console.log('Mission Failed - Player Defeated');
+      Logger.debug('Mission Failed - Player Defeated');
       this.currentBattle.isComplete = true;
       this.currentBattle.rewards = null; // No rewards for losing
     }

@@ -4,6 +4,7 @@
 
 import { BloomBeastCard } from '../../types/core';
 import { StructuredAbility, EffectType, AbilityTarget, AbilityTrigger, CostType } from '../../types/abilities';
+import { CardBuilder } from '../CardBuilder';
 
 const cinderPupPassive: StructuredAbility = {
   name: 'Burning Passion',
@@ -105,16 +106,12 @@ const cinderPupBloom9: StructuredAbility = {
   ],
 };
 
-export const CINDER_PUP: BloomBeastCard = {
-  id: 'cinder-pup',
-  name: 'Cinder Pup',
-  type: 'Bloom',
-  affinity: 'Fire',
-  cost: 2,
-  baseAttack: 2,
-  baseHealth: 3,
-  ability: cinderPupPassive,
-  levelingConfig: {
+export const CINDER_PUP: BloomBeastCard = CardBuilder.bloomBeast('cinder-pup', 'Cinder Pup')
+  .affinity('Fire')
+  .cost(2)
+  .stats(2, 3)
+  .ability(cinderPupPassive)
+  .leveling({
     statGains: {
       1: { hp: 0, atk: 0 },
       2: { hp: 1, atk: 1 },
@@ -137,5 +134,5 @@ export const CINDER_PUP: BloomBeastCard = {
         ability: cinderPupPassive9,
       },
     },
-  },
-};
+  })
+  .build();

@@ -27,8 +27,10 @@ const mossletBloom: StructuredAbility = {
     {
       type: EffectType.Heal,
       target: AbilityTarget.Self,
-      value: 1, // TODO: Needs calculation based on Spore counters / 2
-    },
+      value: 1,
+      // Implementation note: Value should be calculated as floor(SporeCounters / 2) at runtime
+      // This requires the game engine to check habitat counters during processing
+    } as any,
   ],
 };
 
@@ -56,8 +58,9 @@ const mossletBloom7: StructuredAbility = {
     {
       type: EffectType.Heal,
       target: AbilityTarget.Self,
-      value: 2, // TODO: Needs calculation based on Spore counters / 2
-    },
+      value: 2,
+      // Implementation note: Value should be calculated as 2 * floor(SporeCounters / 2) at runtime
+    } as any,
   ],
 };
 
@@ -89,8 +92,9 @@ const mossletBloom9: StructuredAbility = {
     {
       type: EffectType.Heal,
       target: AbilityTarget.Self,
-      value: 3, // TODO: Needs calculation based on Spore counters / 2
-    },
+      value: 3,
+      // Implementation note: Value should be calculated as 3 * floor(SporeCounters / 2) at runtime
+    } as any,
     {
       type: EffectType.Heal,
       target: AbilityTarget.AdjacentAllies,

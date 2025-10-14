@@ -21,7 +21,9 @@ export class MenuController {
     console.log(`Starting ${mode.type} game with ${mode.difficulty} difficulty...`);
     this.currentState = 'game';
 
-    // TODO: Initialize game engine
+    // Note: Game engine integration point for future menu-initiated games
+    // Currently, missions are started through MissionManager -> MissionBattleUI
+    // Future: Add direct game mode support (quick play, practice matches, etc.)
     // const gameEngine = new GameEngine();
     // await gameEngine.initialize();
     // await gameEngine.startMatch(mode);
@@ -36,7 +38,8 @@ export class MenuController {
     console.log('Opening inventory...');
     this.currentState = 'inventory';
 
-    // TODO: Initialize inventory view
+    // Note: Inventory integration point - Cards system exists (screens/cards/)
+    // Future: Connect MenuController to Cards.initialize() for full inventory view
     // const inventory = new InventoryView();
     // await inventory.display();
 
@@ -50,7 +53,8 @@ export class MenuController {
     console.log('Opening settings...');
     this.currentState = 'settings';
 
-    // TODO: Initialize settings menu
+    // Note: Settings menu integration point
+    // Future: Implement SettingsMenu for audio, graphics, controls configuration
     // const settings = new SettingsMenu();
     // await settings.display();
 
@@ -64,7 +68,8 @@ export class MenuController {
     console.log('Thanks for playing Bloom Beasts!');
     console.log('Goodbye!');
 
-    // TODO: Save game state before exiting
+    // Note: Save system integration point
+    // Future: Implement SaveManager to persist game state before exit
     // await this.saveGameState();
     // process.exit(0);
   }
@@ -90,7 +95,8 @@ export class MenuController {
   public async loadSavedGame(): Promise<boolean> {
     console.log('Loading saved game...');
 
-    // TODO: Implement save game loading
+    // Note: Save game loading integration point
+    // Future: Implement SaveManager.load() to restore player progress
     // const saveData = await SaveManager.load();
     // if (saveData) {
     //   await this.startGame(saveData.mode);

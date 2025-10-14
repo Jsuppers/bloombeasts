@@ -10,6 +10,7 @@ import {
   AbilityTrigger,
   ConditionType
 } from '../../types/abilities';
+import { CardBuilder } from '../CardBuilder';
 
 const blazefinchPassive: StructuredAbility = {
   name: 'Quick Strike',
@@ -105,16 +106,12 @@ const blazefinchBloom9: StructuredAbility = {
   ],
 };
 
-export const BLAZEFINCH: BloomBeastCard = {
-  id: 'blazefinch',
-  name: 'Blazefinch',
-  type: 'Bloom',
-  affinity: 'Fire',
-  cost: 1,
-  baseAttack: 1,
-  baseHealth: 2,
-  ability: blazefinchPassive,
-  levelingConfig: {
+export const BLAZEFINCH: BloomBeastCard = CardBuilder.bloomBeast('blazefinch', 'Blazefinch')
+  .affinity('Fire')
+  .cost(1)
+  .stats(1, 2)
+  .ability(blazefinchPassive)
+  .leveling({
     statGains: {
       1: { hp: 0, atk: 0 },
       2: { hp: 0, atk: 1 },
@@ -137,5 +134,5 @@ export const BLAZEFINCH: BloomBeastCard = {
         ability: blazefinchPassive9,
       },
     },
-  },
-};
+  })
+  .build();

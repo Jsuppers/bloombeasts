@@ -12,19 +12,22 @@ import { MissionManager } from './screens/missions/MissionManager';
 import { MissionSelectionUI } from './screens/missions/MissionSelectionUI';
 import { MissionBattleUI } from './screens/missions/MissionBattleUI';
 import { GameEngine } from './engine/systems/GameEngine';
-import { LevelingSystem } from './engine/systems/LevelingSystem';
 import {
   buildFireDeck,
   buildWaterDeck,
   buildForestDeck,
   buildSkyDeck,
-  DeckList,
-  getStarterDeck
+  DeckList
 } from './engine/utils/deckBuilder';
-import { BloomBeastCard, AnyCard } from './engine/types/core';
+import { AnyCard } from './engine/types/core';
 import { Mission } from './screens/missions/types';
 import { getAllCards } from './engine/cards';
 import { SoundManager, SoundSettings } from './systems/SoundManager';
+import { SaveLoadManager, PlayerData as SaveLoadPlayerData, PlayerItem as SaveLoadPlayerItem } from './systems/SaveLoadManager';
+import { CardCollectionManager } from './systems/CardCollectionManager';
+import { BattleDisplayManager } from './systems/BattleDisplayManager';
+import { Logger } from './engine/utils/Logger';
+import { DECK_SIZE, STARTING_HEALTH, TURN_TIME_LIMIT, FIELD_SIZE } from './engine/constants/gameRules';
 
 export interface MenuStats {
   playerLevel: number;
@@ -176,6 +179,11 @@ export class GameManager {
   private gameEngine: GameEngine;
   private soundManager: SoundManager;
 
+  // Manager instances
+  private saveLoadManager: SaveLoadManager;
+  private cardCollectionManager: CardCollectionManager;
+  private battleDisplayManager: BattleDisplayManager;
+
   // Platform callbacks
   private platform: PlatformCallbacks;
 
@@ -200,6 +208,11 @@ export class GameManager {
     this.missionUI = new MissionSelectionUI(this.missionManager);
     this.gameEngine = new GameEngine();
     this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine);
+
+    // Initialize managers
+    this.saveLoadManager = new SaveLoadManager(this.platform);
+    this.cardCollectionManager = new CardCollectionManager();
+    this.battleDisplayManager = new BattleDisplayManager();
 
     // Initialize sound manager
     this.soundManager = new SoundManager({
@@ -238,7 +251,7 @@ export class GameManager {
    * Initialize the game
    */
   async initialize(): Promise<void> {
-    console.log('Initializing Bloom Beasts...');
+    Logger.info('Initializing Bloom Beasts...');
 
     // Load saved data
     await this.loadGameData();
@@ -281,7 +294,7 @@ export class GameManager {
    * Handle button clicks
    */
   private async handleButtonClick(buttonId: string): Promise<void> {
-    console.log(`Button clicked: ${buttonId}`);
+    Logger.debug(`Button clicked: ${buttonId}`);
 
     // Determine if this button should play a sound
     const shouldPlaySound = this.shouldPlayButtonSound(buttonId);
@@ -412,8 +425,7 @@ export class GameManager {
    * Get the quantity of a specific item from player's items array
    */
   private getItemQuantity(itemId: string): number {
-    const item = this.playerData.items.find(i => i.itemId === itemId);
-    return item ? item.quantity : 0;
+    return this.saveLoadManager.getItemQuantity(itemId);
   }
 
   /**
@@ -510,76 +522,7 @@ export class GameManager {
    * This centralizes all the logic for enriching card instances with definition data
    */
   private cardInstanceToDisplay(card: CardInstance): CardDisplay {
-    // Get all card definitions once
-    const allCardDefs = getAllCards();
-    const cardDef = allCardDefs.find((c: any) => c && c.id === card.cardId);
-
-    // Calculate experience requirements for all card types
-    let expRequired = 0;
-    if (card.type === 'Bloom' && card.level) {
-      // For Bloom beasts, use the LevelingSystem
-      expRequired = LevelingSystem.getXPRequirement(card.level as any, cardDef as BloomBeastCard | undefined) || 0;
-    } else if (card.level) {
-      // For Magic/Trap/Habitat/Buff cards, use simple formula (level * 100)
-      expRequired = card.level * 100;
-    }
-
-    // Build display card with common properties
-    const displayCard: CardDisplay = {
-      id: card.id,
-      name: card.name,
-      type: card.type,
-      affinity: card.affinity,
-      cost: card.cost,
-      level: card.level,
-      experience: card.currentXP || 0,
-      experienceRequired: expRequired,
-      count: 1,
-    };
-
-    // Copy titleColor from card definition if present (applies to all card types)
-    if (cardDef && (cardDef as any).titleColor) {
-      (displayCard as any).titleColor = (cardDef as any).titleColor;
-    }
-
-    // Add type-specific fields
-    if (card.type === 'Bloom') {
-      displayCard.baseAttack = card.baseAttack;
-      displayCard.currentAttack = card.currentAttack;
-      displayCard.baseHealth = card.baseHealth;
-      displayCard.currentHealth = card.currentHealth;
-      displayCard.ability = card.ability;
-    } else if (card.type === 'Trap') {
-      // For Trap cards, get description from card definition
-      if (cardDef && (cardDef as any).description) {
-        displayCard.ability = {
-          name: 'Trap Card',
-          description: (cardDef as any).description
-        };
-      } else if (card.effects && card.effects.length > 0) {
-        // Fallback to effects if no description found
-        displayCard.ability = {
-          name: 'Trap Card',
-          description: card.effects.join('. ')
-        };
-      }
-    } else if (card.type === 'Magic') {
-      // For Magic cards, convert effects to readable descriptions
-      const effectDescs = this.getEffectDescriptions(card);
-      if (effectDescs.length > 0) {
-        displayCard.ability = {
-          name: card.type + ' Card',
-          description: effectDescs.join('. ')
-        };
-      }
-    } else if (card.type === 'Habitat' || card.type === 'Buff') {
-      // For Habitat/Buff cards, get description from card definition
-      if (cardDef && (cardDef as any).description) {
-        displayCard.description = (cardDef as any).description;
-      }
-    }
-
-    return displayCard;
+    return this.cardCollectionManager.cardInstanceToDisplay(card);
   }
 
   /**
@@ -682,117 +625,20 @@ export class GameManager {
   }
 
   /**
-   * Get abilities for a card based on its level
-   */
-  private getAbilitiesForLevel(cardInstance: CardInstance): { ability: any} {
-    // Get the base card definition
-    const allCards = getAllCards();
-    const cardDef = allCards.find((card: any) =>
-      card && card.id === cardInstance.cardId
-    ) as BloomBeastCard | undefined;
-
-    if (!cardDef || cardDef.type !== 'Bloom') {
-      return {
-        ability: cardInstance.ability
-      };
-    }
-
-    const level = cardInstance.level || 1;
-    let ability = cardDef.ability;
-
-    // Apply ability upgrades based on level
-    if (cardDef.levelingConfig?.abilityUpgrades) {
-      const upgrades = cardDef.levelingConfig.abilityUpgrades;
-
-      // Check each upgrade level (4, 7, 9) up to current level
-      if (level >= 4 && upgrades[4]) {
-        ability = upgrades[4].ability || ability;
-      }
-      if (level >= 7 && upgrades[7]) {
-        ability = upgrades[7].ability || ability;
-      }
-      if (level >= 9 && upgrades[9]) {
-        ability = upgrades[9].ability || ability;
-      }
-    }
-
-    return { ability };
-  }
-
-  /**
    * Get player's deck cards for battle
    */
   private getPlayerDeckCards(): AnyCard[] {
-    const deckCards: AnyCard[] = [];
-    const allCardDefs = getAllCards();
-
-    // Convert all cards from player's deck
-    for (const cardId of this.playerDeck) {
-      const cardInstance = this.cardCollection.getCard(cardId);
-
-      if (cardInstance) {
-        if (cardInstance.type === 'Bloom') {
-          // Get the correct abilities for the card's level
-          const abilities = this.getAbilitiesForLevel(cardInstance);
-
-          // Convert CardInstance to BloomBeastCard format for battle
-          const bloomCard: BloomBeastCard = {
-            id: cardInstance.cardId,
-            instanceId: cardInstance.id, // Used for unique identification in battle
-            name: cardInstance.name,
-            type: 'Bloom',
-            affinity: cardInstance.affinity || 'Forest',
-            cost: cardInstance.cost,
-            baseAttack: cardInstance.baseAttack || 0,
-            baseHealth: cardInstance.baseHealth || 0,
-            ability: abilities.ability,
-            level: cardInstance.level || 1, // Include level for beast instance
-            levelingConfig: {} as any, // Not used in battle
-          } as any;
-
-          deckCards.push(bloomCard);
-        } else {
-          // For non-Bloom cards, find the original card definition
-          const originalCard = allCardDefs.find((card: any) =>
-            card && card.id === cardInstance.cardId
-          );
-
-          if (originalCard) {
-            // Use the original card definition for battle
-            deckCards.push(originalCard as AnyCard);
-          } else {
-            // Fallback: create a simple card structure
-            console.warn(`Card definition not found for ${cardInstance.cardId}, creating fallback`);
-            const fallbackCard: any = {
-              id: cardInstance.cardId,
-              name: cardInstance.name,
-              type: cardInstance.type,
-              cost: cardInstance.cost || 0,
-              affinity: cardInstance.affinity,
-            };
-
-            // Add type-specific properties
-            if (cardInstance.type === 'Magic' || cardInstance.type === 'Trap') {
-              fallbackCard.effects = [];
-            } else if (cardInstance.type === 'Habitat') {
-              fallbackCard.onPlayEffects = [];
-              fallbackCard.ongoingEffects = [];
-            }
-
-            deckCards.push(fallbackCard);
-          }
-        }
-      }
-    }
-
-    return deckCards;
+    return this.cardCollectionManager.getPlayerDeckCards(
+      this.playerDeck,
+      this.cardCollection
+    );
   }
 
   /**
    * Handle mission selection
    */
   private async handleMissionSelect(missionId: string): Promise<void> {
-    console.log(`Mission selected: ${missionId}`);
+    Logger.info(`Mission selected: ${missionId}`);
 
     // Play menu button sound
     this.soundManager.playSfx('sfx/menuButtonSelect.wav');
@@ -866,7 +712,7 @@ export class GameManager {
               this.soundManager.playSfx('sfx/playCard.wav');
               await this.showCardPopup(card, 'opponent');
             } catch (error) {
-              console.error('Failed to parse magic card JSON:', error);
+              Logger.error('Failed to parse magic card JSON:', error);
             }
           } else if (action.startsWith('play-trap-card:')) {
             // Trap cards are face-down, so don't show popup when opponent plays them
@@ -880,7 +726,7 @@ export class GameManager {
               this.soundManager.playSfx('sfx/playCard.wav');
               await this.showCardPopup(card, 'opponent');
             } catch (error) {
-              console.error('Failed to parse habitat card JSON:', error);
+              Logger.error('Failed to parse habitat card JSON:', error);
             }
           } else if (action === 'play-card') {
             this.soundManager.playSfx('sfx/playCard.wav');
@@ -952,8 +798,8 @@ export class GameManager {
    * Add card to player's deck
    */
   private async addCardToDeck(cardId: string): Promise<void> {
-    if (this.playerDeck.length >= 30) {
-      await this.platform.showDialog('Deck Full', 'Your deck already has 30 cards. Remove a card first.', ['OK']);
+    if (this.playerDeck.length >= DECK_SIZE) {
+      await this.platform.showDialog('Deck Full', `Your deck already has ${DECK_SIZE} cards. Remove a card first.`, ['OK']);
       return;
     }
 
@@ -1031,114 +877,6 @@ export class GameManager {
   }
 
   /**
-   * Calculate stat bonuses for a beast from habitat and buff zones
-   */
-  private calculateStatBonuses(beast: any, gameState: any, playerIndex: number): { attackBonus: number; healthBonus: number } {
-    let attackBonus = 0;
-    let healthBonus = 0;
-
-    // Helper to check if effect applies to this beast
-    const checkCondition = (condition: any): boolean => {
-      if (!condition) return true; // No condition means applies to all
-
-      switch (condition.type) {
-        case 'affinity-matches':
-        case 'AffinityMatches':
-          return beast.affinity === condition.value;
-        // Add more condition types as needed
-        default:
-          return true;
-      }
-    };
-
-    // Helper to process ongoing effects
-    const processOngoingEffects = (effects: any[]) => {
-      if (!effects || !Array.isArray(effects)) return;
-
-      effects.forEach((effect: any) => {
-        // Only process stat modification effects with WhileOnField duration
-        if (effect.type === 'modify-stats' || effect.type === 'ModifyStats') {
-          if (effect.duration === 'while-on-field' || effect.duration === 'WhileOnField') {
-            // Check if effect applies to this beast
-            if (checkCondition(effect.condition)) {
-              // Apply the bonus based on stat type
-              if (effect.stat === 'attack' || effect.stat === 'Attack') {
-                attackBonus += effect.value || 0;
-              } else if (effect.stat === 'health' || effect.stat === 'Health') {
-                healthBonus += effect.value || 0;
-              } else if (effect.stat === 'both' || effect.stat === 'Both') {
-                attackBonus += effect.value || 0;
-                healthBonus += effect.value || 0;
-              }
-            }
-          }
-        }
-      });
-    };
-
-    // Process habitat zone ongoing effects
-    if (gameState.habitatZone && gameState.habitatZone.ongoingEffects) {
-      processOngoingEffects(gameState.habitatZone.ongoingEffects);
-    }
-
-    // Process buff zones ONLY for the player who owns this beast
-    if (gameState.players && gameState.players[playerIndex]) {
-      const player = gameState.players[playerIndex];
-      if (player.buffZone && Array.isArray(player.buffZone)) {
-        player.buffZone.forEach((buff: any) => {
-          if (buff && buff.ongoingEffects) {
-            processOngoingEffects(buff.ongoingEffects);
-          }
-        });
-      }
-    }
-
-    return { attackBonus, healthBonus };
-  }
-
-  /**
-   * Enrich field beasts with card definition data and apply bonuses for display
-   */
-  private enrichFieldBeasts(field: any[], gameState?: any, playerIndex?: number): any[] {
-    // Create a card lookup map from all card definitions
-    const cardMap = new Map<string, BloomBeastCard>();
-    const allCards = getAllCards();
-    allCards.forEach((card: any) => {
-      if (card && card.type === 'Bloom') {
-        cardMap.set(card.id, card as BloomBeastCard);
-      }
-    });
-
-    return field.map(beast => {
-      if (!beast) return null;
-
-      // Get the card definition
-      const cardDef = cardMap.get(beast.cardId);
-
-      if (!cardDef) return beast; // Return as-is if card not found
-
-      // Calculate stat bonuses from habitat and buffs (only if we have gameState and playerIndex)
-      const bonuses = (gameState && playerIndex !== undefined)
-        ? this.calculateStatBonuses(beast, gameState, playerIndex)
-        : { attackBonus: 0, healthBonus: 0 };
-
-      // Merge instance data with card definition data and apply bonuses
-      // Only add abilities if they're not already present
-      return {
-        ...beast,
-        name: beast.name || cardDef.name,
-        affinity: beast.affinity || cardDef.affinity,
-        cost: beast.cost || cardDef.cost,
-        ability: beast.ability || cardDef.ability,
-        // Apply bonuses to display stats (don't modify the actual beast in game engine)
-        currentAttack: (beast.currentAttack || 0) + bonuses.attackBonus,
-        currentHealth: (beast.currentHealth || 0) + bonuses.healthBonus,
-        maxHealth: (beast.maxHealth || 0) + bonuses.healthBonus,
-      };
-    });
-  }
-
-  /**
    * Update battle display
    */
   private async updateBattleDisplay(attackAnimation?: {
@@ -1149,75 +887,20 @@ export class GameManager {
   } | null): Promise<void> {
     const battleState = this.battleUI.getCurrentBattle();
 
-    if (!battleState || !battleState.gameState) {
-      return;
-    }
+    const display = this.battleDisplayManager.createBattleDisplay(
+      battleState,
+      this.selectedBeastIndex,
+      attackAnimation
+    );
 
-    // Players is a tuple [Player, Player] where index 0 is typically the player
-    const player = battleState.gameState.players[0];
-    const opponent = battleState.gameState.players[1];
-
-    if (!player || !opponent) return;
-
-    // Convert to display format
-    const display: BattleDisplay = {
-      playerHealth: player.health,
-      playerMaxHealth: player.maxHealth || 30, // Default to 30 if undefined
-      playerDeckCount: player.deck.length,
-      playerNectar: player.currentNectar,
-      playerHand: player.hand,
-      playerTrapZone: player.trapZone || [null, null, null],
-      playerBuffZone: player.buffZone || [null, null],
-      opponentHealth: opponent.health,
-      opponentMaxHealth: opponent.maxHealth || 30, // Default to 30 if undefined
-      opponentDeckCount: opponent.deck.length,
-      opponentNectar: opponent.currentNectar,
-      opponentField: this.enrichFieldBeasts(opponent.field, battleState.gameState, 1), // Opponent is player index 1
-      opponentTrapZone: opponent.trapZone || [null, null, null],
-      opponentBuffZone: opponent.buffZone || [null, null],
-      playerField: this.enrichFieldBeasts(player.field, battleState.gameState, 0), // Player is player index 0
-      currentTurn: battleState.gameState.turn,
-      turnPlayer: battleState.gameState.activePlayer === 0 ? 'player' : 'opponent',
-      turnTimeRemaining: 60, // TODO: Implement actual timer
-      objectives: this.getObjectiveDisplay(battleState),
-      habitatZone: battleState.gameState.habitatZone,
-      selectedBeastIndex: this.selectedBeastIndex,
-      attackAnimation: attackAnimation,
-    };
+    if (!display) return;
 
     this.platform.renderBattle(display);
 
     // Check if battle ended (only if no animation is running)
-    if (battleState.isComplete && !attackAnimation) {
+    if (battleState && battleState.isComplete && !attackAnimation) {
       await this.handleBattleComplete(battleState);
     }
-  }
-
-  /**
-   * Get objective display for current battle
-   */
-  private getObjectiveDisplay(battleState: any): ObjectiveDisplay[] {
-    if (!battleState.mission || !battleState.progress) {
-      return [];
-    }
-
-    // Check if mission has objectives defined
-    if (!battleState.mission.objectives || !Array.isArray(battleState.mission.objectives)) {
-      return [];
-    }
-
-    return battleState.mission.objectives.map((obj: any) => {
-      const key = `${obj.type}-${obj.target || 0}`;
-      const progress = battleState.progress.objectiveProgress.get(key) || 0;
-      const target = obj.target || 1;
-
-      return {
-        description: obj.description,
-        progress: Math.min(progress, target),
-        target: target,
-        isComplete: progress >= target,
-      };
-    });
   }
 
   /**
@@ -1231,7 +914,7 @@ export class GameManager {
     const card = player.hand[index];
 
     // Debug: Check hand card data
-    console.log('Hand card:', card);
+    Logger.debug('Hand card:', card);
 
     if (!card) return;
 
@@ -1253,11 +936,7 @@ export class GameManager {
     if (!battleState || !battleState.gameState) return;
 
     const playerObj = player === 'player' ? battleState.gameState.players[0] : battleState.gameState.players[1];
-
-    // Determine player index: 0 for player, 1 for opponent
-    const playerIndex = player === 'player' ? 0 : 1;
-    const field = this.enrichFieldBeasts(playerObj.field, battleState.gameState, playerIndex);
-    const beast = field[index];
+    const beast = playerObj.field[index];
 
     if (!beast) return;
 
@@ -1567,42 +1246,18 @@ export class GameManager {
    * Display for 3 seconds then dismiss
    */
   private async showCardPopup(card: any, player: 'player' | 'opponent'): Promise<void> {
-    // Get current battle state without animation
     const battleState = this.battleUI.getCurrentBattle();
     if (!battleState || !battleState.gameState) return;
 
-    // Build display with cardPopup
-    const playerObj = battleState.gameState.players[0];
-    const opponent = battleState.gameState.players[1];
+    // Create display with popup
+    const display = this.battleDisplayManager.createBattleDisplayWithPopup(
+      battleState,
+      this.selectedBeastIndex,
+      card,
+      player
+    );
 
-    const display: BattleDisplay = {
-      playerHealth: playerObj.health,
-      playerMaxHealth: playerObj.maxHealth || 30,
-      playerDeckCount: playerObj.deck.length,
-      playerNectar: playerObj.currentNectar,
-      playerHand: playerObj.hand,
-      playerTrapZone: playerObj.trapZone || [null, null, null],
-      playerBuffZone: playerObj.buffZone || [null, null],
-      opponentHealth: opponent.health,
-      opponentMaxHealth: opponent.maxHealth || 30,
-      opponentDeckCount: opponent.deck.length,
-      opponentNectar: opponent.currentNectar,
-      opponentField: this.enrichFieldBeasts(opponent.field, battleState.gameState, 1), // Opponent is player index 1
-      opponentTrapZone: opponent.trapZone || [null, null, null],
-      opponentBuffZone: opponent.buffZone || [null, null],
-      playerField: this.enrichFieldBeasts(playerObj.field, battleState.gameState, 0), // Player is player index 0
-      currentTurn: battleState.gameState.turn,
-      turnPlayer: battleState.gameState.activePlayer === 0 ? 'player' : 'opponent',
-      turnTimeRemaining: 60,
-      objectives: this.getObjectiveDisplay(battleState),
-      habitatZone: battleState.gameState.habitatZone,
-      selectedBeastIndex: this.selectedBeastIndex,
-      attackAnimation: null,
-      cardPopup: {
-        card,
-        player,
-      },
-    };
+    if (!display) return;
 
     // Show popup
     this.platform.renderBattle(display);
@@ -1630,95 +1285,11 @@ export class GameManager {
    * Card XP is distributed evenly across all cards in the deck
    */
   private awardDeckExperience(totalCardXP: number): void {
-    const allCardDefs = getAllCards();
-
-    // Distribute XP evenly across all cards in deck
-    const xpPerCard = Math.floor(totalCardXP / this.playerDeck.length);
-
-    // Award XP to each card in the deck
-    for (const cardId of this.playerDeck) {
-      const cardInstance = this.cardCollection.getCard(cardId);
-
-      if (!cardInstance) continue;
-
-      // Add XP
-      cardInstance.currentXP = (cardInstance.currentXP || 0) + xpPerCard;
-
-      // Check for level up
-      let leveledUp = false;
-
-      if (cardInstance.type === 'Bloom') {
-        // For Bloom beasts, use the LevelingSystem
-        const cardDef = allCardDefs.find((c: any) => c && c.id === cardInstance.cardId) as BloomBeastCard | undefined;
-
-        if (cardDef) {
-          let currentLevel = cardInstance.level || 1;
-          let currentXP = cardInstance.currentXP;
-
-          // Keep leveling up while possible
-          while (currentLevel < 9) {
-            const nextLevel = (currentLevel + 1) as any;
-            const xpRequired = LevelingSystem.getXPRequirement(currentLevel as any, cardDef);
-
-            if (xpRequired !== null && currentXP >= xpRequired) {
-              // Level up!
-              currentXP -= xpRequired;
-              currentLevel = nextLevel;
-
-              // Apply stat gains
-              const statGain = LevelingSystem.getStatGain(currentLevel as any, cardDef);
-              cardInstance.currentAttack = (cardInstance.currentAttack || 0) + statGain.attackGain;
-              cardInstance.currentHealth = (cardInstance.currentHealth || 0) + statGain.healthGain;
-              cardInstance.baseAttack = (cardInstance.baseAttack || 0) + statGain.attackGain;
-              cardInstance.baseHealth = (cardInstance.baseHealth || 0) + statGain.healthGain;
-
-              leveledUp = true;
-            } else {
-              break;
-            }
-          }
-
-          // Update the card instance
-          cardInstance.level = currentLevel;
-          cardInstance.currentXP = currentXP;
-
-          // Update ability if there's an upgrade at this level
-          if (leveledUp) {
-            const abilities = this.getAbilitiesForLevel(cardInstance);
-            cardInstance.ability = abilities.ability;
-          }
-        }
-      } else {
-        // For Magic/Trap/Habitat/Buff cards, use steep exponential leveling
-        // Formula: XP = 20 * (2.0 ^ (level - 1))
-        const nonBloomXPRequirements = [0, 20, 40, 80, 160, 320, 640, 1280, 2560];
-
-        let currentLevel = cardInstance.level || 1;
-        let currentXP = cardInstance.currentXP;
-
-        // Keep leveling up while possible
-        while (currentLevel < 9) {
-          const xpRequired = nonBloomXPRequirements[currentLevel];
-
-          if (currentXP >= xpRequired) {
-            // Level up!
-            currentXP -= xpRequired;
-            currentLevel++;
-            leveledUp = true;
-          } else {
-            break;
-          }
-        }
-
-        // Update the card instance
-        cardInstance.level = currentLevel;
-        cardInstance.currentXP = currentXP;
-      }
-
-      if (leveledUp) {
-        console.log(`${cardInstance.name} leveled up to level ${cardInstance.level}!`);
-      }
-    }
+    this.cardCollectionManager.awardDeckExperience(
+      totalCardXP,
+      this.playerDeck,
+      this.cardCollection
+    );
   }
 
   /**
@@ -1727,7 +1298,7 @@ export class GameManager {
   private async handleBattleComplete(battleState: any): Promise<void> {
     if (battleState.rewards) {
       // Apply player XP (for player leveling)
-      this.playerData.totalXP += battleState.rewards.xpGained;
+      this.saveLoadManager.addXP(battleState.rewards.xpGained);
       // Note: Nectar is no longer persistent - it's only tracked during battle
 
       // Award card XP (distributed evenly across all cards in deck)
@@ -1737,53 +1308,12 @@ export class GameManager {
 
       // Add cards to collection
       battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
-        const baseId = `${card.id}-reward-${Date.now()}-${index}`;
-
-        if (card.type === 'Bloom') {
-          // Convert Bloom Beast card rewards to CardInstance for collection
-          const beastCard = card as BloomBeastCard;
-          const cardInstance: CardInstance = {
-            id: baseId,
-            cardId: beastCard.id,
-            name: beastCard.name,
-            type: 'Bloom',
-            affinity: beastCard.affinity,
-            cost: beastCard.cost,
-            level: 1,
-            currentXP: 0,
-            baseAttack: beastCard.baseAttack,
-            currentAttack: beastCard.baseAttack,
-            baseHealth: beastCard.baseHealth,
-            currentHealth: beastCard.baseHealth,
-            ability: beastCard.ability ? {
-              name: (beastCard.ability as any).name || '',
-              description: (beastCard.ability as any).description || ''
-            } : undefined,
-          };
-          this.cardCollection.addCard(cardInstance);
-        } else {
-          // Convert Magic, Trap, and Habitat card rewards to CardInstance
-          const cardInstance: CardInstance = {
-            id: baseId,
-            cardId: card.id,
-            name: card.name,
-            type: card.type,
-            affinity: card.affinity,
-            cost: card.cost || 0,
-            level: 1,           // All cards start at level 1
-            currentXP: 0,       // All cards start with 0 XP
-            effects: this.getEffectDescriptions(card),
-            ability: undefined,
-          };
-          this.cardCollection.addCard(cardInstance);
-        }
+        this.cardCollectionManager.addCardReward(card, this.cardCollection, index);
       });
 
       // Track mission completion
       if (this.currentBattleId) {
-        // Track mission completion count
-        const currentCount = this.playerData.missions.completedMissions[this.currentBattleId] || 0;
-        this.playerData.missions.completedMissions[this.currentBattleId] = currentCount + 1;
+        this.saveLoadManager.trackMissionCompletion(this.currentBattleId);
       }
 
       // Show rewards
@@ -1877,60 +1407,10 @@ export class GameManager {
    * Initialize starting collection
    */
   private async initializeStartingCollection(): Promise<void> {
-    // Give player one starter deck worth of cards - default to Forest
-    const starterDeck = getStarterDeck('Forest');
-
-    starterDeck.cards.forEach((card, index) => {
-      const baseId = `${card.id}-${Date.now()}-${index}`;
-
-      if (card.type === 'Bloom') {
-        // Process Bloom Beast cards
-        const beastCard = card as BloomBeastCard;
-        const cardInstance: CardInstance = {
-          id: baseId,
-          cardId: beastCard.id,
-          name: beastCard.name,
-          type: 'Bloom',
-          affinity: beastCard.affinity,
-          cost: beastCard.cost,
-          level: 1,
-          currentXP: 0,
-          baseAttack: beastCard.baseAttack,
-          currentAttack: beastCard.baseAttack,
-          baseHealth: beastCard.baseHealth,
-          currentHealth: beastCard.baseHealth,
-          ability: beastCard.ability ? {
-            name: (beastCard.ability as any).name || '',
-            description: (beastCard.ability as any).description || ''
-          } : undefined,
-        };
-        this.cardCollection.addCard(cardInstance);
-        // Add to player's deck (up to 30 cards)
-        if (this.playerDeck.length < 30) {
-          this.playerDeck.push(cardInstance.id);
-        }
-      } else {
-        // Process Magic, Trap, and Habitat cards
-        const cardInstance: CardInstance = {
-          id: baseId,
-          cardId: card.id,
-          name: card.name,
-          type: card.type,
-          affinity: (card as any).affinity,
-          cost: card.cost || 0,
-          level: 1,           // All cards start at level 1
-          currentXP: 0,       // All cards start with 0 XP
-          // Add simplified effect descriptions for display
-          effects: this.getEffectDescriptions(card),
-          ability: undefined, // Non-Bloom cards use effects instead
-        };
-        this.cardCollection.addCard(cardInstance);
-        // Add to player's deck (up to 30 cards)
-        if (this.playerDeck.length < 30) {
-          this.playerDeck.push(cardInstance.id);
-        }
-      }
-    });
+    this.playerDeck = await this.cardCollectionManager.initializeStartingCollection(
+      this.cardCollection,
+      this.playerDeck
+    );
 
     // Update cards in player data
     this.playerData.cards.collected = this.cardCollection.getAllCards();
@@ -1940,167 +1420,22 @@ export class GameManager {
   }
 
   /**
-   * Get simplified effect descriptions for Magic/Trap/Habitat cards
-   */
-  private getEffectDescriptions(card: any): string[] {
-    const descriptions: string[] = [];
-
-    // Try to get the actual card definition for more accurate info
-    const allCardDefs = getAllCards();
-    // card.cardId exists if this is a CardInstance, card.id exists if it's the original definition
-    const lookupId = card.cardId || card.id;
-    const cardDef = allCardDefs.find((c: any) => c && c.id === lookupId);
-
-    if (card.type === 'Magic') {
-      // Check if card definition has a description first (preferred method)
-      if (cardDef && (cardDef as any).description) {
-        descriptions.push((cardDef as any).description);
-      } else {
-        // Fallback to parsing effects
-        const effects = (cardDef as any)?.effects || card.effects || [];
-        effects.forEach((effect: any) => {
-          const effectType = effect.type || '';
-          if (effectType === 'draw-cards' || effectType === 'DrawCards') {
-            descriptions.push(`Draw ${effect.value || 1} card(s)`);
-          } else if (effectType === 'heal' || effectType === 'Heal') {
-            descriptions.push(`Heal ${effect.value || 0}`);
-          } else if (effectType === 'deal-damage' || effectType === 'Damage') {
-            descriptions.push(`Deal ${effect.value || 0} damage`);
-          } else if (effectType === 'modify-stats' || effectType === 'ModifyStats') {
-            descriptions.push(`Modify stats by ${effect.attack || 0}/${effect.health || 0}`);
-          } else if (effectType === 'gain-resource' || effectType === 'GainResource') {
-            descriptions.push(`Gain ${effect.value || 1} ${effect.resource || 'nectar'}`);
-          } else if (effectType === 'remove-counter' || effectType === 'RemoveCounter') {
-            descriptions.push(`Remove ${effect.counter || 'all'} counters`);
-          } else if (effectType === 'destroy' || effectType === 'Destroy') {
-            descriptions.push(`Destroy target`);
-          } else {
-            // Try to create a readable description from the effect type
-            const typeStr = effectType.toString().replace(/([A-Z])/g, ' $1').replace(/-/g, ' ').trim();
-            descriptions.push(typeStr || 'Special effect');
-          }
-        });
-      }
-    } else if (card.type === 'Trap') {
-      // For trap cards, use the card's description if available
-      if (cardDef && (cardDef as any).description) {
-        // Already handled in showCards, but include here for completeness
-        descriptions.push((cardDef as any).description);
-      } else {
-        const effects = (cardDef as any)?.effects || card.effects || [];
-        effects.forEach((effect: any) => {
-          if (effect.type === 'nullify-effect' || effect.type === 'NullifyEffect') {
-            descriptions.push('Counter and negate effect');
-          } else if (effect.type === 'damage' || effect.type === 'Damage') {
-            descriptions.push(`Deal ${effect.value || 0} damage`);
-          } else {
-            const typeStr = (effect.type || '').toString().replace(/([A-Z])/g, ' $1').trim();
-            descriptions.push(typeStr || 'Trap effect');
-          }
-        });
-      }
-    } else if (card.type === 'Habitat') {
-      if (card.onPlayEffects || (cardDef as any)?.onPlayEffects) {
-        descriptions.push('On Play: Field transformation');
-      }
-      if (card.ongoingEffects || (cardDef as any)?.ongoingEffects) {
-        descriptions.push('Ongoing: Field bonuses');
-      }
-    }
-
-    return descriptions.length > 0 ? descriptions : ['Special card'];
-  }
-
-  /**
    * Save game data
    */
   private async saveGameData(): Promise<void> {
-    // Update cards in playerData before saving
-    this.playerData.cards.collected = this.cardCollection.getAllCards();
-    this.playerData.cards.deck = this.playerDeck;
-
-    await this.platform.saveData('bloom-beasts-save', {
-      playerData: this.playerData,
-    });
+    await this.saveLoadManager.saveGameData(this.cardCollection, this.playerDeck);
   }
 
   /**
    * Load game data
    */
   private async loadGameData(): Promise<void> {
-    const savedData = await this.platform.loadData('bloom-beasts-save');
-
-    if (savedData && savedData.playerData) {
-      const data = savedData.playerData;
-
-      // Check if this is the new format or old format
-      if (data.cards && data.missions) {
-        // New format - direct assignment
-        this.playerData = data;
-
-        // Ensure items array exists (for saves created before items feature)
-        if (!this.playerData.items) {
-          this.playerData.items = [];
-        }
-
-        // Ensure completedMissions object exists (for saves created before mission tracking feature)
-        if (!this.playerData.missions.completedMissions) {
-          this.playerData.missions.completedMissions = {};
-        }
-
-        // Load cards into collection
-        if (data.cards.collected) {
-          data.cards.collected.forEach((cardInstance: CardInstance) => {
-            this.cardCollection.addCard(cardInstance);
-          });
-        }
-
-        // Load deck
-        this.playerDeck = data.cards.deck || [];
-      } else {
-        // Old format - migrate to new format
-        this.playerData = {
-          name: data.playerName || 'Player',
-          level: data.playerLevel || 1,
-          totalXP: data.totalXP || 0,
-          cards: {
-            collected: data.cardInventory || savedData.collection || [],
-            deck: savedData.playerDeck || []
-          },
-          missions: {
-            completedMissions: {}  // Initialize empty for old saves
-          },
-          items: []  // Initialize items for old saves
-        };
-
-        // Load old collection format
-        if (savedData.collection) {
-          savedData.collection.forEach((cardInstance: CardInstance) => {
-            this.cardCollection.addCard(cardInstance);
-          });
-        } else if (data.cardInventory) {
-          data.cardInventory.forEach((cardInstance: CardInstance) => {
-            this.cardCollection.addCard(cardInstance);
-          });
-        }
-
-        // Load old deck format
-        if (savedData.playerDeck) {
-          this.playerDeck = savedData.playerDeck;
-        }
-
-        // Save in new format
-        await this.saveGameData();
-      }
-
-      // Update player level based on XP
-      this.updatePlayerLevel();
-
-      // Load completed missions into MissionManager
-      if (this.playerData.missions.completedMissions) {
-        this.missionManager.loadCompletedMissions(this.playerData.missions.completedMissions);
-      }
-    }
+    this.playerDeck = await this.saveLoadManager.loadGameData(
+      this.cardCollection,
+      this.missionManager
+    );
+    // Get the loaded player data reference
+    this.playerData = this.saveLoadManager.getPlayerData();
   }
 
   /**
@@ -2109,25 +1444,7 @@ export class GameManager {
    * Formula: XP = 100 * (2.0 ^ (level - 1))
    */
   private updatePlayerLevel(): void {
-    // Cumulative XP thresholds for each level (total XP needed to reach that level)
-    const xpThresholds = [
-      0,      // Level 1
-      100,    // Level 2: 100 XP
-      300,    // Level 3: 300 XP total
-      700,    // Level 4: 700 XP total
-      1500,   // Level 5: 1500 XP total
-      3100,   // Level 6: 3100 XP total
-      6300,   // Level 7: 6300 XP total
-      12700,  // Level 8: 12700 XP total
-      25500,  // Level 9: 25500 XP total
-    ];
-
-    for (let level = 9; level >= 1; level--) {
-      if (this.playerData.totalXP >= xpThresholds[level - 1]) {
-        this.playerData.level = level;
-        break;
-      }
-    }
+    this.saveLoadManager.updatePlayerLevel();
   }
 
   /**
