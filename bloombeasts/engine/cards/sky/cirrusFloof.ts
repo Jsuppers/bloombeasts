@@ -20,7 +20,7 @@ const cirrusFloofPassive: StructuredAbility = {
 
 const cirrusFloofBloom: StructuredAbility = {
   name: 'Cloud Cover',
-  trigger: AbilityTrigger.StartOfTurn,
+  trigger: AbilityTrigger.OnOwnStartOfTurn,
   effects: [
     {
       type: EffectType.TemporaryHP,
@@ -33,7 +33,7 @@ const cirrusFloofBloom: StructuredAbility = {
 // Level 4 upgrades
 const cirrusFloofBloom4: StructuredAbility = {
   name: 'Storm Shield',
-  trigger: AbilityTrigger.StartOfTurn,
+  trigger: AbilityTrigger.OnOwnStartOfTurn,
   effects: [
     {
       type: EffectType.TemporaryHP,
@@ -77,7 +77,7 @@ const cirrusFloofPassive9: StructuredAbility = {
 
 const cirrusFloofBloom9: StructuredAbility = {
   name: 'Divine Barrier',
-  trigger: AbilityTrigger.StartOfTurn,
+  trigger: AbilityTrigger.OnOwnStartOfTurn,
   effects: [
     {
       type: EffectType.TemporaryHP,
@@ -101,7 +101,7 @@ export const CIRRUS_FLOOF: BloomBeastCard = {
   cost: 2,
   baseAttack: 1,
   baseHealth: 6,
-  ability: cirrusFloofPassive,
+  abilities: [cirrusFloofPassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -116,13 +116,13 @@ export const CIRRUS_FLOOF: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: cirrusFloofBloom4,
+        abilities: [cirrusFloofBloom4],
       },
       7: {
-        ability: cirrusFloofPassive7,
+        abilities: [cirrusFloofPassive7],
       },
       9: {
-        ability: cirrusFloofPassive9,
+        abilities: [cirrusFloofPassive9],
       },
     },
   },

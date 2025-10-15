@@ -39,21 +39,21 @@ describe('Gale Glider Card', () => {
 
   describe('Base Ability - First Wind', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(GALE_GLIDER.ability as StructuredAbility);
+      validateStructuredAbility(GALE_GLIDER.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = GALE_GLIDER.ability as StructuredAbility;
+      const ability = GALE_GLIDER.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('First Wind');
     });
 
     test('should be a passive ability', () => {
-      const ability = GALE_GLIDER.ability as StructuredAbility;
+      const ability = GALE_GLIDER.abilities[0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should allow attacking first', () => {
-      const ability = GALE_GLIDER.ability as StructuredAbility;
+      const ability = GALE_GLIDER.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.AttackModification);
@@ -62,7 +62,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should provide speed advantage in combat', () => {
-      const ability = GALE_GLIDER.ability as StructuredAbility;
+      const ability = GALE_GLIDER.abilities[0] as StructuredAbility;
       const effect: any = ability.effects[0];
       expect(effect.modification).toBe('attack-first');
     });
@@ -105,22 +105,22 @@ describe('Gale Glider Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = GALE_GLIDER.levelingConfig!.abilityUpgrades![4];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability!);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0]);
     });
 
     test('should have correct ability name', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.name).toBe('Wind Dance');
     });
 
     test('should trigger on attack', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should allow movement to any slot', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.MoveUnit);
@@ -129,7 +129,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should provide enhanced mobility', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].abilities![0];
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.MoveUnit);
       expect(effect.destination).toBe('any-slot');
@@ -140,28 +140,28 @@ describe('Gale Glider Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = GALE_GLIDER.levelingConfig!.abilityUpgrades![7];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability!);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0]);
     });
 
     test('should have correct ability name', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.name).toBe('Storm Blade');
     });
 
     test('should be a passive ability', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should have multiple effects', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.effects.length).toBeGreaterThan(1);
       expect(ability.effects).toHaveLength(2);
     });
 
     test('should maintain attack-first capability', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].abilities![0];
       const attackFirstEffect: any = ability.effects[0];
       expect(attackFirstEffect.type).toBe(EffectType.AttackModification);
       expect(attackFirstEffect.target).toBe(AbilityTarget.Self);
@@ -169,7 +169,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should gain attack bonus for next attack', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].abilities![0];
       const attackBonusEffect: any = ability.effects[1];
       expect(attackBonusEffect.type).toBe(EffectType.ModifyStats);
       expect(attackBonusEffect.target).toBe(AbilityTarget.Self);
@@ -179,7 +179,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should combine speed with power', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].abilities![0];
       const hasAttackFirst = ability.effects.some(
         (e: any) => e.type === EffectType.AttackModification && e.modification === 'attack-first'
       );
@@ -195,28 +195,28 @@ describe('Gale Glider Card', () => {
     test('should have upgraded passive ability at level 9', () => {
       const upgrade = GALE_GLIDER.levelingConfig!.abilityUpgrades![9];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability!);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0]);
     });
 
     test('should have correct ability name', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.name).toBe('Tempest Strike');
     });
 
     test('should be a passive ability', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should have multiple powerful effects', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.effects.length).toBeGreaterThanOrEqual(2);
       expect(ability.effects).toHaveLength(3);
     });
 
     test('should maintain attack-first capability', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       const attackFirstEffect: any = ability.effects.find(
         (e: any) => e.modification === 'attack-first'
       );
@@ -225,7 +225,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should have triple damage modifier', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       const tripleDamageEffect: any = ability.effects.find(
         (e: any) => e.modification === 'triple-damage'
       );
@@ -234,7 +234,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should prevent counterattack', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       const noCounterEffect: any = ability.effects.find(
         (e: any) => e.modification === 'cannot-counterattack'
       );
@@ -243,7 +243,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should be an assassin-style ability', () => {
-      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       const modifications = ability.effects.map((e: any) => e.modification);
       expect(modifications).toContain('attack-first');
       expect(modifications).toContain('triple-damage');
@@ -261,15 +261,15 @@ describe('Gale Glider Card', () => {
     });
 
     test('should have consistent speed and mobility theme', () => {
-      const baseAbility = GALE_GLIDER.ability as StructuredAbility;
+      const baseAbility = GALE_GLIDER.abilities[0] as StructuredAbility;
       const baseEffect: any = baseAbility.effects[0];
       expect(baseEffect.modification).toBe('attack-first');
 
-      const level7Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].ability!;
+      const level7Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].abilities![0];
       const level7FirstEffect: any = level7Ability.effects[0];
       expect(level7FirstEffect.modification).toBe('attack-first');
 
-      const level9Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       const level9HasFirst = level9Ability.effects.some(
         (e: any) => e.modification === 'attack-first'
       );
@@ -284,16 +284,16 @@ describe('Gale Glider Card', () => {
     });
 
     test('should evolve from mobility to raw power', () => {
-      const level4Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].ability!;
+      const level4Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(level4Ability.trigger).toBe(AbilityTrigger.OnAttack);
 
-      const level7Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].ability!;
+      const level7Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].abilities![0];
       const hasStatBonus = level7Ability.effects.some(
         (e: any) => e.type === EffectType.ModifyStats
       );
       expect(hasStatBonus).toBe(true);
 
-      const level9Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       const hasTripleDamage = level9Ability.effects.some(
         (e: any) => e.modification === 'triple-damage'
       );
@@ -303,13 +303,13 @@ describe('Gale Glider Card', () => {
 
   describe('Ability Synergies', () => {
     test('should synergize with first-strike mechanics', () => {
-      const baseAbility = GALE_GLIDER.ability as StructuredAbility;
+      const baseAbility = GALE_GLIDER.abilities[0] as StructuredAbility;
       const effect: any = baseAbility.effects[0];
       expect(effect.modification).toBe('attack-first');
     });
 
     test('should excel at hit-and-run tactics', () => {
-      const level4Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].ability!;
+      const level4Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].abilities![0];
       const hasMoveAbility = level4Ability.effects.some(
         (e: any) => e.type === EffectType.MoveUnit
       );
@@ -317,7 +317,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should counter slower units effectively', () => {
-      const level9Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       const hasFirstStrike = level9Ability.effects.some(
         (e: any) => e.modification === 'attack-first'
       );
@@ -331,11 +331,11 @@ describe('Gale Glider Card', () => {
 
   describe('Thematic Consistency', () => {
     test('should maintain wind-themed ability names', () => {
-      const baseAbility = GALE_GLIDER.ability as StructuredAbility;
+      const baseAbility = GALE_GLIDER.abilities[0] as StructuredAbility;
       expect(baseAbility.name).toBe('First Wind');
-      expect(GALE_GLIDER.levelingConfig!.abilityUpgrades![4].ability!.name).toBe('Wind Dance');
-      expect(GALE_GLIDER.levelingConfig!.abilityUpgrades![7].ability!.name).toBe('Storm Blade');
-      expect(GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!.name).toBe('Tempest Strike');
+      expect(GALE_GLIDER.levelingConfig!.abilityUpgrades![4].abilities![0].name).toBe('Wind Dance');
+      expect(GALE_GLIDER.levelingConfig!.abilityUpgrades![7].abilities![0].name).toBe('Storm Blade');
+      expect(GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0].name).toBe('Tempest Strike');
     });
 
     test('should embody swift aerial creature mechanics', () => {
@@ -346,13 +346,13 @@ describe('Gale Glider Card', () => {
       expect(GALE_GLIDER.baseAttack).toBe(2);
 
       // Attack-first represents speed
-      const baseAbility = GALE_GLIDER.ability as StructuredAbility;
+      const baseAbility = GALE_GLIDER.abilities[0] as StructuredAbility;
       const effect: any = baseAbility.effects[0];
       expect(effect.modification).toBe('attack-first');
     });
 
     test('should represent agile aerial combat', () => {
-      const level4Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].ability!;
+      const level4Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(level4Ability.name).toBe('Wind Dance');
       const effect: any = level4Ability.effects[0];
       expect(effect.type).toBe(EffectType.MoveUnit);
@@ -368,7 +368,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should have temporary attack buffs', () => {
-      const level7Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].ability!;
+      const level7Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![7].abilities![0];
       const tempBuff: any = level7Ability.effects.find(
         (e: any) => e.duration === EffectDuration.NextAttack
       );
@@ -376,7 +376,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should have multiple attack modifiers at max level', () => {
-      const level9Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       const attackMods = level9Ability.effects.filter(
         (e: any) => e.type === EffectType.AttackModification
       );
@@ -391,10 +391,10 @@ describe('Gale Glider Card', () => {
     });
 
     test('should transition from mobility to one-shot capability', () => {
-      const level4Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].ability!;
+      const level4Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(level4Ability.trigger).toBe(AbilityTrigger.OnAttack);
 
-      const level9Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = GALE_GLIDER.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(level9Ability.trigger).toBe(AbilityTrigger.Passive);
       const hasTripleDamage = level9Ability.effects.some(
         (e: any) => e.modification === 'triple-damage'

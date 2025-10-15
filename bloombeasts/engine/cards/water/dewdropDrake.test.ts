@@ -38,27 +38,27 @@ describe('Dewdrop Drake Card', () => {
 
   describe('Base Ability - Mist Screen', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(DEWDROP_DRAKE.ability);
+      validateStructuredAbility(DEWDROP_DRAKE.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(DEWDROP_DRAKE.ability.name).toBe('Mist Screen');
+      expect(DEWDROP_DRAKE.abilities[0].name).toBe('Mist Screen');
     });
 
     test('should be a passive ability', () => {
-      expect(DEWDROP_DRAKE.ability.trigger).toBe(AbilityTrigger.Passive);
+      expect(DEWDROP_DRAKE.abilities[0].trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should grant attack-first when alone', () => {
-      expect(DEWDROP_DRAKE.ability.effects).toHaveLength(1);
-      const effect = DEWDROP_DRAKE.ability.effects[0] as AttackModificationEffect;
+      expect(DEWDROP_DRAKE.abilities[0].effects).toHaveLength(1);
+      const effect = DEWDROP_DRAKE.abilities[0].effects[0] as AttackModificationEffect;
       expect(effect.type).toBe(EffectType.AttackModification);
       expect(effect.target).toBe(AbilityTarget.Self);
       expect(effect.modification).toBe('attack-first');
     });
 
     test('should have condition for being alone on field', () => {
-      const effect = DEWDROP_DRAKE.ability.effects[0] as AttackModificationEffect;
+      const effect = DEWDROP_DRAKE.abilities[0].effects[0] as AttackModificationEffect;
       expect(effect.condition).toBeDefined();
       expect(effect.condition!.type).toBe(ConditionType.UnitsOnField);
       expect(effect.condition!.value).toBe(1);
@@ -109,28 +109,28 @@ describe('Dewdrop Drake Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Deluge');
     });
 
     test('should trigger on attack', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should have nectar cost', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.cost).toBeDefined();
       expect(ability.cost!.type).toBe(CostType.Nectar);
       expect(ability.cost!.value).toBe(1);
@@ -139,8 +139,8 @@ describe('Dewdrop Drake Card', () => {
     test('should deal 3 damage to opponent gardener', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as DamageEffect;
       expect(effect.type).toBe(EffectType.DealDamage);
@@ -151,7 +151,7 @@ describe('Dewdrop Drake Card', () => {
     test('should be a power upgrade from base damage', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       const effect = ability.effects[0] as DamageEffect;
       expect(effect.value).toBe(3);
     });
@@ -161,28 +161,28 @@ describe('Dewdrop Drake Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Fog Veil');
     });
 
     test('should be a passive ability', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should grant unconditional attack-first', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       const attackFirstEffect = ability.effects.find(e => e.type === EffectType.AttackModification) as AttackModificationEffect | undefined;
       expect(attackFirstEffect).toBeDefined();
       expect(attackFirstEffect!.modification).toBe('attack-first');
@@ -192,7 +192,7 @@ describe('Dewdrop Drake Card', () => {
     test('should provide damage reduction', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       const damageReductionEffect = ability.effects.find(e => e.type === EffectType.DamageReduction) as DamageReductionEffect | undefined;
       expect(damageReductionEffect).toBeDefined();
       expect(damageReductionEffect!.target).toBe(AbilityTarget.Self);
@@ -203,15 +203,15 @@ describe('Dewdrop Drake Card', () => {
     test('should have multiple effects', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects.length).toBe(2);
     });
 
     test('should remove conditional requirement from base', () => {
-      const baseEffect = DEWDROP_DRAKE.ability.effects[0] as AttackModificationEffect;
+      const baseEffect = DEWDROP_DRAKE.abilities[0].effects[0] as AttackModificationEffect;
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const level7Effect = upgrade!.ability!.effects[0] as AttackModificationEffect;
+      const level7Effect = upgrade!.abilities![0].effects[0] as AttackModificationEffect;
       expect(baseEffect.condition).toBeDefined();
       expect(level7Effect.condition).toBeUndefined();
     });
@@ -221,28 +221,28 @@ describe('Dewdrop Drake Card', () => {
     test('should have upgraded ability at level 9', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Storm Guardian');
     });
 
     test('should be a passive ability', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should grant unconditional attack-first', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       const attackFirstEffect = ability.effects.find(e => e.type === EffectType.AttackModification) as AttackModificationEffect | undefined;
       expect(attackFirstEffect).toBeDefined();
       expect(attackFirstEffect!.modification).toBe('attack-first');
@@ -252,7 +252,7 @@ describe('Dewdrop Drake Card', () => {
     test('should provide enhanced damage reduction', () => {
       const upgrade = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       const damageReductionEffect = ability.effects.find(e => e.type === EffectType.DamageReduction) as DamageReductionEffect | undefined;
       expect(damageReductionEffect).toBeDefined();
       expect(damageReductionEffect!.target).toBe(AbilityTarget.Self);
@@ -263,11 +263,11 @@ describe('Dewdrop Drake Card', () => {
     test('should have improved damage reduction from level 7', () => {
       const upgrade7 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       const level7Reduction = level7Ability.effects.find(e => e.type === EffectType.DamageReduction) as DamageReductionEffect | undefined;
       const upgrade9 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
       const level9Reduction = level9Ability.effects.find(e => e.type === EffectType.DamageReduction) as DamageReductionEffect | undefined;
 
       expect(level9Reduction!.value).toBeGreaterThan(level7Reduction!.value);
@@ -287,7 +287,7 @@ describe('Dewdrop Drake Card', () => {
     test('should have consistent direct damage theme', () => {
       const upgrade4 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const hasDirectDamage = level4Ability.effects.some(
         e => e.type === EffectType.DealDamage && e.target === AbilityTarget.OpponentGardener
       );
@@ -304,11 +304,11 @@ describe('Dewdrop Drake Card', () => {
     test('should have increasing defensive capabilities', () => {
       const upgrade7 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       const level7Reduction = level7Ability.effects.find(e => e.type === EffectType.DamageReduction) as DamageReductionEffect | undefined;
       const upgrade9 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
       const level9Reduction = level9Ability.effects.find(e => e.type === EffectType.DamageReduction) as DamageReductionEffect | undefined;
 
       expect(level7Reduction).toBeDefined();
@@ -319,7 +319,7 @@ describe('Dewdrop Drake Card', () => {
 
   describe('Ability Synergies', () => {
     test('should provide solo play advantage', () => {
-      const baseAbility = DEWDROP_DRAKE.ability;
+      const baseAbility = DEWDROP_DRAKE.abilities[0];
       const effect = baseAbility.effects[0] as AttackModificationEffect;
       expect(effect.condition).toBeDefined();
       expect(effect.condition!.type).toBe(ConditionType.UnitsOnField);
@@ -329,7 +329,7 @@ describe('Dewdrop Drake Card', () => {
     test('should enable aggressive finisher strategy with direct damage', () => {
       const upgrade4 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       expect(level4Ability.trigger).toBe(AbilityTrigger.OnAttack);
       const effect = level4Ability.effects[0] as DamageEffect;
       expect(effect.type).toBe(EffectType.DealDamage);
@@ -339,7 +339,7 @@ describe('Dewdrop Drake Card', () => {
     test('should have survival tools at higher levels', () => {
       const upgrade7 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       const hasDamageReduction = level7Ability.effects.some(e => e.type === EffectType.DamageReduction);
       expect(hasDamageReduction).toBe(true);
     });
@@ -347,7 +347,7 @@ describe('Dewdrop Drake Card', () => {
     test('should require resource management with nectar cost', () => {
       const upgrade4 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability!;
+      const level4Ability = upgrade4!.abilities![0];
       expect(level4Ability.cost).toBeDefined();
       expect(level4Ability.cost!.type).toBe(CostType.Nectar);
     });
@@ -355,55 +355,55 @@ describe('Dewdrop Drake Card', () => {
 
   describe('Thematic Consistency', () => {
     test('should maintain water-themed ability names', () => {
-      expect(DEWDROP_DRAKE.ability.name).toBe('Mist Screen');
+      expect(DEWDROP_DRAKE.abilities[0].name).toBe('Mist Screen');
       const upgrade4 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      expect(upgrade4!.ability!.name).toBe('Deluge');
+      expect(upgrade4!.abilities![0].name).toBe('Deluge');
       const upgrade7 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      expect(upgrade7!.ability!.name).toBe('Fog Veil');
+      expect(upgrade7!.abilities![0].name).toBe('Fog Veil');
       const upgrade9 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      expect(upgrade9!.ability!.name).toBe('Storm Guardian');
+      expect(upgrade9!.abilities![0].name).toBe('Storm Guardian');
     });
 
     test('should embody swift, elusive striker mechanics', () => {
       // Attack-first represents speed
-      expect((DEWDROP_DRAKE.ability.effects[0] as AttackModificationEffect).modification).toBe('attack-first');
+      expect((DEWDROP_DRAKE.abilities[0].effects[0] as AttackModificationEffect).modification).toBe('attack-first');
 
       // Direct damage represents finishing power
       const upgrade4 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       expect(level4Ability.effects[0].type).toBe(EffectType.DealDamage);
 
       // Damage reduction represents elusiveness
       const upgrade7 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       const hasDamageReduction = level7Ability.effects.some(e => e.type === EffectType.DamageReduction);
       expect(hasDamageReduction).toBe(true);
     });
 
     test('should represent storm and mist themes', () => {
-      expect(DEWDROP_DRAKE.ability.name).toContain('Mist');
+      expect(DEWDROP_DRAKE.abilities[0].name).toContain('Mist');
       const upgrade7 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      expect(upgrade7!.ability!.name).toContain('Fog');
+      expect(upgrade7!.abilities![0].name).toContain('Fog');
       const upgrade9 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      expect(upgrade9!.ability!.name).toContain('Storm');
+      expect(upgrade9!.abilities![0].name).toContain('Storm');
     });
   });
 
   describe('Edge Cases and Special Mechanics', () => {
     test('should transition from conditional to unconditional attack-first', () => {
-      const baseAbility = DEWDROP_DRAKE.ability;
+      const baseAbility = DEWDROP_DRAKE.abilities[0];
       expect((baseAbility.effects[0] as AttackModificationEffect).condition).toBeDefined();
 
       const upgrade7 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       const attackFirstEffect = level7Ability.effects.find(e => e.type === EffectType.AttackModification) as AttackModificationEffect | undefined;
       expect(attackFirstEffect!.condition).toBeUndefined();
     });
@@ -411,7 +411,7 @@ describe('Dewdrop Drake Card', () => {
     test('should have damage reduction that lasts while on field', () => {
       const upgrade7 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       const damageReductionEffect = level7Ability.effects.find(e => e.type === EffectType.DamageReduction) as DamageReductionEffect | undefined;
       expect(damageReductionEffect!.duration).toBe(EffectDuration.WhileOnField);
     });
@@ -419,7 +419,7 @@ describe('Dewdrop Drake Card', () => {
     test('should require payment for powerful effects', () => {
       const upgrade4 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability!;
+      const level4Ability = upgrade4!.abilities![0];
       expect(level4Ability.cost).toBeDefined();
       expect(level4Ability.cost!.value).toBeGreaterThan(0);
     });
@@ -427,7 +427,7 @@ describe('Dewdrop Drake Card', () => {
     test('should scale direct damage appropriately', () => {
       const upgrade4 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const damage = (level4Ability.effects[0] as DamageEffect).value;
       expect(damage).toBeGreaterThanOrEqual(3);
       expect(damage).toBeLessThanOrEqual(5);
@@ -436,7 +436,7 @@ describe('Dewdrop Drake Card', () => {
 
   describe('Combat Mechanics', () => {
     test('should have attack-first advantage', () => {
-      const baseAbility = DEWDROP_DRAKE.ability;
+      const baseAbility = DEWDROP_DRAKE.abilities[0];
       expect(baseAbility.effects[0].type).toBe(EffectType.AttackModification);
       expect((baseAbility.effects[0] as AttackModificationEffect).modification).toBe('attack-first');
     });
@@ -444,7 +444,7 @@ describe('Dewdrop Drake Card', () => {
     test('should deal damage on attack', () => {
       const upgrade4 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       expect(level4Ability.trigger).toBe(AbilityTrigger.OnAttack);
       expect(level4Ability.effects[0].type).toBe(EffectType.DealDamage);
     });
@@ -452,11 +452,11 @@ describe('Dewdrop Drake Card', () => {
     test('should have progressive defensive layering', () => {
       const upgrade7 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Reduction = (upgrade7!.ability! as StructuredAbility).effects
+      const level7Reduction = (upgrade7!.abilities![0] as StructuredAbility).effects
         .find(e => e.type === EffectType.DamageReduction) as DamageReductionEffect | undefined;
       const upgrade9 = DEWDROP_DRAKE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Reduction = (upgrade9!.ability! as StructuredAbility).effects
+      const level9Reduction = (upgrade9!.abilities![0] as StructuredAbility).effects
         .find(e => e.type === EffectType.DamageReduction) as DamageReductionEffect | undefined;
 
       expect(level7Reduction!.value).toBe(1);

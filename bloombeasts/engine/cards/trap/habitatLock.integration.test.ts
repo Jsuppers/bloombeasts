@@ -200,8 +200,8 @@ describe('Habitat Lock - Integration Tests', () => {
       const state = game.getState();
       const player = state.players[0];
 
-      // Set trap
-      giveCards(player, [HABITAT_LOCK, ANCIENT_FOREST]);
+      // Set trap - replace hand to ensure correct order
+      player.hand = [HABITAT_LOCK, ANCIENT_FOREST];
       giveNectar(player, 10);
       await game.playCard(player, 0); // Set trap
 

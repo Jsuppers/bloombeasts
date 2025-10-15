@@ -262,9 +262,48 @@ export class BattleScreen {
         // Render card popup if present (should be last so it's on top)
         if (battleState.cardPopup) {
             const card = battleState.cardPopup.card;
+            const showCloseButton = battleState.cardPopup.showCloseButton || false;
+
+            // Debug: Log card data at popup render time
+            console.log('[BattleScreen] Card popup data:', {
+                name: card.name,
+                type: card.type,
+                cost: card.cost,
+                hasEffects: !!card.effects,
+                effectsArray: card.effects,
+                hasAbilities: !!card.abilities,
+                abilitiesArray: card.abilities,
+                hasOngoingEffects: !!card.ongoingEffects,
+                ongoingEffectsArray: card.ongoingEffects,
+                hasOnPlayEffects: !!card.onPlayEffects,
+                onPlayEffectsArray: card.onPlayEffects,
+                hasActivation: !!card.activation,
+                activationObject: card.activation,
+                fullCard: card
+            });
+
             const assets = await this.assets.loadCardAssets(card, 'default');
             const experienceBarImg = this.assets.getImage('experienceBar');
             await this.renderer.drawCenteredCardPopup(card, assets, experienceBarImg);
+
+            // Add close button if this is a manual popup
+            if (showCloseButton) {
+                const closeButtonX = 1280 / 2 + 120; // Right of the card with spacing
+                const closeButtonY = 720 / 2 - 150; // Top right area
+                const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
+
+                if (standardButtonImg) {
+                    this.renderer.drawSideMenuStandardButton('Close', closeButtonX, closeButtonY, standardButtonImg);
+                    this.clickManager.addRegion({
+                        id: 'close-card-popup',
+                        x: closeButtonX,
+                        y: closeButtonY,
+                        width: sideMenuButtonDimensions.width,
+                        height: sideMenuButtonDimensions.height,
+                        callback: () => onButtonClick('btn-card-close'),
+                    });
+                }
+            }
         }
     }
 
@@ -326,16 +365,8 @@ export class BattleScreen {
                     );
                 }
 
-                // Draw ability icon if beast has activated ability available
-                if (abilityIcon && beast.ability && beast.ability.trigger === 'Activated' && !beast.usedAbilityThisTurn) {
-                    this.renderer.ctx.drawImage(
-                        abilityIcon,
-                        pos.x + 157,
-                        pos.y + 44,
-                        26,
-                        26
-                    );
-                }
+                // Ability icon - removed since all abilities are now passive event-based triggers
+                // No manual activation required
 
                 // Add click regions - show card details
                 this.clickManager.addRegion({

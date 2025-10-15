@@ -38,19 +38,19 @@ describe('Cinder Pup Card', () => {
 
   describe('Base Ability - Burning Passion', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(CINDER_PUP.ability as StructuredAbility);
+      validateStructuredAbility(CINDER_PUP.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(CINDER_PUP.ability.name).toBe('Burning Passion');
+      expect(CINDER_PUP.abilities[0].name).toBe('Burning Passion');
     });
 
     test('should trigger on attack', () => {
-      expect(CINDER_PUP.ability.trigger).toBe(AbilityTrigger.OnAttack);
+      expect(CINDER_PUP.abilities[0].trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should apply 1 Burn counter to target on attack', () => {
-      const ability = CINDER_PUP.ability as StructuredAbility;
+      const ability = CINDER_PUP.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.ApplyCounter);
@@ -60,7 +60,7 @@ describe('Cinder Pup Card', () => {
     });
 
     test('should apply burn on every attack', () => {
-      const ability = CINDER_PUP.ability as StructuredAbility;
+      const ability = CINDER_PUP.abilities[0] as StructuredAbility;
       const hasBurn = ability.effects.some(
         (e: any) => e.type === EffectType.ApplyCounter && e.counter === 'Burn'
       );
@@ -102,22 +102,22 @@ describe('Cinder Pup Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = CINDER_PUP.levelingConfig!.abilityUpgrades![4];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.name).toBe('Inferno Bite');
     });
 
     test('should still trigger on attack', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should apply 2 Burn counters instead of 1', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.ApplyCounter);
@@ -127,8 +127,8 @@ describe('Cinder Pup Card', () => {
     });
 
     test('should be a power upgrade from base ability', () => {
-      const baseAbility = CINDER_PUP.ability as StructuredAbility;
-      const upgradedAbility = CINDER_PUP.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const baseAbility = CINDER_PUP.abilities[0] as StructuredAbility;
+      const upgradedAbility = CINDER_PUP.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       const baseEffect: any = baseAbility.effects[0];
       const upgradedEffect: any = upgradedAbility.effects[0];
       expect(upgradedEffect.value).toBeGreaterThan(baseEffect.value);
@@ -139,29 +139,29 @@ describe('Cinder Pup Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = CINDER_PUP.levelingConfig!.abilityUpgrades![7];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.name).toBe('Flame Burst');
     });
 
     test('should be an activated ability', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Activated);
     });
 
     test('should have discard cost', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(ability.cost).toBeDefined();
       expect(ability.cost!.type).toBe(CostType.Discard);
       expect(ability.cost!.value).toBe(1);
     });
 
     test('should apply 2 Burn counters to all enemies', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.ApplyCounter);
@@ -171,7 +171,7 @@ describe('Cinder Pup Card', () => {
     });
 
     test('should provide AoE burn capability', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       const effect: any = ability.effects[0];
       expect(effect.target).toBe(AbilityTarget.AllEnemies);
     });
@@ -181,22 +181,22 @@ describe('Cinder Pup Card', () => {
     test('should have upgraded passive ability at level 9', () => {
       const upgrade = CINDER_PUP.levelingConfig!.abilityUpgrades![9];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.name).toBe('Wildfire Aura');
     });
 
     test('should trigger on attack', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should apply 3 Burn counters to target', () => {
-      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.ApplyCounter);
@@ -206,9 +206,9 @@ describe('Cinder Pup Card', () => {
     });
 
     test('should maximize burn application', () => {
-      const baseAbility = CINDER_PUP.ability as StructuredAbility;
-      const level4Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
-      const level9Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const baseAbility = CINDER_PUP.abilities[0] as StructuredAbility;
+      const level4Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
+      const level9Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
 
       const baseValue = (baseAbility.effects[0] as any).value;
       const level4Value = (level4Ability.effects[0] as any).value;
@@ -229,13 +229,13 @@ describe('Cinder Pup Card', () => {
     });
 
     test('should have consistent burn application theme', () => {
-      const baseAbility = CINDER_PUP.ability as StructuredAbility;
+      const baseAbility = CINDER_PUP.abilities[0] as StructuredAbility;
       expect((baseAbility.effects[0] as any).counter).toBe('Burn');
 
-      const level4Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const level4Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       expect((level4Ability.effects[0] as any).counter).toBe('Burn');
 
-      const level9Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const level9Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       expect((level9Ability.effects[0] as any).counter).toBe('Burn');
     });
 
@@ -247,9 +247,9 @@ describe('Cinder Pup Card', () => {
     });
 
     test('should increase burn power at each upgrade', () => {
-      const baseAbility = CINDER_PUP.ability as StructuredAbility;
-      const level4Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
-      const level9Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const baseAbility = CINDER_PUP.abilities[0] as StructuredAbility;
+      const level4Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
+      const level9Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
 
       const baseBurn = (baseAbility.effects[0] as any).value;
       const level4Burn = (level4Ability.effects[0] as any).value;
@@ -263,22 +263,22 @@ describe('Cinder Pup Card', () => {
 
   describe('Ability Synergies', () => {
     test('should synergize with burn-focused strategies', () => {
-      const baseAbility = CINDER_PUP.ability as StructuredAbility;
+      const baseAbility = CINDER_PUP.abilities[0] as StructuredAbility;
       const effect: any = baseAbility.effects[0];
       expect(effect.type).toBe(EffectType.ApplyCounter);
       expect(effect.counter).toBe('Burn');
     });
 
     test('should provide AoE burn at level 7', () => {
-      const level7Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       const effect: any = level7Ability.effects[0];
       expect(effect.target).toBe(AbilityTarget.AllEnemies);
       expect(effect.counter).toBe('Burn');
     });
 
     test('should scale from single-target to multi-target burn', () => {
-      const baseAbility = CINDER_PUP.ability as StructuredAbility;
-      const level7Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const baseAbility = CINDER_PUP.abilities[0] as StructuredAbility;
+      const level7Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
 
       const baseTarget = (baseAbility.effects[0] as any).target;
       const level7Target = (level7Ability.effects[0] as any).target;
@@ -288,7 +288,7 @@ describe('Cinder Pup Card', () => {
     });
 
     test('should have activated abilities for strategic play', () => {
-      const level7Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(level7Ability.trigger).toBe(AbilityTrigger.Activated);
       expect(level7Ability.cost).toBeDefined();
     });
@@ -296,37 +296,37 @@ describe('Cinder Pup Card', () => {
 
   describe('Thematic Consistency', () => {
     test('should maintain fire-themed ability names', () => {
-      expect(CINDER_PUP.ability.name).toBe('Burning Passion');
-      expect(CINDER_PUP.levelingConfig!.abilityUpgrades![4].ability!.name).toBe('Inferno Bite');
-      expect(CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability!.name).toBe('Flame Burst');
-      expect(CINDER_PUP.levelingConfig!.abilityUpgrades![9].ability!.name).toBe('Wildfire Aura');
+      expect(CINDER_PUP.abilities[0].name).toBe('Burning Passion');
+      expect(CINDER_PUP.levelingConfig!.abilityUpgrades![4].abilities![0].name).toBe('Inferno Bite');
+      expect(CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0].name).toBe('Flame Burst');
+      expect(CINDER_PUP.levelingConfig!.abilityUpgrades![9].abilities![0].name).toBe('Wildfire Aura');
     });
 
     test('should embody burn and damage-over-time mechanics', () => {
-      const baseAbility = CINDER_PUP.ability as StructuredAbility;
+      const baseAbility = CINDER_PUP.abilities[0] as StructuredAbility;
       expect((baseAbility.effects[0] as any).counter).toBe('Burn');
 
-      const level4Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const level4Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       expect((level4Ability.effects[0] as any).counter).toBe('Burn');
 
-      const level7Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect((level7Ability.effects[0] as any).counter).toBe('Burn');
     });
 
     test('should represent growing wildfire intensity', () => {
-      expect(CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability!.name).toBe('Flame Burst');
-      expect(CINDER_PUP.levelingConfig!.abilityUpgrades![9].ability!.name).toBe('Wildfire Aura');
+      expect(CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0].name).toBe('Flame Burst');
+      expect(CINDER_PUP.levelingConfig!.abilityUpgrades![9].abilities![0].name).toBe('Wildfire Aura');
 
-      const level9Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const level9Ability = CINDER_PUP.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       expect((level9Ability.effects[0] as any).value).toBe(3);
     });
 
     test('should be a dedicated burn applier', () => {
       const abilities = [
-        CINDER_PUP.ability,
-        CINDER_PUP.levelingConfig!.abilityUpgrades![4].ability!,
-        CINDER_PUP.levelingConfig!.abilityUpgrades![7].ability!,
-        CINDER_PUP.levelingConfig!.abilityUpgrades![9].ability!,
+        CINDER_PUP.abilities[0],
+        CINDER_PUP.levelingConfig!.abilityUpgrades![4].abilities![0],
+        CINDER_PUP.levelingConfig!.abilityUpgrades![7].abilities![0],
+        CINDER_PUP.levelingConfig!.abilityUpgrades![9].abilities![0],
       ];
 
       abilities.forEach(ability => {

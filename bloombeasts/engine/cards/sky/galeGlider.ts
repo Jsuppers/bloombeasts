@@ -110,7 +110,7 @@ export const GALE_GLIDER: BloomBeastCard = {
   cost: 1,
   baseAttack: 2,
   baseHealth: 2,
-  ability: galeGliderPassive,
+  abilities: [galeGliderPassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -125,13 +125,13 @@ export const GALE_GLIDER: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: galeGliderBloom4,
+        abilities: [galeGliderBloom4],
       },
       7: {
-        ability: galeGliderPassive7,
+        abilities: [galeGliderPassive7],
       },
       9: {
-        ability: galeGliderPassive9,
+        abilities: [galeGliderPassive9],
       },
     },
   },

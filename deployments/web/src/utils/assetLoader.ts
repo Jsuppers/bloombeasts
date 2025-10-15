@@ -68,6 +68,7 @@ export class AssetLoader {
             // Load mission complete popup images
             await this.loadImage('MissionCompleteContainer', '/shared/images/MissionCompleteContainer.png');
             await this.loadImage('LongGreenButton', '/shared/images/LongGreenButton.png');
+            await this.loadImage('LoseImage', '/shared/images/LoseImage.png');
 
             // Load chest images (all affinities, closed and opened)
             await this.loadImage('ForestChestClosed', '/shared/images/chests/ForestChestClosed.png');

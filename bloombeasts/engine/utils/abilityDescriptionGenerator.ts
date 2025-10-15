@@ -80,10 +80,18 @@ function getTriggerText(trigger?: AbilityTrigger): string {
       return 'When attacked,';
     case AbilityTrigger.OnDestroy:
       return 'When destroyed,';
-    case AbilityTrigger.StartOfTurn:
+    case AbilityTrigger.OnOwnStartOfTurn:
       return 'At turn start,';
-    case AbilityTrigger.EndOfTurn:
+    case AbilityTrigger.OnOwnEndOfTurn:
       return 'At turn end,';
+    case AbilityTrigger.OnAnyStartOfTurn:
+      return 'At any turn start,';
+    case AbilityTrigger.OnAnyEndOfTurn:
+      return 'At any turn end,';
+    case AbilityTrigger.OnOpponentStartOfTurn:
+      return 'At opponent\'s turn start,';
+    case AbilityTrigger.OnOpponentEndOfTurn:
+      return 'At opponent\'s turn end,';
     case AbilityTrigger.Passive:
       return '';
     case AbilityTrigger.Activated:

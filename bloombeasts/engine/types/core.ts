@@ -108,7 +108,7 @@ export interface BuffCard extends Card {
  * Ability upgrade at a specific level
  */
 export interface AbilityUpgrade {
-  ability?: Ability;
+  abilities?: Ability[];  // Additional abilities to add at this level
 }
 
 /**
@@ -131,7 +131,7 @@ export interface BloomBeastCard extends Card {
   affinity: Affinity;
   baseAttack: number;
   baseHealth: number;
-  ability: Ability;  // Single ability field (trigger determines if passive/active)
+  abilities: Ability[];  // Array of passive abilities (triggered automatically)
   /** Optional custom leveling configuration */
   levelingConfig?: LevelingConfig;
   // Note: Card definitions are blueprints. All cards (Bloom, Magic, Trap, Habitat, Buff)

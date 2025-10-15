@@ -125,7 +125,7 @@ export const STAR_BLOOM: BloomBeastCard = {
   cost: 3,
   baseAttack: 4,
   baseHealth: 5,
-  ability: starBloomPassive,
+  abilities: [starBloomPassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -140,13 +140,13 @@ export const STAR_BLOOM: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: starBloomPassive4,
+        abilities: [starBloomPassive4],
       },
       7: {
-        ability: starBloomBloom7,
+        abilities: [starBloomBloom7],
       },
       9: {
-        ability: starBloomPassive9,
+        abilities: [starBloomPassive9],
       },
     },
   },

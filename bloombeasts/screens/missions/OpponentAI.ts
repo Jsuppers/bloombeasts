@@ -197,7 +197,7 @@ export class OpponentAI {
           name: playedCard.name,
           affinity: playedCard.affinity,
           cost: playedCard.cost,
-          ability: playedCard.ability,
+          ability: playedCard.abilities && playedCard.abilities.length > 0 ? playedCard.abilities[0] : undefined,
         };
 
         // Initialize stat system (beasts need this even before buffs are applied)

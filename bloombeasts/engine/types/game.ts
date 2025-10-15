@@ -9,7 +9,19 @@ import { SimpleMap } from '../../utils/polyfills';
 // Re-export for convenience
 export { BloomBeastInstance } from './leveling';
 
-// Phase type for game flow
+// Battle state enum for state-based battle flow
+export enum BattleState {
+  Setup = 'Setup',
+  Player1StartOfTurn = 'Player1StartOfTurn',
+  Player1Playing = 'Player1Playing',
+  Player1EndOfTurn = 'Player1EndOfTurn',
+  Player2StartOfTurn = 'Player2StartOfTurn',
+  Player2Playing = 'Player2Playing',
+  Player2EndOfTurn = 'Player2EndOfTurn',
+  Finished = 'Finished'
+}
+
+// Phase type for game flow (kept for backward compatibility)
 export type Phase = 'Setup' | 'Draw' | 'Main' | 'Combat' | 'End';
 
 export interface Player {
@@ -39,7 +51,8 @@ export interface GameState {
   habitatZone: HabitatCard | null;
   habitatCounters?: Counter[]; // Counters on the habitat (like Spores)
   turn: number;
-  phase: Phase;
+  phase: Phase;  // Kept for backward compatibility
+  battleState: BattleState;  // New state-based battle flow
   turnHistory: any[];  // History of actions taken
   // Pending actions that need to be resolved
   drawCardsQueued?: number;

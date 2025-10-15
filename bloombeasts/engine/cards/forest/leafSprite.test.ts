@@ -40,19 +40,19 @@ describe('Leaf Sprite Card', () => {
 
   describe('Base Ability - Evasive', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(LEAF_SPRITE.ability as StructuredAbility);
+      validateStructuredAbility(LEAF_SPRITE.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(LEAF_SPRITE.ability.name).toBe('Evasive');
+      expect(LEAF_SPRITE.abilities[0].name).toBe('Evasive');
     });
 
     test('should be a passive ability', () => {
-      expect(LEAF_SPRITE.ability.trigger).toBe(AbilityTrigger.Passive);
+      expect(LEAF_SPRITE.abilities[0].trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should have piercing attack modification', () => {
-      const ability = LEAF_SPRITE.ability as StructuredAbility;
+      const ability = LEAF_SPRITE.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as AttackModificationEffect;
       expect(effect.type).toBe(EffectType.AttackModification);
@@ -89,28 +89,28 @@ describe('Leaf Sprite Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability as StructuredAbility);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('Pollen Rush');
     });
 
     test('should trigger on destroy', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.OnDestroy);
     });
 
     test('should grant 2 extra nectar plays', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as ResourceGainEffect;
       expect(effect.type).toBe(EffectType.GainResource);
@@ -124,28 +124,28 @@ describe('Leaf Sprite Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability as StructuredAbility);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('Master Evasion');
     });
 
     test('should be passive', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should have piercing and immunity to targeting', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const piercingEffect = ability.effects[0] as AttackModificationEffect;
@@ -163,28 +163,28 @@ describe('Leaf Sprite Card', () => {
     test('should have upgraded ability at level 9', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability as StructuredAbility);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('Shadow Strike');
     });
 
     test('should be passive', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should attack twice and have piercing', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const doubleAttackEffect = ability.effects[0] as AttackModificationEffect;
@@ -207,12 +207,12 @@ describe('Leaf Sprite Card', () => {
     });
 
     test('should have consistent evasion theme', () => {
-      const baseAbility = LEAF_SPRITE.ability as StructuredAbility;
+      const baseAbility = LEAF_SPRITE.abilities[0] as StructuredAbility;
       expect(baseAbility.effects[0].type).toBe(EffectType.AttackModification);
 
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const level7Ability = upgrade!.ability as StructuredAbility;
+      const level7Ability = upgrade!.abilities[0] as StructuredAbility;
       const hasImmunity = level7Ability.effects.some(e => e.type === EffectType.Immunity);
       expect(hasImmunity).toBe(true);
     });
@@ -227,7 +227,7 @@ describe('Leaf Sprite Card', () => {
     test('should have resource generation on death', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const level4Ability = upgrade!.ability as StructuredAbility;
+      const level4Ability = upgrade!.abilities[0] as StructuredAbility;
       const hasResourceGain = level4Ability.effects.some(e => e.type === EffectType.GainResource);
       expect(hasResourceGain).toBe(true);
     });

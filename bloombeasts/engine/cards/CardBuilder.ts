@@ -56,8 +56,13 @@ export class BloomBeastBuilder {
     return this;
   }
 
+  abilities(abilities: StructuredAbility[]): this {
+    this.card.abilities = abilities;
+    return this;
+  }
+
   ability(ability: StructuredAbility): this {
-    this.card.ability = ability;
+    this.card.abilities = [ability];
     return this;
   }
 
@@ -79,7 +84,7 @@ export class BloomBeastBuilder {
     if (this.card.cost === undefined) throw new Error('Card cost is required');
     if (this.card.baseAttack === undefined) throw new Error('Card attack is required');
     if (this.card.baseHealth === undefined) throw new Error('Card health is required');
-    if (!this.card.ability) throw new Error('Card ability is required');
+    if (!this.card.abilities || this.card.abilities.length === 0) throw new Error('Card abilities are required');
 
     return this.card as BloomBeastCard;
   }

@@ -104,7 +104,7 @@ export const BLAZEFINCH: BloomBeastCard = CardBuilder.bloomBeast('blazefinch', '
   .affinity('Fire')
   .cost(1)
   .stats(1, 2)
-  .ability(blazefinchPassive)
+  .abilities([blazefinchPassive])
   .leveling({
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -119,13 +119,13 @@ export const BLAZEFINCH: BloomBeastCard = CardBuilder.bloomBeast('blazefinch', '
     },
     abilityUpgrades: {
       4: {
-        ability: blazefinchBloom4,
+        abilities: [blazefinchBloom4],
       },
       7: {
-        ability: blazefinchPassive7,
+        abilities: [blazefinchPassive7],
       },
       9: {
-        ability: blazefinchPassive9,
+        abilities: [blazefinchPassive9],
       },
     },
   })

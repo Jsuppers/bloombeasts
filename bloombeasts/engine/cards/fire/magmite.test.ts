@@ -38,19 +38,19 @@ describe('Magmite Card', () => {
 
   describe('Base Ability - Hardened Shell', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(MAGMITE.ability as StructuredAbility);
+      validateStructuredAbility(MAGMITE.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(MAGMITE.ability.name).toBe('Hardened Shell');
+      expect(MAGMITE.abilities[0].name).toBe('Hardened Shell');
     });
 
     test('should be a passive ability', () => {
-      expect(MAGMITE.ability.trigger).toBe(AbilityTrigger.Passive);
+      expect(MAGMITE.abilities[0].trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should reduce incoming damage by 1', () => {
-      const ability = MAGMITE.ability as StructuredAbility;
+      const ability = MAGMITE.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.DamageReduction);
@@ -60,7 +60,7 @@ describe('Magmite Card', () => {
     });
 
     test('should provide passive defensive capability', () => {
-      const ability = MAGMITE.ability as StructuredAbility;
+      const ability = MAGMITE.abilities[0] as StructuredAbility;
       const hasDamageReduction = ability.effects.some(
         e => e.type === EffectType.DamageReduction
       );
@@ -102,22 +102,22 @@ describe('Magmite Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = MAGMITE.levelingConfig!.abilityUpgrades![4];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.name).toBe('Molten Armor');
     });
 
     test('should remain a passive ability', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should reduce incoming damage by 2 instead of 1', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.DamageReduction);
@@ -127,8 +127,8 @@ describe('Magmite Card', () => {
     });
 
     test('should be a power upgrade from base ability', () => {
-      const baseAbility = MAGMITE.ability as StructuredAbility;
-      const upgradedAbility = MAGMITE.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const baseAbility = MAGMITE.abilities[0] as StructuredAbility;
+      const upgradedAbility = MAGMITE.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       const baseEffect: any = baseAbility.effects[0];
       const upgradedEffect: any = upgradedAbility.effects[0];
       expect(upgradedEffect.value).toBeGreaterThan(baseEffect.value);
@@ -139,22 +139,22 @@ describe('Magmite Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = MAGMITE.levelingConfig!.abilityUpgrades![7];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.name).toBe('Eruption');
     });
 
     test('should trigger on destroy', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnDestroy);
     });
 
     test('should deal 5 damage to opponent gardener and 2 to all enemies', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const gardenerEffect: any = ability.effects[0];
@@ -169,7 +169,7 @@ describe('Magmite Card', () => {
     });
 
     test('should add death effect capability', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.OnDestroy);
       const hasDamage = ability.effects.some(e => e.type === EffectType.DealDamage);
       expect(hasDamage).toBe(true);
@@ -180,22 +180,22 @@ describe('Magmite Card', () => {
     test('should have upgraded passive ability at level 9', () => {
       const upgrade = MAGMITE.levelingConfig!.abilityUpgrades![9];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.name).toBe('Obsidian Carapace');
     });
 
     test('should be a passive ability', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should reduce damage by 3 and retaliate for 2', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const reductionEffect: any = ability.effects[0];
@@ -211,7 +211,7 @@ describe('Magmite Card', () => {
     });
 
     test('should combine defense and offense', () => {
-      const ability = MAGMITE.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const ability = MAGMITE.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       const hasDamageReduction = countEffectsByType(ability.effects, EffectType.DamageReduction) > 0;
       const hasRetaliation = countEffectsByType(ability.effects, EffectType.Retaliation) > 0;
       expect(hasDamageReduction).toBe(true);
@@ -229,10 +229,10 @@ describe('Magmite Card', () => {
     });
 
     test('should have consistent defensive and death effect theme', () => {
-      const baseAbility = MAGMITE.ability as StructuredAbility;
+      const baseAbility = MAGMITE.abilities[0] as StructuredAbility;
       expect(baseAbility.effects[0].type).toBe(EffectType.DamageReduction);
 
-      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(level7Ability.trigger).toBe(AbilityTrigger.OnDestroy);
     });
 
@@ -244,9 +244,9 @@ describe('Magmite Card', () => {
     });
 
     test('should have increasing damage reduction', () => {
-      const baseAbility = MAGMITE.ability as StructuredAbility;
-      const level4Ability = MAGMITE.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
-      const level9Ability = MAGMITE.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const baseAbility = MAGMITE.abilities[0] as StructuredAbility;
+      const level4Ability = MAGMITE.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
+      const level9Ability = MAGMITE.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
 
       const baseReduction = (baseAbility.effects[0] as any).value;
       const level4Reduction = (level4Ability.effects[0] as any).value;
@@ -260,20 +260,20 @@ describe('Magmite Card', () => {
 
   describe('Ability Synergies', () => {
     test('should synergize with defensive strategies', () => {
-      const baseAbility = MAGMITE.ability as StructuredAbility;
+      const baseAbility = MAGMITE.abilities[0] as StructuredAbility;
       expect(baseAbility.trigger).toBe(AbilityTrigger.Passive);
       expect(baseAbility.effects[0].type).toBe(EffectType.DamageReduction);
     });
 
     test('should provide death value at level 7', () => {
-      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(level7Ability.trigger).toBe(AbilityTrigger.OnDestroy);
       const hasDamage = level7Ability.effects.some(e => e.type === EffectType.DealDamage);
       expect(hasDamage).toBe(true);
     });
 
     test('should become nearly invincible at level 9', () => {
-      const level9Ability = MAGMITE.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const level9Ability = MAGMITE.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       const reductionEffect: any = level9Ability.effects[0];
       expect(reductionEffect.value).toBe(3);
 
@@ -282,7 +282,7 @@ describe('Magmite Card', () => {
     });
 
     test('should punish attackers at higher levels', () => {
-      const level9Ability = MAGMITE.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const level9Ability = MAGMITE.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       const hasRetaliation = level9Ability.effects.some(e => e.type === EffectType.Retaliation);
       expect(hasRetaliation).toBe(true);
     });
@@ -290,24 +290,24 @@ describe('Magmite Card', () => {
 
   describe('Thematic Consistency', () => {
     test('should maintain fire and rock-themed ability names', () => {
-      expect(MAGMITE.ability.name).toBe('Hardened Shell');
-      expect(MAGMITE.levelingConfig!.abilityUpgrades![4].ability!.name).toBe('Molten Armor');
-      expect(MAGMITE.levelingConfig!.abilityUpgrades![7].ability!.name).toBe('Eruption');
-      expect(MAGMITE.levelingConfig!.abilityUpgrades![9].ability!.name).toBe('Obsidian Carapace');
+      expect(MAGMITE.abilities[0].name).toBe('Hardened Shell');
+      expect(MAGMITE.levelingConfig!.abilityUpgrades![4].abilities![0].name).toBe('Molten Armor');
+      expect(MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0].name).toBe('Eruption');
+      expect(MAGMITE.levelingConfig!.abilityUpgrades![9].abilities![0].name).toBe('Obsidian Carapace');
     });
 
     test('should embody volcanic tank mechanics', () => {
-      const baseAbility = MAGMITE.ability as StructuredAbility;
+      const baseAbility = MAGMITE.abilities[0] as StructuredAbility;
       expect(baseAbility.trigger).toBe(AbilityTrigger.Passive);
       expect(baseAbility.effects[0].type).toBe(EffectType.DamageReduction);
 
-      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(level7Ability.trigger).toBe(AbilityTrigger.OnDestroy);
       expect(level7Ability.name).toBe('Eruption');
     });
 
     test('should represent volcanic eruption on death', () => {
-      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(level7Ability.name).toBe('Eruption');
       expect(level7Ability.trigger).toBe(AbilityTrigger.OnDestroy);
 
@@ -317,7 +317,7 @@ describe('Magmite Card', () => {
     });
 
     test('should be an ultimate finisher', () => {
-      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(level7Ability.trigger).toBe(AbilityTrigger.OnDestroy);
 
       const hasDamage = level7Ability.effects.some(
@@ -330,9 +330,9 @@ describe('Magmite Card', () => {
   describe('Advanced Mechanics', () => {
     test('should scale damage reduction progressively', () => {
       const abilities = [
-        MAGMITE.ability as StructuredAbility,
-        MAGMITE.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility,
-        MAGMITE.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility,
+        MAGMITE.abilities[0] as StructuredAbility,
+        MAGMITE.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility,
+        MAGMITE.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility,
       ];
 
       const reductions = abilities.map(ability => {
@@ -344,7 +344,7 @@ describe('Magmite Card', () => {
     });
 
     test('should have massive death effect at level 7', () => {
-      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = MAGMITE.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       const totalDamage = level7Ability.effects.reduce((sum, effect: any) => {
         if (effect.type === EffectType.DealDamage && typeof effect.value === 'number') {
           return sum + effect.value;
@@ -356,7 +356,7 @@ describe('Magmite Card', () => {
     });
 
     test('should combine multiple defensive mechanics at level 9', () => {
-      const level9Ability = MAGMITE.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const level9Ability = MAGMITE.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       const effectTypes = level9Ability.effects.map(e => e.type);
       expect(effectTypes).toContain(EffectType.DamageReduction);
       expect(effectTypes).toContain(EffectType.Retaliation);

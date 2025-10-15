@@ -10,7 +10,7 @@ import { longButtonDimensions, missionCompleteCardDimensions, chestImageMissionC
 
 export interface MissionCompletePopupState {
   mission: Mission;
-  rewards: RewardResult;
+  rewards: RewardResult | null; // null for mission failed
   chestOpened: boolean;
 }
 
@@ -28,7 +28,7 @@ export class MissionCompletePopup {
   /**
    * Show the mission complete popup
    */
-  show(mission: Mission, rewards: RewardResult): void {
+  show(mission: Mission, rewards: RewardResult | null): void {
     this.state = {
       mission,
       rewards,
@@ -103,32 +103,48 @@ export class MissionCompletePopup {
         missionCompleteCardDimensions.height
       );
 
-      // Draw "MISSION COMPLETE" title
-      ctx.fillStyle = '#FFD700';
+      // Draw title based on success/failure
+      const isFailed = !rewards;
+      ctx.fillStyle = isFailed ? '#FF4444' : '#FFD700';
       ctx.font = `bold ${missionCompleteCardPositions.title.size}px Arial`;
       ctx.textAlign = missionCompleteCardPositions.title.textAlign as CanvasTextAlign;
       ctx.textBaseline = missionCompleteCardPositions.title.textBaseline as CanvasTextBaseline;
       ctx.fillText(
-        'MISSION COMPLETE!',
+        isFailed ? 'MISSION FAILED' : 'MISSION COMPLETE!',
         centerX + missionCompleteCardPositions.title.x,
         centerY + missionCompleteCardPositions.title.y
       );
 
-      // Draw chest image (closed or open based on state)
-      const affinityKey = mission.affinity || 'Forest';
-      const chestImageKey = chestOpened
-        ? `${affinityKey}ChestOpened`
-        : `${affinityKey}ChestClosed`;
-      const chestImage = images[chestImageKey];
+      // Draw image based on success/failure
+      if (isFailed) {
+        // Show lose image for failed missions
+        const loseImage = images['LoseImage'];
+        if (loseImage) {
+          ctx.drawImage(
+            loseImage,
+            centerX + missionCompleteCardPositions.chestImage.x,
+            centerY + missionCompleteCardPositions.chestImage.y,
+            chestImageMissionCompleteDimensions.width,
+            chestImageMissionCompleteDimensions.height
+          );
+        }
+      } else {
+        // Draw chest image (closed or open based on state)
+        const affinityKey = mission.affinity || 'Forest';
+        const chestImageKey = chestOpened
+          ? `${affinityKey}ChestOpened`
+          : `${affinityKey}ChestClosed`;
+        const chestImage = images[chestImageKey];
 
-      if (chestImage) {
-        ctx.drawImage(
-          chestImage,
-          centerX + missionCompleteCardPositions.chestImage.x,
-          centerY + missionCompleteCardPositions.chestImage.y,
-          chestImageMissionCompleteDimensions.width,
-          chestImageMissionCompleteDimensions.height
-        );
+        if (chestImage) {
+          ctx.drawImage(
+            chestImage,
+            centerX + missionCompleteCardPositions.chestImage.x,
+            centerY + missionCompleteCardPositions.chestImage.y,
+            chestImageMissionCompleteDimensions.width,
+            chestImageMissionCompleteDimensions.height
+          );
+        }
       }
 
       // Draw info text
@@ -141,58 +157,74 @@ export class MissionCompletePopup {
       ctx.textAlign = missionCompleteCardPositions.infoText.textAlign as CanvasTextAlign;
       ctx.textBaseline = missionCompleteCardPositions.infoText.textBaseline as CanvasTextBaseline;
 
-      // Format completion time
-      const minutes = Math.floor(rewards.completionTimeSeconds / 60);
-      const seconds = rewards.completionTimeSeconds % 60;
-      const timeString = minutes > 0
-        ? `${minutes}m ${seconds}s`
-        : `${seconds}s`;
-
-      // If chest NOT opened, only show basic info
-      if (!chestOpened) {
-        const basicInfo = [
-          `Time: ${timeString}`,
-          ``,
-          `Player XP: +${rewards.xpGained}`,
-          `Beast XP: +${rewards.beastXP}`,
+      // Show different info for failed missions
+      if (isFailed) {
+        const failInfo = [
+          '',
+          'Better luck next time!',
+          '',
+          'Keep training your beasts',
+          'and try again.',
         ];
 
-        basicInfo.forEach(line => {
+        failInfo.forEach(line => {
           ctx.fillText(line, infoX, infoY);
           infoY += lineHeight;
         });
       } else {
-        // If chest is opened, show all rewards (but NOT XP again)
+        // Format completion time
+        const minutes = Math.floor(rewards.completionTimeSeconds / 60);
+        const seconds = rewards.completionTimeSeconds % 60;
+        const timeString = minutes > 0
+          ? `${minutes}m ${seconds}s`
+          : `${seconds}s`;
 
-        // Show card rewards
-        if (rewards.cardsReceived.length > 0) {
-          ctx.fillStyle = '#FFD700';
-          ctx.fillText('Cards Received:', infoX, infoY);
-          infoY += lineHeight;
+        // If chest NOT opened, only show basic info
+        if (!chestOpened) {
+          const basicInfo = [
+            `Time: ${timeString}`,
+            ``,
+            `Player XP: +${rewards.xpGained}`,
+            `Beast XP: +${rewards.beastXP}`,
+          ];
 
-          ctx.fillStyle = '#FFFFFF';
-          rewards.cardsReceived.forEach(card => {
-            ctx.fillText(`  • ${card.name}`, infoX, infoY);
+          basicInfo.forEach(line => {
+            ctx.fillText(line, infoX, infoY);
             infoY += lineHeight;
           });
-          infoY += 10; // Extra spacing
-        }
+        } else {
+          // If chest is opened, show all rewards (but NOT XP again)
 
-        // Show item rewards with emojis
-        if (rewards.itemsReceived.length > 0) {
-          ctx.fillStyle = '#FFD700';
-          ctx.fillText('Items Received:', infoX, infoY);
-          infoY += lineHeight;
-
-          ctx.fillStyle = '#FFFFFF';
-          rewards.itemsReceived.forEach(itemReward => {
-            const item = items.find(i => i.id === itemReward.itemId);
-            const emoji = item ? item.emoji : '';
-            const itemName = item ? item.name : itemReward.itemId;
-            ctx.fillText(`  ${emoji} ${itemName} x${itemReward.quantity}`, infoX, infoY);
+          // Show card rewards
+          if (rewards.cardsReceived.length > 0) {
+            ctx.fillStyle = '#FFD700';
+            ctx.fillText('Cards Received:', infoX, infoY);
             infoY += lineHeight;
-          });
-          infoY += 10; // Extra spacing
+
+            ctx.fillStyle = '#FFFFFF';
+            rewards.cardsReceived.forEach(card => {
+              ctx.fillText(`  • ${card.name}`, infoX, infoY);
+              infoY += lineHeight;
+            });
+            infoY += 10; // Extra spacing
+          }
+
+          // Show item rewards with emojis
+          if (rewards.itemsReceived.length > 0) {
+            ctx.fillStyle = '#FFD700';
+            ctx.fillText('Items Received:', infoX, infoY);
+            infoY += lineHeight;
+
+            ctx.fillStyle = '#FFFFFF';
+            rewards.itemsReceived.forEach(itemReward => {
+              const item = items.find(i => i.id === itemReward.itemId);
+              const emoji = item ? item.emoji : '';
+              const itemName = item ? item.name : itemReward.itemId;
+              ctx.fillText(`  ${emoji} ${itemName} x${itemReward.quantity}`, infoX, infoY);
+              infoY += lineHeight;
+            });
+            infoY += 10; // Extra spacing
+          }
         }
       }
 
@@ -216,7 +248,8 @@ export class MissionCompletePopup {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        const buttonText = chestOpened ? 'CONTINUE' : 'CLAIM REWARDS';
+        // Show different button text for failed missions
+        const buttonText = isFailed ? 'CONTINUE' : (chestOpened ? 'CONTINUE' : 'CLAIM REWARDS');
         ctx.fillText(
           buttonText,
           buttonX + longButtonDimensions.width / 2,
@@ -254,6 +287,11 @@ export class MissionCompletePopup {
     if (!this.state) return false;
 
     if (this.isClickOnButton(x, y)) {
+      // For failed missions, always close immediately
+      if (!this.state.rewards) {
+        return true;
+      }
+
       if (!this.state.chestOpened) {
         // Claim rewards - open chest
         this.claimRewards();

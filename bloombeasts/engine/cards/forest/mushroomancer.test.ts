@@ -39,19 +39,19 @@ describe('Mushroomancer Card', () => {
 
   describe('Base Ability - Fungal Cloud', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(MUSHROOMANCER.ability as StructuredAbility);
+      validateStructuredAbility(MUSHROOMANCER.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(MUSHROOMANCER.ability.name).toBe('Fungal Cloud');
+      expect(MUSHROOMANCER.abilities[0].name).toBe('Fungal Cloud');
     });
 
     test('should trigger on summon', () => {
-      expect(MUSHROOMANCER.ability.trigger).toBe(AbilityTrigger.OnSummon);
+      expect(MUSHROOMANCER.abilities[0].trigger).toBe(AbilityTrigger.OnSummon);
     });
 
     test('should debuff adjacent enemies attack by -1', () => {
-      const ability = MUSHROOMANCER.ability as StructuredAbility;
+      const ability = MUSHROOMANCER.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.type).toBe(EffectType.ModifyStats);
@@ -90,28 +90,28 @@ describe('Mushroomancer Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability as StructuredAbility);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('Toxic Spores');
     });
 
     test('should trigger on summon', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.OnSummon);
     });
 
     test('should debuff adjacent enemies attack by -2', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.type).toBe(EffectType.ModifyStats);
       expect(effect.target).toBe(AbilityTarget.AdjacentEnemies);
@@ -124,28 +124,28 @@ describe('Mushroomancer Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability as StructuredAbility);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('Greater Life Spore');
     });
 
     test('should be an activated ability', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.Activated);
     });
 
     test('should have spore cost', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.cost).toBeDefined();
       expect(ability.cost!.type).toBe(CostType.RemoveCounter);
       expect(ability.cost!.counter).toBe('Spore');
@@ -155,7 +155,7 @@ describe('Mushroomancer Card', () => {
     test('should heal for 3', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       const effect = ability.effects[0] as HealEffect;
       expect(effect.type).toBe(EffectType.Heal);
       expect(effect.target).toBe(AbilityTarget.Self);
@@ -167,28 +167,28 @@ describe('Mushroomancer Card', () => {
     test('should have upgraded passive at level 9', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability as StructuredAbility);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('Parasitic Bloom');
     });
 
     test('should trigger on summon', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.OnSummon);
     });
 
     test('should permanently debuff all enemies', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.type).toBe(EffectType.ModifyStats);
       expect(effect.target).toBe(AbilityTarget.AllEnemies);
@@ -200,13 +200,13 @@ describe('Mushroomancer Card', () => {
 
   describe('Card Progression and Balance', () => {
     test('should maintain AOE debuffer role throughout progression', () => {
-      const baseAbility = MUSHROOMANCER.ability as StructuredAbility;
+      const baseAbility = MUSHROOMANCER.abilities[0] as StructuredAbility;
       const baseEffect = baseAbility.effects[0] as StatModificationEffect;
       expect(baseEffect.target).toBe(AbilityTarget.AdjacentEnemies);
 
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const level9Ability = upgrade!.ability as StructuredAbility;
+      const level9Ability = upgrade!.abilities[0] as StructuredAbility;
       const level9Effect = level9Ability.effects[0] as StatModificationEffect;
       expect(level9Effect.target).toBe(AbilityTarget.AllEnemies);
     });
@@ -214,18 +214,18 @@ describe('Mushroomancer Card', () => {
     test('should have activated healing abilities', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const level7Ability = upgrade!.ability as StructuredAbility;
+      const level7Ability = upgrade!.abilities[0] as StructuredAbility;
       expect(level7Ability.trigger).toBe(AbilityTrigger.Activated);
       expect(level7Ability.effects[0].type).toBe(EffectType.Heal);
     });
 
     test('should scale debuff power with level', () => {
-      const baseAbility = MUSHROOMANCER.ability as StructuredAbility;
+      const baseAbility = MUSHROOMANCER.abilities[0] as StructuredAbility;
       const baseEffect = baseAbility.effects[0] as StatModificationEffect;
       const baseDebuff = baseEffect.value;
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const level4Ability = upgrade!.ability as StructuredAbility;
+      const level4Ability = upgrade!.abilities[0] as StructuredAbility;
       const level4Effect = level4Ability.effects[0] as StatModificationEffect;
       const level4Debuff = level4Effect.value;
       expect(level4Debuff).toBeLessThan(baseDebuff);
@@ -235,7 +235,7 @@ describe('Mushroomancer Card', () => {
     test('should have consistent spore mechanics theme', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const level7Ability = upgrade!.ability as StructuredAbility;
+      const level7Ability = upgrade!.abilities[0] as StructuredAbility;
       expect(level7Ability.cost!.counter).toBe('Spore');
     });
   });

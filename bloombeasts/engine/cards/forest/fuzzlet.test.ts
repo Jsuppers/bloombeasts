@@ -37,20 +37,20 @@ describe('Fuzzlet Card', () => {
 
   describe('Base Ability - Spores of Defense', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(FUZZLET.ability);
+      validateStructuredAbility(FUZZLET.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(FUZZLET.ability.name).toBe('Spores of Defense');
+      expect(FUZZLET.abilities[0].name).toBe('Spores of Defense');
     });
 
     test('should trigger on damage', () => {
-      expect(FUZZLET.ability.trigger).toBe(AbilityTrigger.OnDamage);
+      expect(FUZZLET.abilities[0].trigger).toBe(AbilityTrigger.OnDamage);
     });
 
     test('should apply 1 Spore counter to self when damaged', () => {
-      expect(FUZZLET.ability.effects).toHaveLength(1);
-      const effect = FUZZLET.ability.effects[0] as ApplyCounterEffect;
+      expect(FUZZLET.abilities[0].effects).toHaveLength(1);
+      const effect = FUZZLET.abilities[0].effects[0] as ApplyCounterEffect;
       expect(effect.type).toBe(EffectType.ApplyCounter);
       expect(effect.target).toBe(AbilityTarget.Self);
       expect(effect.counter).toBe('Spore');
@@ -92,29 +92,29 @@ describe('Fuzzlet Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('Spore Burst');
     });
 
     test('should still trigger on damage', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.OnDamage);
     });
 
     test('should apply 2 Spore counters instead of 1', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as ApplyCounterEffect;
       expect(effect.type).toBe(EffectType.ApplyCounter);
@@ -124,10 +124,10 @@ describe('Fuzzlet Card', () => {
     });
 
     test('should be a power upgrade from base ability', () => {
-      const baseEffect = FUZZLET.ability.effects[0] as ApplyCounterEffect;
+      const baseEffect = FUZZLET.abilities[0].effects[0] as ApplyCounterEffect;
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       const upgradedEffect = ability.effects[0] as ApplyCounterEffect;
       expect(upgradedEffect.value).toBeGreaterThan(baseEffect.value);
     });
@@ -137,29 +137,29 @@ describe('Fuzzlet Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('Accelerated Growth');
     });
 
     test('should trigger at start of turn', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
-      expect(ability.trigger).toBe(AbilityTrigger.StartOfTurn);
+      const ability = upgrade!.abilities[0] as StructuredAbility;
+      expect(ability.trigger).toBe(AbilityTrigger.OnOwnStartOfTurn);
     });
 
     test('should have healing effect', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as HealEffect;
       expect(effect.type).toBe(EffectType.Heal);
@@ -172,36 +172,36 @@ describe('Fuzzlet Card', () => {
     test('should have upgraded passive ability at level 9', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('Spore Dominance');
     });
 
     test('should trigger on damage', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.OnDamage);
     });
 
     test('should have multiple effects', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.effects.length).toBeGreaterThan(1);
     });
 
     test('should apply 2 Spore counters and heal', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const sporeEffect = ability.effects[0] as ApplyCounterEffect;
@@ -219,7 +219,7 @@ describe('Fuzzlet Card', () => {
     test('should combine offensive and defensive capabilities', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability as StructuredAbility;
+      const ability = upgrade!.abilities[0] as StructuredAbility;
       const hasCounterEffect = countEffectsByType(ability.effects, EffectType.ApplyCounter) > 0;
       const hasHealEffect = countEffectsByType(ability.effects, EffectType.Heal) > 0;
       expect(hasCounterEffect).toBe(true);
@@ -237,18 +237,18 @@ describe('Fuzzlet Card', () => {
     });
 
     test('should have consistent spore mechanics theme', () => {
-      const baseEffect = FUZZLET.ability.effects[0] as ApplyCounterEffect;
+      const baseEffect = FUZZLET.abilities[0].effects[0] as ApplyCounterEffect;
       expect(baseEffect.counter).toBe('Spore');
 
       const upgrade4 = FUZZLET.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const ability4 = upgrade4!.ability as StructuredAbility;
+      const ability4 = upgrade4!.abilities[0] as StructuredAbility;
       const level4Effect = ability4.effects[0] as ApplyCounterEffect;
       expect(level4Effect.counter).toBe('Spore');
 
       const upgrade9 = FUZZLET.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const ability9 = upgrade9!.ability as StructuredAbility;
+      const ability9 = upgrade9!.abilities[0] as StructuredAbility;
       const level9Effect = ability9.effects[0] as ApplyCounterEffect;
       expect(level9Effect.counter).toBe('Spore');
     });
@@ -265,7 +265,7 @@ describe('Fuzzlet Card', () => {
     test('should synergize with spore-generating abilities', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const level4Ability = upgrade!.ability as StructuredAbility;
+      const level4Ability = upgrade!.abilities[0] as StructuredAbility;
       const effect = level4Ability.effects[0] as ApplyCounterEffect;
       expect(effect.type).toBe(EffectType.ApplyCounter);
       expect(effect.counter).toBe('Spore');
@@ -275,7 +275,7 @@ describe('Fuzzlet Card', () => {
     test('should have healing capabilities at higher levels', () => {
       const upgrade = FUZZLET.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const level7Ability = upgrade!.ability as StructuredAbility;
+      const level7Ability = upgrade!.abilities[0] as StructuredAbility;
       const hasHeal = level7Ability.effects.some(e => e.type === EffectType.Heal);
       expect(hasHeal).toBe(true);
     });

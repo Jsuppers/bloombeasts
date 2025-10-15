@@ -38,6 +38,7 @@ export interface BattleDisplay {
   cardPopup?: { // Card popup display (for magic/trap/buff cards)
     card: any;
     player: 'player' | 'opponent';
+    showCloseButton?: boolean; // Show close button for manual popups
   } | null;
 }
 
@@ -158,7 +159,7 @@ export class BattleDisplayManager {
         name: beast.name || cardDef.name,
         affinity: beast.affinity || cardDef.affinity,
         cost: beast.cost || cardDef.cost,
-        ability: beast.ability || cardDef.ability,
+        abilities: beast.abilities || cardDef.abilities,
         // Use stats as-is from the engine (bonuses are already applied by StatModifierManager)
         currentAttack: beast.currentAttack || 0,
         currentHealth: beast.currentHealth || 0,

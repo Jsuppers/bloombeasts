@@ -31,32 +31,61 @@ import { getAbilityDescription } from './getAbilityDescription';
 export function getCardDescription(card: any): string {
   if (!card) return '';
 
-  // Handle Bloom cards (have ability property)
-  if (card.type === 'Bloom' && card.ability) {
-    return getAbilityDescription(card.ability);
+  // Debug logging
+  console.log('[getCardDescription] Card:', {
+    name: card.name,
+    type: card.type,
+    hasEffects: !!card.effects,
+    hasAbilities: !!card.abilities,
+    hasOngoingEffects: !!card.ongoingEffects,
+    hasActivation: !!card.activation
+  });
+
+  // Handle Bloom cards (have abilities array)
+  if (card.type === 'Bloom' && card.abilities && Array.isArray(card.abilities)) {
+    // Generate descriptions for all abilities and combine them
+    const abilityDescriptions = card.abilities.map((ability: any) => getAbilityDescription(ability));
+    // Combine ability descriptions with bullet points if multiple
+    if (abilityDescriptions.length === 0) {
+      return '';
+    } else if (abilityDescriptions.length === 1) {
+      return abilityDescriptions[0];
+    } else {
+      // Multiple abilities: join with bullet points
+      return abilityDescriptions.map((desc: string) => `• ${desc}`).join(' ');
+    }
   }
 
   // Handle Magic cards
   if (card.type === 'Magic' && card.effects) {
-    return generateMagicCardDescription(card as MagicCard);
+    const desc = generateMagicCardDescription(card as MagicCard);
+    console.log('[getCardDescription] Magic description:', desc);
+    return desc;
   }
 
   // Handle Trap cards
   if (card.type === 'Trap' && card.effects) {
-    return generateTrapCardDescription(card as TrapCard);
+    const desc = generateTrapCardDescription(card as TrapCard);
+    console.log('[getCardDescription] Trap description:', desc);
+    return desc;
   }
 
   // Handle Buff cards
   if (card.type === 'Buff' && card.ongoingEffects) {
-    return generateBuffCardDescription(card as BuffCard);
+    const desc = generateBuffCardDescription(card as BuffCard);
+    console.log('[getCardDescription] Buff description:', desc);
+    return desc;
   }
 
   // Handle Habitat cards
   if (card.type === 'Habitat') {
-    return generateHabitatCardDescription(card as HabitatCard);
+    const desc = generateHabitatCardDescription(card as HabitatCard);
+    console.log('[getCardDescription] Habitat description:', desc);
+    return desc;
   }
 
   // Fallback: return card description if it exists, otherwise empty
+  console.log('[getCardDescription] Fallback, no description generated');
   return card.description || '';
 }
 

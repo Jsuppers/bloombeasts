@@ -20,7 +20,7 @@ const mossletPassive: StructuredAbility = {
 
 const mossletBloom: StructuredAbility = {
   name: 'Rapid Growth',
-  trigger: AbilityTrigger.StartOfTurn,
+  trigger: AbilityTrigger.OnOwnStartOfTurn,
   effects: [
     {
       type: EffectType.Heal,
@@ -49,7 +49,7 @@ const mossletPassive4: StructuredAbility = {
 // Level 7 upgrades
 const mossletBloom7: StructuredAbility = {
   name: 'Accelerated Growth',
-  trigger: AbilityTrigger.StartOfTurn,
+  trigger: AbilityTrigger.OnOwnStartOfTurn,
   effects: [
     {
       type: EffectType.Heal,
@@ -81,7 +81,7 @@ const mossletPassive9: StructuredAbility = {
 
 const mossletBloom9: StructuredAbility = {
   name: 'Maximum Bloom',
-  trigger: AbilityTrigger.StartOfTurn,
+  trigger: AbilityTrigger.OnOwnStartOfTurn,
   effects: [
     {
       type: EffectType.Heal,
@@ -105,7 +105,7 @@ export const MOSSLET: BloomBeastCard = {
   cost: 2,
   baseAttack: 2,
   baseHealth: 4,
-  ability: mossletPassive,
+  abilities: [mossletPassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -120,13 +120,13 @@ export const MOSSLET: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: mossletPassive4,
+        abilities: [mossletPassive4],
       },
       7: {
-        ability: mossletBloom7,
+        abilities: [mossletBloom7],
       },
       9: {
-        ability: mossletPassive9,
+        abilities: [mossletPassive9],
       },
     },
   },

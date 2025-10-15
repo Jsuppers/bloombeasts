@@ -26,7 +26,7 @@ export interface CardDisplay {
   currentAttack?: number;
   baseHealth?: number;
   currentHealth?: number;
-  ability?: any; // Full structured ability with effects for description generation
+  abilities?: any[]; // Array of all abilities for Bloom cards (used for description generation)
   effects?: any[]; // For Magic/Trap/Buff cards
   ongoingEffects?: any[]; // For Buff/Habitat cards
   onPlayEffects?: any[]; // For Habitat cards
@@ -129,9 +129,10 @@ export class CardCollectionManager {
     displayCard.baseHealth = card.baseHealth;
     displayCard.currentHealth = card.currentHealth;
 
-    // Get the full ability from the card definition (with effects array)
-    const abilities = this.getAbilitiesForLevel(card);
-    displayCard.ability = abilities.ability;
+    // Get the full abilities from the card definition (with effects array)
+    const result = this.getAbilitiesForLevel(card);
+    // Store all abilities for description generation
+    displayCard.abilities = result.abilities;
   }
 
   /**
@@ -172,7 +173,7 @@ export class CardCollectionManager {
   /**
    * Get abilities for a card based on its level
    */
-  getAbilitiesForLevel(cardInstance: CardInstance): { ability: any} {
+  getAbilitiesForLevel(cardInstance: CardInstance): { abilities: any[] } {
     // Get the base card definition
     const allCards = getAllCards();
     const cardDef = allCards.find((card: any) =>
@@ -181,30 +182,28 @@ export class CardCollectionManager {
 
     if (!cardDef || cardDef.type !== 'Bloom') {
       return {
-        ability: cardInstance.ability
+        abilities: []
       };
     }
 
     const level = cardInstance.level || 1;
-    let ability = cardDef.ability;
+    let abilities = [...cardDef.abilities];
 
-    // Apply ability upgrades based on level
+    // Apply ability upgrades based on level (use the most recent complete set)
     if (cardDef.levelingConfig?.abilityUpgrades) {
       const upgrades = cardDef.levelingConfig.abilityUpgrades;
 
-      // Check each upgrade level (4, 7, 9) up to current level
-      if (level >= 4 && upgrades[4]) {
-        ability = upgrades[4].ability || ability;
-      }
-      if (level >= 7 && upgrades[7]) {
-        ability = upgrades[7].ability || ability;
-      }
+      // Check upgrade levels in reverse order (9, 7, 4) to get the most recent applicable upgrade
       if (level >= 9 && upgrades[9]) {
-        ability = upgrades[9].ability || ability;
+        abilities = upgrades[9].abilities || abilities;
+      } else if (level >= 7 && upgrades[7]) {
+        abilities = upgrades[7].abilities || abilities;
+      } else if (level >= 4 && upgrades[4]) {
+        abilities = upgrades[4].abilities || abilities;
       }
     }
 
-    return { ability };
+    return { abilities };
   }
 
   /**
@@ -233,7 +232,7 @@ export class CardCollectionManager {
             cost: cardInstance.cost,
             baseAttack: cardInstance.baseAttack || 0,
             baseHealth: cardInstance.baseHealth || 0,
-            ability: abilities.ability,
+            abilities: abilities.abilities,
             level: cardInstance.level || 1, // Include level for beast instance
             levelingConfig: {} as any, // Not used in battle
           } as any;
@@ -335,8 +334,9 @@ export class CardCollectionManager {
 
           // Update ability if there's an upgrade at this level
           if (leveledUp) {
-            const abilities = this.getAbilitiesForLevel(cardInstance);
-            cardInstance.ability = abilities.ability;
+            const result = this.getAbilitiesForLevel(cardInstance);
+            // Store the first ability in CardInstance (internal storage format)
+            cardInstance.ability = result.abilities.length > 0 ? result.abilities[0] : undefined;
           }
         }
       } else {
@@ -398,9 +398,9 @@ export class CardCollectionManager {
           currentAttack: beastCard.baseAttack,
           baseHealth: beastCard.baseHealth,
           currentHealth: beastCard.baseHealth,
-          ability: beastCard.ability ? {
-            name: (beastCard.ability as any).name || '',
-            description: (beastCard.ability as any).description || ''
+          ability: beastCard.abilities && beastCard.abilities.length > 0 ? {
+            name: (beastCard.abilities[0] as any).name || '',
+            description: (beastCard.abilities[0] as any).description || ''
           } : undefined,
         };
         cardCollection.addCard(cardInstance);
@@ -456,9 +456,9 @@ export class CardCollectionManager {
         currentAttack: beastCard.baseAttack,
         baseHealth: beastCard.baseHealth,
         currentHealth: beastCard.baseHealth,
-        ability: beastCard.ability ? {
-          name: (beastCard.ability as any).name || '',
-          description: (beastCard.ability as any).description || ''
+        ability: beastCard.abilities && beastCard.abilities.length > 0 ? {
+          name: (beastCard.abilities[0] as any).name || '',
+          description: (beastCard.abilities[0] as any).description || ''
         } : undefined,
       };
       cardCollection.addCard(cardInstance);

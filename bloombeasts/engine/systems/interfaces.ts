@@ -143,7 +143,7 @@ export interface ILevelingSystem {
   /**
    * Get current abilities for a beast based on its level
    */
-  getCurrentAbilities(card: BloomBeastCard, level: Level): { ability: Ability };
+  getCurrentAbilities(card: BloomBeastCard, level: Level): { abilities: Ability[] };
 
   /**
    * Check if a beast has an ability upgrade at the current level

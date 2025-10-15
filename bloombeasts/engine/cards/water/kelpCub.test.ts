@@ -38,27 +38,27 @@ describe('Kelp Cub Card', () => {
 
   describe('Base Ability - Entangle', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(KELP_CUB.ability);
+      validateStructuredAbility(KELP_CUB.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(KELP_CUB.ability.name).toBe('Entangle');
+      expect(KELP_CUB.abilities[0].name).toBe('Entangle');
     });
 
     test('should trigger on attack', () => {
-      expect(KELP_CUB.ability.trigger).toBe(AbilityTrigger.OnAttack);
+      expect(KELP_CUB.abilities[0].trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should prevent target from attacking', () => {
-      expect(KELP_CUB.ability.effects).toHaveLength(1);
-      const effect = KELP_CUB.ability.effects[0] as PreventEffect;
+      expect(KELP_CUB.abilities[0].effects).toHaveLength(1);
+      const effect = KELP_CUB.abilities[0].effects[0] as PreventEffect;
       expect(effect.type).toBe(EffectType.PreventAttack);
       expect(effect.target).toBe(AbilityTarget.Target);
       expect(effect.duration).toBe(EffectDuration.StartOfNextTurn);
     });
 
     test('should immobilize until start of next turn', () => {
-      const effect = KELP_CUB.ability.effects[0] as PreventEffect;
+      const effect = KELP_CUB.abilities[0].effects[0] as PreventEffect;
       expect(effect.duration).toBe(EffectDuration.StartOfNextTurn);
     });
   });
@@ -106,29 +106,29 @@ describe('Kelp Cub Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Binding Vines');
     });
 
     test('should still trigger on attack', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should prevent both attack and abilities', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const preventAttack = ability.effects.find(e => e.type === EffectType.PreventAttack) as PreventEffect | undefined;
@@ -143,17 +143,17 @@ describe('Kelp Cub Card', () => {
     test('should have consistent duration on both effects', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       ability.effects.forEach(effect => {
         expect((effect as PreventEffect).duration).toBe(EffectDuration.StartOfNextTurn);
       });
     });
 
     test('should be a power upgrade from base ability', () => {
-      const baseEffects = KELP_CUB.ability.effects.length;
+      const baseEffects = KELP_CUB.abilities[0].effects.length;
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const upgradedEffects = upgrade!.ability!.effects.length;
+      const upgradedEffects = upgrade!.abilities![0].effects.length;
       expect(upgradedEffects).toBeGreaterThan(baseEffects);
     });
   });
@@ -162,29 +162,29 @@ describe('Kelp Cub Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Deep Anchor');
     });
 
     test('should be a passive ability', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should grant immunity to magic, traps, and abilities', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as ImmunityEffect;
       expect(effect.type).toBe(EffectType.Immunity);
@@ -198,7 +198,7 @@ describe('Kelp Cub Card', () => {
     test('should have while on field duration', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       const effect = ability.effects[0] as ImmunityEffect;
       expect(effect.duration).toBe(EffectDuration.WhileOnField);
     });
@@ -206,7 +206,7 @@ describe('Kelp Cub Card', () => {
     test('should add defensive capabilities', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects[0].type).toBe(EffectType.Immunity);
     });
   });
@@ -215,29 +215,29 @@ describe('Kelp Cub Card', () => {
     test('should have upgraded ability at level 9', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Strangling Grasp');
     });
 
     test('should trigger on attack', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should permanently prevent attack and abilities', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const preventAttack = ability.effects.find(e => e.type === EffectType.PreventAttack) as PreventEffect | undefined;
@@ -252,10 +252,10 @@ describe('Kelp Cub Card', () => {
     test('should have permanent lockdown instead of temporary', () => {
       const upgrade4 = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const upgrade9 = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
 
       expect((level4Ability.effects[0] as PreventEffect).duration).toBe(EffectDuration.StartOfNextTurn);
       expect((level9Ability.effects[0] as PreventEffect).duration).toBe(EffectDuration.Permanent);
@@ -264,7 +264,7 @@ describe('Kelp Cub Card', () => {
     test('should target the same unit as base ability', () => {
       const upgrade = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       ability.effects.forEach(effect => {
         if (effect.type === EffectType.PreventAttack || effect.type === EffectType.PreventAbilities) {
           expect(effect.target).toBe(AbilityTarget.Target);
@@ -275,12 +275,12 @@ describe('Kelp Cub Card', () => {
 
   describe('Card Progression and Balance', () => {
     test('should maintain control role throughout progression', () => {
-      const baseAbility = KELP_CUB.ability;
+      const baseAbility = KELP_CUB.abilities[0];
       expect(baseAbility.effects[0].type).toBe(EffectType.PreventAttack);
 
       const upgrade4 = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const hasControl = level4Ability.effects.some(
         e => e.type === EffectType.PreventAttack || e.type === EffectType.PreventAbilities
       );
@@ -288,7 +288,7 @@ describe('Kelp Cub Card', () => {
 
       const upgrade9 = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
       const hasLevel9Control = level9Ability.effects.some(
         e => e.type === EffectType.PreventAttack || e.type === EffectType.PreventAbilities
       );
@@ -296,17 +296,17 @@ describe('Kelp Cub Card', () => {
     });
 
     test('should have consistent immobilization theme', () => {
-      const baseAbility = KELP_CUB.ability;
+      const baseAbility = KELP_CUB.abilities[0];
       expect(baseAbility.name).toBe('Entangle');
 
       const upgrade4 = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability!;
+      const level4Ability = upgrade4!.abilities![0];
       expect(level4Ability.name).toBe('Binding Vines');
 
       const upgrade9 = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability!;
+      const level9Ability = upgrade9!.abilities![0];
       expect(level9Ability.name).toBe('Strangling Grasp');
     });
 
@@ -318,36 +318,36 @@ describe('Kelp Cub Card', () => {
     });
 
     test('should progress from temporary to permanent control', () => {
-      const baseAbility = KELP_CUB.ability;
+      const baseAbility = KELP_CUB.abilities[0];
       expect((baseAbility.effects[0] as PreventEffect).duration).toBe(EffectDuration.StartOfNextTurn);
 
       const upgrade9 = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
       expect((level9Ability.effects[0] as PreventEffect).duration).toBe(EffectDuration.Permanent);
     });
   });
 
   describe('Ability Synergies', () => {
     test('should synergize with attack-based strategies', () => {
-      const baseAbility = KELP_CUB.ability;
+      const baseAbility = KELP_CUB.abilities[0];
       expect(baseAbility.trigger).toBe(AbilityTrigger.OnAttack);
 
       const upgrade4 = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability!;
+      const level4Ability = upgrade4!.abilities![0];
       expect(level4Ability.trigger).toBe(AbilityTrigger.OnAttack);
 
       const upgrade9 = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability!;
+      const level9Ability = upgrade9!.abilities![0];
       expect(level9Ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should provide immunity to indirect strategies at level 7', () => {
       const upgrade7 = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       const effect = level7Ability.effects[0] as ImmunityEffect;
       expect(effect.immuneTo).toContain(ImmunityType.Magic);
       expect(effect.immuneTo).toContain(ImmunityType.Trap);
@@ -357,7 +357,7 @@ describe('Kelp Cub Card', () => {
     test('should neutralize single threats effectively', () => {
       const upgrade9 = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
       const preventAttack = level9Ability.effects.find(e => e.type === EffectType.PreventAttack) as PreventEffect | undefined;
       const preventAbilities = level9Ability.effects.find(e => e.type === EffectType.PreventAbilities) as PreventEffect | undefined;
 
@@ -366,12 +366,12 @@ describe('Kelp Cub Card', () => {
     });
 
     test('should have increasing control power', () => {
-      const baseAbility = KELP_CUB.ability;
+      const baseAbility = KELP_CUB.abilities[0];
       const baseControl = countEffectsByType(baseAbility.effects, EffectType.PreventAttack);
 
       const upgrade4 = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const level4Control = countEffectsByType(level4Ability.effects, EffectType.PreventAttack) +
                             countEffectsByType(level4Ability.effects, EffectType.PreventAbilities);
 
@@ -381,51 +381,51 @@ describe('Kelp Cub Card', () => {
 
   describe('Thematic Consistency', () => {
     test('should maintain kelp/entanglement themed ability names', () => {
-      expect(KELP_CUB.ability.name).toBe('Entangle');
+      expect(KELP_CUB.abilities[0].name).toBe('Entangle');
       const upgrade4 = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      expect(upgrade4!.ability!.name).toBe('Binding Vines');
+      expect(upgrade4!.abilities![0].name).toBe('Binding Vines');
       const upgrade7 = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      expect(upgrade7!.ability!.name).toBe('Deep Anchor');
+      expect(upgrade7!.abilities![0].name).toBe('Deep Anchor');
       const upgrade9 = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      expect(upgrade9!.ability!.name).toBe('Strangling Grasp');
+      expect(upgrade9!.abilities![0].name).toBe('Strangling Grasp');
     });
 
     test('should embody immobilization and control mechanics', () => {
       // Base prevents attack
-      expect(KELP_CUB.ability.effects[0].type).toBe(EffectType.PreventAttack);
+      expect(KELP_CUB.abilities[0].effects[0].type).toBe(EffectType.PreventAttack);
 
       // Level 4 adds ability prevention
       const upgrade4 = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const hasAbilityPrevention = level4Ability.effects.some(e => e.type === EffectType.PreventAbilities);
       expect(hasAbilityPrevention).toBe(true);
 
       // Level 7 adds immunity (defensive anchor)
       const upgrade7 = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       expect(level7Ability.effects[0].type).toBe(EffectType.Immunity);
 
       // Level 9 makes control permanent (strangling)
       const upgrade9 = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
       expect((level9Ability.effects[0] as PreventEffect).duration).toBe(EffectDuration.Permanent);
     });
 
     test('should represent underwater plant mechanics', () => {
       // Entanglement on attack (wrapping around)
-      expect(KELP_CUB.ability.trigger).toBe(AbilityTrigger.OnAttack);
-      expect(KELP_CUB.ability.effects[0].type).toBe(EffectType.PreventAttack);
+      expect(KELP_CUB.abilities[0].trigger).toBe(AbilityTrigger.OnAttack);
+      expect(KELP_CUB.abilities[0].effects[0].type).toBe(EffectType.PreventAttack);
 
       // Anchoring provides stability (immunity)
       const upgrade7 = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability!;
+      const level7Ability = upgrade7!.abilities![0];
       expect(level7Ability.name).toContain('Anchor');
       expect(level7Ability.effects[0].type).toBe(EffectType.Immunity);
     });
@@ -433,14 +433,14 @@ describe('Kelp Cub Card', () => {
 
   describe('Edge Cases and Special Mechanics', () => {
     test('should have attack-triggered control effects', () => {
-      expect(KELP_CUB.ability.trigger).toBe(AbilityTrigger.OnAttack);
-      expect(KELP_CUB.ability.effects[0].target).toBe(AbilityTarget.Target);
+      expect(KELP_CUB.abilities[0].trigger).toBe(AbilityTrigger.OnAttack);
+      expect(KELP_CUB.abilities[0].effects[0].target).toBe(AbilityTarget.Target);
     });
 
     test('should provide self-protection through immunity', () => {
       const upgrade7 = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       expect(level7Ability.effects[0].target).toBe(AbilityTarget.Self);
       expect(level7Ability.effects[0].type).toBe(EffectType.Immunity);
     });
@@ -453,34 +453,34 @@ describe('Kelp Cub Card', () => {
     });
 
     test('should escalate control duration', () => {
-      const baseAbility = KELP_CUB.ability;
+      const baseAbility = KELP_CUB.abilities[0];
       expect((baseAbility.effects[0] as PreventEffect).duration).toBe(EffectDuration.StartOfNextTurn);
 
       const upgrade4 = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       expect((level4Ability.effects[0] as PreventEffect).duration).toBe(EffectDuration.StartOfNextTurn);
 
       const upgrade9 = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
       expect((level9Ability.effects[0] as PreventEffect).duration).toBe(EffectDuration.Permanent);
     });
   });
 
   describe('Combat Mechanics', () => {
     test('should disable attacker on successful attack', () => {
-      const baseAbility = KELP_CUB.ability;
+      const baseAbility = KELP_CUB.abilities[0];
       expect(baseAbility.trigger).toBe(AbilityTrigger.OnAttack);
       expect(baseAbility.effects[0].type).toBe(EffectType.PreventAttack);
       expect(baseAbility.effects[0].target).toBe(AbilityTarget.Target);
     });
 
     test('should have increasing lockdown power', () => {
-      const baseEffects = KELP_CUB.ability.effects.length;
+      const baseEffects = KELP_CUB.abilities[0].effects.length;
       const upgrade4 = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Effects = upgrade4!.ability!.effects.length;
+      const level4Effects = upgrade4!.abilities![0].effects.length;
 
       expect(level4Effects).toBeGreaterThan(baseEffects);
     });
@@ -488,7 +488,7 @@ describe('Kelp Cub Card', () => {
     test('should prevent both offensive and utility actions', () => {
       const upgrade4 = KELP_CUB.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const preventAttack = level4Ability.effects.some(e => e.type === EffectType.PreventAttack);
       const preventAbilities = level4Ability.effects.some(e => e.type === EffectType.PreventAbilities);
 
@@ -503,9 +503,9 @@ describe('Kelp Cub Card', () => {
       expect(upgrade9).toBeDefined();
 
       const abilities = [
-        KELP_CUB.ability,
-        upgrade4!.ability!,
-        upgrade9!.ability!,
+        KELP_CUB.abilities[0],
+        upgrade4!.abilities![0],
+        upgrade9!.abilities![0],
       ];
 
       abilities.forEach(ability => {
@@ -523,7 +523,7 @@ describe('Kelp Cub Card', () => {
     test('should provide hard removal at level 9', () => {
       const upgrade9 = KELP_CUB.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
       const permanentPrevent = level9Ability.effects.every(
         e => (e as PreventEffect).duration === EffectDuration.Permanent
       );
@@ -533,7 +533,7 @@ describe('Kelp Cub Card', () => {
     test('should have immunity to indirect removal', () => {
       const upgrade7 = KELP_CUB.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       const immunities = (level7Ability.effects[0] as ImmunityEffect).immuneTo;
       expect(immunities).toContain(ImmunityType.Magic);
       expect(immunities).toContain(ImmunityType.Trap);

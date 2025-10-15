@@ -38,19 +38,19 @@ describe('Charcoil Card', () => {
 
   describe('Base Ability - Flame Retaliation', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(CHARCOIL.ability as StructuredAbility);
+      validateStructuredAbility(CHARCOIL.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(CHARCOIL.ability.name).toBe('Flame Retaliation');
+      expect(CHARCOIL.abilities[0].name).toBe('Flame Retaliation');
     });
 
     test('should trigger on damage', () => {
-      expect(CHARCOIL.ability.trigger).toBe(AbilityTrigger.OnDamage);
+      expect(CHARCOIL.abilities[0].trigger).toBe(AbilityTrigger.OnDamage);
     });
 
     test('should deal 1 retaliation damage to attacker', () => {
-      const ability = CHARCOIL.ability as StructuredAbility;
+      const ability = CHARCOIL.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.Retaliation);
@@ -59,7 +59,7 @@ describe('Charcoil Card', () => {
     });
 
     test('should punish attackers immediately', () => {
-      const ability = CHARCOIL.ability as StructuredAbility;
+      const ability = CHARCOIL.abilities[0] as StructuredAbility;
       const hasRetaliation = ability.effects.some(e => e.type === EffectType.Retaliation);
       expect(hasRetaliation).toBe(true);
     });
@@ -99,22 +99,22 @@ describe('Charcoil Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = CHARCOIL.levelingConfig!.abilityUpgrades![4];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.name).toBe('Burning Retaliation');
     });
 
     test('should still trigger on damage', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnDamage);
     });
 
     test('should deal increased retaliation damage and apply burn', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const retaliationEffect: any = ability.effects[0];
@@ -130,8 +130,8 @@ describe('Charcoil Card', () => {
     });
 
     test('should be a power upgrade from base ability', () => {
-      const baseAbility = CHARCOIL.ability as StructuredAbility;
-      const upgradedAbility = CHARCOIL.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const baseAbility = CHARCOIL.abilities[0] as StructuredAbility;
+      const upgradedAbility = CHARCOIL.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       const baseEffect: any = baseAbility.effects[0];
       const upgradedEffect: any = upgradedAbility.effects[0];
       expect(upgradedEffect.value).toBeGreaterThan(baseEffect.value);
@@ -143,22 +143,22 @@ describe('Charcoil Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = CHARCOIL.levelingConfig!.abilityUpgrades![7];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.name).toBe('Smoke Screen');
     });
 
     test('should trigger on damage', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnDamage);
     });
 
     test('should grant immunity to magic and traps', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const immunityEffect: any = ability.effects[0];
@@ -170,7 +170,7 @@ describe('Charcoil Card', () => {
     });
 
     test('should apply increased soot counters', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       const sootEffect: any = ability.effects[1];
       expect(sootEffect.type).toBe(EffectType.ApplyCounter);
       expect(sootEffect.target).toBe(AbilityTarget.Target);
@@ -179,7 +179,7 @@ describe('Charcoil Card', () => {
     });
 
     test('should add defensive utility', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       const hasImmunity = ability.effects.some(e => e.type === EffectType.Immunity);
       expect(hasImmunity).toBe(true);
     });
@@ -189,22 +189,22 @@ describe('Charcoil Card', () => {
     test('should have upgraded passive ability at level 9', () => {
       const upgrade = CHARCOIL.levelingConfig!.abilityUpgrades![9];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.name).toBe('Blazing Vengeance');
     });
 
     test('should trigger on damage', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnDamage);
     });
 
     test('should maintain immunity and apply heavy burn', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const immunityEffect: any = ability.effects[0];
@@ -221,7 +221,7 @@ describe('Charcoil Card', () => {
     });
 
     test('should combine offensive and defensive capabilities', () => {
-      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       const hasImmunity = countEffectsByType(ability.effects, EffectType.Immunity) > 0;
       const hasCounter = countEffectsByType(ability.effects, EffectType.ApplyCounter) > 0;
       expect(hasImmunity).toBe(true);
@@ -239,10 +239,10 @@ describe('Charcoil Card', () => {
     });
 
     test('should have consistent retaliation theme', () => {
-      const baseAbility = CHARCOIL.ability as StructuredAbility;
+      const baseAbility = CHARCOIL.abilities[0] as StructuredAbility;
       expect(baseAbility.effects[0].type).toBe(EffectType.Retaliation);
 
-      const level4Ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const level4Ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       expect(level4Ability.effects[0].type).toBe(EffectType.Retaliation);
     });
 
@@ -254,15 +254,15 @@ describe('Charcoil Card', () => {
     });
 
     test('should evolve from retaliation to immunity and burn', () => {
-      const baseAbility = CHARCOIL.ability as StructuredAbility;
+      const baseAbility = CHARCOIL.abilities[0] as StructuredAbility;
       const baseHasRetaliation = baseAbility.effects.some(e => e.type === EffectType.Retaliation);
       expect(baseHasRetaliation).toBe(true);
 
-      const level7Ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       const level7HasImmunity = level7Ability.effects.some(e => e.type === EffectType.Immunity);
       expect(level7HasImmunity).toBe(true);
 
-      const level9Ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const level9Ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       const level9HasBurn = level9Ability.effects.some(
         (e: any) => e.type === EffectType.ApplyCounter && e.counter === 'Burn'
       );
@@ -272,13 +272,13 @@ describe('Charcoil Card', () => {
 
   describe('Ability Synergies', () => {
     test('should synergize with defensive strategies', () => {
-      const baseAbility = CHARCOIL.ability as StructuredAbility;
+      const baseAbility = CHARCOIL.abilities[0] as StructuredAbility;
       expect(baseAbility.trigger).toBe(AbilityTrigger.OnDamage);
       expect(baseAbility.effects[0].type).toBe(EffectType.Retaliation);
     });
 
     test('should counter magic and trap heavy decks', () => {
-      const level7Ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       const immunityEffect: any = level7Ability.effects[0];
       expect(immunityEffect.type).toBe(EffectType.Immunity);
       expect(immunityEffect.immuneTo).toContain(ImmunityType.Magic);
@@ -286,13 +286,13 @@ describe('Charcoil Card', () => {
     });
 
     test('should scale from simple retaliation to complex burn synergies', () => {
-      const level4Ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const level4Ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       const hasBurn = level4Ability.effects.some(
         (e: any) => e.type === EffectType.ApplyCounter && e.counter === 'Burn'
       );
       expect(hasBurn).toBe(true);
 
-      const level9Ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const level9Ability = CHARCOIL.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       const burnEffect: any = level9Ability.effects.find(
         (e: any) => e.type === EffectType.ApplyCounter && e.counter === 'Burn'
       );
@@ -302,29 +302,29 @@ describe('Charcoil Card', () => {
 
   describe('Thematic Consistency', () => {
     test('should maintain fire-themed ability names', () => {
-      expect(CHARCOIL.ability.name).toBe('Flame Retaliation');
-      expect(CHARCOIL.levelingConfig!.abilityUpgrades![4].ability!.name).toBe('Burning Retaliation');
-      expect(CHARCOIL.levelingConfig!.abilityUpgrades![7].ability!.name).toBe('Smoke Screen');
-      expect(CHARCOIL.levelingConfig!.abilityUpgrades![9].ability!.name).toBe('Blazing Vengeance');
+      expect(CHARCOIL.abilities[0].name).toBe('Flame Retaliation');
+      expect(CHARCOIL.levelingConfig!.abilityUpgrades![4].abilities![0].name).toBe('Burning Retaliation');
+      expect(CHARCOIL.levelingConfig!.abilityUpgrades![7].abilities![0].name).toBe('Smoke Screen');
+      expect(CHARCOIL.levelingConfig!.abilityUpgrades![9].abilities![0].name).toBe('Blazing Vengeance');
     });
 
     test('should embody defensive retaliation mechanics', () => {
-      const baseAbility = CHARCOIL.ability as StructuredAbility;
+      const baseAbility = CHARCOIL.abilities[0] as StructuredAbility;
       expect(baseAbility.trigger).toBe(AbilityTrigger.OnDamage);
       expect(baseAbility.effects[0].type).toBe(EffectType.Retaliation);
 
-      const level4Ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const level4Ability = CHARCOIL.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       expect(level4Ability.effects[0].type).toBe(EffectType.Retaliation);
     });
 
     test('should represent charcoal and soot thematically', () => {
-      const level7Ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = CHARCOIL.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       const sootEffect: any = level7Ability.effects.find(
         (e: any) => e.type === EffectType.ApplyCounter && e.counter === 'Soot'
       );
       expect(sootEffect).toBeDefined();
 
-      expect(CHARCOIL.levelingConfig!.abilityUpgrades![7].ability!.name).toBe('Smoke Screen');
+      expect(CHARCOIL.levelingConfig!.abilityUpgrades![7].abilities![0].name).toBe('Smoke Screen');
     });
   });
 });

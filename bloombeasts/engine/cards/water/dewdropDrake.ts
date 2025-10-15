@@ -119,7 +119,7 @@ export const DEWDROP_DRAKE: BloomBeastCard = {
   cost: 3,
   baseAttack: 3,
   baseHealth: 6,
-  ability: dewdropDrakePassive,
+  abilities: [dewdropDrakePassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -134,13 +134,13 @@ export const DEWDROP_DRAKE: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: dewdropDrakeBloom4,
+        abilities: [dewdropDrakeBloom4],
       },
       7: {
-        ability: dewdropDrakePassive7,
+        abilities: [dewdropDrakePassive7],
       },
       9: {
-        ability: dewdropDrakePassive9,
+        abilities: [dewdropDrakePassive9],
       },
     },
   },

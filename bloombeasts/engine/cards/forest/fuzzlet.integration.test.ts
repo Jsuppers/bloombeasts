@@ -521,7 +521,7 @@ describe('Fuzzlet - Integration Tests', () => {
       const leafSprite = createTestBeast(LEAF_SPRITE, { currentHealth: 2, currentAttack: 3 });
       placeBeast(player2, leafSprite, 0);
 
-      // Fuzzlet attacks - in current implementation, attacker doesn't take counter-damage
+      // Fuzzlet attacks - both beasts should die from simultaneous damage
       await game.executeAttack(player1, 0, 'beast', 0);
       await waitForEffects();
 
@@ -532,8 +532,8 @@ describe('Fuzzlet - Integration Tests', () => {
 
       // Leaf Sprite should be dead (took 2 damage, had 2 HP)
       expect(updatedLeafSprite).toBe(null);
-      // Fuzzlet should still be alive (no counter-attack in current implementation)
-      expect(updatedFuzzlet).toBeTruthy();
+      // Fuzzlet should also be dead (took 3 counter-damage, had 3 HP)
+      expect(updatedFuzzlet).toBe(null);
     });
   });
 

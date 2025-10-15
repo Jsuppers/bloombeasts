@@ -38,19 +38,19 @@ describe('Aqua Pebble Card', () => {
 
   describe('Base Ability - Tide Flow', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(AQUA_PEBBLE.ability as StructuredAbility);
+      validateStructuredAbility(AQUA_PEBBLE.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(AQUA_PEBBLE.ability.name).toBe('Tide Flow');
+      expect(AQUA_PEBBLE.abilities[0].name).toBe('Tide Flow');
     });
 
     test('should trigger on ally summon', () => {
-      expect(AQUA_PEBBLE.ability.trigger).toBe(AbilityTrigger.OnAllySummon);
+      expect(AQUA_PEBBLE.abilities[0].trigger).toBe(AbilityTrigger.OnAllySummon);
     });
 
     test('should grant +1 attack to self when Water ally is summoned', () => {
-      const ability = AQUA_PEBBLE.ability as StructuredAbility;
+      const ability = AQUA_PEBBLE.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.type).toBe(EffectType.ModifyStats);
@@ -61,7 +61,7 @@ describe('Aqua Pebble Card', () => {
     });
 
     test('should have affinity condition for Water units', () => {
-      const ability = AQUA_PEBBLE.ability as StructuredAbility;
+      const ability = AQUA_PEBBLE.abilities[0] as StructuredAbility;
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.condition).toBeDefined();
       expect(effect.condition!.type).toBe(ConditionType.AffinityMatches);
@@ -110,29 +110,29 @@ describe('Aqua Pebble Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability! as StructuredAbility);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Tidal Surge');
     });
 
     test('should still trigger on ally summon', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnAllySummon);
     });
 
     test('should grant +2 attack instead of +1', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.type).toBe(EffectType.ModifyStats);
@@ -145,7 +145,7 @@ describe('Aqua Pebble Card', () => {
     test('should maintain affinity condition', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.condition).toBeDefined();
       expect(effect.condition!.type).toBe(ConditionType.AffinityMatches);
@@ -153,10 +153,10 @@ describe('Aqua Pebble Card', () => {
     });
 
     test('should be a power upgrade from base ability', () => {
-      const baseAbility = AQUA_PEBBLE.ability as StructuredAbility;
+      const baseAbility = AQUA_PEBBLE.abilities[0] as StructuredAbility;
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const upgradedAbility = upgrade!.ability! as StructuredAbility;
+      const upgradedAbility = upgrade!.abilities![0] as StructuredAbility;
       const baseEffect = baseAbility.effects[0] as StatModificationEffect;
       const upgradedEffect = upgradedAbility.effects[0] as StatModificationEffect;
       expect(upgradedEffect.value).toBeGreaterThan(baseEffect.value);
@@ -167,29 +167,29 @@ describe('Aqua Pebble Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability! as StructuredAbility);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Rejuvenation');
     });
 
     test('should trigger at end of turn', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
-      expect(ability.trigger).toBe(AbilityTrigger.EndOfTurn);
+      const ability = upgrade!.abilities![0];
+      expect(ability.trigger).toBe(AbilityTrigger.OnOwnEndOfTurn);
     });
 
     test('should heal all allies for 2', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as HealEffect;
       expect(effect.type).toBe(EffectType.Heal);
@@ -200,7 +200,7 @@ describe('Aqua Pebble Card', () => {
     test('should add support capabilities', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       const hasHeal = ability.effects.some(e => e.type === EffectType.Heal);
       expect(hasHeal).toBe(true);
     });
@@ -210,29 +210,29 @@ describe('Aqua Pebble Card', () => {
     test('should have upgraded ability at level 9', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability! as StructuredAbility);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Tsunami Force');
     });
 
     test('should trigger on ally summon', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnAllySummon);
     });
 
     test('should grant +3 attack permanently', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.type).toBe(EffectType.ModifyStats);
@@ -243,10 +243,10 @@ describe('Aqua Pebble Card', () => {
     });
 
     test('should have permanent duration instead of temporary', () => {
-      const baseAbility = AQUA_PEBBLE.ability as StructuredAbility;
+      const baseAbility = AQUA_PEBBLE.abilities[0] as StructuredAbility;
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const level9Ability = upgrade!.ability! as StructuredAbility;
+      const level9Ability = upgrade!.abilities![0] as StructuredAbility;
       const baseEffect = baseAbility.effects[0] as StatModificationEffect;
       const level9Effect = level9Ability.effects[0] as StatModificationEffect;
       expect(baseEffect.duration).toBe(EffectDuration.EndOfTurn);
@@ -256,7 +256,7 @@ describe('Aqua Pebble Card', () => {
     test('should maintain affinity condition', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.condition).toBeDefined();
       expect(effect.condition!.type).toBe(ConditionType.AffinityMatches);
@@ -273,19 +273,19 @@ describe('Aqua Pebble Card', () => {
     });
 
     test('should have consistent synergy theme', () => {
-      const baseAbility = AQUA_PEBBLE.ability as StructuredAbility;
+      const baseAbility = AQUA_PEBBLE.abilities[0] as StructuredAbility;
       const baseEffect = baseAbility.effects[0] as StatModificationEffect;
       expect(baseEffect.condition!.value).toBe('Water');
 
       const upgrade4 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const level4Effect = level4Ability.effects[0] as StatModificationEffect;
       expect(level4Effect.condition!.value).toBe('Water');
 
       const upgrade9 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
       const level9Effect = level9Ability.effects[0] as StatModificationEffect;
       expect(level9Effect.condition!.value).toBe('Water');
     });
@@ -298,13 +298,13 @@ describe('Aqua Pebble Card', () => {
     });
 
     test('should have increasing power progression', () => {
-      const baseAbility = AQUA_PEBBLE.ability as StructuredAbility;
+      const baseAbility = AQUA_PEBBLE.abilities[0] as StructuredAbility;
       const upgrade4 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const upgrade9 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
 
       const baseValue = (baseAbility.effects[0] as StatModificationEffect).value;
       const level4Value = (level4Ability.effects[0] as StatModificationEffect).value;
@@ -317,7 +317,7 @@ describe('Aqua Pebble Card', () => {
 
   describe('Ability Synergies', () => {
     test('should synergize with Water affinity teams', () => {
-      const baseAbility = AQUA_PEBBLE.ability as StructuredAbility;
+      const baseAbility = AQUA_PEBBLE.abilities[0] as StructuredAbility;
       const effect = baseAbility.effects[0] as StatModificationEffect;
       expect(effect.condition).toBeDefined();
       expect(effect.condition!.type).toBe(ConditionType.AffinityMatches);
@@ -327,17 +327,17 @@ describe('Aqua Pebble Card', () => {
     test('should provide healing support at level 7', () => {
       const upgrade7 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       const hasHeal = level7Ability.effects.some(e => e.type === EffectType.Heal);
       expect(hasHeal).toBe(true);
       expect(level7Ability.effects[0].target).toBe(AbilityTarget.AllAllies);
     });
 
     test('should scale from temporary to permanent buffs', () => {
-      const baseAbility = AQUA_PEBBLE.ability as StructuredAbility;
+      const baseAbility = AQUA_PEBBLE.abilities[0] as StructuredAbility;
       const upgrade9 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
 
       const baseEffect = baseAbility.effects[0] as StatModificationEffect;
       const level9Effect = level9Ability.effects[0] as StatModificationEffect;
@@ -347,13 +347,13 @@ describe('Aqua Pebble Card', () => {
     });
 
     test('should have consistent self-buffing strategy', () => {
-      const baseAbility = AQUA_PEBBLE.ability as StructuredAbility;
+      const baseAbility = AQUA_PEBBLE.abilities[0] as StructuredAbility;
       const upgrade4 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const upgrade9 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
 
       const baseEffect = baseAbility.effects[0] as StatModificationEffect;
       const level4Effect = level4Ability.effects[0] as StatModificationEffect;
@@ -367,26 +367,26 @@ describe('Aqua Pebble Card', () => {
 
   describe('Thematic Consistency', () => {
     test('should maintain water-themed ability names', () => {
-      expect(AQUA_PEBBLE.ability.name).toBe('Tide Flow');
+      expect(AQUA_PEBBLE.abilities[0].name).toBe('Tide Flow');
       const upgrade4 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      expect(upgrade4!.ability!.name).toBe('Tidal Surge');
+      expect(upgrade4!.abilities![0].name).toBe('Tidal Surge');
       const upgrade7 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      expect(upgrade7!.ability!.name).toBe('Rejuvenation');
+      expect(upgrade7!.abilities![0].name).toBe('Rejuvenation');
       const upgrade9 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      expect(upgrade9!.ability!.name).toBe('Tsunami Force');
+      expect(upgrade9!.abilities![0].name).toBe('Tsunami Force');
     });
 
     test('should embody support and synergy mechanics', () => {
       // Triggers on ally summon for synergy
-      expect(AQUA_PEBBLE.ability.trigger).toBe(AbilityTrigger.OnAllySummon);
+      expect(AQUA_PEBBLE.abilities[0].trigger).toBe(AbilityTrigger.OnAllySummon);
 
       // Provides team healing at level 7
       const upgrade7 = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability! as StructuredAbility;
+      const level7Ability = upgrade7!.abilities![0] as StructuredAbility;
       expect(level7Ability.effects[0].type).toBe(EffectType.Heal);
       expect(level7Ability.effects[0].target).toBe(AbilityTarget.AllAllies);
     });

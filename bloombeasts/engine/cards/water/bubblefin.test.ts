@@ -38,20 +38,20 @@ describe('Bubblefin Card', () => {
 
   describe('Base Ability - Emerge', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(BUBBLEFIN.ability);
+      validateStructuredAbility(BUBBLEFIN.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(BUBBLEFIN.ability.name).toBe('Emerge');
+      expect(BUBBLEFIN.abilities[0].name).toBe('Emerge');
     });
 
     test('should be a passive ability', () => {
-      expect(BUBBLEFIN.ability.trigger).toBe(AbilityTrigger.Passive);
+      expect(BUBBLEFIN.abilities[0].trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should prevent targeting by traps', () => {
-      expect(BUBBLEFIN.ability.effects).toHaveLength(1);
-      const effect = BUBBLEFIN.ability.effects[0] as CannotBeTargetedEffect;
+      expect(BUBBLEFIN.abilities[0].effects).toHaveLength(1);
+      const effect = BUBBLEFIN.abilities[0].effects[0] as CannotBeTargetedEffect;
       expect(effect.type).toBe(EffectType.CannotBeTargeted);
       expect(effect.target).toBe(AbilityTarget.Self);
       expect(effect.by).toBeDefined();
@@ -59,7 +59,7 @@ describe('Bubblefin Card', () => {
     });
 
     test('should only protect from traps at base level', () => {
-      const effect = BUBBLEFIN.ability.effects[0] as CannotBeTargetedEffect;
+      const effect = BUBBLEFIN.abilities[0].effects[0] as CannotBeTargetedEffect;
       expect(effect.by).toEqual(['trap']);
     });
   });
@@ -101,29 +101,29 @@ describe('Bubblefin Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Tidal Shield');
     });
 
     test('should trigger on damage', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnDamage);
     });
 
     test('should reduce attacker attack by 2', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.type).toBe(EffectType.ModifyStats);
@@ -136,7 +136,7 @@ describe('Bubblefin Card', () => {
     test('should be a defensive counter mechanism', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       const effect = ability.effects[0] as StatModificationEffect;
       expect(effect.target).toBe(AbilityTarget.Attacker);
       expect(effect.value).toBeLessThan(0);
@@ -147,29 +147,29 @@ describe('Bubblefin Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Deep Dive');
     });
 
     test('should be a passive ability', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should prevent targeting by traps and magic', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as CannotBeTargetedEffect;
       expect(effect.type).toBe(EffectType.CannotBeTargeted);
@@ -180,10 +180,10 @@ describe('Bubblefin Card', () => {
     });
 
     test('should expand protection compared to base ability', () => {
-      const baseEffect = BUBBLEFIN.ability.effects[0] as CannotBeTargetedEffect;
+      const baseEffect = BUBBLEFIN.abilities[0].effects[0] as CannotBeTargetedEffect;
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
-      const level7Effect = upgrade!.ability!.effects[0] as CannotBeTargetedEffect;
+      const level7Effect = upgrade!.abilities![0].effects[0] as CannotBeTargetedEffect;
       expect(level7Effect.by!.length).toBeGreaterThan(baseEffect.by!.length);
     });
   });
@@ -192,29 +192,29 @@ describe('Bubblefin Card', () => {
     test('should have upgraded ability at level 9', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      validateStructuredAbility(upgrade!.ability!);
+      expect(upgrade?.abilities).toBeDefined();
+      validateStructuredAbility(upgrade!.abilities![0]);
     });
 
     test('should have correct ability name', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.name).toBe('Ocean Sanctuary');
     });
 
     test('should be a passive ability', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const ability = upgrade!.ability!;
+      const ability = upgrade!.abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should prevent targeting by magic, traps, and abilities', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      expect(upgrade?.ability).toBeDefined();
-      const ability = upgrade!.ability! as StructuredAbility;
+      expect(upgrade?.abilities).toBeDefined();
+      const ability = upgrade!.abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect = ability.effects[0] as CannotBeTargetedEffect;
       expect(effect.type).toBe(EffectType.CannotBeTargeted);
@@ -226,10 +226,10 @@ describe('Bubblefin Card', () => {
     });
 
     test('should have maximum protection coverage', () => {
-      const baseEffect = BUBBLEFIN.ability.effects[0] as CannotBeTargetedEffect;
+      const baseEffect = BUBBLEFIN.abilities[0].effects[0] as CannotBeTargetedEffect;
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
-      const level9Effect = upgrade!.ability!.effects[0] as CannotBeTargetedEffect;
+      const level9Effect = upgrade!.abilities![0].effects[0] as CannotBeTargetedEffect;
       expect(level9Effect.by!.length).toBeGreaterThan(baseEffect.by!.length);
       expect(level9Effect.by!.length).toBe(3);
     });
@@ -245,13 +245,13 @@ describe('Bubblefin Card', () => {
     });
 
     test('should have consistent protection theme', () => {
-      const baseAbility = BUBBLEFIN.ability;
+      const baseAbility = BUBBLEFIN.abilities[0];
       expect(baseAbility.effects[0].type).toBe(EffectType.CannotBeTargeted);
 
-      const level7Ability = BUBBLEFIN.levelingConfig!.abilityUpgrades![7].ability!;
+      const level7Ability = BUBBLEFIN.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(level7Ability.effects[0].type).toBe(EffectType.CannotBeTargeted);
 
-      const level9Ability = BUBBLEFIN.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = BUBBLEFIN.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(level9Ability.effects[0].type).toBe(EffectType.CannotBeTargeted);
     });
 
@@ -263,13 +263,13 @@ describe('Bubblefin Card', () => {
     });
 
     test('should expand protection over time', () => {
-      const baseProtection = (BUBBLEFIN.ability.effects[0] as CannotBeTargetedEffect).by!.length;
+      const baseProtection = (BUBBLEFIN.abilities[0].effects[0] as CannotBeTargetedEffect).by!.length;
       const upgrade7 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Protection = (upgrade7!.ability!.effects[0] as CannotBeTargetedEffect).by!.length;
+      const level7Protection = (upgrade7!.abilities![0].effects[0] as CannotBeTargetedEffect).by!.length;
       const upgrade9 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Protection = (upgrade9!.ability!.effects[0] as CannotBeTargetedEffect).by!.length;
+      const level9Protection = (upgrade9!.abilities![0].effects[0] as CannotBeTargetedEffect).by!.length;
 
       expect(level7Protection).toBeGreaterThan(baseProtection);
       expect(level9Protection).toBeGreaterThan(level7Protection);
@@ -280,7 +280,7 @@ describe('Bubblefin Card', () => {
     test('should provide excellent protection from targeted effects', () => {
       const upgrade9 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability! as StructuredAbility;
+      const level9Ability = upgrade9!.abilities![0] as StructuredAbility;
       const effect = level9Ability.effects[0] as CannotBeTargetedEffect;
       expect(effect.type).toBe(EffectType.CannotBeTargeted);
       expect(effect.by!.length).toBeGreaterThanOrEqual(3);
@@ -289,7 +289,7 @@ describe('Bubblefin Card', () => {
     test('should have defensive counter mechanics at level 4', () => {
       const upgrade4 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       expect(level4Ability.trigger).toBe(AbilityTrigger.OnDamage);
       const effect = level4Ability.effects[0] as StatModificationEffect;
       expect(effect.type).toBe(EffectType.ModifyStats);
@@ -300,7 +300,7 @@ describe('Bubblefin Card', () => {
     test('should counter aggressive strategies', () => {
       const upgrade4 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const hasAttackReduction = level4Ability.effects.some(
         e => e.type === EffectType.ModifyStats && (e as StatModificationEffect).stat === StatType.Attack && (e as StatModificationEffect).value < 0
       );
@@ -310,21 +310,21 @@ describe('Bubblefin Card', () => {
 
   describe('Thematic Consistency', () => {
     test('should maintain water-themed ability names', () => {
-      expect(BUBBLEFIN.ability.name).toBe('Emerge');
+      expect(BUBBLEFIN.abilities[0].name).toBe('Emerge');
       const upgrade4 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      expect(upgrade4!.ability!.name).toBe('Tidal Shield');
+      expect(upgrade4!.abilities![0].name).toBe('Tidal Shield');
       const upgrade7 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      expect(upgrade7!.ability!.name).toBe('Deep Dive');
+      expect(upgrade7!.abilities![0].name).toBe('Deep Dive');
       const upgrade9 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      expect(upgrade9!.ability!.name).toBe('Ocean Sanctuary');
+      expect(upgrade9!.abilities![0].name).toBe('Ocean Sanctuary');
     });
 
     test('should embody elusive underwater creature mechanics', () => {
       // Base ability provides untargetability
-      expect(BUBBLEFIN.ability.effects[0].type).toBe(EffectType.CannotBeTargeted);
+      expect(BUBBLEFIN.abilities[0].effects[0].type).toBe(EffectType.CannotBeTargeted);
 
       // High HP to represent durability
       expect(BUBBLEFIN.baseHealth).toBe(5);
@@ -332,14 +332,14 @@ describe('Bubblefin Card', () => {
       // Expands protection over levels
       const upgrade9 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Protection = (upgrade9!.ability!.effects[0] as CannotBeTargetedEffect).by!;
+      const level9Protection = (upgrade9!.abilities![0].effects[0] as CannotBeTargetedEffect).by!;
       expect(level9Protection.length).toBeGreaterThanOrEqual(3);
     });
 
     test('should represent bubble shield mechanics', () => {
       const upgrade4 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability!;
+      const level4Ability = upgrade4!.abilities![0];
       expect(level4Ability.name).toBe('Tidal Shield');
       expect(level4Ability.trigger).toBe(AbilityTrigger.OnDamage);
       expect(level4Ability.effects[0].target).toBe(AbilityTarget.Attacker);
@@ -348,36 +348,36 @@ describe('Bubblefin Card', () => {
 
   describe('Edge Cases and Special Mechanics', () => {
     test('should have passive protection that is always active', () => {
-      expect(BUBBLEFIN.ability.trigger).toBe(AbilityTrigger.Passive);
+      expect(BUBBLEFIN.abilities[0].trigger).toBe(AbilityTrigger.Passive);
       const upgrade7 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Ability = upgrade7!.ability!;
+      const level7Ability = upgrade7!.abilities![0];
       expect(level7Ability.trigger).toBe(AbilityTrigger.Passive);
       const upgrade9 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Ability = upgrade9!.ability!;
+      const level9Ability = upgrade9!.abilities![0];
       expect(level9Ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should protect self, not allies', () => {
-      const baseEffect = BUBBLEFIN.ability.effects[0] as CannotBeTargetedEffect;
+      const baseEffect = BUBBLEFIN.abilities[0].effects[0] as CannotBeTargetedEffect;
       expect(baseEffect.target).toBe(AbilityTarget.Self);
 
       const upgrade7 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade7).toBeDefined();
-      const level7Effect = upgrade7!.ability!.effects[0] as CannotBeTargetedEffect;
+      const level7Effect = upgrade7!.abilities![0].effects[0] as CannotBeTargetedEffect;
       expect(level7Effect.target).toBe(AbilityTarget.Self);
 
       const upgrade9 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade9).toBeDefined();
-      const level9Effect = upgrade9!.ability!.effects[0] as CannotBeTargetedEffect;
+      const level9Effect = upgrade9!.abilities![0].effects[0] as CannotBeTargetedEffect;
       expect(level9Effect.target).toBe(AbilityTarget.Self);
     });
 
     test('should have temporary debuffs on damage', () => {
       const upgrade4 = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade4).toBeDefined();
-      const level4Ability = upgrade4!.ability! as StructuredAbility;
+      const level4Ability = upgrade4!.abilities![0] as StructuredAbility;
       const effect = level4Ability.effects[0] as StatModificationEffect;
       expect(effect.duration).toBe(EffectDuration.EndOfTurn);
     });

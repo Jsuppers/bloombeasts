@@ -25,7 +25,7 @@ const aquaPebblePassive: StructuredAbility = {
 
 const aquaPebbleBloom: StructuredAbility = {
   name: 'Hydration',
-  trigger: AbilityTrigger.EndOfTurn,
+  trigger: AbilityTrigger.OnOwnEndOfTurn,
   effects: [
     {
       type: EffectType.Heal,
@@ -57,7 +57,7 @@ const aquaPebblePassive4: StructuredAbility = {
 // Level 7 upgrades
 const aquaPebbleBloom7: StructuredAbility = {
   name: 'Rejuvenation',
-  trigger: AbilityTrigger.EndOfTurn,
+  trigger: AbilityTrigger.OnOwnEndOfTurn,
   effects: [
     {
       type: EffectType.Heal,
@@ -88,7 +88,7 @@ const aquaPebblePassive9: StructuredAbility = {
 
 const aquaPebbleBloom9: StructuredAbility = {
   name: 'Fountain of Life',
-  trigger: AbilityTrigger.EndOfTurn,
+  trigger: AbilityTrigger.OnOwnEndOfTurn,
   effects: [
     {
       type: EffectType.Heal,
@@ -106,7 +106,7 @@ export const AQUA_PEBBLE: BloomBeastCard = {
   cost: 1,
   baseAttack: 1,
   baseHealth: 4,
-  ability: aquaPebblePassive,
+  abilities: [aquaPebblePassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -121,13 +121,13 @@ export const AQUA_PEBBLE: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: aquaPebblePassive4,
+        abilities: [aquaPebblePassive4],
       },
       7: {
-        ability: aquaPebbleBloom7,
+        abilities: [aquaPebbleBloom7],
       },
       9: {
-        ability: aquaPebblePassive9,
+        abilities: [aquaPebblePassive9],
       },
     },
   },

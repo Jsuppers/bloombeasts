@@ -104,7 +104,7 @@ export const CINDER_PUP: BloomBeastCard = CardBuilder.bloomBeast('cinder-pup', '
   .affinity('Fire')
   .cost(2)
   .stats(2, 3)
-  .ability(cinderPupPassive)
+  .abilities([cinderPupPassive])
   .leveling({
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -119,13 +119,13 @@ export const CINDER_PUP: BloomBeastCard = CardBuilder.bloomBeast('cinder-pup', '
     },
     abilityUpgrades: {
       4: {
-        ability: cinderPupPassive4,
+        abilities: [cinderPupPassive4],
       },
       7: {
-        ability: cinderPupBloom7,
+        abilities: [cinderPupBloom7],
       },
       9: {
-        ability: cinderPupPassive9,
+        abilities: [cinderPupPassive9],
       },
     },
   })

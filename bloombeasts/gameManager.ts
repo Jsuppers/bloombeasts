@@ -103,7 +103,7 @@ export interface CardDisplay {
   currentAttack?: number;
   baseHealth?: number;
   currentHealth?: number;
-  ability?: any; // Full structured ability with effects for description generation
+  abilities?: any[]; // Array of all abilities for Bloom cards (used for description generation)
   effects?: any[]; // For Magic/Trap/Buff cards
   ongoingEffects?: any[]; // For Buff/Habitat cards
   onPlayEffects?: any[]; // For Habitat cards
@@ -150,6 +150,7 @@ export interface BattleDisplay {
   cardPopup?: { // Card popup display (for magic/trap/buff cards)
     card: any;
     player: 'player' | 'opponent';
+    showCloseButton?: boolean; // Show close button for manual popups
   } | null;
 }
 
@@ -199,6 +200,7 @@ export class GameManager {
   private playerDeck: string[] = []; // Track player's custom deck (card IDs)
   private selectedBeastIndex: number | null = null; // Track selected beast in battle
   private currentCardDetailId: string | null = null; // Track current card being viewed in detail
+  private currentCardPopup: { card: any; player: 'player' | 'opponent'; showCloseButton?: boolean } | null = null; // Track active card popup
 
   constructor(platformCallbacks: PlatformCallbacks) {
     this.platform = platformCallbacks;
@@ -346,8 +348,8 @@ export class GameManager {
       case 'btn-card-close':
         // Close the card detail overlay based on current screen
         if (this.currentScreen === 'battle') {
-          // Refresh battle display
-          await this.updateBattleDisplay();
+          // Close card popup if one is open
+          this.closeCardPopup();
         } else {
           // In cards screen, refresh to remove the overlay
           await this.showCards();
@@ -905,6 +907,11 @@ export class GameManager {
 
     if (!display) return;
 
+    // Add current popup if one is active (preserves popup during timer refreshes)
+    if (this.currentCardPopup) {
+      display.cardPopup = this.currentCardPopup;
+    }
+
     this.platform.renderBattle(display);
   }
 
@@ -987,48 +994,18 @@ export class GameManager {
 
     const trapCard: any = trapZone[index];
 
-    // Convert to CardDisplay format (similar to inventory)
+    // Get the full card definition to include effects and activation
     const allCardDefs = getAllCards();
     const cardDef = allCardDefs.find((c: any) => c && c.id === trapCard.id);
 
-    const cardDisplay: CardDisplay = {
-      id: trapCard.id,
-      name: trapCard.name,
-      type: 'Trap',
-      affinity: trapCard.affinity,
-      cost: trapCard.cost || 0,
-      level: 1,
-      experience: 0,
-      count: 1,
-      counters: trapCard.counters || [],
+    // Merge the trap card with its definition to ensure all fields are present
+    const fullCard = {
+      ...trapCard,
+      ...(cardDef || {}),
     };
 
-    // Add description
-    if (cardDef && (cardDef as any).description) {
-      cardDisplay.ability = {
-        name: 'Trap Card',
-        description: (cardDef as any).description
-      };
-    }
-
-    // Create CardDetailDisplay object with just Close button
-    const cardDetailDisplay: CardDetailDisplay = {
-      card: cardDisplay,
-      buttons: ['Close'],
-      isInDeck: false,
-    };
-
-    // Get current stats
-    const stats: MenuStats = {
-      playerLevel: this.playerData.level,
-      totalXP: this.playerData.totalXP,
-      tokens: this.getItemQuantity('token'),
-      diamonds: this.getItemQuantity('diamond'),
-      serums: this.getItemQuantity('serum'),
-    };
-
-    // Render card detail view (as overlay on top of battle screen)
-    this.platform.renderCardDetail(cardDetailDisplay, stats);
+    // Show popup that stays open until user clicks elsewhere
+    await this.showCardPopup(fullCard, 'player', false);
   }
 
   /**
@@ -1044,45 +1021,18 @@ export class GameManager {
       return; // No habitat card currently played
     }
 
-    // Convert to CardDisplay format (similar to inventory)
+    // Get the full card definition to include effects
     const allCardDefs = getAllCards();
     const cardDef = allCardDefs.find((c: any) => c && c.id === habitatCard.id);
 
-    const cardDisplay: CardDisplay = {
-      id: habitatCard.id,
-      name: habitatCard.name,
-      type: 'Habitat',
-      affinity: habitatCard.affinity,
-      cost: habitatCard.cost || 0,
-      level: 1,
-      experience: 0,
-      count: 1,
-      counters: habitatCard.counters || [],
+    // Merge the habitat card with its definition to ensure all fields are present
+    const fullCard = {
+      ...habitatCard,
+      ...(cardDef || {}),
     };
 
-    // Add description
-    if (cardDef && (cardDef as any).description) {
-      cardDisplay.description = (cardDef as any).description;
-    }
-
-    // Create CardDetailDisplay object with just Close button
-    const cardDetailDisplay: CardDetailDisplay = {
-      card: cardDisplay,
-      buttons: ['Close'],
-      isInDeck: false,
-    };
-
-    // Get current stats
-    const stats: MenuStats = {
-      playerLevel: this.playerData.level,
-      totalXP: this.playerData.totalXP,
-      tokens: this.getItemQuantity('token'),
-      diamonds: this.getItemQuantity('diamond'),
-      serums: this.getItemQuantity('serum'),
-    };
-
-    // Render card detail view (as overlay on top of battle screen)
-    this.platform.renderCardDetail(cardDetailDisplay, stats);
+    // Show popup that stays open until user clicks elsewhere
+    await this.showCardPopup(fullCard, 'player', false);
   }
 
   /**
@@ -1102,45 +1052,18 @@ export class GameManager {
 
     const buffCard: any = buffZone[index];
 
-    // Convert to CardDisplay format (similar to inventory)
+    // Get the full card definition to include ongoingEffects
     const allCardDefs = getAllCards();
     const cardDef = allCardDefs.find((c: any) => c && c.id === buffCard.id);
 
-    const cardDisplay: CardDisplay = {
-      id: buffCard.id,
-      name: buffCard.name,
-      type: 'Buff',
-      affinity: buffCard.affinity,
-      cost: buffCard.cost || 0,
-      level: 1,
-      experience: 0,
-      count: 1,
-      counters: buffCard.counters || [],
+    // Merge the buff card with its definition to ensure all fields are present
+    const fullCard = {
+      ...buffCard,
+      ...(cardDef || {}),
     };
 
-    // Add description
-    if (cardDef && (cardDef as any).description) {
-      cardDisplay.description = (cardDef as any).description;
-    }
-
-    // Create CardDetailDisplay object with just Close button
-    const cardDetailDisplay: CardDetailDisplay = {
-      card: cardDisplay,
-      buttons: ['Close'],
-      isInDeck: false,
-    };
-
-    // Get current stats
-    const stats: MenuStats = {
-      playerLevel: this.playerData.level,
-      totalXP: this.playerData.totalXP,
-      tokens: this.getItemQuantity('token'),
-      diamonds: this.getItemQuantity('diamond'),
-      serums: this.getItemQuantity('serum'),
-    };
-
-    // Render card detail view (as overlay on top of battle screen)
-    this.platform.renderCardDetail(cardDetailDisplay, stats);
+    // Show popup that stays open until user clicks elsewhere
+    await this.showCardPopup(fullCard, player as 'player' | 'opponent', false);
   }
 
   /**
@@ -1247,36 +1170,48 @@ export class GameManager {
   }
 
   /**
-   * Show a card popup for magic/trap cards
-   * Display for 3 seconds then dismiss
+   * Show a card popup for magic/trap/habitat/buff cards
+   * @param card - The card to display
+   * @param player - Which player's side to show the popup on
+   * @param autoDismiss - If true, auto-close after 2 seconds. If false, stay open until manually closed.
    */
-  private async showCardPopup(card: any, player: 'player' | 'opponent'): Promise<void> {
+  private async showCardPopup(card: any, player: 'player' | 'opponent', autoDismiss: boolean = true): Promise<void> {
     const battleState = this.battleUI.getCurrentBattle();
     if (!battleState || !battleState.gameState) return;
 
-    // Create display without popup first
-    const display = this.battleDisplayManager.createBattleDisplay(
-      battleState,
-      this.selectedBeastIndex,
-      null
-    );
-
-    if (!display) return;
-
-    // Add popup to display
-    display.cardPopup = {
+    // Store the popup state (this will be picked up by updateBattleDisplay)
+    this.currentCardPopup = {
       card,
       player,
+      showCloseButton: !autoDismiss, // Show close button for manual popups
     };
 
-    // Show popup
-    this.platform.renderBattle(display);
-
-    // Wait 2 seconds
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Clear popup (re-render without popup)
+    // Render with popup
     await this.updateBattleDisplay();
+
+    // Only auto-dismiss if requested (for when cards are played)
+    if (autoDismiss) {
+      // Wait 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Clear popup state (only if it hasn't been changed)
+      if (this.currentCardPopup?.card === card) {
+        this.currentCardPopup = null;
+        // Re-render without popup
+        await this.updateBattleDisplay();
+      }
+    }
+    // If not auto-dismiss, popup stays open until manually closed by user action
+  }
+
+  /**
+   * Close the current card popup (for manual popups)
+   */
+  private closeCardPopup(): void {
+    if (this.currentCardPopup) {
+      this.currentCardPopup = null;
+      this.updateBattleDisplay();
+    }
   }
 
   /**
@@ -1316,6 +1251,7 @@ export class GameManager {
     this.battleUI.clearBattle();
     this.currentBattleId = null;
     this.selectedBeastIndex = null;
+    this.currentCardPopup = null; // Clear any active popup
 
     if (battleState.rewards) {
       // Get the mission object
@@ -1391,14 +1327,27 @@ export class GameManager {
         await this.saveGameData();
       }
     } else {
-      // Mission failed - play lose sound before showing dialog
+      // Mission failed
       this.soundManager.playSfx('sfx/lose.wav');
 
-      await this.platform.showDialog(
-        'Mission Failed',
-        'Better luck next time!',
-        ['OK']
-      );
+      // Get the mission object
+      const mission = battleState.mission || this.missionManager.getCurrentMission();
+
+      // Check if platform has new showMissionComplete method
+      if (mission && (this.platform as any).showMissionComplete) {
+        // Change screen state
+        this.currentScreen = 'mission-complete';
+
+        // Show mission failed popup with null rewards (triggers fail state)
+        await (this.platform as any).showMissionComplete(mission, null);
+      } else {
+        // Fallback to old dialog system
+        await this.platform.showDialog(
+          'Mission Failed',
+          'Better luck next time!',
+          ['OK']
+        );
+      }
     }
 
     // Resume background music
@@ -1438,6 +1387,7 @@ export class GameManager {
           this.battleUI.clearBattle();
           this.currentBattleId = null;
           this.selectedBeastIndex = null; // Clear selection
+          this.currentCardPopup = null; // Clear any active popup
           // Play lose sound for forfeit
           this.soundManager.playSfx('sfx/lose.wav');
           // Resume background music

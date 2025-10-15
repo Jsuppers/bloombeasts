@@ -2,7 +2,7 @@
  * Game Engine - Main game controller and state manager
  */
 
-import { GameState, Player, Phase, BloomBeastInstance } from '../types/game';
+import { GameState, Player, Phase, BloomBeastInstance, BattleState } from '../types/game';
 import { AnyCard, BloomBeastCard, TrapCard, MagicCard, HabitatCard, TrapTrigger } from '../types/core';
 import { CombatSystem } from './CombatSystem';
 import { AbilityProcessor } from './AbilityProcessor';
@@ -62,6 +62,7 @@ export class GameEngine {
     return {
       turn: 1,
       phase: 'Setup',
+      battleState: BattleState.Setup,
       activePlayer: 0,
       players: [
         this.createPlayer('Player 1'),
@@ -121,61 +122,160 @@ export class GameEngine {
     this.drawCards(this.gameState.players[0], 5);
     this.drawCards(this.gameState.players[1], 5);
 
-    // Start first turn
+    // Transition to first player's turn
     this.gameState.phase = 'Main';
-    await this.startTurn();
+    this.gameState.battleState = BattleState.Player1StartOfTurn;
+    await this.transitionState();
   }
 
   /**
-   * Start a new turn
+   * State machine transition logic
    */
-  private async startTurn(): Promise<void> {
-    const activePlayer = this.gameState.players[this.gameState.activePlayer];
+  private async transitionState(): Promise<void> {
+    // Check for win condition before any state processing
+    if (this.checkForBattleEnd()) {
+      this.gameState.battleState = BattleState.Finished;
+      return;
+    }
 
-    Logger.debug(`Turn ${this.gameState.turn}: ${activePlayer.name}'s turn`);
+    const currentState = this.gameState.battleState;
+    Logger.debug(`Transitioning from state: ${currentState}`);
+
+    switch (currentState) {
+      case BattleState.Player1StartOfTurn:
+        await this.processPlayerStartOfTurn(0);
+        this.gameState.battleState = BattleState.Player1Playing;
+        break;
+
+      case BattleState.Player1Playing:
+        // This state waits for player input (endTurn call)
+        break;
+
+      case BattleState.Player1EndOfTurn:
+        await this.processPlayerEndOfTurn(0);
+        this.gameState.battleState = BattleState.Player2StartOfTurn;
+        await this.transitionState();
+        break;
+
+      case BattleState.Player2StartOfTurn:
+        await this.processPlayerStartOfTurn(1);
+        this.gameState.battleState = BattleState.Player2Playing;
+        break;
+
+      case BattleState.Player2Playing:
+        // This state waits for player input (endTurn call)
+        break;
+
+      case BattleState.Player2EndOfTurn:
+        await this.processPlayerEndOfTurn(1);
+        // Increment turn counter after both players have played
+        this.gameState.turn++;
+        this.gameState.battleState = BattleState.Player1StartOfTurn;
+        await this.transitionState();
+        break;
+
+      case BattleState.Finished:
+        // Battle has ended
+        const result = this.combatSystem.checkWinCondition(this.gameState);
+        this.endMatch(result);
+        break;
+    }
+  }
+
+  /**
+   * Process player start of turn
+   */
+  private async processPlayerStartOfTurn(playerIndex: 0 | 1): Promise<void> {
+    this.gameState.activePlayer = playerIndex;
+    const activePlayer = this.gameState.players[playerIndex];
+    const opposingPlayer = this.gameState.players[playerIndex === 0 ? 1 : 0];
+
+    Logger.debug(`Turn ${this.gameState.turn}: ${activePlayer.name}'s turn begins`);
 
     // Reset turn counters
     activePlayer.summonsThisTurn = 0;
 
-    // Draw card (except first turn)
-    if (this.gameState.turn > 1) {
+    // Draw card (except first turn for player 1)
+    if (!(this.gameState.turn === 1 && playerIndex === 0)) {
       this.drawCards(activePlayer, 1);
     }
 
     // Gain nectar
     activePlayer.currentNectar = Math.min(MAX_NECTAR, this.gameState.turn);
 
-    // Trigger start of turn abilities
-    await this.triggerStartOfTurnAbilities();
+    // Remove summoning sickness from all beasts
+    for (const beast of activePlayer.field) {
+      if (beast) {
+        beast.summoningSickness = false;
+      }
+    }
+
+    // Process counter effects (burn, freeze, etc.)
+    await this.processCounterEffects(activePlayer);
+
+    // Check for death after counter effects
+    if (this.checkForBattleEnd()) {
+      this.gameState.battleState = BattleState.Finished;
+      return;
+    }
+
+    // Trigger start of turn abilities based on state
+    await this.triggerStateBasedAbilities(playerIndex, 'start');
 
     // Set phase to main
     this.gameState.phase = 'Main';
   }
 
   /**
+   * Process player end of turn
+   */
+  private async processPlayerEndOfTurn(playerIndex: 0 | 1): Promise<void> {
+    const activePlayer = this.gameState.players[playerIndex];
+    const opposingPlayer = this.gameState.players[playerIndex === 0 ? 1 : 0];
+
+    // Trigger end of turn abilities based on state
+    await this.triggerStateBasedAbilities(playerIndex, 'end');
+
+    // Clear temporary effects
+    for (const beast of activePlayer.field) {
+      if (beast) {
+        this.clearTemporaryEffects(beast);
+      }
+    }
+
+    // Check for death after end of turn effects
+    if (this.checkForBattleEnd()) {
+      this.gameState.battleState = BattleState.Finished;
+      return;
+    }
+  }
+
+  /**
+   * Check if battle should end (player health <= 0)
+   */
+  private checkForBattleEnd(): boolean {
+    const player1 = this.gameState.players[0];
+    const player2 = this.gameState.players[1];
+
+    return player1.health <= 0 || player2.health <= 0;
+  }
+
+  /**
    * End current turn
    */
   public async endTurn(): Promise<void> {
-    // Trigger end of turn abilities
-    await this.triggerEndOfTurnAbilities();
-
-    // Switch active player
-    this.gameState.activePlayer = this.gameState.activePlayer === 0 ? 1 : 0;
-
-    // Increment turn counter when player 2 ends
-    if (this.gameState.activePlayer === 0) {
-      this.gameState.turn++;
-    }
-
-    // Check win conditions
-    const result = this.combatSystem.checkWinCondition(this.gameState);
-    if (result) {
-      this.endMatch(result);
+    // Determine which end of turn state to transition to
+    if (this.gameState.battleState === BattleState.Player1Playing) {
+      this.gameState.battleState = BattleState.Player1EndOfTurn;
+    } else if (this.gameState.battleState === BattleState.Player2Playing) {
+      this.gameState.battleState = BattleState.Player2EndOfTurn;
+    } else {
+      Logger.error(`Unexpected state during endTurn: ${this.gameState.battleState}`);
       return;
     }
 
-    // Start next turn
-    await this.startTurn();
+    // Continue state transitions
+    await this.transitionState();
   }
 
   /**
@@ -223,9 +323,6 @@ export class GameEngine {
     // Place on field
     player.field[position] = instance;
     player.summonsThisTurn++;
-
-    // Apply passive abilities immediately
-    this.applyPassiveAbilities(instance);
 
     // Trigger summon abilities on the summoned beast
     this.triggerSummonAbilities(instance);
@@ -474,77 +571,104 @@ export class GameEngine {
   }
 
   /**
-   * Trigger abilities at start of turn
+   * Trigger state-based abilities
    */
-  private async triggerStartOfTurnAbilities(): Promise<void> {
-    const activePlayer = this.gameState.players[this.gameState.activePlayer];
-    const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+  private async triggerStateBasedAbilities(playerIndex: 0 | 1, phase: 'start' | 'end'): Promise<void> {
+    const activePlayer = this.gameState.players[playerIndex];
+    const opposingPlayer = this.gameState.players[playerIndex === 0 ? 1 : 0];
 
-    // Remove summoning sickness from all beasts
-    for (const beast of activePlayer.field) {
-      if (beast) {
-        beast.summoningSickness = false;
+    // Determine which triggers to use based on player and phase
+    const stateTriggers = [];
+
+    if (phase === 'start') {
+      // Player-specific triggers
+      if (playerIndex === 0) {
+        stateTriggers.push('OnPlayer1StartOfTurn');
+      } else {
+        stateTriggers.push('OnPlayer2StartOfTurn');
+      }
+
+      // Generic triggers
+      stateTriggers.push('OnAnyStartOfTurn');
+
+      // Own/Opponent relative triggers
+      for (const beast of activePlayer.field) {
+        if (beast) {
+          await this.triggerBeastAbility(beast, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
+        }
+      }
+      for (const beast of opposingPlayer.field) {
+        if (beast) {
+          await this.triggerBeastAbility(beast, 'OnOpponentStartOfTurn', opposingPlayer, activePlayer);
+        }
+      }
+    } else {
+      // Player-specific triggers
+      if (playerIndex === 0) {
+        stateTriggers.push('OnPlayer1EndOfTurn');
+      } else {
+        stateTriggers.push('OnPlayer2EndOfTurn');
+      }
+
+      // Generic triggers
+      stateTriggers.push('OnAnyEndOfTurn');
+
+      // Own/Opponent relative triggers
+      for (const beast of activePlayer.field) {
+        if (beast) {
+          await this.triggerBeastAbility(beast, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
+        }
+      }
+      for (const beast of opposingPlayer.field) {
+        if (beast) {
+          await this.triggerBeastAbility(beast, 'OnOpponentEndOfTurn', opposingPlayer, activePlayer);
+        }
       }
     }
 
-    // Process counter effects (burn, freeze, etc.)
-    await this.processCounterEffects(activePlayer);
-    await this.processCounterEffects(opposingPlayer);
-
-    // Trigger passive abilities with StartOfTurn trigger
-    await this.triggerPassiveAbilities('StartOfTurn', activePlayer, opposingPlayer);
+    // Trigger abilities for each state trigger
+    for (const trigger of stateTriggers) {
+      await this.triggerPassiveAbilities(trigger, activePlayer, opposingPlayer);
+    }
   }
 
   /**
-   * Trigger abilities at end of turn
+   * Trigger all abilities for a beast that match a specific trigger
    */
-  private async triggerEndOfTurnAbilities(): Promise<void> {
-    const activePlayer = this.gameState.players[this.gameState.activePlayer];
-    const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
-
-    // Trigger passive abilities with EndOfTurn trigger
-    await this.triggerPassiveAbilities('EndOfTurn', activePlayer, opposingPlayer);
-
-    // Clear temporary effects
-    for (const beast of activePlayer.field) {
-      if (beast) {
-        this.clearTemporaryEffects(beast);
-      }
-    }
-    for (const beast of opposingPlayer.field) {
-      if (beast) {
-        this.clearTemporaryEffects(beast);
-      }
-    }
-  }
-
-  /**
-   * Apply passive abilities to a beast when summoned
-   */
-  private applyPassiveAbilities(beast: BloomBeastInstance): void {
+  private async triggerBeastAbility(
+    beast: BloomBeastInstance,
+    trigger: string,
+    controllingPlayer: Player,
+    opposingPlayer: Player
+  ): Promise<void> {
     const cardDef = this.getCardDefinition(beast.cardId);
     if (!cardDef || cardDef.type !== 'Bloom') return;
 
     const beastCard = cardDef as BloomBeastCard;
-    const ability = this.getCurrentAbility(beast, beastCard);
+    const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
 
-    if (ability && ability.trigger === 'Passive') {
-      const activePlayer = this.gameState.players[this.gameState.activePlayer];
-      const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
-
+    // Process each ability with this trigger
+    for (const ability of abilities) {
       const results = this.abilityProcessor.processAbility(ability, {
         source: beast,
         sourceCard: beastCard,
-        trigger: 'Passive',
+        trigger,
         gameState: this.gameState,
-        controllingPlayer: activePlayer,
-        opposingPlayer: opposingPlayer,
+        controllingPlayer,
+        opposingPlayer,
       });
 
-      // Apply ability results to game state (e.g., cannot be targeted effects)
+      // Apply ability results to game state
       this.applyAbilityResults(results);
+
+      // Check for battle end after ability effects
+      if (this.checkForBattleEnd()) {
+        this.gameState.battleState = BattleState.Finished;
+      }
     }
   }
+
+
 
   /**
    * Trigger summon abilities
@@ -558,9 +682,10 @@ export class GameEngine {
     if (!cardDef || cardDef.type !== 'Bloom') return;
 
     const beastCard = cardDef as BloomBeastCard;
-    const ability = this.getCurrentAbility(beast, beastCard);
+    const abilities = this.getAbilitiesWithTrigger(beast, beastCard, 'OnSummon');
 
-    if (ability && ability.trigger === 'OnSummon') {
+    // Process each OnSummon ability
+    for (const ability of abilities) {
       const results = this.abilityProcessor.processAbility(ability, {
         source: beast,
         sourceCard: beastCard,
@@ -592,9 +717,10 @@ export class GameEngine {
       if (!cardDef || cardDef.type !== 'Bloom') continue;
 
       const beastCard = cardDef as BloomBeastCard;
-      const ability = this.getCurrentAbility(beast, beastCard);
+      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, 'OnAllySummon');
 
-      if (ability && ability.trigger === 'OnAllySummon') {
+      // Process each OnAllySummon ability
+      for (const ability of abilities) {
         const results = this.abilityProcessor.processAbility(ability, {
           source: beast,
           sourceCard: beastCard,
@@ -612,7 +738,7 @@ export class GameEngine {
   }
 
   /**
-   * Trigger passive abilities for all beasts
+   * Trigger abilities for all beasts with the specified trigger
    */
   private async triggerPassiveAbilities(
     trigger: string,
@@ -626,9 +752,10 @@ export class GameEngine {
       if (!cardDef || cardDef.type !== 'Bloom') continue;
 
       const beastCard = cardDef as BloomBeastCard;
-      const ability = this.getCurrentAbility(beast, beastCard);
+      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
 
-      if (ability && ability.trigger === trigger) {
+      // Process each ability with this trigger
+      for (const ability of abilities) {
         const results = this.abilityProcessor.processAbility(ability, {
           source: beast,
           sourceCard: beastCard,
@@ -728,12 +855,20 @@ export class GameEngine {
   }
 
   /**
-   * Get current ability for a beast based on its level
+   * Get all current abilities for a beast based on its level
    * Takes into account ability upgrades from leveling
    */
-  private getCurrentAbility(beast: BloomBeastInstance, beastCard: BloomBeastCard): any {
-    const { ability } = this.levelingSystem.getCurrentAbilities(beastCard, beast.currentLevel);
-    return ability;
+  private getCurrentAbilities(beast: BloomBeastInstance, beastCard: BloomBeastCard): any[] {
+    const { abilities } = this.levelingSystem.getCurrentAbilities(beastCard, beast.currentLevel);
+    return abilities;
+  }
+
+  /**
+   * Get abilities for a beast that match a specific trigger
+   */
+  private getAbilitiesWithTrigger(beast: BloomBeastInstance, beastCard: BloomBeastCard, trigger: string): any[] {
+    const abilities = this.getCurrentAbilities(beast, beastCard);
+    return abilities.filter(ability => ability.trigger === trigger);
   }
 
   /**
@@ -747,106 +882,32 @@ export class GameEngine {
     if (!cardDef || cardDef.type !== 'Bloom') return false;
 
     const beastCard = cardDef as BloomBeastCard;
-    const ability = this.getCurrentAbility(beast, beastCard);
+    const abilities = this.getCurrentAbilities(beast, beastCard);
 
-    // Only StructuredAbility has effects
-    if (!ability || !('effects' in ability)) return false;
+    // Check all abilities for the attack modification
+    for (const ability of abilities) {
+      // Only StructuredAbility has effects
+      if (!ability || !('effects' in ability)) continue;
 
-    // Check if any effect is an AttackModification with the specified modification
-    for (const effect of ability.effects) {
-      if (effect.type === EffectType.AttackModification && (effect as any).modification === modification) {
-        // Check condition if present
-        const attackModEffect = effect as any;
-        if (attackModEffect.condition) {
-          // TODO: Implement condition checking
-          // For now, if there's a condition we need to evaluate it
-          // Example: Dewdrop Drake only has attack-first when it's the only unit on field
-          Logger.debug(`Attack modification '${modification}' has condition, assuming true for now`);
+      // Check if any effect is an AttackModification with the specified modification
+      for (const effect of ability.effects) {
+        if (effect.type === EffectType.AttackModification && (effect as any).modification === modification) {
+          // Check condition if present
+          const attackModEffect = effect as any;
+          if (attackModEffect.condition) {
+            // TODO: Implement condition checking
+            // For now, if there's a condition we need to evaluate it
+            // Example: Dewdrop Drake only has attack-first when it's the only unit on field
+            Logger.debug(`Attack modification '${modification}' has condition, assuming true for now`);
+          }
+          return true;
         }
-        return true;
       }
     }
 
     return false;
   }
 
-  /**
-   * Activate ability for a beast
-   */
-  public activateAbility(
-    player: Player,
-    beastIndex: number,
-    target?: any
-  ): boolean {
-    if (beastIndex < 0 || beastIndex >= player.field.length) {
-      Logger.error('Invalid beast index');
-      return false;
-    }
-
-    const beast = player.field[beastIndex];
-    if (!beast) {
-      Logger.error('No beast at this position');
-      return false;
-    }
-
-    // Get card definition
-    const cardDef = this.getCardDefinition(beast.cardId);
-    if (!cardDef || cardDef.type !== 'Bloom') {
-      Logger.error('Invalid beast card');
-      return false;
-    }
-
-    const beastCard = cardDef as BloomBeastCard;
-    const ability = this.getCurrentAbility(beast, beastCard);
-
-    // Check if the ability is activated type
-    if (!ability || ability.trigger !== 'Activated') {
-      Logger.error('Beast has no activated ability');
-      return false;
-    }
-
-    // Check if ability has cost
-    if (ability.cost) {
-      switch (ability.cost.type) {
-        case 'nectar':
-          if (player.currentNectar < (ability.cost.value || 1)) {
-            Logger.error('Not enough nectar');
-            return false;
-          }
-          player.currentNectar -= ability.cost.value || 1;
-          break;
-        case 'discard':
-          if (player.hand.length < (ability.cost.value || 1)) {
-            Logger.error('Not enough cards to discard');
-            return false;
-          }
-          // Discard cards
-          for (let i = 0; i < (ability.cost.value || 1); i++) {
-            const card = player.hand.pop();
-            if (card) player.graveyard.push(card as any);
-          }
-          break;
-      }
-    }
-
-    // Activate the ability
-    const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
-    const results = this.abilityProcessor.processAbility(ability, {
-      source: beast,
-      sourceCard: beastCard,
-      trigger: 'Activated',
-      target: target,
-      gameState: this.gameState,
-      controllingPlayer: player,
-      opposingPlayer: opposingPlayer,
-    });
-
-    // Apply ability results to game state
-    this.applyAbilityResults(results);
-
-    Logger.debug(`Activated ability: ${ability.name}`);
-    return true;
-  }
 
   /**
    * End the match
@@ -930,6 +991,12 @@ export class GameEngine {
             defendingPlayer.field[index] = null;
             defendingPlayer.graveyard.push(defender as any);
           }
+
+          // Check for battle end immediately
+          if (this.checkForBattleEnd()) {
+            this.gameState.battleState = BattleState.Finished;
+            await this.transitionState();
+          }
           return true; // Combat ends, defender died before counter-attacking
         }
 
@@ -949,6 +1016,12 @@ export class GameEngine {
             if (index !== -1) {
               attackingPlayer.field[index] = null;
               attackingPlayer.graveyard.push(attacker as any);
+            }
+
+            // Check for battle end
+            if (this.checkForBattleEnd()) {
+              this.gameState.battleState = BattleState.Finished;
+              await this.transitionState();
             }
           }
         } else {
@@ -994,6 +1067,12 @@ export class GameEngine {
             attackingPlayer.graveyard.push(attacker as any);
           }
         }
+
+        // Check for battle end after any death
+        if (this.checkForBattleEnd()) {
+          this.gameState.battleState = BattleState.Finished;
+          await this.transitionState();
+        }
       }
     } else if (targetType === 'player') {
       // Direct attack to player
@@ -1004,11 +1083,15 @@ export class GameEngine {
       // Check if player was defeated
       if (defendingPlayer.health <= 0) {
         Logger.debug(`${defendingPlayer.name} was defeated!`);
-        const result = this.combatSystem.checkWinCondition(this.gameState);
-        if (result) {
-          this.endMatch(result);
-        }
+        this.gameState.battleState = BattleState.Finished;
+        await this.transitionState();
       }
+    }
+
+    // Always check for battle end after any damage
+    if (this.checkForBattleEnd()) {
+      this.gameState.battleState = BattleState.Finished;
+      await this.transitionState();
     }
 
     return true;
@@ -1029,9 +1112,10 @@ export class GameEngine {
     if (!cardDef || cardDef.type !== 'Bloom') return;
 
     const beastCard = cardDef as BloomBeastCard;
-    const ability = this.getCurrentAbility(beast, beastCard);
+    const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
 
-    if (ability && ability.trigger === trigger) {
+    // Process each ability with this trigger
+    for (const ability of abilities) {
       const results = this.abilityProcessor.processAbility(ability, {
         source: beast,
         sourceCard: beastCard,
@@ -1200,6 +1284,13 @@ export class GameEngine {
       if (result.message) {
         Logger.debug(result.message);
       }
+    }
+
+    // Always check for battle end after applying ability results
+    if (this.checkForBattleEnd()) {
+      this.gameState.battleState = BattleState.Finished;
+      // Don't transition immediately here as we might be in the middle of processing
+      // The next game loop iteration will handle the transition
     }
   }
 

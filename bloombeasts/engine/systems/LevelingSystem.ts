@@ -213,24 +213,28 @@ getXPRequirement(currentLevel: Level, card?: BloomBeastCard): number | null {
    * Get current abilities for a beast based on its level
    */
 getCurrentAbilities(card: BloomBeastCard, level: Level) {
-    let ability = card.ability;
+    // Start with base abilities
+    let abilities = [...card.abilities];
 
     // Check for ability upgrades at level milestones
+    // Use the most recent complete ability set for the current level
     const upgrades = card.levelingConfig?.abilityUpgrades;
     if (upgrades) {
-      // Check each upgrade level in order (4, 7, 9)
-      const upgradeLevel: Array<4 | 7 | 9> = [4, 7, 9];
-      for (const lvl of upgradeLevel) {
+      // Check each upgrade level in reverse order (9, 7, 4) to find the most recent applicable upgrade
+      const upgradeLevels: Array<4 | 7 | 9> = [9, 7, 4];
+      for (const lvl of upgradeLevels) {
         if (level >= lvl && upgrades[lvl]) {
           const upgrade = upgrades[lvl];
-          if (upgrade && upgrade.ability) {
-            ability = upgrade.ability;
+          if (upgrade && upgrade.abilities) {
+            // Use this upgrade's abilities as the complete set
+            abilities = [...upgrade.abilities];
+            break;  // Found the most recent upgrade, stop looking
           }
         }
       }
     }
 
-    return { ability };
+    return { abilities };
   }
 
   /**

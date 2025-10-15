@@ -39,19 +39,19 @@ describe('Blazefinch Card', () => {
 
   describe('Base Ability - Quick Strike', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(BLAZEFINCH.ability as StructuredAbility);
+      validateStructuredAbility(BLAZEFINCH.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      expect(BLAZEFINCH.ability.name).toBe('Quick Strike');
+      expect(BLAZEFINCH.abilities[0].name).toBe('Quick Strike');
     });
 
     test('should be a passive ability', () => {
-      expect(BLAZEFINCH.ability.trigger).toBe(AbilityTrigger.Passive);
+      expect(BLAZEFINCH.abilities[0].trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should remove summoning sickness', () => {
-      const ability = BLAZEFINCH.ability as StructuredAbility;
+      const ability = BLAZEFINCH.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.RemoveSummoningSickness);
@@ -59,7 +59,7 @@ describe('Blazefinch Card', () => {
     });
 
     test('should enable immediate attack capability', () => {
-      const ability = BLAZEFINCH.ability as StructuredAbility;
+      const ability = BLAZEFINCH.abilities[0] as StructuredAbility;
       const hasRemoveSummoningSickness = ability.effects.some(
         e => e.type === EffectType.RemoveSummoningSickness
       );
@@ -101,22 +101,22 @@ describe('Blazefinch Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = BLAZEFINCH.levelingConfig!.abilityUpgrades![4];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.name).toBe('Ember Strike');
     });
 
     test('should trigger on attack', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should deal triple damage to damaged enemies', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.AttackModification);
@@ -125,14 +125,14 @@ describe('Blazefinch Card', () => {
     });
 
     test('should have damaged condition', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       const effect: any = ability.effects[0];
       expect(effect.condition).toBeDefined();
       expect(effect.condition!.type).toBe(ConditionType.IsDamaged);
     });
 
     test('should add execute mechanic', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       const hasAttackModification = ability.effects.some(
         e => e.type === EffectType.AttackModification
       );
@@ -144,22 +144,22 @@ describe('Blazefinch Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = BLAZEFINCH.levelingConfig!.abilityUpgrades![7];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.name).toBe('Lightning Speed');
     });
 
     test('should be a passive ability', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should remove summoning sickness and attack twice', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       expect(ability.effects).toHaveLength(2);
 
       const removeSicknessEffect: any = ability.effects[0];
@@ -173,7 +173,7 @@ describe('Blazefinch Card', () => {
     });
 
     test('should combine speed and multi-attack', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       const hasRemoveSickness = countEffectsByType(ability.effects, EffectType.RemoveSummoningSickness) > 0;
       const hasAttackModification = countEffectsByType(ability.effects, EffectType.AttackModification) > 0;
       expect(hasRemoveSickness).toBe(true);
@@ -185,22 +185,22 @@ describe('Blazefinch Card', () => {
     test('should have upgraded passive ability at level 9', () => {
       const upgrade = BLAZEFINCH.levelingConfig!.abilityUpgrades![9];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability! as StructuredAbility);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.name).toBe('Phoenix Form');
     });
 
     test('should be a passive ability', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should attack twice', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       expect(ability.effects.length).toBeGreaterThanOrEqual(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.AttackModification);
@@ -209,7 +209,7 @@ describe('Blazefinch Card', () => {
     });
 
     test('should enable ultimate offensive capabilities', () => {
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       const hasAttackModification = ability.effects.some(
         e => e.type === EffectType.AttackModification
       );
@@ -227,10 +227,10 @@ describe('Blazefinch Card', () => {
     });
 
     test('should have consistent speed and execute theme', () => {
-      const baseAbility = BLAZEFINCH.ability as StructuredAbility;
+      const baseAbility = BLAZEFINCH.abilities[0] as StructuredAbility;
       expect(baseAbility.effects[0].type).toBe(EffectType.RemoveSummoningSickness);
 
-      const level4Ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const level4Ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       const level4Effect: any = level4Ability.effects[0];
       expect(level4Effect.condition?.type).toBe(ConditionType.IsDamaged);
     });
@@ -252,7 +252,7 @@ describe('Blazefinch Card', () => {
 
   describe('Ability Synergies', () => {
     test('should synergize with fast aggressive strategies', () => {
-      const baseAbility = BLAZEFINCH.ability as StructuredAbility;
+      const baseAbility = BLAZEFINCH.abilities[0] as StructuredAbility;
       const hasRemoveSickness = baseAbility.effects.some(
         e => e.type === EffectType.RemoveSummoningSickness
       );
@@ -260,15 +260,15 @@ describe('Blazefinch Card', () => {
     });
 
     test('should enable execute strategies against damaged enemies', () => {
-      const level4Ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].ability! as StructuredAbility;
+      const level4Ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![4].abilities![0] as StructuredAbility;
       const effect: any = level4Ability.effects[0];
       expect(effect.condition?.type).toBe(ConditionType.IsDamaged);
       expect(effect.modification).toBe('triple-damage');
     });
 
     test('should scale into multi-attack powerhouse', () => {
-      const level7Ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
-      const level9Ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      const level7Ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
+      const level9Ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
 
       const level7HasMultiAttack = level7Ability.effects.some(
         (e: any) => e.modification === 'attack-twice'
@@ -284,18 +284,18 @@ describe('Blazefinch Card', () => {
 
   describe('Thematic Consistency', () => {
     test('should maintain fire-themed ability names', () => {
-      expect(BLAZEFINCH.ability.name).toBe('Quick Strike');
-      expect(BLAZEFINCH.levelingConfig!.abilityUpgrades![4].ability!.name).toBe('Ember Strike');
-      expect(BLAZEFINCH.levelingConfig!.abilityUpgrades![7].ability!.name).toBe('Lightning Speed');
-      expect(BLAZEFINCH.levelingConfig!.abilityUpgrades![9].ability!.name).toBe('Phoenix Form');
+      expect(BLAZEFINCH.abilities[0].name).toBe('Quick Strike');
+      expect(BLAZEFINCH.levelingConfig!.abilityUpgrades![4].abilities![0].name).toBe('Ember Strike');
+      expect(BLAZEFINCH.levelingConfig!.abilityUpgrades![7].abilities![0].name).toBe('Lightning Speed');
+      expect(BLAZEFINCH.levelingConfig!.abilityUpgrades![9].abilities![0].name).toBe('Phoenix Form');
     });
 
     test('should embody speed and aggression mechanics', () => {
-      const baseAbility = BLAZEFINCH.ability as StructuredAbility;
+      const baseAbility = BLAZEFINCH.abilities[0] as StructuredAbility;
       expect(baseAbility.trigger).toBe(AbilityTrigger.Passive);
       expect(baseAbility.effects[0].type).toBe(EffectType.RemoveSummoningSickness);
 
-      const level7Ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].ability! as StructuredAbility;
+      const level7Ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![7].abilities![0] as StructuredAbility;
       const hasMultiAttack = level7Ability.effects.some(
         (e: any) => e.modification === 'attack-twice'
       );
@@ -303,8 +303,8 @@ describe('Blazefinch Card', () => {
     });
 
     test('should represent a phoenix-like evolution', () => {
-      expect(BLAZEFINCH.levelingConfig!.abilityUpgrades![9].ability!.name).toBe('Phoenix Form');
-      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].ability! as StructuredAbility;
+      expect(BLAZEFINCH.levelingConfig!.abilityUpgrades![9].abilities![0].name).toBe('Phoenix Form');
+      const ability = BLAZEFINCH.levelingConfig!.abilityUpgrades![9].abilities![0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
   });

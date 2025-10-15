@@ -116,7 +116,7 @@ export const MUSHROOMANCER: BloomBeastCard = {
   cost: 3,
   baseAttack: 3,
   baseHealth: 5,
-  ability: mushroomancerPassive,
+  abilities: [mushroomancerPassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -131,13 +131,13 @@ export const MUSHROOMANCER: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: mushroomancerPassive4,
+        abilities: [mushroomancerPassive4],
       },
       7: {
-        ability: mushroomancerBloom7,
+        abilities: [mushroomancerBloom7],
       },
       9: {
-        ability: mushroomancerPassive9,
+        abilities: [mushroomancerPassive9],
       },
     },
   },

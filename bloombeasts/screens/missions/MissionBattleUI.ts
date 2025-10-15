@@ -5,7 +5,7 @@
 import { Mission } from './types';
 import { MissionManager, MissionRunProgress, RewardResult } from './MissionManager';
 import { GameEngine } from '../../engine/systems/GameEngine';
-import { GameState, Player } from '../../engine/types/game';
+import { GameState, Player, BattleState } from '../../engine/types/game';
 import { AnyCard } from '../../engine/types/core';
 import { SimpleMap } from '../../utils/polyfills';
 import { Logger } from '../../engine/utils/Logger';
@@ -129,6 +129,7 @@ export class MissionBattleUI {
       habitatZone: null,
       turn: 1,
       phase: 'Setup',
+      battleState: BattleState.Player1StartOfTurn,  // Start with Player 1's turn
       turnHistory: [],
     };
 

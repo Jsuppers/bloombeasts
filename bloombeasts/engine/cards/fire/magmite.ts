@@ -107,7 +107,7 @@ export const MAGMITE: BloomBeastCard = CardBuilder.bloomBeast('magmite', 'Magmit
   .affinity('Fire')
   .cost(3)
   .stats(4, 6)
-  .ability(magmitePassive)
+  .abilities([magmitePassive])
   .leveling({
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -122,13 +122,13 @@ export const MAGMITE: BloomBeastCard = CardBuilder.bloomBeast('magmite', 'Magmit
     },
     abilityUpgrades: {
       4: {
-        ability: magmitePassive4,
+        abilities: [magmitePassive4],
       },
       7: {
-        ability: magmiteBloom7,
+        abilities: [magmiteBloom7],
       },
       9: {
-        ability: magmitePassive9,
+        abilities: [magmitePassive9],
       },
     },
   })

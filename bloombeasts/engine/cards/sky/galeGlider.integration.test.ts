@@ -17,13 +17,13 @@ describe('Gale Glider - Basic Setup', () => {
   });
 
   test('should have First Wind passive ability', () => {
-    expect(GALE_GLIDER.ability).toBeDefined();
-    expect(GALE_GLIDER.ability?.name).toBe('First Wind');
-    expect(GALE_GLIDER.ability?.trigger).toBe('Passive');
+    expect(GALE_GLIDER.abilities[0]).toBeDefined();
+    expect(GALE_GLIDER.abilities[0]?.name).toBe('First Wind');
+    expect(GALE_GLIDER.abilities[0]?.trigger).toBe('Passive');
   });
 
   test('should have attack-first modification', () => {
-    const ability = GALE_GLIDER.ability;
+    const ability = GALE_GLIDER.abilities[0];
     expect(ability).toBeDefined();
 
     // Type guard: check if it's a StructuredAbility (has effects)
@@ -292,17 +292,17 @@ describe('Gale Glider - Ability Upgrades on Level Up', () => {
 
     // Get abilities at level 1 (should be First Wind - passive)
     const level1Abilities = levelingSystem.getCurrentAbilities(GALE_GLIDER, 1);
-    expect(level1Abilities.ability.name).toBe('First Wind');
-    expect(level1Abilities.ability.trigger).toBe('Passive');
+    expect(level1Abilities.abilities[0].name).toBe('First Wind');
+    expect(level1Abilities.abilities[0].trigger).toBe('Passive');
 
     // Get abilities at level 4 (should be Wind Dance - OnAttack)
     const level4Abilities = levelingSystem.getCurrentAbilities(GALE_GLIDER, 4);
-    expect(level4Abilities.ability.name).toBe('Wind Dance');
-    expect(level4Abilities.ability.trigger).toBe('OnAttack');
+    expect(level4Abilities.abilities[0].name).toBe('Wind Dance');
+    expect(level4Abilities.abilities[0].trigger).toBe('OnAttack');
 
     // Verify it's the movement ability, not the passive
-    if ('effects' in level4Abilities.ability) {
-      const effect: any = level4Abilities.ability.effects[0];
+    if ('effects' in level4Abilities.abilities[0]) {
+      const effect: any = level4Abilities.abilities[0].effects[0];
       expect(effect.type).toBe('move-unit');
       expect(effect.destination).toBe('any-slot');
     } else {
@@ -316,13 +316,13 @@ describe('Gale Glider - Ability Upgrades on Level Up', () => {
 
     // Get abilities at level 7 (should be Storm Blade - enhanced passive)
     const level7Abilities = levelingSystem.getCurrentAbilities(GALE_GLIDER, 7);
-    expect(level7Abilities.ability.name).toBe('Storm Blade');
-    expect(level7Abilities.ability.trigger).toBe('Passive');
+    expect(level7Abilities.abilities[0].name).toBe('Storm Blade');
+    expect(level7Abilities.abilities[0].trigger).toBe('Passive');
 
     // Verify it has both attack-first and attack bonus
-    if ('effects' in level7Abilities.ability) {
-      expect(level7Abilities.ability.effects).toHaveLength(2);
-      const effects = level7Abilities.ability.effects as any[];
+    if ('effects' in level7Abilities.abilities[0]) {
+      expect(level7Abilities.abilities[0].effects).toHaveLength(2);
+      const effects = level7Abilities.abilities[0].effects as any[];
       expect(effects[0].modification).toBe('attack-first');
       expect(effects[1].stat).toBe('attack');
       expect(effects[1].value).toBe(2);
@@ -337,13 +337,13 @@ describe('Gale Glider - Ability Upgrades on Level Up', () => {
 
     // Get abilities at level 9 (should be Tempest Strike - ultimate passive)
     const level9Abilities = levelingSystem.getCurrentAbilities(GALE_GLIDER, 9);
-    expect(level9Abilities.ability.name).toBe('Tempest Strike');
-    expect(level9Abilities.ability.trigger).toBe('Passive');
+    expect(level9Abilities.abilities[0].name).toBe('Tempest Strike');
+    expect(level9Abilities.abilities[0].trigger).toBe('Passive');
 
     // Verify all three modifications
-    if ('effects' in level9Abilities.ability) {
-      expect(level9Abilities.ability.effects).toHaveLength(3);
-      const modifications = level9Abilities.ability.effects.map((e: any) => e.modification);
+    if ('effects' in level9Abilities.abilities[0]) {
+      expect(level9Abilities.abilities[0].effects).toHaveLength(3);
+      const modifications = level9Abilities.abilities[0].effects.map((e: any) => e.modification);
       expect(modifications).toContain('attack-first');
       expect(modifications).toContain('triple-damage');
       expect(modifications).toContain('cannot-counterattack');

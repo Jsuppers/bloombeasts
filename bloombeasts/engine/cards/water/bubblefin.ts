@@ -96,7 +96,7 @@ export const BUBBLEFIN: BloomBeastCard = CardBuilder.bloomBeast('bubblefin', 'Bu
   .affinity('Water')
   .cost(2)
   .stats(2, 5)
-  .ability(bubblefinPassive)
+  .abilities([bubblefinPassive])
   .leveling({
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -111,13 +111,13 @@ export const BUBBLEFIN: BloomBeastCard = CardBuilder.bloomBeast('bubblefin', 'Bu
     },
     abilityUpgrades: {
       4: {
-        ability: bubblefinBloom4,
+        abilities: [bubblefinBloom4],
       },
       7: {
-        ability: bubblefinPassive7,
+        abilities: [bubblefinPassive7],
       },
       9: {
-        ability: bubblefinPassive9,
+        abilities: [bubblefinPassive9],
       },
     },
   })

@@ -105,13 +105,26 @@ export enum Comparison {
  * Ability triggers
  */
 export enum AbilityTrigger {
+  // Combat triggers
   OnSummon = 'OnSummon',
   OnAllySummon = 'OnAllySummon',      // When another ally is summoned
   OnAttack = 'OnAttack',
   OnDamage = 'OnDamage',
   OnDestroy = 'OnDestroy',
-  StartOfTurn = 'StartOfTurn',
-  EndOfTurn = 'EndOfTurn',
+
+  // State-based triggers
+  OnPlayer1StartOfTurn = 'OnPlayer1StartOfTurn',
+  OnPlayer1EndOfTurn = 'OnPlayer1EndOfTurn',
+  OnPlayer2StartOfTurn = 'OnPlayer2StartOfTurn',
+  OnPlayer2EndOfTurn = 'OnPlayer2EndOfTurn',
+  OnAnyStartOfTurn = 'OnAnyStartOfTurn',  // Triggers for any player's start
+  OnAnyEndOfTurn = 'OnAnyEndOfTurn',      // Triggers for any player's end
+  OnOwnStartOfTurn = 'OnOwnStartOfTurn',  // Triggers only on controlling player's start
+  OnOwnEndOfTurn = 'OnOwnEndOfTurn',      // Triggers only on controlling player's end
+  OnOpponentStartOfTurn = 'OnOpponentStartOfTurn',  // Triggers on opponent's start
+  OnOpponentEndOfTurn = 'OnOpponentEndOfTurn',      // Triggers on opponent's end
+
+  // Ability types
   Passive = 'Passive',
   Activated = 'Activated'
 }

@@ -117,7 +117,7 @@ export class BattleStateManager {
       name: bloomCard.name,
       affinity: bloomCard.affinity,
       cost: bloomCard.cost,
-      ability: bloomCard.ability,
+      ability: bloomCard.abilities && bloomCard.abilities.length > 0 ? bloomCard.abilities[0] : undefined,
     };
 
     // Initialize stat system
@@ -531,6 +531,23 @@ export class BattleStateManager {
         Logger.debug(`Added ${effect.value || 1} ${effect.counter} counter(s) to ${source.name}`);
         break;
 
+      case 'draw-cards':
+      case 'DrawCards':
+        // Draw cards from deck to hand
+        const abilityDrawCount = effect.value || 1;
+        for (let i = 0; i < abilityDrawCount; i++) {
+          if (player.deck.length > 0) {
+            const card = player.deck.pop();
+            if (card) {
+              player.hand.push(card);
+              Logger.debug(`Drew card: ${card.name}`);
+            }
+          } else {
+            Logger.debug('Deck is empty - cannot draw');
+          }
+        }
+        break;
+
       default:
         Logger.debug(`Unknown effect type: ${effect.type}`);
     }
@@ -574,8 +591,20 @@ export class BattleStateManager {
         break;
 
       case 'draw-cards':
-        // Note: drawCard function must be provided by caller
-        Logger.debug(`Draw ${effect.value || 1} cards (handled externally)`);
+      case 'DrawCards':
+        // Draw cards from deck to hand
+        const drawCount = effect.value || 1;
+        for (let i = 0; i < drawCount; i++) {
+          if (player.deck.length > 0) {
+            const card = player.deck.pop();
+            if (card) {
+              player.hand.push(card);
+              Logger.debug(`Drew card: ${card.name}`);
+            }
+          } else {
+            Logger.debug('Deck is empty - cannot draw');
+          }
+        }
         break;
 
       case 'destroy':
@@ -693,7 +722,20 @@ export class BattleStateManager {
         break;
 
       case 'draw-cards':
-        Logger.debug(`Draw ${effect.value || 1} cards (handled externally)`);
+      case 'DrawCards':
+        // Draw cards from deck to hand
+        const habitatDrawCount = effect.value || 1;
+        for (let i = 0; i < habitatDrawCount; i++) {
+          if (player.deck.length > 0) {
+            const card = player.deck.pop();
+            if (card) {
+              player.hand.push(card);
+              Logger.debug(`Drew card: ${card.name}`);
+            }
+          } else {
+            Logger.debug('Deck is empty - cannot draw');
+          }
+        }
         break;
 
       case 'remove-counter':

@@ -108,7 +108,7 @@ export const KELP_CUB: BloomBeastCard = {
   cost: 2,
   baseAttack: 3,
   baseHealth: 3,
-  ability: kelpCubPassive,
+  abilities: [kelpCubPassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -123,13 +123,13 @@ export const KELP_CUB: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: kelpCubPassive4,
+        abilities: [kelpCubPassive4],
       },
       7: {
-        ability: kelpCubBloom7,
+        abilities: [kelpCubBloom7],
       },
       9: {
-        ability: kelpCubPassive9,
+        abilities: [kelpCubPassive9],
       },
     },
   },

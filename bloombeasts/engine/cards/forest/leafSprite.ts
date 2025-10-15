@@ -107,7 +107,7 @@ export const LEAF_SPRITE: BloomBeastCard = {
   cost: 2,
   baseAttack: 3,
   baseHealth: 2,
-  ability: leafSpritePassive,
+  abilities: [leafSpritePassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -122,13 +122,13 @@ export const LEAF_SPRITE: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: leafSpriteBloom4,
+        abilities: [leafSpriteBloom4],
       },
       7: {
-        ability: leafSpritePassive7,
+        abilities: [leafSpritePassive7],
       },
       9: {
-        ability: leafSpritePassive9,
+        abilities: [leafSpritePassive9],
       },
     },
   },

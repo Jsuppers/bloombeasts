@@ -112,7 +112,7 @@ export const CHARCOIL: BloomBeastCard = CardBuilder.bloomBeast('charcoil', 'Char
   .affinity('Fire')
   .cost(2)
   .stats(3, 4)
-  .ability(charcoilBloom)
+  .abilities([charcoilBloom])
   .leveling({
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -127,13 +127,13 @@ export const CHARCOIL: BloomBeastCard = CardBuilder.bloomBeast('charcoil', 'Char
     },
     abilityUpgrades: {
       4: {
-        ability: charcoilBloom4,
+        abilities: [charcoilBloom4],
       },
       7: {
-        ability: charcoilPassive7,
+        abilities: [charcoilPassive7],
       },
       9: {
-        ability: charcoilPassive9,
+        abilities: [charcoilPassive9],
       },
     },
   })

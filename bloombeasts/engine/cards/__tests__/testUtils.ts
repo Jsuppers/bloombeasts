@@ -35,7 +35,8 @@ export function validateBloomBeastCard(card: BloomBeastCard): void {
   expect(card.baseHealth).toBeDefined();
   expect(typeof card.baseHealth).toBe('number');
   expect(card.baseHealth).toBeGreaterThan(0);
-  expect(card.ability).toBeDefined();
+  expect(card.abilities).toBeDefined();
+  expect(Array.isArray(card.abilities)).toBe(true);
 }
 
 /**
@@ -52,7 +53,12 @@ export function validateStructuredAbility(ability: StructuredAbility): void {
   if (ability.trigger) {
     expect([
       'OnSummon', 'OnAllySummon', 'OnAttack', 'OnDamage', 'OnDestroy',
-      'StartOfTurn', 'EndOfTurn', 'Passive', 'Activated'
+      'OnPlayer1StartOfTurn', 'OnPlayer1EndOfTurn',
+      'OnPlayer2StartOfTurn', 'OnPlayer2EndOfTurn',
+      'OnAnyStartOfTurn', 'OnAnyEndOfTurn',
+      'OnOwnStartOfTurn', 'OnOwnEndOfTurn',
+      'OnOpponentStartOfTurn', 'OnOpponentEndOfTurn',
+      'Passive', 'Activated'
     ]).toContain(ability.trigger);
   }
 }

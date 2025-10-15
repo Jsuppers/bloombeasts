@@ -39,21 +39,21 @@ describe('Cirrus Floof Card', () => {
 
   describe('Base Ability - Lightness', () => {
     test('should have valid structured ability', () => {
-      validateStructuredAbility(CIRRUS_FLOOF.ability as StructuredAbility);
+      validateStructuredAbility(CIRRUS_FLOOF.abilities[0] as StructuredAbility);
     });
 
     test('should have correct ability name', () => {
-      const ability = CIRRUS_FLOOF.ability as StructuredAbility;
+      const ability = CIRRUS_FLOOF.abilities[0] as StructuredAbility;
       expect(ability.name).toBe('Lightness');
     });
 
     test('should be a passive ability', () => {
-      const ability = CIRRUS_FLOOF.ability as StructuredAbility;
+      const ability = CIRRUS_FLOOF.abilities[0] as StructuredAbility;
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should prevent targeting by high-cost units', () => {
-      const ability = CIRRUS_FLOOF.ability as StructuredAbility;
+      const ability = CIRRUS_FLOOF.abilities[0] as StructuredAbility;
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.CannotBeTargeted);
@@ -64,7 +64,7 @@ describe('Cirrus Floof Card', () => {
     });
 
     test('should provide protection based on cost threshold', () => {
-      const ability = CIRRUS_FLOOF.ability as StructuredAbility;
+      const ability = CIRRUS_FLOOF.abilities[0] as StructuredAbility;
       const effect: any = ability.effects[0];
       expect(effect.costThreshold).toBeGreaterThanOrEqual(3);
     });
@@ -107,22 +107,22 @@ describe('Cirrus Floof Card', () => {
     test('should have upgraded ability at level 4', () => {
       const upgrade = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability!);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0]);
     });
 
     test('should have correct ability name', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.name).toBe('Storm Shield');
     });
 
     test('should trigger at start of turn', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].ability!;
-      expect(ability.trigger).toBe(AbilityTrigger.StartOfTurn);
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].abilities![0];
+      expect(ability.trigger).toBe(AbilityTrigger.OnOwnStartOfTurn);
     });
 
     test('should grant temporary HP to all allies', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.TemporaryHP);
@@ -131,7 +131,7 @@ describe('Cirrus Floof Card', () => {
     });
 
     test('should provide team-wide defensive buff', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].abilities![0];
       const effect: any = ability.effects[0];
       expect(effect.target).toBe(AbilityTarget.AllAllies);
       expect(effect.value).toBeGreaterThan(0);
@@ -142,22 +142,22 @@ describe('Cirrus Floof Card', () => {
     test('should have upgraded ability at level 7', () => {
       const upgrade = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability!);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0]);
     });
 
     test('should have correct ability name', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.name).toBe('Ethereal Form');
     });
 
     test('should be a passive ability', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should prevent targeting by attacks', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(ability.effects).toHaveLength(1);
       const effect: any = ability.effects[0];
       expect(effect.type).toBe(EffectType.CannotBeTargeted);
@@ -167,7 +167,7 @@ describe('Cirrus Floof Card', () => {
     });
 
     test('should provide broader protection than base ability', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].abilities![0];
       const effect: any = ability.effects[0];
       expect(effect.by).toBeDefined();
       expect(effect.by.length).toBeGreaterThan(0);
@@ -178,28 +178,28 @@ describe('Cirrus Floof Card', () => {
     test('should have upgraded ability at level 9', () => {
       const upgrade = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9];
       expect(upgrade).toBeDefined();
-      expect(upgrade.ability).toBeDefined();
-      validateStructuredAbility(upgrade.ability!);
+      expect(upgrade.abilities).toBeDefined();
+      validateStructuredAbility(upgrade.abilities![0]);
     });
 
     test('should have correct ability name', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.name).toBe('Celestial Protector');
     });
 
     test('should be a passive ability', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.trigger).toBe(AbilityTrigger.Passive);
     });
 
     test('should have multiple protective effects', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(ability.effects.length).toBeGreaterThan(1);
       expect(ability.effects).toHaveLength(2);
     });
 
     test('should prevent all targeting', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       const cannotBeTargetedEffect: any = ability.effects[0];
       expect(cannotBeTargetedEffect.type).toBe(EffectType.CannotBeTargeted);
       expect(cannotBeTargetedEffect.target).toBe(AbilityTarget.Self);
@@ -207,7 +207,7 @@ describe('Cirrus Floof Card', () => {
     });
 
     test('should provide damage reduction to all allies', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       const damageReductionEffect: any = ability.effects[1];
       expect(damageReductionEffect.type).toBe(EffectType.DamageReduction);
       expect(damageReductionEffect.target).toBe(AbilityTarget.AllAllies);
@@ -216,7 +216,7 @@ describe('Cirrus Floof Card', () => {
     });
 
     test('should be a comprehensive team protector', () => {
-      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       const hasProtection = ability.effects.some(
         (e: any) => e.type === EffectType.CannotBeTargeted
       );
@@ -238,13 +238,13 @@ describe('Cirrus Floof Card', () => {
     });
 
     test('should have consistent protection theme', () => {
-      const baseAbility = CIRRUS_FLOOF.ability as StructuredAbility;
+      const baseAbility = CIRRUS_FLOOF.abilities[0] as StructuredAbility;
       expect(baseAbility.effects[0].type).toBe(EffectType.CannotBeTargeted);
 
-      const level7Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].ability!;
+      const level7Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].abilities![0];
       expect(level7Ability.effects[0].type).toBe(EffectType.CannotBeTargeted);
 
-      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       expect(level9Ability.effects[0].type).toBe(EffectType.CannotBeTargeted);
     });
 
@@ -256,11 +256,11 @@ describe('Cirrus Floof Card', () => {
     });
 
     test('should expand protection coverage over time', () => {
-      const baseAbility = CIRRUS_FLOOF.ability as StructuredAbility;
+      const baseAbility = CIRRUS_FLOOF.abilities[0] as StructuredAbility;
       const baseEffect: any = baseAbility.effects[0];
       expect(baseEffect.by).toBeDefined();
 
-      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       const level9Effect: any = level9Ability.effects[0];
       expect(level9Effect.by).toContain('all');
     });
@@ -268,7 +268,7 @@ describe('Cirrus Floof Card', () => {
 
   describe('Ability Synergies', () => {
     test('should provide team-wide temporary HP buffs', () => {
-      const level4Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].ability!;
+      const level4Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].abilities![0];
       const hasTemporaryHP = level4Ability.effects.some(
         (e: any) => e.type === EffectType.TemporaryHP && e.target === AbilityTarget.AllAllies
       );
@@ -276,7 +276,7 @@ describe('Cirrus Floof Card', () => {
     });
 
     test('should synergize with defensive team strategies', () => {
-      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       const hasDamageReduction = level9Ability.effects.some(
         (e: any) => e.type === EffectType.DamageReduction && e.target === AbilityTarget.AllAllies
       );
@@ -284,7 +284,7 @@ describe('Cirrus Floof Card', () => {
     });
 
     test('should excel at protecting fragile units', () => {
-      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       const teamProtection = level9Ability.effects.filter(
         (e: any) => e.target === AbilityTarget.AllAllies
       );
@@ -294,11 +294,11 @@ describe('Cirrus Floof Card', () => {
 
   describe('Thematic Consistency', () => {
     test('should maintain cloud-themed ability names', () => {
-      const baseAbility = CIRRUS_FLOOF.ability as StructuredAbility;
+      const baseAbility = CIRRUS_FLOOF.abilities[0] as StructuredAbility;
       expect(baseAbility.name).toBe('Lightness');
-      expect(CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].ability!.name).toBe('Storm Shield');
-      expect(CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].ability!.name).toBe('Ethereal Form');
-      expect(CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!.name).toBe('Celestial Protector');
+      expect(CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].abilities![0].name).toBe('Storm Shield');
+      expect(CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].abilities![0].name).toBe('Ethereal Form');
+      expect(CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0].name).toBe('Celestial Protector');
     });
 
     test('should embody ethereal cloud creature mechanics', () => {
@@ -309,14 +309,14 @@ describe('Cirrus Floof Card', () => {
       expect(CIRRUS_FLOOF.baseAttack).toBeLessThanOrEqual(1);
 
       // Untargetability represents intangibility
-      const baseAbility = CIRRUS_FLOOF.ability as StructuredAbility;
+      const baseAbility = CIRRUS_FLOOF.abilities[0] as StructuredAbility;
       expect(baseAbility.effects[0].type).toBe(EffectType.CannotBeTargeted);
     });
 
     test('should represent protective cloud cover mechanics', () => {
-      const level4Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].ability!;
+      const level4Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![4].abilities![0];
       expect(level4Ability.name).toBe('Storm Shield');
-      expect(level4Ability.trigger).toBe(AbilityTrigger.StartOfTurn);
+      expect(level4Ability.trigger).toBe(AbilityTrigger.OnOwnStartOfTurn);
       const effect: any = level4Ability.effects[0];
       expect(effect.target).toBe(AbilityTarget.AllAllies);
     });
@@ -324,28 +324,28 @@ describe('Cirrus Floof Card', () => {
 
   describe('Edge Cases and Special Mechanics', () => {
     test('should have cost-based protection threshold', () => {
-      const baseAbility = CIRRUS_FLOOF.ability as StructuredAbility;
+      const baseAbility = CIRRUS_FLOOF.abilities[0] as StructuredAbility;
       const effect: any = baseAbility.effects[0];
       expect(effect.costThreshold).toBeDefined();
       expect(typeof effect.costThreshold).toBe('number');
     });
 
     test('should transition from conditional to absolute protection', () => {
-      const baseAbility = CIRRUS_FLOOF.ability as StructuredAbility;
+      const baseAbility = CIRRUS_FLOOF.abilities[0] as StructuredAbility;
       const baseEffect: any = baseAbility.effects[0];
       expect(baseEffect.by).toContain('high-cost-units');
 
-      const level7Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].ability!;
+      const level7Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![7].abilities![0];
       const level7Effect: any = level7Ability.effects[0];
       expect(level7Effect.by).toContain('attacks');
 
-      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       const level9Effect: any = level9Ability.effects[0];
       expect(level9Effect.by).toContain('all');
     });
 
     test('should have permanent aura effects at max level', () => {
-      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].ability!;
+      const level9Ability = CIRRUS_FLOOF.levelingConfig!.abilityUpgrades![9].abilities![0];
       const auraEffect: any = level9Ability.effects.find(
         (e: any) => e.type === EffectType.DamageReduction
       );

@@ -96,7 +96,7 @@ export const ROOTLING: BloomBeastCard = {
   cost: 1,
   baseAttack: 1,
   baseHealth: 3,
-  ability: rootlingPassive,
+  abilities: [rootlingPassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -111,13 +111,13 @@ export const ROOTLING: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: rootlingBloom4,
+        abilities: [rootlingBloom4],
       },
       7: {
-        ability: rootlingPassive7,
+        abilities: [rootlingPassive7],
       },
       9: {
-        ability: rootlingPassive9,
+        abilities: [rootlingPassive9],
       },
     },
   },

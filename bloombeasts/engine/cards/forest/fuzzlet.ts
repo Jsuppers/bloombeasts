@@ -20,7 +20,7 @@ const fuzzletPassive: StructuredAbility = {
 
 const fuzzletBloom: StructuredAbility = {
   name: 'Rapid Growth',
-  trigger: AbilityTrigger.StartOfTurn,
+  trigger: AbilityTrigger.OnOwnStartOfTurn,
   effects: [
     {
       type: EffectType.Heal,
@@ -49,7 +49,7 @@ const fuzzletPassive4: StructuredAbility = {
 // Level 7 upgrades
 const fuzzletBloom7: StructuredAbility = {
   name: 'Accelerated Growth',
-  trigger: AbilityTrigger.StartOfTurn,
+  trigger: AbilityTrigger.OnOwnStartOfTurn,
   effects: [
     {
       type: EffectType.Heal,
@@ -81,7 +81,7 @@ const fuzzletPassive9: StructuredAbility = {
 
 const fuzzletBloom9: StructuredAbility = {
   name: 'Maximum Bloom',
-  trigger: AbilityTrigger.StartOfTurn,
+  trigger: AbilityTrigger.OnOwnStartOfTurn,
   effects: [
     {
       type: EffectType.Heal,
@@ -105,7 +105,7 @@ export const FUZZLET: BloomBeastCard = {
   cost: 2,
   baseAttack: 2,
   baseHealth: 4,
-  ability: fuzzletPassive,
+  abilities: [fuzzletPassive],
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -120,13 +120,13 @@ export const FUZZLET: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: fuzzletPassive4,
+        abilities: [fuzzletPassive4],
       },
       7: {
-        ability: fuzzletBloom7,
+        abilities: [fuzzletBloom7],
       },
       9: {
-        ability: fuzzletPassive9,
+        abilities: [fuzzletPassive9],
       },
     },
   },

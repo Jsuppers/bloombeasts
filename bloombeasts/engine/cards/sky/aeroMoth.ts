@@ -109,7 +109,7 @@ export const AERO_MOTH: BloomBeastCard = {
   cost: 2,
   baseAttack: 3,
   baseHealth: 3,
-  ability: aeroMothPassive,
+  abilities: [aeroMothPassive],  // Levels 1-3: OnSummon draws 1 card
   levelingConfig: {
     statGains: {
       1: { hp: 0, atk: 0 },
@@ -124,13 +124,13 @@ export const AERO_MOTH: BloomBeastCard = {
     },
     abilityUpgrades: {
       4: {
-        ability: aeroMothPassive4,
+        abilities: [aeroMothPassive4],  // Levels 4-6: OnSummon draws 2 cards
       },
       7: {
-        ability: aeroMothBloom7,
+        abilities: [aeroMothPassive4, aeroMothBloom7],  // Levels 7-8: OnSummon draws 2 + OnAttack swaps enemies
       },
       9: {
-        ability: aeroMothPassive9,
+        abilities: [aeroMothPassive9, aeroMothBloom9],  // Level 9: OnSummon draws 3+buffs + OnAttack advanced
       },
     },
   },
