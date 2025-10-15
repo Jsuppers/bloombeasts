@@ -1190,8 +1190,9 @@ export class GameEngine {
           this.gameState.habitatCounters = result.modifiedState.habitatCounters;
         }
         if (result.modifiedState.drawCardsQueued !== undefined) {
-          const activePlayer = this.gameState.players[this.gameState.activePlayer];
-          this.drawCards(activePlayer, result.modifiedState.drawCardsQueued);
+          const playerIndex = result.modifiedState.drawForPlayerIndex ?? this.gameState.activePlayer;
+          const player = this.gameState.players[playerIndex];
+          this.drawCards(player, result.modifiedState.drawCardsQueued);
         }
       }
 

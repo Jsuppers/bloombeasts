@@ -49,7 +49,6 @@ export const mission01: Mission = {
         dropChance: 0.3,
       },
     ],
-    nectarReward: 10,
   },
 
   timesCompleted: 0,

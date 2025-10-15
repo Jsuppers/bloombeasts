@@ -163,11 +163,10 @@ export interface ObjectiveDisplay {
 export interface RewardDisplay {
   xp: number;
   cards: CardDisplay[];
-  nectar: number;
   message: string;
 }
 
-export type GameScreen = 'start-menu' | 'missions' | 'cards' | 'battle' | 'deck-builder' | 'settings' | 'card-detail';
+export type GameScreen = 'start-menu' | 'missions' | 'cards' | 'battle' | 'deck-builder' | 'settings' | 'card-detail' | 'mission-complete';
 
 /**
  * Main game manager class
@@ -892,6 +891,12 @@ export class GameManager {
   } | null): Promise<void> {
     const battleState = this.battleUI.getCurrentBattle();
 
+    // Check if battle ended FIRST - never render after completion
+    if (battleState && battleState.isComplete && !attackAnimation) {
+      await this.handleBattleComplete(battleState);
+      return;
+    }
+
     const display = this.battleDisplayManager.createBattleDisplay(
       battleState,
       this.selectedBeastIndex,
@@ -901,11 +906,6 @@ export class GameManager {
     if (!display) return;
 
     this.platform.renderBattle(display);
-
-    // Check if battle ended (only if no animation is running)
-    if (battleState && battleState.isComplete && !attackAnimation) {
-      await this.handleBattleComplete(battleState);
-    }
   }
 
   /**
@@ -1306,15 +1306,25 @@ export class GameManager {
    * Handle battle completion
    */
   private async handleBattleComplete(battleState: any): Promise<void> {
+    // STOP EVERYTHING IMMEDIATELY
+    // 1. Stop the platform's turn timer (visual countdown)
+    if ((this.platform as any).battleScreen) {
+      (this.platform as any).battleScreen.stopTurnTimer();
+    }
+
+    // 2. Clear the battle logic (stops AI, clears callbacks)
+    this.battleUI.clearBattle();
+    this.currentBattleId = null;
+    this.selectedBeastIndex = null;
+
     if (battleState.rewards) {
       // Get the mission object
       const mission = battleState.mission || this.missionManager.getCurrentMission();
 
       // Check if platform has new showMissionComplete method
       if (mission && (this.platform as any).showMissionComplete) {
-        // Stop battle rendering before showing popup
-        this.currentScreen = 'missions';
-        this.battleUI.clearBattle();
+        // Change screen state
+        this.currentScreen = 'mission-complete';
 
         // Use new popup system - show popup first, then apply rewards after user claims
         await (this.platform as any).showMissionComplete(mission, battleState.rewards);
@@ -1373,7 +1383,6 @@ export class GameManager {
             experience: 0,
             count: 1,
           })),
-          nectar: battleState.rewards.nectarGained,
           message: 'Mission Complete!',
         };
 
@@ -1391,11 +1400,6 @@ export class GameManager {
         ['OK']
       );
     }
-
-    // Clear battle
-    this.battleUI.clearBattle();
-    this.currentBattleId = null;
-    this.selectedBeastIndex = null; // Clear selection
 
     // Resume background music
     this.soundManager.playMusic('BackgroundMusic.mp3', true);

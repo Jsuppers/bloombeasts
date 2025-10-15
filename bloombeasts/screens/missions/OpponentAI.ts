@@ -38,6 +38,7 @@ export class OpponentAI {
    * @param player The human player
    * @param gameState Current game state (for habitat zone, turn number, etc.)
    * @param effectProcessors Functions to process various effects
+   * @param shouldStopGetter Function that returns true if AI should stop processing
    */
   async executeTurn(
     opponent: Player,
@@ -51,13 +52,16 @@ export class OpponentAI {
       processMagicEffect: (effect: any, player: any, opponent: any) => void;
       processHabitatEffect: (effect: any, player: any, opponent: any) => void;
       applyStatBuffEffects: (player: any) => void;
-    }
+    },
+    shouldStopGetter?: () => boolean
   ): Promise<void> {
     const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
     // Play cards phase
     const cardDecisions = this.decideCardPlays(opponent, player, gameState);
     for (const decision of cardDecisions) {
+      if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
+
       await this.executeCardPlay(
         decision,
         opponent,
@@ -70,11 +74,15 @@ export class OpponentAI {
       // Longer delay for non-Bloom cards to show popup
       const delayTime = decision.card?.type === 'Bloom' ? 1200 : 3500;
       await delay(delayTime);
+
+      if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
     }
 
     // Attack phase
     const attackDecisions = this.decideAttacks(opponent, player);
     for (const decision of attackDecisions) {
+      if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
+
       await this.executeAttack(
         decision,
         opponent,
@@ -83,6 +91,8 @@ export class OpponentAI {
       );
       if (this.callbacks.onRender) this.callbacks.onRender();
       await delay(1000);
+
+      if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
 
       // Check if player was defeated during attack
       if (player.health <= 0) {

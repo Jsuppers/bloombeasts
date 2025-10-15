@@ -40,7 +40,7 @@ export class WebPlatform implements PlatformCallbacks {
     private menuScreen: MenuScreen;
     private missionScreen: MissionScreen;
     private cardsScreen: CardsScreen;
-    private battleScreen: BattleScreen;
+    public battleScreen: BattleScreen; // Make public so gameManager can access it
     private settingsScreen: SettingsScreen;
     private cardDetailScreen: CardDetailScreen;
     private missionCompletePopup: MissionCompletePopup;
@@ -409,10 +409,6 @@ export class WebPlatform implements PlatformCallbacks {
         let message = `🎉 Rewards Earned! 🎉\n\n`;
         message += `XP: +${rewards.xp}\n`;
 
-        if (rewards.nectar) {
-            message += `Nectar: +${rewards.nectar}\n`;
-        }
-
         if (rewards.cards && rewards.cards.length > 0) {
             message += `\nCards Received:\n`;
             rewards.cards.forEach((card) => {
@@ -432,15 +428,16 @@ export class WebPlatform implements PlatformCallbacks {
      */
     async showMissionComplete(mission: Mission, rewards: RewardResult): Promise<void> {
         return new Promise((resolve) => {
-            // Cleanup battle screen to stop timer and clear canvas
+            // Stop the battle timer but DON'T cleanup/clear the canvas
+            // We want the battle screen to remain visible behind the popup backdrop
             if (this.currentScreen === 'battle') {
-                this.battleScreen.cleanup();
+                // Just stop the timer, don't clear anything
+                this.battleScreen.stopTurnTimer();
             }
             this.currentScreen = 'mission-complete';
 
-            // Force clear canvas and click regions before showing popup
-            this.renderer.clear();
-            this.clickManager.clearRegions();
+            // Don't clear click regions yet - we'll set them up when rendering the popup
+            // this.clickManager.clearRegions();
 
             // Setup click handler for popup
             const clickHandler = (event: MouseEvent) => {
@@ -476,10 +473,13 @@ export class WebPlatform implements PlatformCallbacks {
     private renderMissionCompletePopupInternal(): void {
         if (!this.missionCompletePopup.isVisible()) return;
 
-        // Clear the canvas
-        this.renderer.clear();
+        // DON'T clear the canvas - we want the battle board to remain visible behind the popup!
+        // The popup will draw its own semi-transparent backdrop over the existing battle screen
 
-        // Render the popup
+        // Clear click regions before rendering popup
+        this.clickManager.clearRegions();
+
+        // Render the popup on top of the existing battle screen
         this.missionCompletePopup.render(this.ctx, this.assets.getAllImages());
     }
 

@@ -432,12 +432,22 @@ export class AbilityProcessor implements IAbilityProcessor {
     effect: DrawCardEffect,
     context: AbilityContext
   ): EffectResult {
-    // This would be implemented by the game engine
+    // Determine which player should draw based on target
+    let drawForPlayerIndex: 0 | 1;
+    if (effect.target === AbilityTarget.OpponentGardener) {
+      // Draw for opponent
+      drawForPlayerIndex = context.gameState.players[0] === context.opposingPlayer ? 0 : 1;
+    } else {
+      // Default: PlayerGardener or other - draw for controlling player
+      drawForPlayerIndex = context.gameState.players[0] === context.controllingPlayer ? 0 : 1;
+    }
+
     return {
       success: true,
       message: `Draw ${effect.value} card(s)`,
       modifiedState: {
         drawCardsQueued: effect.value,
+        drawForPlayerIndex,
       },
     };
   }

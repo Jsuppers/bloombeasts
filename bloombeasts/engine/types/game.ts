@@ -43,6 +43,7 @@ export interface GameState {
   turnHistory: any[];  // History of actions taken
   // Pending actions that need to be resolved
   drawCardsQueued?: number;
+  drawForPlayerIndex?: 0 | 1;
   pendingMove?: {
     unit: BloomBeastInstance;
     destination: string;

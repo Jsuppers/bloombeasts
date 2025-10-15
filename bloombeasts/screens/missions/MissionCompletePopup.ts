@@ -85,6 +85,10 @@ export class MissionCompletePopup {
 
     const { mission, rewards, chestOpened } = this.state;
 
+    // Draw semi-transparent backdrop
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, 1280, 720);
+
     // Draw container background
     const containerImage = images['MissionCompleteContainer'];
     if (containerImage) {

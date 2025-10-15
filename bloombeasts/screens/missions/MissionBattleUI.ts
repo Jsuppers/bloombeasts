@@ -31,6 +31,7 @@ export class MissionBattleUI {
   private playerLowHealthTriggered: boolean = false; // Track if low health sound already played
   private battleStateManager: BattleStateManager;
   private opponentAI: OpponentAI;
+  private shouldStopAI: boolean = false; // Flag to stop AI turn processing
 
   constructor(missionManager: MissionManager, gameEngine: GameEngine) {
     this.missionManager = missionManager;
@@ -64,6 +65,9 @@ export class MissionBattleUI {
    * Initialize a mission battle
    */
   initializeBattle(playerDeckCards: AnyCard[]): BattleUIState | null {
+    // Reset AI stop flag for new battle
+    this.shouldStopAI = false;
+
     const mission = this.missionManager.getCurrentMission();
     if (!mission) {
       Logger.error('No mission selected');
@@ -369,11 +373,13 @@ export class MissionBattleUI {
     this.drawCard(opponent);
     if (this.renderCallback) this.renderCallback();
     await delay(800);
+    if (this.shouldStopAI) return; // Stop if battle ended
 
     // Increase opponent nectar
     opponent.currentNectar = Math.min(10, this.currentBattle.gameState.turn);
     if (this.renderCallback) this.renderCallback();
     await delay(500);
+    if (this.shouldStopAI) return; // Stop if battle ended
 
     // Apply buff card start-of-turn effects for opponent (Swift Wind, Nature's Blessing)
     this.battleStateManager.applyBuffStartOfTurnEffects(opponent, player);
@@ -402,7 +408,9 @@ export class MissionBattleUI {
       processMagicEffect: this.battleStateManager.processMagicEffect.bind(this.battleStateManager),
       processHabitatEffect: this.battleStateManager.processHabitatEffect.bind(this.battleStateManager),
       applyStatBuffEffects: this.battleStateManager.applyStatBuffEffects.bind(this.battleStateManager),
-    });
+    }, () => this.shouldStopAI); // Pass shouldStopAI getter
+
+    if (this.shouldStopAI) return; // Stop if battle ended
 
     // Check if player health reached 0 during AI turn - end battle immediately
     if (player.health <= 0) {
@@ -591,6 +599,9 @@ export class MissionBattleUI {
   private endBattle(): void {
     if (!this.currentBattle) return;
 
+    // Stop AI turn processing immediately
+    this.shouldStopAI = true;
+
     const player = this.currentBattle.gameState?.players[0];
     const opponent = this.currentBattle.gameState?.players[1];
 
@@ -694,10 +705,6 @@ export class MissionBattleUI {
       });
     }
 
-    if (rewards.nectarGained > 0) {
-      display.push(`Nectar Gained: ${rewards.nectarGained}`);
-    }
-
     if (rewards.bonusRewards && rewards.bonusRewards.length > 0) {
       display.push('');
       display.push('Bonus Rewards:');
@@ -720,6 +727,7 @@ export class MissionBattleUI {
    * Clear the current battle
    */
   clearBattle(): void {
+    this.shouldStopAI = true; // Stop any ongoing AI processing
     this.currentBattle = null;
     this.renderCallback = null; // Clear callback to prevent race conditions
     this.playerLowHealthTriggered = false; // Reset low health flag

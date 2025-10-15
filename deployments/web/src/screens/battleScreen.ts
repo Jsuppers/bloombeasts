@@ -749,7 +749,7 @@ export class BattleScreen {
         }, 1000);
     }
 
-    private stopTurnTimer(): void {
+    public stopTurnTimer(): void {
         if (this.timerInterval) {
             clearInterval(this.timerInterval);
             this.timerInterval = null;

@@ -22,7 +22,6 @@ export interface MissionRewards {
   bonusXPAmount: number;        // Amount of bonus XP if triggered
   cardRewards: CardReward[];    // Possible card rewards
   itemRewards?: ItemReward[];   // Possible item rewards
-  nectarReward?: number;        // Nectar currency reward
 }
 
 export interface CardReward {

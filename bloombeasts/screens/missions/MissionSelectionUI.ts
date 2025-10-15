@@ -117,11 +117,6 @@ export class MissionSelectionUI {
       preview.push(`Cards: ${minCards}-${maxCards}`);
     }
 
-    // Nectar rewards
-    if (mission.rewards.nectarReward) {
-      preview.push(`Nectar: ${mission.rewards.nectarReward}`);
-    }
-
     return preview;
   }
 

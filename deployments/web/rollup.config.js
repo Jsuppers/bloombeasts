@@ -12,6 +12,7 @@ export default {
     typescript({
       tsconfig: './tsconfig.json',
       include: ['src/**/*.ts', '../../bloombeasts/**/*.ts', '../../shared/**/*.ts'],
+      exclude: ['**/*.test.ts', '**/*.integration.test.ts', '**/__tests__/**'],
       compilerOptions: {
         target: 'ES2017',
         module: 'ES2015',
