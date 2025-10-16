@@ -1489,7 +1489,7 @@ export interface PlayerItem {
 /**
  * Player data interface
  */
-interface PlayerData {
+export interface PlayerData {
   name: string;
   level: number;
   totalXP: number;

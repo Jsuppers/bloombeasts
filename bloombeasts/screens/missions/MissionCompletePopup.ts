@@ -90,7 +90,7 @@ export class MissionCompletePopup {
     ctx.fillRect(0, 0, 1280, 720);
 
     // Draw container background
-    const containerImage = images['MissionCompleteContainer'];
+    const containerImage = images['MissionContainer'];
     if (containerImage) {
       const centerX = (1280 - missionCompleteCardDimensions.width) / 2;
       const centerY = (720 - missionCompleteCardDimensions.height) / 2;

@@ -27,7 +27,9 @@
       "Bash(npx ts-node:*)",
       "Bash(npx tsx:*)",
       "Bash(xargs:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "WebSearch",
+      "WebFetch(domain:developers.meta.com)"
     ],
     "deny": [],
     "ask": []

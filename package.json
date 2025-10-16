@@ -7,8 +7,9 @@
   "scripts": {
     "build": "rollup -c",
     "build:watch": "rollup -c -w",
+    "build:standalone": "node bundle-with-namespace.js",
     "build:horizon": "cd deployments/horizon && npm run build",
-    "build:horizon:watch": "cd deployments/horizon && npm run build:watch",
+    "build:web:prod": "cd deployments/web && npm run build:prod",
     "compile": "tsc --noEmit",
     "bundle": "node bundle.js",
     "test": "jest",

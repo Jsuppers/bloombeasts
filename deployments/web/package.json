@@ -6,8 +6,14 @@
   "scripts": {
     "build": "rollup -c",
     "build:watch": "rollup -c -w",
+    "build:prod": "npm run build:standalone && npm run build:bundle",
+    "build:standalone": "cd ../.. && node bundle-with-namespace.js",
+    "build:js": "cd ../.. && npx tsc dist/BloomBeasts-GameEngine-Standalone.ts --outFile dist/BloomBeasts-GameEngine-Standalone.js --module none --target ES2020 --lib ES2020 --skipLibCheck",
+    "build:bundle": "npm run build:js && rollup -c rollup.config.prod.js",
     "dev": "concurrently \"npm run build:watch\" \"npm run serve\"",
-    "serve": "cd ../.. && http-server -p 8000 -c-1"
+    "dev:prod": "concurrently \"npm run build:prod\" \"npm run serve:prod\"",
+    "serve": "cd ../.. && http-server -p 8000 -c-1",
+    "serve:prod": "cd ../.. && http-server -p 8001 -c-1 --proxy http://localhost:8001/deployments/web/index-prod.html?"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",

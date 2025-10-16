@@ -1,446 +1,685 @@
+/// <reference path="./BloomBeasts-GameEngine-Standalone.ts" />
+
+import * as hz from 'horizon/core';
+import type { Player } from 'horizon/core';
+import { UIComponent, View, Text, Pressable, ScrollView, ImageSource, Image, Binding, UINode } from 'horizon/ui';
+
+// Import shared styles from the BloomBeasts namespace
+const COLORS = BloomBeasts.COLORS;
+const DIMENSIONS = BloomBeasts.DIMENSIONS;
+const GAPS = BloomBeasts.GAPS;
+const LAYOUTS = BloomBeasts.LAYOUTS;
+const BUTTON_STYLES = BloomBeasts.BUTTON_STYLES;
+const TEXT_STYLES = BloomBeasts.TEXT_STYLES;
+const CARD_STYLES = BloomBeasts.CARD_STYLES;
+const DIALOG_STYLES = BloomBeasts.DIALOG_STYLES;
+const getAffinityColor = BloomBeasts.getAffinityColor;
+
 /**
- * BloomBeasts Game - Meta Horizon Edition
- *
- * This is the main game script for Meta Horizon Worlds.
- * It defines asset props, custom UI gizmo, and integrates with the game engine.
- *
- * To use this script in Meta Horizon:
- * 1. Import BloomBeasts-GameEngine.ts as a module dependency
- * 2. Attach this script to a game object
- * 3. Assign all asset props in the Meta Horizon editor
- * 4. Assign the custom UI gizmo prop
- * 5. The game will initialize automatically
+ * HorizonPlatform - Implementation of PlatformCallbacks for Meta Horizon Worlds
+ * Bridges the BloomBeasts game engine with Horizon's Custom UI
  */
+class HorizonPlatform implements BloomBeasts.PlatformCallbacks {
+  private ui: BloomBeastsUI;
 
-import * as Engine from './BloomBeasts-GameEngine';
-
-// Meta Horizon types (these will be provided by the Horizon platform at runtime)
-// For compilation purposes, we define basic stubs here
-declare namespace Horizon {
-  export interface World {}
-  export namespace Asset {
-    export interface Texture {}
-    export interface Audio {}
-  }
-  export namespace Gizmo {
-    export interface CustomUI {}
-  }
-  export interface Player {}
-}
-
-// Use the Horizon types
-type World = Horizon.World;
-type HorizonPlayer = Horizon.Player;
-
-// ==================== Script Props ====================
-// These will be set in the Meta Horizon editor
-
-type Props = {
-  // Custom UI Gizmo for rendering the game
-  gameUI: Horizon.Gizmo.CustomUI;
-
-  // Card Images - Forest Affinity
-  cardImage_fuzzlet: Horizon.Asset.Texture;
-  cardImage_leafSprite: Horizon.Asset.Texture;
-  cardImage_mosslet: Horizon.Asset.Texture;
-  cardImage_mushroomancer: Horizon.Asset.Texture;
-  cardImage_rootling: Horizon.Asset.Texture;
-
-  // Card Images - Fire Affinity
-  cardImage_blazefinch: Horizon.Asset.Texture;
-  cardImage_charcoil: Horizon.Asset.Texture;
-  cardImage_cinderPup: Horizon.Asset.Texture;
-  cardImage_magmite: Horizon.Asset.Texture;
-
-  // Card Images - Water Affinity
-  cardImage_aquaPebble: Horizon.Asset.Texture;
-  cardImage_bubblefin: Horizon.Asset.Texture;
-  cardImage_dewdropDrake: Horizon.Asset.Texture;
-  cardImage_kelpCub: Horizon.Asset.Texture;
-
-  // Card Images - Sky Affinity
-  cardImage_aeroMoth: Horizon.Asset.Texture;
-  cardImage_cirrusFloof: Horizon.Asset.Texture;
-  cardImage_galeGlider: Horizon.Asset.Texture;
-  cardImage_starBloom: Horizon.Asset.Texture;
-
-  // Habitat Images
-  habitatImage_ancientForest: Horizon.Asset.Texture;
-  habitatImage_volcanicScar: Horizon.Asset.Texture;
-  habitatImage_clearZenith: Horizon.Asset.Texture;
-
-  // Magic Card Images
-  magicImage_cleansingDownpour: Horizon.Asset.Texture;
-  magicImage_nectarSurge: Horizon.Asset.Texture;
-
-  // Trap Card Images
-  trapImage_habitatLock: Horizon.Asset.Texture;
-
-  // UI Images
-  uiImage_cardBack: Horizon.Asset.Texture;
-  uiImage_button: Horizon.Asset.Texture;
-  uiImage_panel: Horizon.Asset.Texture;
-  uiImage_healthBar: Horizon.Asset.Texture;
-  uiImage_nectarIcon: Horizon.Asset.Texture;
-
-  // Background Images
-  backgroundImage_mainMenu: Horizon.Asset.Texture;
-  backgroundImage_battle: Horizon.Asset.Texture;
-  backgroundImage_missionSelect: Horizon.Asset.Texture;
-
-  // Sound Effects
-  sound_cardPlay: Horizon.Asset.Audio;
-  sound_attack: Horizon.Asset.Audio;
-  sound_damage: Horizon.Asset.Audio;
-  sound_victory: Horizon.Asset.Audio;
-  sound_defeat: Horizon.Asset.Audio;
-  sound_buttonClick: Horizon.Asset.Audio;
-
-  // Music
-  music_mainMenu: Horizon.Asset.Audio;
-  music_battle: Horizon.Asset.Audio;
-};
-
-// ==================== Meta Horizon Platform Implementation ====================
-
-class HorizonPlatform implements Engine.PlatformInterface {
-  private props: Props;
-  private uiGizmo: Horizon.Gizmo.CustomUI;
-  private assetMap: Map<string, Horizon.Asset.Texture | Horizon.Asset.Audio>;
-  private renderCallbacks: ((ctx: Engine.RenderContext) => void)[] = [];
-  private inputHandlers: Map<string, Engine.InputCallback> = new Map();
-
-  constructor(props: Props) {
-    this.props = props;
-    this.uiGizmo = props.gameUI;
-    this.assetMap = new Map();
+  constructor(ui: BloomBeastsUI) {
+    this.ui = ui;
   }
 
-  // ==================== Initialization ====================
-
-  async initialize(): Promise<void> {
-    console.log('[BloomBeasts] Initializing Horizon Platform...');
-
-    // Map all asset props to asset IDs
-    this.mapAssets();
-
-    // Initialize the custom UI
-    await this.initializeUI();
-
-    console.log('[BloomBeasts] Platform initialized successfully');
+  // UI Rendering
+  renderStartMenu(options: string[], stats: BloomBeasts.MenuStats): void {
+    this.ui.showStartMenu(options, stats);
   }
 
-  private mapAssets(): void {
-    // Card Images - Forest
-    this.assetMap.set('card-fuzzlet', this.props.cardImage_fuzzlet);
-    this.assetMap.set('card-leafSprite', this.props.cardImage_leafSprite);
-    this.assetMap.set('card-mosslet', this.props.cardImage_mosslet);
-    this.assetMap.set('card-mushroomancer', this.props.cardImage_mushroomancer);
-    this.assetMap.set('card-rootling', this.props.cardImage_rootling);
-
-    // Card Images - Fire
-    this.assetMap.set('card-blazefinch', this.props.cardImage_blazefinch);
-    this.assetMap.set('card-charcoil', this.props.cardImage_charcoil);
-    this.assetMap.set('card-cinderPup', this.props.cardImage_cinderPup);
-    this.assetMap.set('card-magmite', this.props.cardImage_magmite);
-
-    // Card Images - Water
-    this.assetMap.set('card-aquaPebble', this.props.cardImage_aquaPebble);
-    this.assetMap.set('card-bubblefin', this.props.cardImage_bubblefin);
-    this.assetMap.set('card-dewdropDrake', this.props.cardImage_dewdropDrake);
-    this.assetMap.set('card-kelpCub', this.props.cardImage_kelpCub);
-
-    // Card Images - Sky
-    this.assetMap.set('card-aeroMoth', this.props.cardImage_aeroMoth);
-    this.assetMap.set('card-cirrusFloof', this.props.cardImage_cirrusFloof);
-    this.assetMap.set('card-galeGlider', this.props.cardImage_galeGlider);
-    this.assetMap.set('card-starBloom', this.props.cardImage_starBloom);
-
-    // Habitat Images
-    this.assetMap.set('habitat-ancientForest', this.props.habitatImage_ancientForest);
-    this.assetMap.set('habitat-volcanicScar', this.props.habitatImage_volcanicScar);
-    this.assetMap.set('habitat-clearZenith', this.props.habitatImage_clearZenith);
-
-    // Magic Images
-    this.assetMap.set('magic-cleansingDownpour', this.props.magicImage_cleansingDownpour);
-    this.assetMap.set('magic-nectarSurge', this.props.magicImage_nectarSurge);
-
-    // Trap Images
-    this.assetMap.set('trap-habitatLock', this.props.trapImage_habitatLock);
-
-    // UI Images
-    this.assetMap.set('ui-cardBack', this.props.uiImage_cardBack);
-    this.assetMap.set('ui-button', this.props.uiImage_button);
-    this.assetMap.set('ui-panel', this.props.uiImage_panel);
-    this.assetMap.set('ui-healthBar', this.props.uiImage_healthBar);
-    this.assetMap.set('ui-nectarIcon', this.props.uiImage_nectarIcon);
-
-    // Background Images
-    this.assetMap.set('bg-mainMenu', this.props.backgroundImage_mainMenu);
-    this.assetMap.set('bg-battle', this.props.backgroundImage_battle);
-    this.assetMap.set('bg-missionSelect', this.props.backgroundImage_missionSelect);
-
-    // Sound Effects
-    this.assetMap.set('sfx-cardPlay', this.props.sound_cardPlay);
-    this.assetMap.set('sfx-attack', this.props.sound_attack);
-    this.assetMap.set('sfx-damage', this.props.sound_damage);
-    this.assetMap.set('sfx-victory', this.props.sound_victory);
-    this.assetMap.set('sfx-defeat', this.props.sound_defeat);
-    this.assetMap.set('sfx-buttonClick', this.props.sound_buttonClick);
-
-    // Music
-    this.assetMap.set('music-mainMenu', this.props.music_mainMenu);
-    this.assetMap.set('music-battle', this.props.music_battle);
+  renderMissionSelect(missions: BloomBeasts.MissionDisplay[], stats: BloomBeasts.MenuStats): void {
+    this.ui.showMissionSelect(missions, stats);
   }
 
-  private async initializeUI(): Promise<void> {
-    // Set up the custom UI gizmo for game rendering
-    // The UI will be rendered through the render callbacks
-    console.log('[BloomBeasts] Custom UI initialized');
+  renderCards(cards: BloomBeasts.CardDisplay[], deckSize: number, deckCardIds: string[], stats: BloomBeasts.MenuStats): void {
+    this.ui.showCards(cards, deckSize, deckCardIds, stats);
   }
 
-  // ==================== Asset Loading ====================
-
-  async loadAsset(assetId: string): Promise<Engine.AssetLoadResult> {
-    const asset = this.assetMap.get(assetId);
-
-    if (!asset) {
-      console.warn(`[BloomBeasts] Asset not found: ${assetId}`);
-      return {
-        success: false,
-        assetId,
-        error: `Asset not found: ${assetId}`
-      };
-    }
-
-    // In Meta Horizon, assets are pre-loaded through props
-    // Just return success
-    return {
-      success: true,
-      assetId,
-      data: asset
-    };
+  renderBattle(battleState: BloomBeasts.BattleDisplay): void {
+    this.ui.showBattle(battleState);
   }
 
-  async loadAssets(assetIds: string[]): Promise<Engine.AssetLoadResult[]> {
-    return Promise.all(assetIds.map(id => this.loadAsset(id)));
+  renderSettings(settings: any, stats: BloomBeasts.MenuStats): void {
+    this.ui.showSettings(settings, stats);
   }
 
-  // ==================== Rendering ====================
-
-  onRender(callback: (ctx: Engine.RenderContext) => void): void {
-    this.renderCallbacks.push(callback);
+  renderCardDetail(cardDetail: BloomBeasts.CardDetailDisplay, stats: BloomBeasts.MenuStats): void {
+    this.ui.showCardDetail(cardDetail, stats);
   }
 
-  render(): void {
-    // Create render context
-    const ctx: Engine.RenderContext = {
-      width: 1920,  // Standard HD width for Horizon UI
-      height: 1080, // Standard HD height for Horizon UI
-      deltaTime: 16 // Approximately 60fps
-    };
-
-    // Call all render callbacks
-    for (const callback of this.renderCallbacks) {
-      try {
-        callback(ctx);
-      } catch (error) {
-        console.error('[BloomBeasts] Render callback error:', error);
-      }
-    }
-
-    // Update the custom UI gizmo with rendered content
-    this.updateCustomUI();
+  // Input handling
+  onButtonClick(callback: (buttonId: string) => void): void {
+    this.ui.buttonClickCallback = callback;
   }
 
-  private updateCustomUI(): void {
-    // This is where we'd send render commands to the CustomUI gizmo
-    // Meta Horizon CustomUI typically uses HTML/CSS-like structure
-    // Implementation depends on Meta Horizon's specific CustomUI API
+  onCardSelect(callback: (cardId: string) => void): void {
+    this.ui.cardSelectCallback = callback;
   }
 
-  // ==================== Input Handling ====================
-
-  onInput(eventType: string, callback: Engine.InputCallback): void {
-    this.inputHandlers.set(eventType, callback);
+  onMissionSelect(callback: (missionId: string) => void): void {
+    this.ui.missionSelectCallback = callback;
   }
 
-  handleInput(eventType: string, data: any): void {
-    const handler = this.inputHandlers.get(eventType);
-    if (handler) {
-      handler(data);
-    }
+  onSettingsChange(callback: (settingId: string, value: any) => void): void {
+    this.ui.settingsChangeCallback = callback;
   }
 
-  // ==================== Audio ====================
-
-  async playSound(soundId: string, volume?: number): Promise<void> {
-    const sound = this.assetMap.get(soundId) as Horizon.Asset.Audio;
-    if (sound) {
-      // Play audio through Meta Horizon's audio system
-      console.log(`[BloomBeasts] Playing sound: ${soundId} at volume ${volume || 1.0}`);
-      // world.audio.play(sound, { volume: volume || 1.0 });
-    }
+  // Asset loading (stub implementations for Horizon)
+  async loadCardImage(cardId: string): Promise<any> {
+    return null;
   }
 
-  async playMusic(musicId: string, loop?: boolean, volume?: number): Promise<void> {
-    const music = this.assetMap.get(musicId) as Horizon.Asset.Audio;
-    if (music) {
-      console.log(`[BloomBeasts] Playing music: ${musicId} (loop: ${loop}) at volume ${volume || 0.5}`);
-      // world.audio.playMusic(music, { loop: loop !== false, volume: volume || 0.5 });
-    }
+  async loadBackground(backgroundId: string): Promise<any> {
+    return null;
   }
 
-  async stopMusic(): Promise<void> {
-    console.log('[BloomBeasts] Stopping music');
-    // world.audio.stopMusic();
+  playSound(soundId: string): void {
+    // Sound implementation
   }
 
-  // ==================== Dialogs ====================
+  // Audio control
+  playMusic(src: string, loop: boolean, volume: number): void {}
+  stopMusic(): void {}
+  playSfx(src: string, volume: number): void {}
+  setMusicVolume(volume: number): void {}
+  setSfxVolume(volume: number): void {}
 
-  async showDialog(title: string, message: string, buttons: string[]): Promise<number> {
-    console.log(`[BloomBeasts] Dialog: ${title} - ${message}`);
-    // In Meta Horizon, we'd show a custom UI dialog
-    // For now, return 0 (first button)
-    return 0;
+  // Storage
+  async saveData(key: string, data: any): Promise<void> {
+    // Use Horizon's data storage if available
   }
 
-  // ==================== Utilities ====================
-
-  getTimestamp(): number {
-    return Date.now();
+  async loadData(key: string): Promise<any> {
+    return null;
   }
 
-  async delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  // Dialogs
+  async showDialog(title: string, message: string, buttons?: string[]): Promise<string> {
+    this.ui.showDialog(title, message, buttons || ['OK']);
+    return 'OK';
+  }
+
+  async showRewards(rewards: BloomBeasts.RewardDisplay): Promise<void> {
+    this.ui.showRewardsPopup(rewards);
   }
 }
 
-// ==================== Main Game Class ====================
+/**
+ * BloomBeastsUI - Custom UI Component for the game
+ */
+class BloomBeastsUI extends UIComponent {
+  // Panel size from shared constants
+  protected readonly panelWidth = DIMENSIONS.panel.width;
+  protected readonly panelHeight = DIMENSIONS.panel.height;
 
-class BloomBeastsGame {
-  private world: World;
-  private props: Props;
-  private platform: HorizonPlatform;
-  private gameManager: Engine.GameManager | null = null;
-  private isInitialized: boolean = false;
-  private updateInterval: number | null = null;
+  // Bindings for dynamic UI
+  private currentScreen = new Binding<string>('start-menu');
+  private menuOptions = new Binding<string[]>([]);
+  private playerLevel = new Binding<number>(1);
+  private playerXP = new Binding<number>(0);
+  private playerTokens = new Binding<number>(0);
+  private playerDiamonds = new Binding<number>(0);
+  private playerSerums = new Binding<number>(0);
 
-  constructor(world: World, props: Props) {
-    this.world = world;
-    this.props = props;
-    this.platform = new HorizonPlatform(props);
+  // Mission select
+  private missions = new Binding<Array<BloomBeasts.MissionDisplay>>([]);
+
+  // Cards screen
+  private cards = new Binding<Array<BloomBeasts.CardDisplay>>([]);
+  private deckSize = new Binding<number>(0);
+
+  // Battle screen
+  private battleState = new Binding<BloomBeasts.BattleDisplay | null>(null);
+
+  // Dialog
+  private dialogVisible = new Binding<boolean>(false);
+  private dialogTitle = new Binding<string>('');
+  private dialogMessage = new Binding<string>('');
+  private dialogButtons = new Binding<string[]>([]);
+
+  // Card detail
+  private cardDetailVisible = new Binding<boolean>(false);
+  private cardDetail = new Binding<BloomBeasts.CardDetailDisplay | null>(null);
+
+  // Callbacks
+  buttonClickCallback?: (buttonId: string) => void;
+  cardSelectCallback?: (cardId: string) => void;
+  missionSelectCallback?: (missionId: string) => void;
+  settingsChangeCallback?: (settingId: string, value: any) => void;
+
+  // Game manager
+  private gameManager: BloomBeasts.GameManager | null = null;
+
+  start() {
+    super.start();
+    this.initializeGame();
   }
 
-  async start(): Promise<void> {
-    try {
-      console.log('[BloomBeasts] Starting game...');
-
-      // Initialize platform (loads assets, sets up UI)
-      await this.platform.initialize();
-
-      // Create and initialize game manager
-      // Note: GameManager expects platform callbacks, not the platform interface
-      // This will need to be adapted based on the actual GameManager implementation
-      this.gameManager = new Engine.GameManager(this.platform as any);
-      await this.gameManager.initialize();
-
-      this.isInitialized = true;
-      console.log('[BloomBeasts] Game started successfully!');
-
-      // Start the game loop
-      this.startGameLoop();
-
-    } catch (error) {
-      console.error('[BloomBeasts] Failed to start game:', error);
-      throw error;
-    }
+  private async initializeGame() {
+    const platform = new HorizonPlatform(this);
+    this.gameManager = new BloomBeasts.GameManager(platform);
+    await this.gameManager.initialize();
   }
 
-  private startGameLoop(): void {
-    // Run game update at ~60fps
-    this.updateInterval = setInterval(() => {
-      this.update();
-    }, 16) as unknown as number;
-  }
+  initializeUI(): UINode {
+    return View({
+      style: {
+        width: LAYOUTS.root.width,
+        height: LAYOUTS.root.height,
+        backgroundColor: COLORS.background,
+        flexDirection: LAYOUTS.root.flexDirection,
+      },
+      children: [
+        // Main content area - conditionally render based on current screen
+        UINode.if(
+          this.currentScreen.derive((s: string) => s === 'start-menu'),
+          this.renderStartMenuScreen(),
+          UINode.if(
+            this.currentScreen.derive((s: string) => s === 'missions'),
+            this.renderMissionSelectScreen(),
+            UINode.if(
+              this.currentScreen.derive((s: string) => s === 'cards'),
+              this.renderCardsScreen(),
+              UINode.if(
+                this.currentScreen.derive((s: string) => s === 'battle'),
+                this.renderBattleScreen(),
+                this.renderSettingsScreen()
+              )
+            )
+          )
+        ),
 
-  private update(): void {
-    if (!this.isInitialized || !this.gameManager) {
-      return;
-    }
+        // Dialog overlay
+        UINode.if(
+          this.dialogVisible,
+          this.renderDialog()
+        ),
 
-    // Render the game
-    this.platform.render();
-  }
-
-  stop(): void {
-    if (this.updateInterval !== null) {
-      clearInterval(this.updateInterval);
-      this.updateInterval = null;
-    }
-
-    console.log('[BloomBeasts] Game stopped');
-  }
-
-  // Handle player interactions with the custom UI
-  handleUIClick(x: number, y: number): void {
-    if (!this.isInitialized) return;
-
-    this.platform.handleInput('click', { x, y });
-  }
-
-  handleUIHover(x: number, y: number): void {
-    if (!this.isInitialized) return;
-
-    this.platform.handleInput('hover', { x, y });
-  }
-}
-
-// ==================== Meta Horizon Script Exports ====================
-
-// This is the main entry point for Meta Horizon
-export class BloomBeastsScript {
-  private game: BloomBeastsGame | null = null;
-
-  // Called when the script starts
-  start(world: World, props: Props) {
-    console.log('[BloomBeasts] Script starting...');
-
-    this.game = new BloomBeastsGame(world, props);
-
-    // Start the game asynchronously
-    this.game.start().catch(error => {
-      console.error('[BloomBeasts] Failed to start:', error);
+        // Card detail overlay
+        UINode.if(
+          this.cardDetailVisible,
+          this.renderCardDetailOverlay()
+        ),
+      ],
     });
   }
 
-  // Called every frame
-  update(world: World, props: Props) {
-    // Game loop is handled internally
+  // ============= SCREEN RENDERERS =============
+
+  private renderStartMenuScreen(): UINode {
+    return View({
+      style: {
+        ...LAYOUTS.startMenu,
+      },
+      children: [
+        // Title
+        Text({
+          text: 'BLOOM BEASTS',
+          style: {
+            ...TEXT_STYLES.hero,
+            marginBottom: DIMENSIONS.spacing.lg,
+            fontFamily: 'Bangers',
+          },
+        }),
+
+        // Player stats
+        View({
+          style: {
+            ...LAYOUTS.startMenuStats,
+          },
+          children: [
+            this.renderStatBadge('Level', this.playerLevel.derive((l: number) => l.toString())),
+            this.renderStatBadge('Tokens', this.playerTokens.derive((t: number) => t.toString())),
+            this.renderStatBadge('Diamonds', this.playerDiamonds.derive((d: number) => d.toString())),
+          ],
+        }),
+
+        // Menu buttons
+        View({
+          style: {
+            ...LAYOUTS.startMenuButtons,
+          },
+          children: [
+            this.renderButton('Missions', 'btn-missions'),
+            this.renderButton('Cards', 'btn-cards'),
+            this.renderButton('Settings', 'btn-settings'),
+          ],
+        }),
+      ],
+    });
   }
 
-  // Called when a player interacts with the custom UI
-  onCustomUIClick(world: World, player: HorizonPlayer, x: number, y: number) {
-    if (this.game) {
-      this.game.handleUIClick(x, y);
-    }
+  private renderMissionSelectScreen(): UINode {
+    return View({
+      style: {
+        ...LAYOUTS.missionSelectContainer,
+      },
+      children: [
+        // Header
+        View({
+          style: {
+            ...LAYOUTS.missionSelectHeader,
+          },
+          children: [
+            Text({
+              text: 'SELECT MISSION',
+              style: {
+                ...TEXT_STYLES.title,
+                fontFamily: 'Bangers',
+              },
+            }),
+            Pressable({
+              onClick: (player: Player) => this.handleButtonClick('btn-back'),
+              style: {
+                ...BUTTON_STYLES.danger,
+              },
+              children: Text({
+                text: 'Back',
+                style: { color: COLORS.textPrimary, fontSize: DIMENSIONS.fontSize.md, fontWeight: 'bold' },
+              }),
+            }),
+          ],
+        }),
+
+        // Mission list
+        ScrollView({
+          style: { ...LAYOUTS.missionList },
+          children: View({
+            style: {
+              ...LAYOUTS.missionListContent,
+            },
+            children: this.missions.derive((missions: BloomBeasts.MissionDisplay[]) =>
+              missions.map((mission, index) => this.renderMissionCard(mission, index))
+            ),
+          }),
+        }),
+      ],
+    });
   }
 
-  onCustomUIHover(world: World, player: HorizonPlayer, x: number, y: number) {
-    if (this.game) {
-      this.game.handleUIHover(x, y);
-    }
+  private renderCardsScreen(): UINode {
+    return View({
+      style: {
+        ...LAYOUTS.cardsContainer,
+      },
+      children: [
+        // Header
+        View({
+          style: {
+            ...LAYOUTS.cardsHeader,
+          },
+          children: [
+            Text({
+              text: 'CARD COLLECTION',
+              style: {
+                ...TEXT_STYLES.title,
+                fontFamily: 'Bangers',
+              },
+            }),
+            View({
+              style: { ...LAYOUTS.cardsHeaderRight },
+              children: [
+                Text({
+                  text: this.deckSize.derive((s: number) => `Deck: ${s}/30`),
+                  style: { color: COLORS.textPrimary, fontSize: DIMENSIONS.fontSize.md },
+                }),
+                Pressable({
+                  onClick: (player: Player) => this.handleButtonClick('btn-back'),
+                  style: {
+                    ...BUTTON_STYLES.danger,
+                  },
+                  children: Text({
+                    text: 'Back',
+                    style: { color: COLORS.textPrimary, fontSize: DIMENSIONS.fontSize.md, fontWeight: 'bold' },
+                  }),
+                }),
+              ],
+            }),
+          ],
+        }),
+
+        // Cards grid
+        ScrollView({
+          style: { ...LAYOUTS.cardsGrid },
+          children: View({
+            style: {
+              ...LAYOUTS.cardsGridContent,
+            },
+            children: this.cards.derive((cards: BloomBeasts.CardDisplay[]) =>
+              cards.map((card, index) => this.renderCardThumbnail(card, index))
+            ),
+          }),
+        }),
+      ],
+    });
   }
 
-  // Called when the script stops
-  dispose(world: World) {
-    console.log('[BloomBeasts] Script stopping...');
-    if (this.game) {
-      this.game.stop();
-      this.game = null;
+  private renderBattleScreen(): UINode {
+    return View({
+      style: {
+        ...LAYOUTS.battleContainer,
+        backgroundColor: COLORS.backgroundDark,
+      },
+      children: [
+        // Battle UI will go here
+        Text({
+          text: 'Battle Screen',
+          style: {
+            fontSize: DIMENSIONS.fontSize.xxl,
+            color: COLORS.textPrimary,
+            textAlign: 'center',
+            marginTop: DIMENSIONS.spacing.xxl,
+          },
+        }),
+      ],
+    });
+  }
+
+  private renderSettingsScreen(): UINode {
+    return View({
+      style: {
+        ...LAYOUTS.settingsContainer,
+      },
+      children: [
+        Text({
+          text: 'SETTINGS',
+          style: {
+            ...TEXT_STYLES.title,
+            marginBottom: DIMENSIONS.spacing.lg,
+            fontFamily: 'Bangers',
+          },
+        }),
+        Pressable({
+          onClick: (player: Player) => this.handleButtonClick('btn-back'),
+          style: {
+            ...BUTTON_STYLES.danger,
+            alignSelf: 'flex-start',
+          },
+          children: Text({
+            text: 'Back',
+            style: { color: COLORS.textPrimary, fontSize: DIMENSIONS.fontSize.md, fontWeight: 'bold' },
+          }),
+        }),
+      ],
+    });
+  }
+
+  // ============= UI COMPONENTS =============
+
+  private renderButton(label: string, id: string, style?: any): UINode {
+    return Pressable({
+      onClick: (player: Player) => this.handleButtonClick(id),
+      style: {
+        ...BUTTON_STYLES.primary,
+        minWidth: DIMENSIONS.button.minWidth,
+        alignItems: 'center',
+        ...style,
+      },
+      children: Text({
+        text: label,
+        style: {
+          color: COLORS.textPrimary,
+          fontSize: DIMENSIONS.fontSize.xl,
+          fontWeight: 'bold',
+        },
+      }),
+    });
+  }
+
+  private renderStatBadge(label: string, value: Binding<string> | any): UINode {
+    return View({
+      style: {
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        padding: DIMENSIONS.statBadge.padding,
+        borderRadius: DIMENSIONS.statBadge.borderRadius,
+        borderWidth: DIMENSIONS.statBadge.borderWidth,
+        borderColor: COLORS.borderPrimary,
+      },
+      children: [
+        Text({
+          text: label,
+          style: {
+            ...TEXT_STYLES.label,
+            marginBottom: DIMENSIONS.spacing.xs,
+          },
+        }),
+        Text({
+          text: value as any,
+          style: {
+            ...TEXT_STYLES.value,
+          },
+        }),
+      ],
+    });
+  }
+
+  private renderMissionCard(mission: BloomBeasts.MissionDisplay, index: number): UINode {
+    const cardStyle = mission.isCompleted
+      ? CARD_STYLES.missionCompleted
+      : mission.isAvailable
+        ? CARD_STYLES.mission
+        : CARD_STYLES.missionDisabled;
+
+    return Pressable({
+      onClick: (player: Player) => this.handleMissionSelect(mission.id),
+      disabled: new Binding(!mission.isAvailable),
+      style: {
+        ...cardStyle,
+      },
+      children: View({
+        style: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        },
+        children: [
+          View({
+            style: { flex: 1 },
+            children: [
+              Text({
+                text: mission.name,
+                style: {
+                  color: COLORS.textPrimary,
+                  fontSize: DIMENSIONS.fontSize.lg,
+                  fontWeight: 'bold',
+                  marginBottom: DIMENSIONS.spacing.xs,
+                },
+              }),
+              Text({
+                text: `Level ${mission.level} • ${mission.difficulty}`,
+                style: {
+                  ...TEXT_STYLES.bodySecondary,
+                },
+              }),
+            ],
+          }),
+          mission.isCompleted
+            ? Text({
+                text: '✓',
+                style: {
+                  color: COLORS.success,
+                  fontSize: DIMENSIONS.fontSize.xl,
+                  fontWeight: 'bold',
+                },
+              })
+            : Text({ text: '' }),
+        ],
+      }),
+    });
+  }
+
+  private renderCardThumbnail(card: BloomBeasts.CardDisplay, index: number): UINode {
+    return Pressable({
+      onClick: (player: Player) => this.handleCardSelect(card.id),
+      style: {
+        ...CARD_STYLES.base,
+        borderColor: getAffinityColor(card.affinity),
+      },
+      children: View({
+        style: {
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          height: '100%',
+        },
+        children: [
+          Text({
+            text: card.name,
+            numberOfLines: 2,
+            style: {
+              color: COLORS.textPrimary,
+              fontSize: DIMENSIONS.fontSize.sm,
+              fontWeight: 'bold',
+              textAlign: 'center',
+            },
+          }),
+          View({
+            style: {
+              flexDirection: 'row',
+              justifyContent: 'space-around',
+            },
+            children: [
+              card.baseAttack !== undefined
+                ? Text({
+                    text: `⚔️ ${card.baseAttack}`,
+                    style: { color: COLORS.textPrimary, fontSize: DIMENSIONS.fontSize.sm },
+                  })
+                : Text({ text: '' }),
+              card.baseHealth !== undefined
+                ? Text({
+                    text: `❤️ ${card.baseHealth}`,
+                    style: { color: COLORS.textPrimary, fontSize: DIMENSIONS.fontSize.sm },
+                  })
+                : Text({ text: '' }),
+            ],
+          }),
+        ],
+      }),
+    });
+  }
+
+  private renderDialog(): UINode {
+    return View({
+      style: {
+        ...LAYOUTS.dialogOverlay,
+        ...DIALOG_STYLES.overlay,
+      },
+      children: View({
+        style: {
+          ...LAYOUTS.dialogContent,
+          ...DIALOG_STYLES.content,
+        },
+        children: [
+          Text({
+            text: this.dialogTitle,
+            style: {
+              ...DIALOG_STYLES.title,
+              marginBottom: DIMENSIONS.spacing.lg,
+            },
+          }),
+          Text({
+            text: this.dialogMessage,
+            style: {
+              ...DIALOG_STYLES.message,
+              marginBottom: DIMENSIONS.spacing.xl,
+            },
+          }),
+          View({
+            style: {
+              ...LAYOUTS.dialogButtons,
+            },
+            children: this.dialogButtons.derive((buttons: string[]) =>
+              buttons.map((btn: string) =>
+                this.renderButton(btn, `dialog-${btn}`, { minWidth: DIMENSIONS.buttonSmall.minWidth })
+              )
+            ),
+          }),
+        ],
+      }),
+    });
+  }
+
+  private renderCardDetailOverlay(): UINode {
+    return View({
+      style: {
+        ...LAYOUTS.cardDetailOverlay,
+        backgroundColor: COLORS.overlayBackgroundDark,
+      },
+      children: Text({
+        text: 'Card Detail',
+        style: { color: COLORS.textPrimary, fontSize: DIMENSIONS.fontSize.xl },
+      }),
+    });
+  }
+
+  // ============= HELPER METHODS =============
+
+  private handleButtonClick(buttonId: string) {
+    if (buttonId.startsWith('dialog-')) {
+      this.dialogVisible.set(false);
     }
+    this.buttonClickCallback?.(buttonId);
+  }
+
+  private handleCardSelect(cardId: string) {
+    this.cardSelectCallback?.(cardId);
+  }
+
+  private handleMissionSelect(missionId: string) {
+    this.missionSelectCallback?.(missionId);
+  }
+
+  // ============= PUBLIC API FOR PLATFORM =============
+
+  showStartMenu(options: string[], stats: BloomBeasts.MenuStats) {
+    this.currentScreen.set('start-menu');
+    this.menuOptions.set(options);
+    this.playerLevel.set(stats.playerLevel);
+    this.playerXP.set(stats.totalXP);
+    this.playerTokens.set(stats.tokens);
+    this.playerDiamonds.set(stats.diamonds);
+    this.playerSerums.set(stats.serums);
+  }
+
+  showMissionSelect(missions: BloomBeasts.MissionDisplay[], stats: BloomBeasts.MenuStats) {
+    this.currentScreen.set('missions');
+    this.missions.set(missions);
+    this.playerLevel.set(stats.playerLevel);
+  }
+
+  showCards(cards: BloomBeasts.CardDisplay[], deckSize: number, deckCardIds: string[], stats: BloomBeasts.MenuStats) {
+    this.currentScreen.set('cards');
+    this.cards.set(cards);
+    this.deckSize.set(deckSize);
+  }
+
+  showBattle(battleState: BloomBeasts.BattleDisplay) {
+    this.currentScreen.set('battle');
+    this.battleState.set(battleState);
+  }
+
+  showSettings(settings: any, stats: BloomBeasts.MenuStats) {
+    this.currentScreen.set('settings');
+  }
+
+  showCardDetail(cardDetail: BloomBeasts.CardDetailDisplay, stats: BloomBeasts.MenuStats) {
+    this.cardDetail.set(cardDetail);
+    this.cardDetailVisible.set(true);
+  }
+
+  showDialog(title: string, message: string, buttons: string[]) {
+    this.dialogTitle.set(title);
+    this.dialogMessage.set(message);
+    this.dialogButtons.set(buttons);
+    this.dialogVisible.set(true);
+  }
+
+  showRewardsPopup(rewards: BloomBeasts.RewardDisplay) {
+    this.showDialog('Mission Complete!', rewards.message, ['Claim Rewards']);
   }
 }
 
-// Export the script class as default for Meta Horizon
-export default BloomBeastsScript;
+hz.Component.register(BloomBeastsUI);

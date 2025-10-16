@@ -9,6 +9,8 @@ import { AssetLoader } from '../utils/assetLoader';
 import { standardCardDimensions, sideMenuButtonDimensions, cardsUIContainerDimensions } from '../../../../shared/constants/dimensions';
 import { uiSafeZoneButtons, uiSafeZoneText, sideMenuPositions, cardsUIContainerPosition } from '../../../../shared/constants/positions';
 import { deckEmoji } from '../../../../shared/constants/emojis';
+import { DIMENSIONS, GAPS } from '../../../../shared/styles/dimensions';
+import { COLORS } from '../../../../shared/styles/colors';
 
 export class CardsScreen {
     private scrollOffset: number = 0;
@@ -109,21 +111,21 @@ export class CardsScreen {
 
         // Draw title and deck info on side menu
         const textPos = sideMenuPositions.textStartPosition;
-        this.renderer.drawText('Cards', textPos.x, textPos.y, 20, '#fff', 'left');
-        this.renderer.drawText(`${deckEmoji} ${deckSize}/30`, textPos.x, textPos.y + 25, 18, '#fff', 'left');
+        this.renderer.drawText('Cards', textPos.x, textPos.y, DIMENSIONS.fontSize.lg, COLORS.textPrimary, 'left');
+        this.renderer.drawText(`${deckEmoji} ${deckSize}/30`, textPos.x, textPos.y + DIMENSIONS.fontSize.lg + 5, DIMENSIONS.fontSize.md, COLORS.textPrimary, 'left');
 
         if (cards.length === 0) {
             const centerX = cardsUIContainerPosition.x + cardsUIContainerDimensions.width / 2;
             const centerY = cardsUIContainerPosition.y + cardsUIContainerDimensions.height / 2;
-            this.renderer.drawText('No cards in your collection yet.', centerX, centerY, 24, '#fff', 'center');
+            this.renderer.drawText('No cards in your collection yet.', centerX, centerY, DIMENSIONS.fontSize.xl, COLORS.textPrimary, 'center');
         } else {
             // Draw cards in a grid within the container (4 cards per row)
             const cardWidth = standardCardDimensions.width;
             const cardHeight = standardCardDimensions.height;
-            const marginX = 30; // Left/right margin inside container
-            const marginY = 30; // Top/bottom margin inside container
-            const gapX = 15; // Gap between cards horizontally
-            const gapY = 15; // Gap between cards vertically
+            const marginX = DIMENSIONS.spacing.xl; // Left/right margin inside container
+            const marginY = DIMENSIONS.spacing.xl; // Top/bottom margin inside container
+            const gapX = GAPS.cards; // Gap between cards horizontally
+            const gapY = GAPS.cards; // Gap between cards vertically
             const startX = cardsUIContainerPosition.x + marginX;
             const startY = cardsUIContainerPosition.y + marginY;
             const spacingX = cardWidth + gapX;
@@ -167,7 +169,7 @@ export class CardsScreen {
 
                 // Draw deck indicator if in deck
                 if (isInDeck) {
-                    this.renderer.drawCardSelectionHighlight(x, y, cardWidth, cardHeight, '#43e97b', 4);
+                    this.renderer.drawCardSelectionHighlight(x, y, cardWidth, cardHeight, COLORS.success, 4);
                 }
 
                 // Add clickable region
@@ -185,11 +187,11 @@ export class CardsScreen {
             const totalPages = Math.ceil(cards.length / cardsPerPage);
 
             // Get button images
-            const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
+            const standardButtonImg = this.assets.getImage('standardButton');
 
             // Button positions on side menu
             const buttonX = sideMenuPositions.buttonStartPosition.x;
-            const buttonSpacing = 10;
+            const buttonSpacing = GAPS.buttons;
             const upBtnY = sideMenuPositions.buttonStartPosition.y;
             const downBtnY = upBtnY + sideMenuButtonDimensions.height + buttonSpacing;
 
@@ -197,7 +199,7 @@ export class CardsScreen {
                 // Up arrow button (always visible, disabled if can't scroll up)
                 const canScrollUp = this.scrollOffset > 0;
                 if (canScrollUp) {
-                    this.renderer.drawSideMenuStandardButton('↑', buttonX, upBtnY, standardButtonImg);
+                    this.renderer.drawStandardButton('↑', buttonX, upBtnY, standardButtonImg);
                     this.clickManager.addRegion({
                         id: 'scroll-up',
                         x: buttonX,
@@ -218,7 +220,7 @@ export class CardsScreen {
                 // Down arrow button (always visible, disabled if can't scroll down)
                 const canScrollDown = this.scrollOffset < totalPages - 1;
                 if (canScrollDown) {
-                    this.renderer.drawSideMenuStandardButton('↓', buttonX, downBtnY, standardButtonImg);
+                    this.renderer.drawStandardButton('↓', buttonX, downBtnY, standardButtonImg);
                     this.clickManager.addRegion({
                         id: 'scroll-down',
                         x: buttonX,
@@ -239,13 +241,13 @@ export class CardsScreen {
         }
 
         // Get button image
-        const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
+        const standardButtonImg = this.assets.getImage('standardButton');
 
         // Back button at header position
         const backBtnX = sideMenuPositions.headerStartPosition.x;
         const backBtnY = sideMenuPositions.headerStartPosition.y;
         if (standardButtonImg) {
-            this.renderer.drawSideMenuStandardButton('Back', backBtnX, backBtnY, standardButtonImg);
+            this.renderer.drawStandardButton('Back', backBtnX, backBtnY, standardButtonImg);
             this.clickManager.addRegion({
                 id: 'back',
                 x: backBtnX,

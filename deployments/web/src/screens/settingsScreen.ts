@@ -9,6 +9,8 @@ import { ClickRegionManager } from '../utils/clickRegionManager';
 import { AssetLoader } from '../utils/assetLoader';
 import { cardsUIContainerDimensions, sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
 import { sideMenuPositions, cardsUIContainerPosition } from '../../../../shared/constants/positions';
+import { DIMENSIONS, GAPS } from '../../../../shared/styles/dimensions';
+import { COLORS } from '../../../../shared/styles/colors';
 
 export class SettingsScreen {
     constructor(
@@ -83,12 +85,12 @@ export class SettingsScreen {
         }
 
         // Get button images
-        const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
-        const greenButtonImg = this.assets.getImage('sideMenuGreenButton');
+        const standardButtonImg = this.assets.getImage('standardButton');
+        const greenButtonImg = this.assets.getImage('greenButton');
 
         // Draw title on side menu
         const textPos = sideMenuPositions.textStartPosition;
-        this.renderer.drawText('Settings', textPos.x, textPos.y, 20, '#fff', 'left');
+        this.renderer.drawText('Settings', textPos.x, textPos.y, DIMENSIONS.fontSize.lg, COLORS.textPrimary, 'left');
 
         // Settings content area
         const contentX = 180;
@@ -96,8 +98,8 @@ export class SettingsScreen {
         const lineHeight = 80;
 
         // Music Volume
-        this.renderer.drawText('Music Volume', contentX, contentY, 24, '#fff', 'left');
-        this.renderer.drawText(`${settings.musicVolume}%`, contentX + 400, contentY, 24, '#43e97b', 'right');
+        this.renderer.drawText('Music Volume', contentX, contentY, DIMENSIONS.fontSize.xl, COLORS.textPrimary, 'left');
+        this.renderer.drawText(`${settings.musicVolume}%`, contentX + 400, contentY, DIMENSIONS.fontSize.xl, COLORS.success, 'right');
 
         // Volume slider background
         const sliderX = contentX;
@@ -109,7 +111,7 @@ export class SettingsScreen {
 
         // Volume slider fill
         const fillWidth = (settings.musicVolume / 100) * sliderWidth;
-        this.renderer.ctx.fillStyle = '#43e97b';
+        this.renderer.ctx.fillStyle = COLORS.success;
         this.renderer.ctx.fillRect(sliderX, sliderY, fillWidth, sliderHeight);
 
         // Add clickable region for music volume slider
@@ -131,15 +133,15 @@ export class SettingsScreen {
         contentY += lineHeight;
 
         // Music Toggle
-        this.renderer.drawText('Music', contentX, contentY, 24, '#fff', 'left');
+        this.renderer.drawText('Music', contentX, contentY, DIMENSIONS.fontSize.xl, COLORS.textPrimary, 'left');
         if (standardButtonImg && greenButtonImg) {
             const toggleButtonX = contentX + 300;
             const toggleButtonY = contentY - 20;
 
             if (settings.musicEnabled) {
-                this.renderer.drawSideMenuGreenButton('ON', toggleButtonX, toggleButtonY, greenButtonImg);
+                this.renderer.drawGreenButton('ON', toggleButtonX, toggleButtonY, greenButtonImg);
             } else {
-                this.renderer.drawSideMenuStandardButton('OFF', toggleButtonX, toggleButtonY, standardButtonImg);
+                this.renderer.drawStandardButton('OFF', toggleButtonX, toggleButtonY, standardButtonImg);
             }
 
             this.clickManager.addRegion({
@@ -155,8 +157,8 @@ export class SettingsScreen {
         contentY += lineHeight;
 
         // SFX Volume
-        this.renderer.drawText('SFX Volume', contentX, contentY, 24, '#fff', 'left');
-        this.renderer.drawText(`${settings.sfxVolume}%`, contentX + 400, contentY, 24, '#43e97b', 'right');
+        this.renderer.drawText('SFX Volume', contentX, contentY, DIMENSIONS.fontSize.xl, COLORS.textPrimary, 'left');
+        this.renderer.drawText(`${settings.sfxVolume}%`, contentX + 400, contentY, DIMENSIONS.fontSize.xl, COLORS.success, 'right');
 
         // Volume slider background
         const sfxSliderX = contentX;
@@ -166,7 +168,7 @@ export class SettingsScreen {
 
         // Volume slider fill
         const sfxFillWidth = (settings.sfxVolume / 100) * sliderWidth;
-        this.renderer.ctx.fillStyle = '#43e97b';
+        this.renderer.ctx.fillStyle = COLORS.success;
         this.renderer.ctx.fillRect(sfxSliderX, sfxSliderY, sfxFillWidth, sliderHeight);
 
         // Add clickable region for SFX volume slider
@@ -188,15 +190,15 @@ export class SettingsScreen {
         contentY += lineHeight;
 
         // SFX Toggle
-        this.renderer.drawText('Sound Effects', contentX, contentY, 24, '#fff', 'left');
+        this.renderer.drawText('Sound Effects', contentX, contentY, DIMENSIONS.fontSize.xl, COLORS.textPrimary, 'left');
         if (standardButtonImg && greenButtonImg) {
             const sfxToggleButtonX = contentX + 300;
             const sfxToggleButtonY = contentY - 20;
 
             if (settings.sfxEnabled) {
-                this.renderer.drawSideMenuGreenButton('ON', sfxToggleButtonX, sfxToggleButtonY, greenButtonImg);
+                this.renderer.drawGreenButton('ON', sfxToggleButtonX, sfxToggleButtonY, greenButtonImg);
             } else {
-                this.renderer.drawSideMenuStandardButton('OFF', sfxToggleButtonX, sfxToggleButtonY, standardButtonImg);
+                this.renderer.drawStandardButton('OFF', sfxToggleButtonX, sfxToggleButtonY, standardButtonImg);
             }
 
             this.clickManager.addRegion({
@@ -213,7 +215,7 @@ export class SettingsScreen {
         const backBtnX = sideMenuPositions.headerStartPosition.x;
         const backBtnY = sideMenuPositions.headerStartPosition.y;
         if (standardButtonImg) {
-            this.renderer.drawSideMenuStandardButton('Back', backBtnX, backBtnY, standardButtonImg);
+            this.renderer.drawStandardButton('Back', backBtnX, backBtnY, standardButtonImg);
             this.clickManager.addRegion({
                 id: 'back',
                 x: backBtnX,

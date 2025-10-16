@@ -130,37 +130,38 @@ class LoggerClass {
     return new ChildLogger(this, prefix);
   }
 
+  private timers: Map<string, number> = new Map();
+
   /**
-   * Group related logs together
+   * Group related logs together (simplified for basic console support)
    * @param label Group label
-   * @param collapsed Whether group should be collapsed by default
+   * @param collapsed Whether group should be collapsed by default (ignored)
    */
   group(label: string, collapsed: boolean = false): void {
     if (this.config.level <= LogLevel.INFO) {
-      if (collapsed) {
-        console.groupCollapsed(label);
-      } else {
-        console.group(label);
-      }
+      const formatted = this.format('GROUP', `>>> ${label}`);
+      console.log(formatted);
     }
   }
 
   /**
-   * End a log group
+   * End a log group (simplified for basic console support)
    */
   groupEnd(): void {
     if (this.config.level <= LogLevel.INFO) {
-      console.groupEnd();
+      const formatted = this.format('GROUP', `<<<`);
+      console.log(formatted);
     }
   }
 
   /**
-   * Log a table (useful for arrays of objects)
+   * Log a table (simplified for basic console support)
    * @param data Data to display as table
    */
   table(data: any): void {
     if (this.config.level <= LogLevel.INFO) {
-      console.table(data);
+      const formatted = this.format('TABLE', JSON.stringify(data, null, 2));
+      console.log(formatted);
     }
   }
 
@@ -170,7 +171,9 @@ class LoggerClass {
    */
   time(label: string): void {
     if (this.config.level <= LogLevel.DEBUG) {
-      console.time(label);
+      this.timers.set(label, Date.now());
+      const formatted = this.format('TIMER', `${label}: started`);
+      console.log(formatted);
     }
   }
 
@@ -180,7 +183,13 @@ class LoggerClass {
    */
   timeEnd(label: string): void {
     if (this.config.level <= LogLevel.DEBUG) {
-      console.timeEnd(label);
+      const startTime = this.timers.get(label);
+      if (startTime) {
+        const duration = Date.now() - startTime;
+        this.timers.delete(label);
+        const formatted = this.format('TIMER', `${label}: ${duration}ms`);
+        console.log(formatted);
+      }
     }
   }
 
@@ -191,7 +200,10 @@ class LoggerClass {
    */
   assert(condition: boolean, message: string): void {
     if (this.config.level <= LogLevel.ERROR) {
-      console.assert(condition, message);
+      if (!condition) {
+        const formatted = this.format('ASSERT', message);
+        console.error(formatted);
+      }
     }
   }
 }

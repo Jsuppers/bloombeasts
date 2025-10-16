@@ -4,8 +4,9 @@
   "description": "BloomBeasts card game for Meta Horizon Worlds",
   "type": "module",
   "scripts": {
-    "build": "node bundle-with-namespace.js",
-    "clean": "rm -rf dist && mkdir dist"
+    "build": "cd ../.. && node bundle-with-namespace.js",
+    "deploy": "npm run build && node deploy.js",
+    "clean": "rm -rf ../../dist"
   },
   "dependencies": {},
   "devDependencies": {

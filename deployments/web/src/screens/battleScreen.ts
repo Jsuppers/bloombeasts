@@ -213,14 +213,14 @@ export class BattleScreen {
         }
 
         // Get button images
-        const greenButtonImg = this.assets.getImage('sideMenuGreenButton');
-        const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
+        const greenButtonImg = this.assets.getImage('greenButton');
+        const standardButtonImg = this.assets.getImage('standardButton');
 
         // Forfeit button (at header position)
         const forfeitBtnX = sideMenuPositions.headerStartPosition.x;
         const forfeitBtnY = sideMenuPositions.headerStartPosition.y;
         if (standardButtonImg) {
-            this.renderer.drawSideMenuStandardButton('Forfeit', forfeitBtnX, forfeitBtnY, standardButtonImg);
+            this.renderer.drawStandardButton('Forfeit', forfeitBtnX, forfeitBtnY, standardButtonImg);
             this.clickManager.addRegion({
                 id: 'forfeit',
                 x: forfeitBtnX,
@@ -238,7 +238,7 @@ export class BattleScreen {
         const endTurnText = isPlayerTurn ? `(${this.turnTimer})` : 'End Turn';
 
         if (isPlayerTurn && greenButtonImg) {
-            this.renderer.drawSideMenuGreenButton(endTurnText, buttonX, buttonStartY, greenButtonImg);
+            this.renderer.drawGreenButton(endTurnText, buttonX, buttonStartY, greenButtonImg);
             this.clickManager.addRegion({
                 id: 'end-turn',
                 x: buttonX,
@@ -290,10 +290,10 @@ export class BattleScreen {
             if (showCloseButton) {
                 const closeButtonX = 1280 / 2 + 120; // Right of the card with spacing
                 const closeButtonY = 720 / 2 - 150; // Top right area
-                const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
+                const standardButtonImg = this.assets.getImage('standardButton');
 
                 if (standardButtonImg) {
-                    this.renderer.drawSideMenuStandardButton('Close', closeButtonX, closeButtonY, standardButtonImg);
+                    this.renderer.drawStandardButton('Close', closeButtonX, closeButtonY, standardButtonImg);
                     this.clickManager.addRegion({
                         id: 'close-card-popup',
                         x: closeButtonX,

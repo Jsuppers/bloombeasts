@@ -9,6 +9,8 @@ import { gameDimensions, sideMenuButtonDimensions } from '../../../../shared/con
 import { sideMenuPositions } from '../../../../shared/constants/positions';
 import { MenuStats } from '../../../../bloombeasts/gameManager';
 import { tokenEmoji, diamondEmoji, serumEmoji } from '../../../../shared/constants/emojis';
+import { DIMENSIONS, GAPS } from '../../../../shared/styles/dimensions';
+import { COLORS } from '../../../../shared/styles/colors';
 
 export class MenuScreen {
     private currentFrame: number = 1;
@@ -57,7 +59,7 @@ export class MenuScreen {
         };
 
         // Get button image
-        const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
+        const standardButtonImg = this.assets.getImage('standardButton');
 
         if (standardButtonImg) {
             // Close button at header position (disabled for now)
@@ -67,7 +69,7 @@ export class MenuScreen {
 
             // Draw menu option buttons on side menu
             const buttonX = sideMenuPositions.buttonStartPosition.x;
-            const buttonSpacing = 10;
+            const buttonSpacing = GAPS.buttons;
 
             // Filter to only show missions, cards, and settings
             const menuOptions = options.filter(opt => opt === 'missions' || opt === 'cards' || opt === 'settings');
@@ -76,7 +78,7 @@ export class MenuScreen {
                 const y = sideMenuPositions.buttonStartPosition.y + index * (sideMenuButtonDimensions.height + buttonSpacing);
                 const label = this.getMenuLabel(option);
 
-                this.renderer.drawSideMenuStandardButton(label, buttonX, y, standardButtonImg);
+                this.renderer.drawStandardButton(label, buttonX, y, standardButtonImg);
 
                 this.clickManager.addRegion({
                     id: option,
@@ -155,7 +157,7 @@ export class MenuScreen {
 
         // Draw text on side menu
         const textPos = sideMenuPositions.textStartPosition;
-        const lineHeight = 25;
+        const lineHeight = DIMENSIONS.fontSize.lg + 5; // fontSize + spacing
 
         // Lines 1-3: Scrolling quote (typing animation across three lines)
         this.drawQuoteWithWordWrap(this.displayedText, textPos.x, textPos.y);
@@ -172,7 +174,7 @@ export class MenuScreen {
                 textPos.x,
                 textPos.y + lineHeight * 4,
                 this.TEXT_SIZE,
-                '#fff',
+                COLORS.textPrimary,
                 'left'
             );
 
@@ -184,7 +186,7 @@ export class MenuScreen {
                 textPos.x,
                 textPos.y + lineHeight * 5,
                 this.TEXT_SIZE,
-                '#fff',
+                COLORS.textPrimary,
                 'left'
             );
 
@@ -196,7 +198,7 @@ export class MenuScreen {
                 textPos.x,
                 textPos.y + lineHeight * 6,
                 this.TEXT_SIZE,
-                '#fff',
+                COLORS.textPrimary,
                 'left'
             );
         }
@@ -212,7 +214,7 @@ export class MenuScreen {
             this.renderFrame();
 
             // Re-add buttons
-            const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
+            const standardButtonImg = this.assets.getImage('standardButton');
             if (standardButtonImg) {
                 // Close button
                 const closeBtnX = sideMenuPositions.headerStartPosition.x;
@@ -221,14 +223,14 @@ export class MenuScreen {
 
                 // Menu buttons
                 const buttonX = sideMenuPositions.buttonStartPosition.x;
-                const buttonSpacing = 10;
+                const buttonSpacing = GAPS.buttons;
                 const menuOptions = options.filter(opt => opt === 'missions' || opt === 'cards' || opt === 'settings');
 
                 menuOptions.forEach((option, index) => {
                     const y = sideMenuPositions.buttonStartPosition.y + index * (sideMenuButtonDimensions.height + buttonSpacing);
                     const label = this.getMenuLabel(option);
 
-                    this.renderer.drawSideMenuStandardButton(label, buttonX, y, standardButtonImg);
+                    this.renderer.drawStandardButton(label, buttonX, y, standardButtonImg);
 
                     this.clickManager.addRegion({
                         id: option,
@@ -277,7 +279,7 @@ export class MenuScreen {
 
     private redrawButtons(options: string[], onButtonClick: (buttonId: string) => void): void {
         // Re-add buttons without clearing the canvas
-        const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
+        const standardButtonImg = this.assets.getImage('standardButton');
         if (standardButtonImg) {
             // Close button
             const closeBtnX = sideMenuPositions.headerStartPosition.x;
@@ -286,14 +288,14 @@ export class MenuScreen {
 
             // Menu buttons
             const buttonX = sideMenuPositions.buttonStartPosition.x;
-            const buttonSpacing = 10;
+            const buttonSpacing = GAPS.buttons;
             const menuOptions = options.filter(opt => opt === 'missions' || opt === 'cards' || opt === 'settings');
 
             menuOptions.forEach((option, index) => {
                 const y = sideMenuPositions.buttonStartPosition.y + index * (sideMenuButtonDimensions.height + buttonSpacing);
                 const label = this.getMenuLabel(option);
 
-                this.renderer.drawSideMenuStandardButton(label, buttonX, y, standardButtonImg);
+                this.renderer.drawStandardButton(label, buttonX, y, standardButtonImg);
             });
         }
     }
@@ -327,9 +329,9 @@ export class MenuScreen {
         }
 
         // Draw only first 3 lines for quotes
-        const lineHeight = 25;
+        const lineHeight = DIMENSIONS.fontSize.lg + 5;
         for (let i = 0; i < Math.min(3, lines.length); i++) {
-            this.renderer.drawText(lines[i], x, y + (i * lineHeight), this.TEXT_SIZE, '#fff', 'left');
+            this.renderer.drawText(lines[i], x, y + (i * lineHeight), this.TEXT_SIZE, COLORS.textPrimary, 'left');
         }
     }
 

@@ -18,9 +18,9 @@ export class AssetLoader {
             await this.loadImage('background', '/shared/images/Background.png');
             await this.loadImage('playboard', '/shared/images/Playboard.png');
             await this.loadImage('sideMenu', '/shared/images/SideMenu.png');
-            await this.loadImage('sideMenuGreenButton', '/shared/images/SideMenuGreenButton.png');
-            await this.loadImage('sideMenuRedButton', '/shared/images/SideMenuRedButton.png');
-            await this.loadImage('sideMenuStandardButton', '/shared/images/SideMenuStandardButton.png');
+            await this.loadImage('greenButton', '/shared/images/GreenButton.png');
+            await this.loadImage('redButton', '/shared/images/RedButton.png');
+            await this.loadImage('standardButton', '/shared/images/StandardButton.png');
             await this.loadImage('cardsContainer', '/shared/images/CardsContainer.png');
             await this.loadImage('CardsContainer', '/shared/images/CardsContainer.png');
 
@@ -66,7 +66,7 @@ export class AssetLoader {
             await this.loadImage('experienceBar', '/shared/images/cards/ExperienceBar.png');
 
             // Load mission complete popup images
-            await this.loadImage('MissionCompleteContainer', '/shared/images/MissionCompleteContainer.png');
+            await this.loadImage('MissionContainer', '/shared/images/MissionContainer.png');
             await this.loadImage('LongGreenButton', '/shared/images/LongGreenButton.png');
             await this.loadImage('LoseImage', '/shared/images/LoseImage.png');
 

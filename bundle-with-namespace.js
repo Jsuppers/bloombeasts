@@ -120,14 +120,20 @@ function removeImportsAndExports(content) {
       continue;
     }
 
-    // Remove 'export' keyword while preserving indentation
+    // Handle export keyword
     let processedLine = line;
     if (trimmed.startsWith('export ')) {
-      const indent = line.match(/^(\s*)/)[0];
-      const withoutExport = line.replace(/^(\s*)export\s+/, '$1');
-
-      // Also remove 'default' if present
-      processedLine = withoutExport.replace(/^(\s*)default\s+/, '$1');
+      // Keep export for class, interface, type, const, function, enum declarations
+      // Inside a namespace, exports become namespace members
+      if (trimmed.match(/^export\s+(class|interface|type|const|let|var|function|enum|abstract\s+class)\s/)) {
+        processedLine = line; // Keep the export
+      } else if (trimmed.startsWith('export default ')) {
+        // Skip export default statements entirely (they're re-exports)
+        continue;
+      } else {
+        // For other exports, remove the export keyword
+        processedLine = line.replace(/^(\s*)export\s+/, '$1');
+      }
     }
 
     result.push(processedLine);
@@ -176,14 +182,21 @@ console.log('Building standalone TypeScript bundle with namespace...\n');
 const declaredConstants = new Map();
 
 // Process entry point
-const entryPoint = path.resolve(__dirname, '../../bloombeasts/engine/index.ts');
+const entryPoint = path.resolve(__dirname, './bloombeasts/engine/index.ts');
 processFile(entryPoint);
 
 // Process other key files
-processFile(path.resolve(__dirname, '../../bloombeasts/gameManager.ts'));
-processFile(path.resolve(__dirname, '../../bloombeasts/systems/CardCollectionManager.ts'));
-processFile(path.resolve(__dirname, '../../bloombeasts/screens/missions/BattleStateManager.ts'));
-processFile(path.resolve(__dirname, '../../bloombeasts/screens/missions/OpponentAI.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/gameManager.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/systems/CardCollectionManager.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/screens/missions/BattleStateManager.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/screens/missions/OpponentAI.ts'));
+
+// Process shared styles (needed for Horizon UI)
+processFile(path.resolve(__dirname, './shared/styles/colors.ts'));
+processFile(path.resolve(__dirname, './shared/styles/dimensions.ts'));
+processFile(path.resolve(__dirname, './shared/styles/layouts.ts'));
+processFile(path.resolve(__dirname, './shared/ui/types.ts'));
+processFile(path.resolve(__dirname, './shared/ui/presets.ts'));
 
 // Handle duplicate const declarations
 // Don't rename - namespaces already provide isolation
@@ -214,97 +227,89 @@ const bundle = `/**
 /* eslint-disable */
 /* tslint:disable */
 
-// ==================== Global Type Declarations (Outside Namespace) ====================
+// ==================== Global Type Declarations ====================
 
-// These global augmentations must be outside the namespace
-declare global {
-  interface Console {
-    log(...args: unknown[]): void;
-    warn(...args: unknown[]): void;
-    error(...args: unknown[]): void;
-    group(...args: unknown[]): void;
-    groupCollapsed(...args: unknown[]): void;
-    groupEnd(): void;
-    table(data: unknown): void;
-    time(label?: string): void;
-    timeEnd(label?: string): void;
-    assert(condition?: boolean, ...data: unknown[]): void;
-  }
-
-  type TimerHandler = (...args: any[]) => any;
-  function setTimeout(callback: TimerHandler, timeout?: number, ...args: unknown[]): number;
-  function setInterval(callback: TimerHandler, timeout?: number, ...args: unknown[]): number;
-  function clearInterval(id: number): void;
-  function clearTimeout(id: number): void;
-
-  type CanvasTextAlign = "start" | "end" | "left" | "right" | "center";
-  type CanvasTextBaseline = "top" | "hanging" | "middle" | "alphabetic" | "ideographic" | "bottom";
-
-  interface CanvasRenderingContext2D {
-    fillStyle: string | CanvasGradient | CanvasPattern;
-    strokeStyle: string | CanvasGradient | CanvasPattern;
-    lineWidth: number;
-    lineCap: string;
-    lineJoin: string;
-    miterLimit: number;
-    lineDashOffset: number;
-    font: string;
-    textAlign: CanvasTextAlign;
-    textBaseline: CanvasTextBaseline;
-    direction: string;
-    globalAlpha: number;
-    globalCompositeOperation: string;
-    imageSmoothingEnabled: boolean;
-    shadowBlur: number;
-    shadowColor: string;
-    shadowOffsetX: number;
-    shadowOffsetY: number;
-
-    fillRect(x: number, y: number, w: number, h: number): void;
-    strokeRect(x: number, y: number, w: number, h: number): void;
-    clearRect(x: number, y: number, w: number, h: number): void;
-    fillText(text: string, x: number, y: number, maxWidth?: number): void;
-    strokeText(text: string, x: number, y: number, maxWidth?: number): void;
-    measureText(text: string): TextMetrics;
-    beginPath(): void;
-    closePath(): void;
-    moveTo(x: number, y: number): void;
-    lineTo(x: number, y: number): void;
-    arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise?: boolean): void;
-    arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void;
-    bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void;
-    quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
-    rect(x: number, y: number, w: number, h: number): void;
-    fill(): void;
-    stroke(): void;
-    clip(): void;
-    save(): void;
-    restore(): void;
-    scale(x: number, y: number): void;
-    rotate(angle: number): void;
-    translate(x: number, y: number): void;
-    transform(a: number, b: number, c: number, d: number, e: number, f: number): void;
-    setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void;
-    resetTransform(): void;
-    drawImage(image: unknown, dx: number, dy: number): void;
-    drawImage(image: unknown, dx: number, dy: number, dw: number, dh: number): void;
-    drawImage(image: unknown, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
-  }
-
-  interface TextMetrics {
-    width: number;
-    actualBoundingBoxLeft?: number;
-    actualBoundingBoxRight?: number;
-    actualBoundingBoxAscent?: number;
-    actualBoundingBoxDescent?: number;
-  }
-
-  interface CanvasGradient {
-    addColorStop(offset: number, color: string): void;
-  }
-
-  interface CanvasPattern {}
+// Augment Meta Horizon's Console interface with basic methods
+// Only includes log, warn, and error for maximum compatibility
+interface Console {
+  log(...args: unknown[]): void;
+  warn(...args: unknown[]): void;
+  error(...args: unknown[]): void;
 }
+
+type TimerHandler = (...args: any[]) => any;
+declare function setTimeout(callback: TimerHandler, timeout?: number, ...args: unknown[]): number;
+declare function setInterval(callback: TimerHandler, timeout?: number, ...args: unknown[]): number;
+declare function clearInterval(id: number): void;
+declare function clearTimeout(id: number): void;
+
+type CanvasTextAlign = "start" | "end" | "left" | "right" | "center";
+type CanvasTextBaseline = "top" | "hanging" | "middle" | "alphabetic" | "ideographic" | "bottom";
+
+interface CanvasRenderingContext2D {
+  fillStyle: string | CanvasGradient | CanvasPattern;
+  strokeStyle: string | CanvasGradient | CanvasPattern;
+  lineWidth: number;
+  lineCap: string;
+  lineJoin: string;
+  miterLimit: number;
+  lineDashOffset: number;
+  font: string;
+  textAlign: CanvasTextAlign;
+  textBaseline: CanvasTextBaseline;
+  direction: string;
+  globalAlpha: number;
+  globalCompositeOperation: string;
+  imageSmoothingEnabled: boolean;
+  shadowBlur: number;
+  shadowColor: string;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+
+  fillRect(x: number, y: number, w: number, h: number): void;
+  strokeRect(x: number, y: number, w: number, h: number): void;
+  clearRect(x: number, y: number, w: number, h: number): void;
+  fillText(text: string, x: number, y: number, maxWidth?: number): void;
+  strokeText(text: string, x: number, y: number, maxWidth?: number): void;
+  measureText(text: string): TextMetrics;
+  beginPath(): void;
+  closePath(): void;
+  moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise?: boolean): void;
+  arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void;
+  bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void;
+  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
+  rect(x: number, y: number, w: number, h: number): void;
+  fill(): void;
+  stroke(): void;
+  clip(): void;
+  save(): void;
+  restore(): void;
+  scale(x: number, y: number): void;
+  rotate(angle: number): void;
+  translate(x: number, y: number): void;
+  transform(a: number, b: number, c: number, d: number, e: number, f: number): void;
+  setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void;
+  resetTransform(): void;
+  drawImage(image: unknown, dx: number, dy: number): void;
+  drawImage(image: unknown, dx: number, dy: number, dw: number, dh: number): void;
+  drawImage(image: unknown, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
+}
+
+interface TextMetrics {
+  width: number;
+  actualBoundingBoxLeft?: number;
+  actualBoundingBoxRight?: number;
+  actualBoundingBoxAscent?: number;
+  actualBoundingBoxDescent?: number;
+}
+
+interface CanvasGradient {
+  addColorStop(offset: number, color: string): void;
+}
+
+interface CanvasPattern {}
 
 // ==================== BloomBeasts Namespace ====================
 
@@ -324,13 +329,16 @@ ${fileContents.map(file => {
 
 }
 
-// This empty export makes the file a module, which allows declare global
-export {};
+// Make BloomBeasts available globally
+if (typeof globalThis !== 'undefined') {
+  (globalThis as any).BloomBeasts = BloomBeasts;
+}
 `;
 
 // Write output
-const outputPath = path.resolve(__dirname, 'dist/BloomBeasts-GameEngine-Standalone.ts');
-fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+const outputDir = path.resolve(__dirname, 'dist');
+const outputPath = path.join(outputDir, 'BloomBeasts-GameEngine-Standalone.ts');
+fs.mkdirSync(outputDir, { recursive: true });
 fs.writeFileSync(outputPath, bundle, 'utf8');
 
 console.log(`\n✓ Standalone TypeScript bundle created!`);

@@ -8,6 +8,8 @@ import { AssetLoader } from '../utils/assetLoader';
 import { CardDetailDisplay, MenuStats } from '../../../../bloombeasts/gameManager';
 import { gameDimensions, sideMenuButtonDimensions, standardCardDimensions } from '../../../../shared/constants/dimensions';
 import { sideMenuPositions } from '../../../../shared/constants/positions';
+import { DIMENSIONS, GAPS } from '../../../../shared/styles/dimensions';
+import { COLORS } from '../../../../shared/styles/colors';
 
 export class CardDetailScreen {
     constructor(
@@ -68,13 +70,13 @@ export class CardDetailScreen {
                     this.renderer.ctx.fillRect(currentX, counterY, 60, 20);
 
                     // Draw counter border
-                    this.renderer.ctx.strokeStyle = '#fff';
+                    this.renderer.ctx.strokeStyle = COLORS.textPrimary;
                     this.renderer.ctx.lineWidth = 1;
                     this.renderer.ctx.strokeRect(currentX, counterY, 60, 20);
 
                     // Draw counter text
                     const counterText = `${counter.type}: ${counter.amount}`;
-                    this.renderer.drawText(counterText, currentX + 30, counterY + 10, 10, '#fff', 'center');
+                    this.renderer.drawText(counterText, currentX + 30, counterY + 10, 10, COLORS.textPrimary, 'center');
 
                     currentX += 60 + counterSpacing;
                 }
@@ -100,14 +102,14 @@ export class CardDetailScreen {
         // Draw buttons to the right of the card
         const buttonWidth = sideMenuButtonDimensions.width;
         const buttonHeight = sideMenuButtonDimensions.height;
-        const buttonSpacing = 10;
-        const buttonX = cardX + cardWidth + 30; // 30px to the right of card
+        const buttonSpacing = GAPS.buttons;
+        const buttonX = cardX + cardWidth + DIMENSIONS.spacing.xl; // spacing to the right of card
         let buttonY = cardY;
 
         // Get button images
-        const greenButtonImg = this.assets.getImage('sideMenuGreenButton');
-        const redButtonImg = this.assets.getImage('sideMenuRedButton');
-        const standardButtonImg = this.assets.getImage('sideMenuStandardButton');
+        const greenButtonImg = this.assets.getImage('greenButton');
+        const redButtonImg = this.assets.getImage('redButton');
+        const standardButtonImg = this.assets.getImage('standardButton');
 
         // Draw each button and add click regions
         cardDetail.buttons.forEach((buttonText, index) => {
@@ -123,7 +125,7 @@ export class CardDetailScreen {
 
             // Draw button using appropriate button image
             if (buttonImg) {
-                this.renderer.drawSideMenuStandardButton(buttonText, buttonX, y, buttonImg);
+                this.renderer.drawStandardButton(buttonText, buttonX, y, buttonImg);
             }
 
             // Add click region (these are added AFTER backdrop, so they'll be checked FIRST)

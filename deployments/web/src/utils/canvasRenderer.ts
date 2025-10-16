@@ -14,11 +14,13 @@ import {
 } from '../../../../shared/constants/dimensions';
 import { standardCardPositions, sideMenuPositions } from '../../../../shared/constants/positions';
 import { getCardDescription } from '../../../../bloombeasts/engine/utils/cardDescriptionGenerator';
+import { COLORS, getAffinityColor as getSharedAffinityColor } from '../../../../shared/styles/colors';
+import { DIMENSIONS as UI_DIMENSIONS } from '../../../../shared/styles/dimensions';
 
 // Font constants
 const FONT_FAMILY = 'monospace';
-const DEFAULT_TEXT_COLOR = '#fff';
-const DISABLED_TEXT_COLOR = '#888';
+const DEFAULT_TEXT_COLOR = COLORS.textPrimary;
+const DISABLED_TEXT_COLOR = COLORS.textSecondary;
 
 export class CanvasRenderer {
     constructor(public ctx: CanvasRenderingContext2D) {}
@@ -150,51 +152,6 @@ export class CanvasRenderer {
         this.ctx.imageSmoothingEnabled = true;
     }
 
-    drawGreenButton(text: string, x: number, y: number, width: number, height: number): void {
-        // Disable image smoothing for pixelated look
-        this.ctx.imageSmoothingEnabled = false;
-
-        // Draw outer shadow/border (dark green)
-        this.ctx.fillStyle = '#2d5016';
-        this.ctx.fillRect(x + 4, y + 4, width, height);
-
-        // Draw button background (green)
-        this.ctx.fillStyle = '#3d7524';
-        this.ctx.fillRect(x, y, width, height);
-
-        // Draw inner highlight (light green)
-        this.ctx.fillStyle = '#5fa349';
-        this.ctx.fillRect(x + 4, y + 4, width - 8, height - 8);
-
-        // Draw main button face (medium green)
-        this.ctx.fillStyle = '#4a8c2a';
-        this.ctx.fillRect(x + 6, y + 6, width - 12, height - 12);
-
-        // Draw thick outer border
-        this.ctx.strokeStyle = '#1a3a10';
-        this.ctx.lineWidth = 4;
-        this.ctx.strokeRect(x, y, width, height);
-
-        // Draw inner border for more depth
-        this.ctx.strokeStyle = '#7bc850';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(x + 6, y + 6, width - 12, height - 12);
-
-        // Draw button text with pixelated style
-        this.ctx.font = 'bold 24px monospace';
-        this.ctx.textAlign = 'center';
-        this.ctx.textBaseline = 'middle';
-        // Text shadow for depth
-        this.ctx.fillStyle = '#1a3a10';
-        this.ctx.fillText(text, x + width / 2 + 2, y + height / 2 + 2);
-        // Main text
-        this.ctx.fillStyle = '#fff';
-        this.ctx.fillText(text, x + width / 2, y + height / 2);
-
-        // Re-enable image smoothing
-        this.ctx.imageSmoothingEnabled = true;
-    }
-
     drawText(
         text: string,
         x: number,
@@ -222,11 +179,11 @@ export class CanvasRenderer {
         const fillWidth = width * percentage;
 
         if (percentage > 0.6) {
-            this.ctx.fillStyle = '#43e97b';
+            this.ctx.fillStyle = COLORS.success;
         } else if (percentage > 0.3) {
-            this.ctx.fillStyle = '#ffd700';
+            this.ctx.fillStyle = COLORS.warning;
         } else {
-            this.ctx.fillStyle = '#ff6b6b';
+            this.ctx.fillStyle = COLORS.danger;
         }
         this.ctx.fillRect(x, y + 20, fillWidth, height);
 
@@ -475,11 +432,11 @@ export class CanvasRenderer {
 
     private getDifficultyColor(difficulty: string): string {
         const colors: Record<string, string> = {
-            'beginner': '#90EE90',
-            'easy': '#87CEEB',
-            'normal': '#FFD700',
-            'hard': '#FF6347',
-            'expert': '#8B008B',
+            'beginner': COLORS.success,
+            'easy': COLORS.affinity.water,
+            'normal': COLORS.warning,
+            'hard': COLORS.danger,
+            'expert': COLORS.affinity.sky,
         };
         return colors[difficulty.toLowerCase()] || DEFAULT_TEXT_COLOR;
     }
@@ -503,7 +460,7 @@ export class CanvasRenderer {
 
         // Draw border if card is in deck
         if (isInDeck) {
-            this.ctx.strokeStyle = '#43e97b'; // Green border for cards in deck
+            this.ctx.strokeStyle = COLORS.success; // Green border for cards in deck
             this.ctx.lineWidth = 4;
             this.ctx.strokeRect(x, y, width, height);
         }
@@ -869,12 +826,12 @@ export class CanvasRenderer {
 
         // Counter display configuration
         const counterIcons: Record<string, { emoji: string; color: string }> = {
-            'Burn': { emoji: '🔥', color: '#ff6b6b' },
-            'Freeze': { emoji: '❄️', color: '#4dabf7' },
-            'XP': { emoji: '⭐', color: '#ffd700' },
-            'Spore': { emoji: '🍄', color: '#51cf66' },
-            'Soot': { emoji: '💨', color: '#868e96' },
-            'Entangle': { emoji: '🌿', color: '#37b24d' },
+            'Burn': { emoji: '🔥', color: COLORS.danger },
+            'Freeze': { emoji: '❄️', color: COLORS.affinity.water },
+            'XP': { emoji: '⭐', color: COLORS.warning },
+            'Spore': { emoji: '🍄', color: COLORS.success },
+            'Soot': { emoji: '💨', color: COLORS.textSecondary },
+            'Entangle': { emoji: '🌿', color: COLORS.affinity.forest },
         };
 
         // Draw counter badges in a row at the top right of the card
@@ -1006,13 +963,17 @@ export class CanvasRenderer {
     }
 
     private getAffinityColor(affinity: string): string {
-        const colors: Record<string, string> = {
-            Forest: 'rgba(76, 175, 80, 0.7)',
-            Fire: 'rgba(244, 67, 54, 0.7)',
-            Water: 'rgba(33, 150, 243, 0.7)',
-            Sky: 'rgba(156, 39, 176, 0.7)',
-        };
-        return colors[affinity] || 'rgba(158, 158, 158, 0.7)';
+        // Use shared affinity color helper
+        // Convert from hex to rgba with 0.7 opacity for canvas background
+        const hexColor = getSharedAffinityColor(affinity);
+
+        // Parse hex color and convert to rgba
+        const hex = hexColor.replace('#', '');
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        return `rgba(${r}, ${g}, ${b}, 0.7)`;
     }
 
     /**
@@ -1168,7 +1129,7 @@ export class CanvasRenderer {
     /**
      * Draw a green button on the side menu (for active End Turn button)
      */
-    drawSideMenuGreenButton(text: string, x: number, y: number, buttonImg: HTMLImageElement): void {
+    drawGreenButton(text: string, x: number, y: number, buttonImg: HTMLImageElement): void {
         this.ctx.drawImage(buttonImg, x, y, sideMenuButtonDimensions.width, sideMenuButtonDimensions.height);
         this.drawSideMenuButtonText(text, x, y);
     }
@@ -1176,7 +1137,7 @@ export class CanvasRenderer {
     /**
      * Draw a standard button on the side menu
      */
-    drawSideMenuStandardButton(text: string, x: number, y: number, buttonImg: HTMLImageElement): void {
+    drawStandardButton(text: string, x: number, y: number, buttonImg: HTMLImageElement): void {
         this.ctx.drawImage(buttonImg, x, y, sideMenuButtonDimensions.width, sideMenuButtonDimensions.height);
         this.drawSideMenuButtonText(text, x, y);
     }
@@ -1250,7 +1211,7 @@ export class CanvasRenderer {
 
             // Progress fill
             const fillWidth = maxBarWidth * expPercentage;
-            this.ctx.fillStyle = '#43e97b';
+            this.ctx.fillStyle = COLORS.success;
             this.ctx.fillRect(expBarX, expBarY, fillWidth, barHeight);
         }
 
