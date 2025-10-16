@@ -39,7 +39,7 @@ export const MIN_NECTAR = 0;
 
 // Level Configuration
 export const MIN_LEVEL = 1;
-export const MAX_LEVEL = 9;
+// MAX_LEVEL is defined in leveling.ts
 
 // Stat Limits
 export const MAX_ATTACK = 99;

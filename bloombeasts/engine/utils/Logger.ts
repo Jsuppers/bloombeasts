@@ -246,14 +246,14 @@ class ChildLogger {
 export const Logger = new LoggerClass();
 
 // Configure based on environment
-if (typeof process !== 'undefined' && process.env) {
-  const env = process.env.NODE_ENV || 'development';
+// if (typeof process !== 'undefined' && process.env) {
+//   const env = 'development';
 
-  if (env === 'production') {
-    Logger.setLevel(LogLevel.WARN);
-  } else if (env === 'test') {
-    Logger.setLevel(LogLevel.ERROR);
-  } else {
+//   if (env === 'production') {
+//     Logger.setLevel(LogLevel.WARN);
+//   } else if (env === 'test') {
+//     Logger.setLevel(LogLevel.ERROR);
+//   } else {
     Logger.setLevel(LogLevel.DEBUG);
-  }
-}
+//   }
+// }

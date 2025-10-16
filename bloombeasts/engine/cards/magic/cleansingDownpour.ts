@@ -11,7 +11,7 @@ const removeAllCounters: RemoveCounterEffect = {
   // No specific counter type means remove all counters
 };
 
-const drawCard: DrawCardEffect = {
+const cleansingDownpourDraw: DrawCardEffect = {
   type: EffectType.DrawCards,
   target: AbilityTarget.PlayerGardener,
   value: 1
@@ -22,6 +22,6 @@ export const CLEANSING_DOWNPOUR: MagicCard = {
   name: 'Cleansing Downpour',
   type: 'Magic',
   cost: 2,
-  effects: [removeAllCounters, drawCard],
+  effects: [removeAllCounters, cleansingDownpourDraw],
   targetRequired: false
 };

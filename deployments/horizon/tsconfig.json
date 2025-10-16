@@ -10,10 +10,14 @@
     "declaration": true
   },
   "include": [
-    "./**/*.ts"
+    "src/**/*",
+    "../../bloombeasts/**/*"
   ],
   "exclude": [
     "node_modules",
-    "dist"
+    "dist",
+    "../../**/*.test.ts",
+    "../../**/__tests__/**",
+    "../../test-*.ts"
   ]
 }

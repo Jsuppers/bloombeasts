@@ -13,7 +13,7 @@ const gainNectar: ResourceGainEffect = {
   duration: EffectDuration.ThisTurn
 };
 
-const drawCard: DrawCardEffect = {
+const nectarSurgeDraw: DrawCardEffect = {
   type: EffectType.DrawCards,
   target: AbilityTarget.PlayerGardener,
   value: 1
@@ -24,6 +24,6 @@ export const NECTAR_SURGE: MagicCard = {
   name: 'Nectar Surge',
   type: 'Magic',
   cost: 1,
-  effects: [gainNectar, drawCard],
+  effects: [gainNectar, nectarSurgeDraw],
   targetRequired: false
 };

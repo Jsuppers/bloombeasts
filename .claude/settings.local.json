@@ -25,7 +25,9 @@
       "Bash(npx jest:*)",
       "Bash(node:*)",
       "Bash(npx ts-node:*)",
-      "Bash(npx tsx:*)"
+      "Bash(npx tsx:*)",
+      "Bash(xargs:*)",
+      "Bash(awk:*)"
     ],
     "deny": [],
     "ask": []

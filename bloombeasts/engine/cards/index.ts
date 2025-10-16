@@ -8,7 +8,7 @@ import { ForestDeck } from './forest';
 import { SkyDeck } from './sky';
 import { MagicCards } from './magic';
 import { TrapCards } from './trap';
-import * as BuffCards from './buff';
+import { BATTLE_FURY, NATURES_BLESSING, MYSTIC_SHIELD, SWIFT_WIND } from './buff';
 import { BloomBeastCard, HabitatCard, TrapCard, MagicCard, BuffCard, AnyCard } from '../types/core';
 import { SimpleMap, arrayFrom } from '../../utils/polyfills';
 
@@ -83,12 +83,10 @@ export function getAllCards(): AnyCard[] {
   });
 
   // Add Buff cards
-  Object.values(BuffCards).forEach(card => {
-    if (card && typeof card === 'object' && 'id' in card) {
-      if (!cardMap.has(card.id)) {
-        (card as any).rarity = 'common';
-        cardMap.set(card.id, card as BuffCard);
-      }
+  [BATTLE_FURY, NATURES_BLESSING, MYSTIC_SHIELD, SWIFT_WIND].forEach(card => {
+    if (!cardMap.has(card.id)) {
+      (card as any).rarity = 'common';
+      cardMap.set(card.id, card as BuffCard);
     }
   });
 
