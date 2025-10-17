@@ -5,7 +5,7 @@
 import { MagicCard } from '../../types/core';
 import { StatModificationEffect, EffectType, AbilityTarget, StatType, EffectDuration } from '../../types/abilities';
 
-const buffEffect: StatModificationEffect = {
+const powerUpBuffEffect: StatModificationEffect = {
   type: EffectType.ModifyStats,
   target: AbilityTarget.Target,
   stat: StatType.Both,
@@ -18,6 +18,6 @@ export const POWER_UP: MagicCard = {
   name: 'Power Up',
   type: 'Magic',
   cost: 2,
-  effects: [buffEffect],
+  effects: [powerUpBuffEffect],
   targetRequired: true
 };

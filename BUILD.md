@@ -31,6 +31,9 @@ bloombeasts/
 # Build standalone namespace bundle (used by both deployments)
 npm run build:standalone
 
+# Flatten assets for Meta Horizon upload (images + audio)
+npm run build:props
+
 # Build for Meta Horizon deployment
 npm run build:horizon
 
@@ -69,29 +72,52 @@ npm run serve:prod                    # Serve on port 8001
 
 ## How It Works
 
-### 1. Standalone Bundle Creation
+### 1. Asset Flattening (build:props)
+
+The `build-props.js` script:
+- Recursively scans `shared/images/` and `shared/audio/`
+- Flattens directory structure (e.g., `cards/Fire/CinderPup.png` → `cards_Fire_CinderPup.png`)
+- Copies 99 images to `dist/props/images/`
+- Copies 10 audio files to `dist/props/audio/`
+- Generates `dist/props/manifest.json` with asset inventory
+- Ready for upload to Meta Horizon's asset library
+
+### 2. Standalone Bundle Creation
 
 The `bundle-with-namespace.js` script:
 - Starts from entry point: `bloombeasts/engine/index.ts`
-- Follows all imports depth-first
+- Follows all imports depth-first (112 files total)
 - Removes all import/export statements
 - Wraps everything in `namespace BloomBeasts {}`
-- Outputs to: `dist/BloomBeasts-GameEngine-Standalone.ts`
+- Includes shared styles (COLORS, DIMENSIONS, LAYOUTS, etc.)
+- Outputs to: `dist/BloomBeasts-GameEngine-Standalone.ts` (469 KB)
 
-### 2. Horizon Deployment
+### 3. Horizon Deployment
 
-**Simple approach**: Just uses the standalone TypeScript bundle
+**Complete workflow**:
 
 ```bash
+# Step 1: Flatten assets for upload
+npm run build:props
+# → Creates dist/props/images/ (99 files)
+# → Creates dist/props/audio/ (10 files)
+# → Upload these to Meta Horizon's asset library
+
+# Step 2: Build game bundle
 npm run build:horizon
-# → Creates dist/BloomBeasts-GameEngine-Standalone.ts (444KB)
-# → Upload this .ts file to Meta Horizon (they compile it)
+# → Creates dist/BloomBeasts-GameEngine-Standalone.ts (469 KB)
+# → Upload this .ts file to Meta Horizon scripts folder
+
+# Step 3: Deploy both files
+cd deployments/horizon
+npm run deploy
+# → Copies bundle to Meta Horizon scripts folder
 # → Use: new BloomBeasts.GameManager(platform)
 ```
 
 **Note**: Only creates `.ts` file - Meta Horizon compiles TypeScript themselves
 
-### 3. Web Deployment
+### 4. Web Deployment
 
 **Two modes for different purposes**:
 
@@ -150,6 +176,11 @@ npm run build:horizon
 - `deployments/*/src/` - Platform-specific code
 
 ### Build Outputs
+
+**Created by `npm run build:props`:**
+- `dist/props/images/` - 99 flattened image files (ready for Horizon upload)
+- `dist/props/audio/` - 10 flattened audio files (ready for Horizon upload)
+- `dist/props/manifest.json` - Asset inventory with counts and metadata
 
 **Created by `npm run build:horizon`:**
 - `dist/BloomBeasts-GameEngine-Standalone.ts` - TypeScript bundle (upload to Horizon)

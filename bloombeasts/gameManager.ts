@@ -1290,7 +1290,7 @@ export class GameManager {
         }
 
         // Play win sound
-        this.soundManager.playSfx('sfx/win.ogg');
+        this.soundManager.playSfx('sfx/win.wav');
 
         // Save game data
         await this.saveGameData();
@@ -1323,7 +1323,7 @@ export class GameManager {
         };
 
         await this.platform.showRewards(rewardDisplay);
-        this.soundManager.playSfx('sfx/win.ogg');
+        this.soundManager.playSfx('sfx/win.wav');
         await this.saveGameData();
       }
     } else {

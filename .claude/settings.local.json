@@ -29,7 +29,9 @@
       "Bash(xargs:*)",
       "Bash(awk:*)",
       "WebSearch",
-      "WebFetch(domain:developers.meta.com)"
+      "WebFetch(domain:developers.meta.com)",
+      "Bash(head:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

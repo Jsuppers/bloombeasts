@@ -16,10 +16,14 @@ console.log('Deploying BloomBeasts to Meta Horizon...\n');
 
 // Source files
 const standaloneBundle = path.resolve(__dirname, '../../dist/BloomBeasts-GameEngine-Standalone.ts');
+const typesFile = path.resolve(__dirname, 'src/BloomBeasts-Types.ts');
+const platformFile = path.resolve(__dirname, 'src/BloomBeasts-GamePlatform.ts');
 const gameFile = path.resolve(__dirname, 'src/BloomBeasts-Game.ts');
 
 // Destination files
 const destStandalone = path.join(HORIZON_SCRIPTS_PATH, 'BloomBeasts-GameEngine-Standalone.ts');
+const destTypes = path.join(HORIZON_SCRIPTS_PATH, 'BloomBeasts-Types.ts');
+const destPlatform = path.join(HORIZON_SCRIPTS_PATH, 'BloomBeasts-GamePlatform.ts');
 const destGame = path.join(HORIZON_SCRIPTS_PATH, 'BloomBeasts-Game.ts');
 
 try {
@@ -37,6 +41,20 @@ try {
   fs.copyFileSync(standaloneBundle, destStandalone);
   console.log(`  ✓ Copied (${(fs.statSync(destStandalone).size / 1024).toFixed(2)} KB)\n`);
 
+  // Copy types file
+  console.log(`Copying types file...`);
+  console.log(`  From: ${typesFile}`);
+  console.log(`  To:   ${destTypes}`);
+  fs.copyFileSync(typesFile, destTypes);
+  console.log(`  ✓ Copied (${(fs.statSync(destTypes).size / 1024).toFixed(2)} KB)\n`);
+
+  // Copy platform file
+  console.log(`Copying platform file...`);
+  console.log(`  From: ${platformFile}`);
+  console.log(`  To:   ${destPlatform}`);
+  fs.copyFileSync(platformFile, destPlatform);
+  console.log(`  ✓ Copied (${(fs.statSync(destPlatform).size / 1024).toFixed(2)} KB)\n`);
+
   // Copy game file
   console.log(`Copying game file...`);
   console.log(`  From: ${gameFile}`);
@@ -46,8 +64,10 @@ try {
 
   console.log('✓ Deployment complete!');
   console.log('\nFiles deployed to Meta Horizon:');
-  console.log('  - BloomBeasts-GameEngine-Standalone.ts');
-  console.log('  - BloomBeasts-Game.ts');
+  console.log('  - BloomBeasts-GameEngine-Standalone.ts (469 KB) - Game engine');
+  console.log('  - BloomBeasts-Types.ts (2 KB) - Shared type definitions');
+  console.log('  - BloomBeasts-GamePlatform.ts (6 KB) - Platform adapter');
+  console.log('  - BloomBeasts-Game.ts (32 KB) - UI component');
   console.log('\nYou can now use these files in your Meta Horizon world.');
 } catch (error) {
   console.error('Deployment failed:', error.message);

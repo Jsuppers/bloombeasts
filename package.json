@@ -8,6 +8,7 @@
     "build": "rollup -c",
     "build:watch": "rollup -c -w",
     "build:standalone": "node bundle-with-namespace.js",
+    "build:props": "node build-props.js",
     "build:horizon": "cd deployments/horizon && npm run build",
     "build:web:prod": "cd deployments/web && npm run build:prod",
     "compile": "tsc --noEmit",

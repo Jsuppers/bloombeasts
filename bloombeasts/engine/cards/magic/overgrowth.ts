@@ -5,7 +5,7 @@
 import { MagicCard } from '../../types/core';
 import { StatModificationEffect, EffectType, AbilityTarget, StatType, EffectDuration } from '../../types/abilities';
 
-const buffEffect: StatModificationEffect = {
+const overgrowthBuffEffect: StatModificationEffect = {
   type: EffectType.ModifyStats,
   target: AbilityTarget.AllAllies,
   stat: StatType.Both,
@@ -18,6 +18,6 @@ export const OVERGROWTH: MagicCard = {
   name: 'Overgrowth',
   type: 'Magic',
   cost: 3,
-  effects: [buffEffect],
+  effects: [overgrowthBuffEffect],
   targetRequired: false
 };

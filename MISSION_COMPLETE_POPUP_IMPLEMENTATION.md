@@ -125,7 +125,7 @@ The `MissionCompletePopup` component needs to be integrated into the game flow. 
            await saveGameData();
 
            // Play win sound
-           soundManager.playSfx('sfx/win.ogg');
+           soundManager.playSfx('sfx/win.wav');
 
            // Hide popup
            missionCompletePopup.hide();
