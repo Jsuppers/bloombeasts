@@ -125,6 +125,16 @@ export class SaveLoadManager {
           this.playerData.missions.completedMissions = {};
         }
 
+        // Ensure localState exists (for Horizon deployment - UI navigation state)
+        if (!(this.playerData as any).localState) {
+          (this.playerData as any).localState = {
+            currentScreen: 'menu',
+            volume: 80,
+            sfxVolume: 80,
+            cardsPageOffset: 0
+          };
+        }
+
         // Load cards into collection
         if (data.cards.collected) {
           data.cards.collected.forEach((cardInstance: CardInstance) => {

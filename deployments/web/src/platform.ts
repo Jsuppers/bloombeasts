@@ -11,6 +11,7 @@ import {
     BattleDisplay,
     RewardDisplay,
     MenuStats,
+    PlayerData,
 } from '../../../bloombeasts/gameManager';
 
 import { SoundSettings } from '../../../bloombeasts/systems/SoundManager';
@@ -45,6 +46,9 @@ export class WebPlatform implements PlatformCallbacks {
     private cardDetailScreen: CardDetailScreen;
     private missionCompletePopup: MissionCompletePopup;
 
+    // Player Data
+    private playerData: PlayerData;
+
     // Audio
     private musicAudio: HTMLAudioElement | null = null;
     private sfxAudioPool: HTMLAudioElement[] = [];
@@ -77,6 +81,9 @@ export class WebPlatform implements PlatformCallbacks {
         this.assets = new AssetLoader();
         this.clickManager = new ClickRegionManager(this.canvas);
 
+        // Initialize player data with defaults (will be overwritten if saved data exists)
+        this.playerData = this.getDefaultPlayerData();
+
         // Initialize screen renderers
         this.menuScreen = new MenuScreen(this.renderer, this.clickManager, this.assets);
         this.missionScreen = new MissionScreen(this.renderer, this.clickManager, this.assets);
@@ -105,6 +112,22 @@ export class WebPlatform implements PlatformCallbacks {
             const sfxAudio = new Audio();
             this.sfxAudioPool.push(sfxAudio);
         }
+    }
+
+    private getDefaultPlayerData(): PlayerData {
+        return {
+            name: 'Player',
+            level: 1,
+            totalXP: 0,
+            cards: {
+                collected: [],
+                deck: []
+            },
+            missions: {
+                completedMissions: {}
+            },
+            items: []
+        };
     }
 
     async initialize(): Promise<void> {
@@ -166,6 +189,9 @@ export class WebPlatform implements PlatformCallbacks {
         if (this.currentScreen === 'battle') {
             this.battleScreen.cleanup();
         }
+
+        // Update cards data in playerData
+        this.playerData.cards.deck = deckCardIds;
 
         this.currentScreen = 'cards';
         // Use async render but don't block (fire and forget)
@@ -483,8 +509,38 @@ export class WebPlatform implements PlatformCallbacks {
         this.missionCompletePopup.render(this.ctx, this.assets.getAllImages());
     }
 
+    setPlayerData(data: PlayerData): void {
+        console.log('Platform.setPlayerData called with:', {
+            cardsCollected: data.cards.collected.length,
+            deckSize: data.cards.deck.length,
+            itemsCount: data.items.length
+        });
+        this.playerData = data;
+    }
+
+    getPlayerData(): PlayerData {
+        return this.playerData;
+    }
+
+    async addXP(amount: number): Promise<void> {
+        this.playerData.totalXP += amount;
+
+        // Calculate new level based on XP thresholds
+        const XP_THRESHOLDS = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+        let newLevel = 1;
+        for (let i = 1; i < XP_THRESHOLDS.length; i++) {
+            if (this.playerData.totalXP >= XP_THRESHOLDS[i]) {
+                newLevel = i + 1;
+            } else {
+                break;
+            }
+        }
+
+        this.playerData.level = Math.min(newLevel, 9); // Max level 9
+    }
+
     updatePlayerStats(playerData: any): void {
-        // Could draw this on canvas if needed, for now we'll skip
-        console.log('Player stats:', playerData);
+        // Deprecated - use setPlayerData instead
+        this.setPlayerData(playerData);
     }
 }

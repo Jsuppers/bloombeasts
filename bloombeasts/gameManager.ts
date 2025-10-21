@@ -41,6 +41,10 @@ export interface MenuStats {
  * Platform callbacks interface - implement these for your specific platform
  */
 export interface PlatformCallbacks {
+  // Player data
+  setPlayerData(data: any): void;
+  getPlayerData?(): any;
+
   // UI Rendering
   renderStartMenu(options: string[], stats: MenuStats): void;
   renderMissionSelect(missions: MissionDisplay[], stats: MenuStats): void;
@@ -234,7 +238,7 @@ export class GameManager {
       this.platform.setCardsSfxCallback((src: string) => this.soundManager.playSfx(src));
     }
 
-    // Initialize player data
+    // Initialize player data with localState for Horizon UI
     this.playerData = {
       name: 'Player',
       level: 1,
@@ -246,8 +250,14 @@ export class GameManager {
       missions: {
         completedMissions: {}  // Track completed missions
       },
-      items: []  // Start with no items
-    };
+      items: [],  // Start with no items
+      localState: {
+        currentScreen: 'menu',
+        volume: 80,
+        sfxVolume: 80,
+        cardsPageOffset: 0
+      }
+    } as any;
 
     // Setup input callbacks
     this.setupInputCallbacks();
@@ -265,6 +275,27 @@ export class GameManager {
     // Initialize starting cards if first time
     if (this.playerData.cards.collected.length === 0) {
       await this.initializeStartingCollection();
+    }
+
+    // For Horizon: merge our game data with platform's playerData (which has localState)
+    if (this.platform.setPlayerData && (this.playerData as any).localState) {
+      // Only call setPlayerData if we have valid data with localState
+      this.platform.setPlayerData(this.playerData);
+    } else if (this.platform.getPlayerData) {
+      // For Horizon: Get platform's playerData (which already has localState)
+      // and merge our game data into it
+      const platformData = this.platform.getPlayerData();
+      if (platformData) {
+        platformData.cards = this.playerData.cards;
+        platformData.missions = this.playerData.missions;
+        platformData.name = this.playerData.name;
+        platformData.level = this.playerData.level;
+        platformData.totalXP = this.playerData.totalXP;
+        if ((this.playerData as any).items) {
+          (platformData as any).items = (this.playerData as any).items;
+        }
+        this.playerData = platformData as any;
+      }
     }
 
     // Show start menu

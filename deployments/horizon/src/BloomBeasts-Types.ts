@@ -4,6 +4,8 @@
  */
 
 export interface PlatformCallbacks {
+  setPlayerData(data: PlayerData): void;
+  getPlayerData?(): PlayerData;
   renderStartMenu(options: string[], stats: MenuStats): void;
   renderMissionSelect(missions: MissionDisplay[], stats: MenuStats): void;
   renderCards(cards: CardDisplay[], deckSize: number, deckCardIds: string[], stats: MenuStats): void;
@@ -69,4 +71,40 @@ export interface RewardDisplay {
 export interface GameManager {
   new (platform: PlatformCallbacks): GameManager;
   initialize(): Promise<void>;
+}
+
+// Extended PlayerData interface with local UI state
+export interface LocalState {
+  currentScreen: 'menu' | 'missions' | 'cards' | 'battle' | 'settings';
+  volume: number;
+  sfxVolume: number;
+  cardsPageOffset: number;
+  selectedMissionId?: string;
+  selectedCardId?: string;
+}
+
+export interface PlayerData {
+  // Core player data (persisted)
+  name: string;
+  level: number;
+  totalXP: number;
+
+  // Card collection and deck
+  cards: {
+    collected: any[];
+    deck: string[];
+  };
+
+  // Mission progress
+  missions: {
+    completedMissions: { [missionId: string]: number };
+  };
+
+  // Player resources
+  tokens: number;
+  diamonds: number;
+  serums: number;
+
+  // Local UI state (also persisted per-player)
+  localState: LocalState;
 }

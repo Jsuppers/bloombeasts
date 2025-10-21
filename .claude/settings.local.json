@@ -31,7 +31,8 @@
       "WebSearch",
       "WebFetch(domain:developers.meta.com)",
       "Bash(head:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(git reset:*)"
     ],
     "deny": [],
     "ask": []
