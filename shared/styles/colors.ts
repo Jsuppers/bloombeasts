@@ -20,6 +20,9 @@ export const COLORS = {
   buttonDanger: '#e74c3c',
   buttonSuccess: '#27ae60',
   buttonDisabled: '#555555',
+  surface: '#2c3e50',
+  disabled: '#555555',
+  error: '#e74c3c',
 
   // Card/Panel colors
   cardBackground: '#2c3e50',
@@ -31,6 +34,7 @@ export const COLORS = {
   borderPrimary: '#00d9ff',
   borderSuccess: '#27ae60',
   borderDefault: '#3498db',
+  border: '#3a3a4a',
 
   // Affinity colors
   affinity: {

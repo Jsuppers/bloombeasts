@@ -2,12 +2,14 @@
  * Cards Screen - Refactored with UI Component System
  */
 
+// Import from unified BloomBeasts UI system
 import { View, Text, Image, Pressable, UINode, Binding } from '../ui';
 import { COLORS } from '../../../../shared/styles/colors';
 import { DIMENSIONS, GAPS } from '../../../../shared/styles/dimensions';
+
 import { CardDisplay, MenuStats } from '../../../../bloombeasts/gameManager';
 import { deckEmoji } from '../../../../shared/constants/emojis';
-import { createSidebar } from './commonComponents';
+import { createSideMenu, createTextRow } from './common/sideMenu';
 import { sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
 
 export class CardsScreenNew {
@@ -261,68 +263,66 @@ export class CardsScreenNew {
      * Create side menu with controls
      */
     private createSideMenu(): UINode {
-        const customContent = [
-            // Title at top
-            View({
-                style: {
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                },
-                children: Text({
-                    text: new Binding('Cards'),
-                    style: {
-                        fontSize: DIMENSIONS.fontSize.lg,
-                        color: COLORS.textPrimary,
-                        fontWeight: 'bold',
+        const deckInfoText = Binding.derive(
+            [this.deckSize],
+            (size) => `${deckEmoji} ${size}/30`
+        );
+
+        return createSideMenu({
+            title: 'Cards',
+            customTextContent: [
+                createTextRow(deckInfoText as any, 0),
+            ],
+            buttons: [
+                {
+                    label: '↑',
+                    onClick: () => {
+                        const cards = this.cards.get();
+                        const currentOffset = this.scrollOffset.get();
+                        const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+                        const totalPages = Math.ceil(cards.length / cardsPerPage);
+
+                        const newOffset = currentOffset - 1;
+                        if (newOffset >= 0) {
+                            if (this.playSfxCallback) {
+                                this.playSfxCallback('sfx/menuButtonSelect.wav');
+                            }
+                            this.scrollOffset.set(newOffset);
+                        }
                     },
-                }),
-            }),
-
-            // Deck info
-            View({
-                style: {
-                    position: 'absolute',
-                    left: 0,
-                    top: 30,
+                    disabled: Binding.derive(
+                        [this.cards, this.scrollOffset],
+                        (cards, offset) => offset <= 0
+                    ) as any,
+                    yOffset: 0,
                 },
-                children: Text({
-                    text: Binding.derive(
-                        [this.deckSize],
-                        (size) => `${deckEmoji} ${size}/30`
-                    ),
-                    style: {
-                        fontSize: DIMENSIONS.fontSize.md,
-                        color: COLORS.textPrimary,
+                {
+                    label: '↓',
+                    onClick: () => {
+                        const cards = this.cards.get();
+                        const currentOffset = this.scrollOffset.get();
+                        const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+                        const totalPages = Math.ceil(cards.length / cardsPerPage);
+
+                        const newOffset = currentOffset + 1;
+                        if (newOffset < totalPages) {
+                            if (this.playSfxCallback) {
+                                this.playSfxCallback('sfx/menuButtonSelect.wav');
+                            }
+                            this.scrollOffset.set(newOffset);
+                        }
                     },
-                }),
-            }),
-
-            // Up button
-            View({
-                style: {
-                    position: 'absolute',
-                    left: 0,
-                    top: 60,
+                    disabled: Binding.derive(
+                        [this.cards, this.scrollOffset],
+                        (cards, offset) => {
+                            const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+                            const totalPages = Math.ceil(cards.length / cardsPerPage);
+                            return offset >= totalPages - 1;
+                        }
+                    ) as any,
+                    yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
                 },
-                children: this.createScrollButton('↑', -1, 'scroll-up'),
-            }),
-
-            // Down button
-            View({
-                style: {
-                    position: 'absolute',
-                    left: 0,
-                    top: 60 + sideMenuButtonDimensions.height + GAPS.buttons,
-                },
-                children: this.createScrollButton('↓', 1, 'scroll-down'),
-            }),
-        ];
-
-        return createSidebar({
-            showMessage: false,
-            showResources: false,
-            customContent,
+            ],
             bottomButton: {
                 label: 'Back',
                 onClick: () => {
@@ -333,90 +333,6 @@ export class CardsScreenNew {
                 disabled: false,
             },
             stats: this.stats,
-        });
-    }
-
-    /**
-     * Create scroll button with image background
-     */
-    private createScrollButton(label: string, direction: number, id: string): UINode {
-        const isDisabled = Binding.derive(
-            [this.cards, this.scrollOffset],
-            (cards, offset) => {
-                const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-                const totalPages = Math.ceil(cards.length / cardsPerPage);
-
-                if (direction < 0) {
-                    return offset <= 0;
-                } else {
-                    return offset >= totalPages - 1;
-                }
-            }
-        );
-
-        const buttonOpacity = Binding.derive(
-            [this.cards, this.scrollOffset],
-            (cards, offset) => {
-                const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-                const totalPages = Math.ceil(cards.length / cardsPerPage);
-                const disabled = direction < 0 ? offset <= 0 : offset >= totalPages - 1;
-                return disabled ? 0.5 : 1;
-            }
-        );
-
-        return Pressable({
-            onClick: () => {
-                const cards = this.cards.get();
-                const currentOffset = this.scrollOffset.get();
-                const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-                const totalPages = Math.ceil(cards.length / cardsPerPage);
-
-                const newOffset = currentOffset + direction;
-                if (newOffset >= 0 && newOffset < totalPages) {
-                    if (this.playSfxCallback) {
-                        this.playSfxCallback('sfx/menuButtonSelect.wav');
-                    }
-                    this.scrollOffset.set(newOffset);
-                }
-            },
-            disabled: isDisabled,
-            style: {
-                width: sideMenuButtonDimensions.width,
-                height: sideMenuButtonDimensions.height,
-                position: 'relative',
-            },
-            children: [
-                // Button background image
-                Image({
-                    source: new Binding({ uri: 'standardButton' }),
-                    style: {
-                        position: 'absolute',
-                        width: sideMenuButtonDimensions.width,
-                        height: sideMenuButtonDimensions.height,
-                        opacity: buttonOpacity,
-                    },
-                }),
-                // Button text centered
-                View({
-                    style: {
-                        position: 'absolute',
-                        width: sideMenuButtonDimensions.width,
-                        height: sideMenuButtonDimensions.height,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                    },
-                    children: Text({
-                        text: new Binding(label),
-                        style: {
-                            fontSize: DIMENSIONS.fontSize.lg,
-                            color: COLORS.textPrimary,
-                            textAlign: 'center',
-                            fontWeight: 'bold',
-                            textAlignVertical: 'center',
-                        },
-                    }),
-                }),
-            ],
         });
     }
 

@@ -1,6 +1,12 @@
+// Import from unified BloomBeasts UI system
+import { Platform, setPlatform, UIComponent, View, Text, Pressable, UINode } from '../../../bloombeasts/ui';
+import type { Player } from '../../../bloombeasts/ui';
+
+// Still need Horizon core for platform-specific features
 import * as hz from 'horizon/core';
-import type { Player } from 'horizon/core';
-import { UIComponent, View, Text, Pressable, UINode } from 'horizon/ui';
+
+// Set platform to Horizon at initialization
+setPlatform(Platform.horizon);
 
 /**
  * SIMPLIFIED TEST VERSION - BloomBeasts UI

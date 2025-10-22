@@ -3,9 +3,11 @@
  * TODO: Implement full battle rendering logic
  */
 
+// Import from unified BloomBeasts UI system
 import { View, Text, Pressable, UINode, Binding } from '../ui';
 import { COLORS } from '../../../../shared/styles/colors';
 import { DIMENSIONS } from '../../../../shared/styles/dimensions';
+
 
 export class BattleScreenNew {
     // State bindings

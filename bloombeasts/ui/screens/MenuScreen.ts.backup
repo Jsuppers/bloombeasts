@@ -1,0 +1,474 @@
+/**
+ * Unified Menu Screen Component
+ * Works on both Horizon and Web platforms
+ * Matches the styling from menuScreen.new.ts
+ */
+
+import { View, Text, Image, Pressable, Binding } from '../index';
+import type { ValueBindingBase } from '../index';
+import { COLORS } from '../../../shared/styles/colors';
+import { DIMENSIONS, GAPS } from '../../../shared/styles/dimensions';
+import { sideMenuButtonDimensions } from '../../../shared/constants/dimensions';
+import type { MenuStats } from '../../../bloombeasts/gameManager';
+import { UINodeType } from './ScreenUtils';
+import { createSideMenu, createResourceRow } from './common/SideMenu';
+
+export interface MenuScreenProps {
+  stats: any;
+  onButtonClick?: (buttonId: string) => void;
+  onNavigate?: (screen: string) => void;
+}
+
+/**
+ * Create sidebar for the menu (similar to createSidebar but inline for now)
+ */
+function createMenuSidebar(
+  displayedText: ValueBindingBase<string> | any,
+  stats: ValueBindingBase<MenuStats | null> | any,
+  menuButtons: UINodeType[],
+  onXPBarClick?: (title: string, message: string) => void
+): UINodeType {
+  return View({
+    style: {
+      position: 'absolute',
+      left: 1145,
+      top: 128,
+      width: 127,
+      height: 465,
+      flexDirection: 'column',
+    },
+    children: [
+      // Sidebar background image
+      Image({
+        source: new Binding({ uri: 'sideMenu' }),
+        style: {
+          position: 'absolute',
+          width: 127,
+          height: 465,
+          top: 0,
+          left: 0,
+        },
+      }),
+      // Message text
+      View({
+        style: {
+          position: 'absolute',
+          left: 17,
+          top: 60,
+          width: 110,
+        },
+        children: Text({
+          text: displayedText,
+          numberOfLines: 3,
+          style: {
+            fontSize: DIMENSIONS.fontSize.lg,
+            color: COLORS.textPrimary,
+            lineHeight: DIMENSIONS.fontSize.lg + 5,
+          },
+        }),
+      }),
+      // Resources
+      View({
+        style: {
+          position: 'absolute',
+          left: 17,
+          top: 60,
+        },
+        children: stats.derive(statsVal => {
+          if (!statsVal) return [];
+          const lineHeight = DIMENSIONS.fontSize.lg + 5;
+          return [
+            createResourceRow('🪙', statsVal.tokens, lineHeight * 4),
+            createResourceRow('💎', statsVal.diamonds, lineHeight * 5),
+            createResourceRow('🧪', statsVal.serums, lineHeight * 6),
+          ];
+        }) as any,
+      }),
+      // Menu buttons
+      View({
+        style: {
+          position: 'absolute',
+          left: 11,
+          top: 241,
+          flexDirection: 'column',
+        },
+        children: menuButtons,
+      }),
+      // Close button at top
+      createCloseButton(11, 11, undefined),
+
+      // Player info at bottom
+      View({
+        style: {
+          position: 'absolute',
+          left: 0,
+          top: 298,
+          width: 127,
+        },
+        children: createPlayerInfo(stats, onXPBarClick),
+      }),
+    ],
+  });
+}
+
+/**
+ * Create Close button for sidebar
+ */
+function createCloseButton(x: number, y: number, onClick?: () => void): UINodeType {
+  return Pressable({
+    onClick: onClick || (() => {}),
+    disabled: !onClick,
+    style: {
+      position: 'absolute',
+      left: x,
+      top: y,
+      width: sideMenuButtonDimensions.width,
+      height: sideMenuButtonDimensions.height,
+    },
+    children: [
+      // Button background image
+      Image({
+        source: new Binding({ uri: 'standardButton' }),
+        style: {
+          position: 'absolute',
+          width: sideMenuButtonDimensions.width,
+          height: sideMenuButtonDimensions.height,
+          opacity: onClick ? 1 : 0.5,
+        },
+      }),
+      // Button text centered
+      View({
+        style: {
+          position: 'absolute',
+          width: sideMenuButtonDimensions.width,
+          height: sideMenuButtonDimensions.height,
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        children: Text({
+          text: new Binding('Close'),
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            color: onClick ? COLORS.textPrimary : '#888',
+            textAlign: 'center',
+            fontWeight: 'bold',
+            textAlignVertical: 'center',
+          },
+        }),
+      }),
+    ],
+  });
+}
+
+function createResourceRow(emoji: string, amount: number, top: number): UINodeType {
+  return View({
+    style: {
+      position: 'absolute',
+      top: top,
+    },
+    children: Text({
+      text: new Binding(`${emoji} ${amount}`),
+      style: {
+        fontSize: 18,
+        color: COLORS.textPrimary,
+      },
+    }),
+  });
+}
+
+function createPlayerInfo(
+  stats: ValueBindingBase<MenuStats | null> | any,
+  onXPBarClick?: (title: string, message: string) => void
+): UINodeType {
+  return View({
+    style: {
+      width: 127,
+      height: 50,
+      position: 'relative',
+    },
+    children: stats.derive(statsVal => {
+      if (!statsVal) return [];
+
+      const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+      const currentLevel = statsVal.playerLevel;
+      const totalXP = statsVal.totalXP;
+      const xpForCurrentLevel = xpThresholds[currentLevel - 1];
+      const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
+      const currentXP = totalXP - xpForCurrentLevel;
+      const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+      const xpPercent = Math.min(100, (currentXP / xpNeeded) * 100);
+
+      return [
+        // Player name
+        View({
+          style: {
+            position: 'absolute',
+            left: 10,
+            top: 0,
+          },
+          children: Text({
+            text: new Binding('Player'),
+            style: {
+              fontSize: 14,
+              color: COLORS.textPrimary,
+            },
+          }),
+        }),
+        // XP Bar
+        View({
+          style: {
+            position: 'absolute',
+            left: 9,
+            top: 19,
+            width: 109,
+            height: 11,
+          },
+          children: Pressable({
+            onClick: () => {
+              if (onXPBarClick) {
+                const title = `Level ${currentLevel}`;
+                const message = `Current XP: ${currentXP} / ${xpNeeded}\n\nTotal XP: ${totalXP}`;
+                onXPBarClick(title, message);
+              }
+            },
+            style: {
+              width: '100%',
+              height: '100%',
+            },
+            children: Image({
+              source: new Binding({ uri: 'experienceBar' }),
+              style: {
+                width: `${xpPercent}%`,
+                height: 11,
+              },
+            }),
+          }),
+        }),
+        // Level text
+        View({
+          style: {
+            position: 'absolute',
+            left: 9,
+            top: 19,
+            width: 20,
+            height: 11,
+            justifyContent: 'center',
+            alignItems: 'center',
+          },
+          children: Text({
+            text: new Binding(`${currentLevel}`),
+            style: {
+              fontSize: 12,
+              color: COLORS.textPrimary,
+              textAlign: 'center',
+            },
+          }),
+        }),
+      ];
+    }) as any,
+  });
+}
+
+/**
+ * Unified Menu Screen that works on both platforms
+ */
+export class MenuScreen {
+  // State bindings
+  private currentFrame: any;
+  private displayedText: any;
+  private stats: any;
+
+  // Animation state
+  private animationInterval: number | null = null;
+  private textAnimationInterval: number | null = null;
+
+  private quotes: string[] = [
+    'Welcome back, Trainer!',
+  ];
+
+  // Callbacks
+  private onButtonClick?: (buttonId: string) => void;
+  private onNavigate?: (screen: string) => void;
+
+  constructor(props: MenuScreenProps) {
+    this.stats = props.stats;
+    this.onButtonClick = props.onButtonClick;
+    this.onNavigate = props.onNavigate;
+
+    // Initialize bindings
+    this.currentFrame = new Binding(1);
+    this.displayedText = new Binding('');
+
+    // Start animations
+    this.startAnimations();
+  }
+
+  private startAnimations(): void {
+    // Frame animation for character
+    if (this.animationInterval) {
+      clearInterval(this.animationInterval);
+    }
+
+    this.animationInterval = setInterval(() => {
+      const current = this.currentFrame.get();
+      this.currentFrame.set((current % 10) + 1);
+    }, 200) as unknown as number;
+
+    // Just show the first quote statically
+    this.displayedText.set(this.quotes[0]);
+  }
+
+  /**
+   * Create the unified menu UI - matches menuScreen.new.ts styling
+   */
+  createUI(): UINodeType {
+    const menuOptions = ['missions', 'cards', 'settings'];
+    const menuButtons = menuOptions.map((option, index) => {
+      const y = index * (sideMenuButtonDimensions.height + GAPS.buttons);
+      return this.createMenuButton(option, 0, y);
+    });
+
+    return View({
+      style: {
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+      },
+      children: [
+        // Background image (full screen)
+        Image({
+          source: new Binding({ uri: 'background' }),
+          style: {
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            top: 0,
+            left: 0,
+          },
+        }),
+
+        // Main content area with animated character
+        View({
+          style: {
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            justifyContent: 'center',
+            alignItems: 'center',
+          },
+          children: [
+            // Animated character frame at position (143, 25)
+            View({
+              style: {
+                position: 'absolute',
+                left: 143,
+                top: 25,
+              },
+              children: Image({
+                source: this.currentFrame.derive(f => ({ uri: `menuFrame${f}` })),
+                style: {
+                  width: 750,
+                  height: 700,
+                },
+              }),
+            }),
+          ],
+        }),
+
+        // Side menu (positioned absolutely on top)
+        createMenuSidebar(
+          this.displayedText,
+          this.stats,
+          menuButtons,
+          (title: string, message: string) => {
+            if (this.onButtonClick) {
+              this.onButtonClick(`show-counter-info:${title}:${message}`);
+            }
+          }
+        ),
+      ],
+    });
+  }
+
+  /**
+   * Create a menu button with image background
+   */
+  private createMenuButton(option: string, x: number, y: number): UINodeType {
+    const label = this.getMenuLabel(option);
+
+    return Pressable({
+      onClick: () => {
+        if (this.onButtonClick) {
+          this.onButtonClick(`btn-${option}`);
+        }
+        if (this.onNavigate) {
+          this.onNavigate(option);
+        }
+      },
+      style: {
+        position: 'absolute',
+        left: x,
+        top: y,
+        width: sideMenuButtonDimensions.width,
+        height: sideMenuButtonDimensions.height,
+      },
+      children: [
+        // Button background image
+        Image({
+          source: new Binding({ uri: 'standardButton' }),
+          style: {
+            position: 'absolute',
+            width: sideMenuButtonDimensions.width,
+            height: sideMenuButtonDimensions.height,
+          },
+        }),
+        // Button text centered
+        View({
+          style: {
+            position: 'absolute',
+            width: sideMenuButtonDimensions.width,
+            height: sideMenuButtonDimensions.height,
+            justifyContent: 'center',
+            alignItems: 'center',
+          },
+          children: Text({
+            text: new Binding(label),
+            style: {
+              fontSize: DIMENSIONS.fontSize.md,
+              color: COLORS.textPrimary,
+              textAlign: 'center',
+              fontWeight: 'bold',
+              textAlignVertical: 'center',
+            },
+          }),
+        }),
+      ],
+    });
+  }
+
+  /**
+   * Get menu label for option
+   */
+  private getMenuLabel(option: string): string {
+    const labels: Record<string, string> = {
+      missions: 'Missions',
+      cards: 'Cards',
+      settings: 'Settings',
+    };
+    return labels[option] || option;
+  }
+
+  /**
+   * Clean up animations
+   */
+  dispose(): void {
+    if (this.animationInterval) {
+      clearInterval(this.animationInterval);
+      this.animationInterval = null;
+    }
+    if (this.textAnimationInterval) {
+      clearInterval(this.textAnimationInterval);
+      this.textAnimationInterval = null;
+    }
+  }
+}

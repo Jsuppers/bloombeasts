@@ -2,12 +2,15 @@
  * Menu Screen - Refactored with UI Component System
  */
 
+// Import from unified BloomBeasts UI system
 import { View, Text, Image, Pressable, UINode, Binding } from '../ui';
 import { COLORS } from '../../../../shared/styles/colors';
 import { DIMENSIONS, GAPS } from '../../../../shared/styles/dimensions';
+
 import { MenuStats } from '../../../../bloombeasts/gameManager';
-import { createSidebar } from './commonComponents';
+import { createSideMenu, createTextRow, createResourceRow } from './common/sideMenu';
 import { sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
+import { tokenEmoji, diamondEmoji, serumEmoji } from '../../../../shared/constants/emojis';
 
 export class MenuScreenNew {
     // State bindings
@@ -107,17 +110,49 @@ export class MenuScreenNew {
      * Create side menu with buttons and stats
      */
     private createSideMenu(menuOptions: string[]): UINode {
-        // Create menu buttons with absolute positioning
-        const menuButtons = menuOptions.map((option, index) => {
-            const y = index * (sideMenuButtonDimensions.height + GAPS.buttons);
-            return this.createMenuButton(option, 0, y);
-        });
+        // Line height for spacing
+        const lineHeight = DIMENSIONS.fontSize.lg + 5;
 
-        return createSidebar({
-            messageText: this.displayedText,
-            showMessage: true,
-            showResources: true,
-            customContent: menuButtons,
+        // Create menu buttons
+        const menuButtons = menuOptions.map((option, index) => ({
+            label: this.getMenuLabel(option),
+            onClick: () => {
+                if (this.onButtonClickCallback) {
+                    this.stopAnimation();
+                    this.onButtonClickCallback(`btn-${option}`);
+                }
+            },
+            disabled: false,
+            yOffset: index * (sideMenuButtonDimensions.height + GAPS.buttons),
+        }));
+
+        // Create custom text content (quote + resources)
+        const customTextContent = this.stats.derive(statsVal => {
+            if (!statsVal) return [];
+
+            return [
+                // Quote text (lines 0-2, with 3 line wrapping)
+                createTextRow(this.displayedText, 0),
+
+                // Blank line (line 3)
+
+                // Resources (lines 4-6)
+                createResourceRow(tokenEmoji, statsVal.tokens, lineHeight * 4),
+                createResourceRow(diamondEmoji, statsVal.diamonds, lineHeight * 5),
+                createResourceRow(serumEmoji, statsVal.serums, lineHeight * 6),
+            ];
+        }) as any;
+
+        return createSideMenu({
+            customTextContent: [
+                View({
+                    style: {
+                        position: 'relative',
+                    },
+                    children: customTextContent,
+                }),
+            ],
+            buttons: menuButtons,
             bottomButton: {
                 label: 'Close',
                 onClick: () => {}, // Disabled button
@@ -129,60 +164,6 @@ export class MenuScreenNew {
                     this.onButtonClickCallback(`show-counter-info:${title}:${message}`);
                 }
             },
-        });
-    }
-
-    /**
-     * Create a menu button with image background
-     */
-    private createMenuButton(option: string, x: number, y: number): UINode {
-        const label = this.getMenuLabel(option);
-
-        return Pressable({
-            onClick: () => {
-                if (this.onButtonClickCallback) {
-                    this.stopAnimation();
-                    this.onButtonClickCallback(`btn-${option}`);
-                }
-            },
-            style: {
-                position: 'absolute',
-                left: x,
-                top: y,
-                width: sideMenuButtonDimensions.width,
-                height: sideMenuButtonDimensions.height,
-            },
-            children: [
-                // Button background image
-                Image({
-                    source: new Binding({ uri: 'standardButton' }),
-                    style: {
-                        position: 'absolute',
-                        width: sideMenuButtonDimensions.width,
-                        height: sideMenuButtonDimensions.height,
-                    },
-                }),
-                // Button text centered
-                View({
-                    style: {
-                        position: 'absolute',
-                        width: sideMenuButtonDimensions.width,
-                        height: sideMenuButtonDimensions.height,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                    },
-                    children: Text({
-                        text: new Binding(label),
-                        style: {
-                            fontSize: DIMENSIONS.fontSize.md,
-                            color: COLORS.textPrimary,
-                            textAlign: 'center',
-                            fontWeight: 'bold',
-                            textAlignVertical: 'center',
-                        },
-                    }),
-                }),
-            ],
         });
     }
 

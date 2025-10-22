@@ -1,34 +1,35 @@
 /**
- * Common UI Components shared across screens
+ * Common Side Menu Component
+ * Shared sidebar used across all unified screens (Horizon & Web)
  */
 
-// Import from unified BloomBeasts UI system
-import { View, Text, Image, Pressable, UINode, Binding } from '../ui';
+import { View, Text, Image, Pressable, Binding } from '../../index';
+import type { ValueBindingBase } from '../../index';
 import { COLORS } from '../../../../shared/styles/colors';
 import { DIMENSIONS } from '../../../../shared/styles/dimensions';
-
-import { MenuStats } from '../../../../bloombeasts/gameManager';
-import { tokenEmoji, diamondEmoji, serumEmoji } from '../../../../shared/constants/emojis';
 import { sideMenuDimensions, sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
 import { sideMenuPositions } from '../../../../shared/constants/positions';
+import type { MenuStats } from '../../../../bloombeasts/gameManager';
+import { UINodeType } from '../ScreenUtils';
 
-export interface SidebarConfig {
-    /** Quote or message text to display at the top */
-    messageText?: Binding<string>;
-    /** Whether to show message text area */
-    showMessage?: boolean;
-    /** Whether to show resources (tokens, diamonds, serums) */
-    showResources?: boolean;
-    /** Custom content/buttons to display in the middle */
-    customContent?: UINode[];
-    /** Bottom button configuration */
-    bottomButton?: {
-        label: string;
-        onClick: () => void;
-        disabled?: boolean;
-    };
-    /** Stats binding for player info and resources */
-    stats: Binding<MenuStats | null>;
+export interface SideMenuButton {
+    label: string | ValueBindingBase<string>;
+    onClick: () => void;
+    disabled?: boolean | ValueBindingBase<boolean>;
+    yOffset?: number; // Vertical offset from buttonStartPosition
+}
+
+export interface SideMenuConfig {
+    /** Title text displayed at headerStartPosition */
+    title?: string | ValueBindingBase<string>;
+    /** Custom content items to display at textStartPosition */
+    customTextContent?: UINodeType[];
+    /** Buttons to display at buttonStartPosition */
+    buttons?: SideMenuButton[];
+    /** Bottom button at headerStartPosition */
+    bottomButton?: SideMenuButton;
+    /** Stats binding for player info */
+    stats: ValueBindingBase<MenuStats | null> | any;
     /** Callback for XP bar click */
     onXPBarClick?: (title: string, message: string) => void;
 }
@@ -36,10 +37,10 @@ export interface SidebarConfig {
 /**
  * Create a common sidebar used across all screens
  */
-export function createSidebar(config: SidebarConfig): UINode {
-    const children: UINode[] = [];
+export function createSideMenu(config: SideMenuConfig): UINodeType {
+    const children: UINodeType[] = [];
 
-    // Calculate positions relative to sidebar origin
+    // Calculate positions relative to sidebar origin (using sideMenuPositions)
     const headerRelativeX = sideMenuPositions.headerStartPosition.x - sideMenuPositions.x;
     const headerRelativeY = sideMenuPositions.headerStartPosition.y - sideMenuPositions.y;
     const textRelativeX = sideMenuPositions.textStartPosition.x - sideMenuPositions.x;
@@ -47,61 +48,44 @@ export function createSidebar(config: SidebarConfig): UINode {
     const buttonRelativeX = sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x;
     const buttonRelativeY = sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y;
 
-    // Line height calculation (matches old implementation)
-    const lineHeight = DIMENSIONS.fontSize.lg + 5;
-
-    // Message/quote text at textStartPosition (lines 1-3)
-    if (config.showMessage && config.messageText) {
+    // Title at headerStartPosition (if provided)
+    if (config.title) {
         children.push(
             View({
                 style: {
                     position: 'absolute',
-                    left: textRelativeX,
-                    top: textRelativeY,
-                    width: sideMenuDimensions.width - textRelativeX - 5,
+                    left: headerRelativeX,
+                    top: headerRelativeY,
                 },
                 children: Text({
-                    text: config.messageText,
-                    numberOfLines: 3,
+                    text: typeof config.title === 'string' ? new Binding(config.title) : config.title,
                     style: {
-                        fontSize: DIMENSIONS.fontSize.lg,
+                        fontSize: DIMENSIONS.fontSize.md,
                         color: COLORS.textPrimary,
-                        lineHeight: lineHeight,
+                        fontWeight: 'bold',
                     },
                 }),
             })
         );
     }
 
-    // Player resources at lines 5-7 (line 4 is blank)
-    if (config.showResources) {
+    // Custom text content at textStartPosition
+    if (config.customTextContent && config.customTextContent.length > 0) {
         children.push(
             View({
                 style: {
                     position: 'absolute',
                     left: textRelativeX,
                     top: textRelativeY,
+                    flexDirection: 'column',
                 },
-                children: config.stats.derive(stats => {
-                    if (!stats) {
-                        return [];
-                    }
-
-                    // Line 5: Tokens (after 3 lines of quote + 1 blank)
-                    // Line 6: Diamonds
-                    // Line 7: Serums
-                    return [
-                        createResourceRow(tokenEmoji, stats.tokens, lineHeight * 4),
-                        createResourceRow(diamondEmoji, stats.diamonds, lineHeight * 5),
-                        createResourceRow(serumEmoji, stats.serums, lineHeight * 6),
-                    ];
-                }) as any,
+                children: config.customTextContent,
             })
         );
     }
 
-    // Custom content at buttonStartPosition
-    if (config.customContent && config.customContent.length > 0) {
+    // Buttons at buttonStartPosition
+    if (config.buttons && config.buttons.length > 0) {
         children.push(
             View({
                 style: {
@@ -110,13 +94,20 @@ export function createSidebar(config: SidebarConfig): UINode {
                     top: buttonRelativeY,
                     flexDirection: 'column',
                 },
-                children: config.customContent,
+                children: config.buttons.map(button =>
+                    createSideMenuButton(
+                        button.label,
+                        0,
+                        button.yOffset !== undefined ? button.yOffset : 0,
+                        button.onClick,
+                        button.disabled
+                    )
+                ),
             })
         );
     }
 
-    // Player info at bottom of sidebar
-    // Position from bottom: sidebar height (465) - player info height (~40)
+    // Player info at bottom of sidebar (aligned to bottom like web deployment)
     children.push(
         View({
             style: {
@@ -124,12 +115,13 @@ export function createSidebar(config: SidebarConfig): UINode {
                 left: 0,
                 top: sideMenuDimensions.height - 40,
                 width: sideMenuDimensions.width,
+                height: 50,
             },
             children: createPlayerInfo(config.stats, config.onXPBarClick),
         })
     );
 
-    // Bottom button (if provided, position below player info)
+    // Bottom button (if provided, at headerStartPosition)
     if (config.bottomButton) {
         children.push(
             createSideMenuButton(
@@ -137,7 +129,7 @@ export function createSidebar(config: SidebarConfig): UINode {
                 headerRelativeX,
                 headerRelativeY,
                 config.bottomButton.onClick,
-                config.bottomButton.disabled || false
+                config.bottomButton.disabled
             )
         );
     }
@@ -170,36 +162,22 @@ export function createSidebar(config: SidebarConfig): UINode {
 }
 
 /**
- * Create a resource display row at a specific vertical position
- */
-function createResourceRow(emoji: string, amount: number, top: number): UINode {
-    return View({
-        style: {
-            position: 'absolute',
-            top: top,
-        },
-        children: Text({
-            text: new Binding(`${emoji} ${amount}`),
-            style: {
-                fontSize: 18, // TEXT_SIZE from old implementation
-                color: COLORS.textPrimary,
-            },
-        }),
-    });
-}
-
-/**
  * Create a side menu button with image background
  */
 function createSideMenuButton(
-    label: string,
+    label: string | ValueBindingBase<string>,
     x: number,
     y: number,
     onClick: () => void,
-    disabled: boolean = false
-): UINode {
+    disabled?: boolean | ValueBindingBase<boolean>
+): UINodeType {
+    const labelBinding = typeof label === 'string' ? new Binding(label) : label;
+    const disabledValue = typeof disabled === 'boolean' ? disabled : false;
+    const disabledBinding = typeof disabled === 'object' && 'get' in disabled ? disabled : undefined;
+
     return Pressable({
-        onClick: disabled ? undefined : onClick,
+        onClick: onClick,
+        disabled: disabledBinding || disabledValue,
         style: {
             position: 'absolute',
             left: x,
@@ -215,7 +193,7 @@ function createSideMenuButton(
                     position: 'absolute',
                     width: sideMenuButtonDimensions.width,
                     height: sideMenuButtonDimensions.height,
-                    opacity: disabled ? 0.5 : 1,
+                    opacity: disabledValue ? 0.5 : 1,
                 },
             }),
             // Button text centered
@@ -228,10 +206,10 @@ function createSideMenuButton(
                     alignItems: 'center',
                 },
                 children: Text({
-                    text: new Binding(label),
+                    text: labelBinding,
                     style: {
                         fontSize: DIMENSIONS.fontSize.md,
-                        color: disabled ? '#888' : COLORS.textPrimary,
+                        color: disabledValue ? '#888' : COLORS.textPrimary,
                         textAlign: 'center',
                         fontWeight: 'bold',
                         textAlignVertical: 'center',
@@ -244,23 +222,18 @@ function createSideMenuButton(
 
 /**
  * Create player info display (name, level, XP bar)
- * Used at the bottom of side menus across all screens
- * Uses exact positions from sideMenuPositions
+ * Positioned using sideMenuPositions
  */
-export function createPlayerInfo(
-    stats: Binding<MenuStats | null>,
+function createPlayerInfo(
+    stats: ValueBindingBase<MenuStats | null> | any,
     onXPBarClick?: (title: string, message: string) => void
-): UINode {
+): UINodeType {
     return View({
         style: {
-            width: sideMenuDimensions.width,
-            height: 50,
             position: 'relative',
         },
-        children: stats.derive(statsVal => {
-            if (!statsVal) {
-                return [];
-            }
+        children: stats.derive((statsVal: MenuStats | null) => {
+            if (!statsVal) return [];
 
             const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
             const currentLevel = statsVal.playerLevel;
@@ -271,14 +244,8 @@ export function createPlayerInfo(
             const xpNeeded = xpForNextLevel - xpForCurrentLevel;
             const xpPercent = Math.min(100, (currentXP / xpNeeded) * 100);
 
-            // Calculate relative Y positions
-            // playerName is at y: 426, playerLevel/bar at y: 445
-            // Difference: 445 - 426 = 19
-            const barYOffset = 19;
-            const barHeight = 11;
-
             return [
-                // Player name at x: 10, y: 0 (relative)
+                // Player name
                 View({
                     style: {
                         position: 'absolute',
@@ -288,21 +255,21 @@ export function createPlayerInfo(
                     children: Text({
                         text: new Binding('Player'),
                         style: {
-                            fontSize: sideMenuPositions.playerName.size, // sm = 14
+                            fontSize: sideMenuPositions.playerName.size,
                             color: COLORS.textPrimary,
                             textAlign: sideMenuPositions.playerName.textAlign as any,
                         },
                     }),
                 }),
 
-                // XP Bar at x: 9, y: 19 (relative), maxWidth: 109, height: 11
+                // XP Bar
                 View({
                     style: {
                         position: 'absolute',
                         left: sideMenuPositions.playerExperienceBar.x,
-                        top: barYOffset,
+                        top: 19, // Offset from player name
                         width: sideMenuPositions.playerExperienceBar.maxWidth,
-                        height: barHeight,
+                        height: 11,
                     },
                     children: Pressable({
                         onClick: () => {
@@ -320,27 +287,27 @@ export function createPlayerInfo(
                             source: new Binding({ uri: 'experienceBar' }),
                             style: {
                                 width: `${xpPercent}%`,
-                                height: barHeight,
+                                height: 11,
                             },
                         }),
                     }),
                 }),
 
-                // Level text centered on top of experience bar
+                // Level text (centered on XP bar)
                 View({
                     style: {
                         position: 'absolute',
                         left: sideMenuPositions.playerLevel.x,
-                        top: barYOffset,
+                        top: 19,
                         width: 20,
-                        height: barHeight,
+                        height: 11,
                         justifyContent: 'center',
                         alignItems: 'center',
                     },
                     children: Text({
                         text: new Binding(`${currentLevel}`),
                         style: {
-                            fontSize: sideMenuPositions.playerLevel.size, // xs = 12
+                            fontSize: sideMenuPositions.playerLevel.size,
                             color: COLORS.textPrimary,
                             textAlign: 'center',
                         },
@@ -348,5 +315,51 @@ export function createPlayerInfo(
                 }),
             ];
         }) as any,
+    });
+}
+
+/**
+ * Helper: Create a text row component
+ */
+export function createTextRow(text: string | ValueBindingBase<string>, top: number = 0): UINodeType {
+    return View({
+        style: {
+            position: 'absolute',
+            top: top,
+        },
+        children: Text({
+            text: typeof text === 'string' ? new Binding(text) : text,
+            style: {
+                fontSize: DIMENSIONS.fontSize.md,
+                color: COLORS.textPrimary,
+            },
+        }),
+    });
+}
+
+/**
+ * Helper: Create a resource row (emoji + count)
+ */
+export function createResourceRow(
+    emoji: string,
+    amount: number | ValueBindingBase<number>,
+    top: number = 0
+): UINodeType {
+    const amountText = typeof amount === 'number'
+        ? new Binding(`${emoji} ${amount}`)
+        : (amount as any).derive((a: number) => `${emoji} ${a}`);
+
+    return View({
+        style: {
+            position: 'absolute',
+            top: top,
+        },
+        children: Text({
+            text: amountText,
+            style: {
+                fontSize: 18,
+                color: COLORS.textPrimary,
+            },
+        }),
     });
 }

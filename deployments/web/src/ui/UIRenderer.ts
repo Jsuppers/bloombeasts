@@ -43,7 +43,6 @@ export class UIRenderer {
     private clickRegions: ClickRegion[] = [];
     private hoveredRegion: ClickRegion | null = null;
     private bindings: Set<ValueBindingBase<any>> = new Set();
-    private unsubscribers: (() => void)[] = [];
     private imageCache: Map<string, HTMLImageElement> = new Map();
 
     constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
@@ -70,9 +69,7 @@ export class UIRenderer {
      * Render a UI tree
      */
     render(root: UINode): void {
-        console.log('UIRenderer.render called');
         // Clear previous state
-        this.clearBindings();
         this.clickRegions = [];
 
         // Clear canvas
@@ -86,9 +83,7 @@ export class UIRenderer {
             height: this.canvas.height,
         };
 
-        console.log('Rendering root with container:', containerBox);
         this.renderNode(root, containerBox);
-        console.log('Render complete');
     }
 
     /**
@@ -126,6 +121,7 @@ export class UIRenderer {
         const style = this.resolveStyle(node.props.style || {});
         const box = this.calculateLayout(style, parentBox);
 
+
         console.log('renderView - box:', box, 'style.backgroundColor:', style.backgroundColor);
 
         // Draw background
@@ -150,9 +146,14 @@ export class UIRenderer {
      */
     private renderText(node: UINode<TextProps>, parentBox: LayoutBox): LayoutBox {
         const style = this.resolveStyle(node.props.style || {}) as TextStyle;
-        const text = resolveBindable(node.props.text);
+        const text = this.resolveAndTrack<string>(node.props.text);
         const box = this.calculateLayout(style, parentBox);
 
+
+        // Handle undefined or null text
+        if (text === undefined || text === null) {
+            return box;
+        }
         // Set text style
         const fontSize = (style.fontSize as number) || 16;
         const fontFamily = style.fontFamily || 'Arial';
@@ -199,7 +200,7 @@ export class UIRenderer {
         const box = this.calculateLayout(style, parentBox);
 
         // Get image source
-        const source = resolveBindable(node.props.source);
+        const source = this.resolveAndTrack<{ uri: string }>(node.props.source);
         if (source && source.uri) {
             const img = this.imageCache.get(source.uri);
             if (img && img.complete) {
@@ -230,7 +231,7 @@ export class UIRenderer {
     private renderPressable(node: UINode<PressableProps>, parentBox: LayoutBox): LayoutBox {
         const style = this.resolveStyle(node.props.style || {});
         const box = this.calculateLayout(style, parentBox);
-        const disabled = resolveBindable(node.props.disabled || false);
+        const disabled = this.resolveAndTrack<boolean>(node.props.disabled || false);
 
         // Register click region
         if (!disabled) {
@@ -282,7 +283,7 @@ export class UIRenderer {
      * Render a conditional component
      */
     private renderConditional(node: UINode<ConditionalProps>, parentBox: LayoutBox): LayoutBox | null {
-        const condition = resolveBindable(node.props.condition);
+        const condition = this.resolveAndTrack<boolean>(node.props.condition);
         const component = condition ? node.props.trueComponent : node.props.falseComponent;
 
         if (!component) return null;
@@ -301,6 +302,8 @@ export class UIRenderer {
         let childArray: UINode[] = [];
 
         if (children instanceof ValueBindingBase) {
+            // Track the binding for re-render on change
+            this.trackBinding(children);
             const value = children.get();
             console.log('Children is a binding, resolved value:', value);
             childArray = Array.isArray(value) ? value : (value ? [value] : []);
@@ -562,22 +565,25 @@ export class UIRenderer {
     }
 
     /**
-     * Track a binding for automatic re-render
+     * Track a binding (for potential future use, but don't auto-rerender)
+     * The main application (main.ts) handles re-rendering via top-level playerData subscription
      */
     private trackBinding(binding: ValueBindingBase<any>): void {
         if (!this.bindings.has(binding)) {
             this.bindings.add(binding);
-            // Subscribe to changes - will be implemented when we hook this up
+            // Don't subscribe - let the app-level binding (playerData) handle re-renders
         }
     }
 
     /**
-     * Clear all binding subscriptions
+     * Resolve a bindable and track it if it's a binding
      */
-    private clearBindings(): void {
-        this.unsubscribers.forEach(unsub => unsub());
-        this.unsubscribers = [];
-        this.bindings.clear();
+    private resolveAndTrack<T>(bindable: any, playerId?: string): T {
+        if (bindable && typeof bindable.get === 'function') {
+            this.trackBinding(bindable);
+            return bindable.get(playerId);
+        }
+        return bindable;
     }
 
     /**
@@ -622,6 +628,9 @@ export class UIRenderer {
      * Wrap text to fit within a width
      */
     private wrapText(text: string, maxWidth: number, maxLines?: number): string[] {
+        // Guard against undefined or null text
+        if (!text) return [];
+
         const words = text.split(' ');
         const lines: string[] = [];
         let currentLine = '';
@@ -726,6 +735,6 @@ export class UIRenderer {
      * Cleanup
      */
     destroy(): void {
-        this.clearBindings();
+        // Cleanup (nothing to do since we don't subscribe to bindings)
     }
 }

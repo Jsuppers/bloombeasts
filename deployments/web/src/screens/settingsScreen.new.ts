@@ -2,12 +2,14 @@
  * Settings Screen - Refactored with UI Component System
  */
 
+// Import from unified BloomBeasts UI system
 import { View, Text, Image, Pressable, UINode, Binding } from '../ui';
 import { COLORS } from '../../../../shared/styles/colors';
 import { DIMENSIONS } from '../../../../shared/styles/dimensions';
+
 import { SoundSettings } from '../../../../bloombeasts/systems/SoundManager';
 import { MenuStats } from '../../../../bloombeasts/gameManager';
-import { createSidebar } from './commonComponents';
+import { createSideMenu } from './common/sideMenu';
 
 export class SettingsScreenNew {
     // State bindings
@@ -19,7 +21,7 @@ export class SettingsScreenNew {
     private renderCallback: (() => void) | null = null;
 
     constructor() {
-        this.settings = new Binding({
+        this.settings = new Binding<SoundSettings>({
             musicVolume: 80,
             sfxVolume: 80,
             musicEnabled: true,
@@ -260,23 +262,8 @@ export class SettingsScreenNew {
      * Create side menu
      */
     private createSideMenu(): UINode {
-        const customContent = [
-            // Title
-            Text({
-                text: new Binding('Settings'),
-                style: {
-                    fontSize: DIMENSIONS.fontSize.lg,
-                    color: COLORS.textPrimary,
-                    fontWeight: 'bold',
-                    marginBottom: 20,
-                },
-            }),
-        ];
-
-        return createSidebar({
-            showMessage: false,
-            showResources: false,
-            customContent,
+        return createSideMenu({
+            title: 'Settings',
             bottomButton: {
                 label: 'Back',
                 onClick: () => {

@@ -86,7 +86,8 @@ export class AssetLoader {
             }
 
             if (this.loadingEl) {
-                this.loadingEl.classList.add('hidden');
+                this.loadingEl.style.display = 'none';
+                console.log('Hidden loading screen');
             }
         } catch (error) {
             console.error('Failed to load assets:', error);
@@ -103,9 +104,11 @@ export class AssetLoader {
             const img = new Image();
             img.onload = () => {
                 this.images.set(key, img);
+                console.log(`✓ Loaded: ${key} (${src})`);
                 resolve();
             };
             img.onerror = () => {
+                console.error(`✗ Failed to load: ${key} (${src})`);
                 reject(new Error(`Failed to load image: ${src}`));
             };
             img.src = src;

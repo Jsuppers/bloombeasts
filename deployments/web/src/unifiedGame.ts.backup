@@ -1,53 +1,39 @@
 /**
- * Horizon Platform Wrapper for Unified BloomBeasts Game
- * This file simply wraps the unified game component for Horizon platform
+ * Web Platform Wrapper for Unified BloomBeasts Game
+ * This file wraps the unified game component for the Web platform
  */
 
 // Set platform and import unified components
-import { Platform, setPlatform, UIComponent, Binding, UINode } from '../../../bloombeasts/ui';
-import { BloomBeastsGame, createHorizonComponent, type PlayerData } from '../../../bloombeasts/ui/screens';
+import { Platform, setPlatform, Binding, UIRenderer } from '../../../bloombeasts/ui';
+import { BloomBeastsGame, type PlayerData } from '../../../bloombeasts/ui/screens';
 
-// Still need Horizon core for platform-specific features
-import * as hz from 'horizon/core';
-import type { Player } from 'horizon/core';
+// Import game manager
+import { GameManager } from '../../../bloombeasts/gameManager';
 
-// Import platform adapter and types
-import { HorizonPlatform } from './BloomBeasts-GamePlatform';
-import type * as BB from './BloomBeasts-Types';
-
-// Set platform to Horizon
-setPlatform(Platform.horizon);
+// Set platform to Web
+setPlatform(Platform.web);
 
 /**
- * Horizon-specific wrapper for the unified BloomBeasts game
- * This thin wrapper handles Horizon-specific initialization and asset management
+ * Web platform wrapper for the unified BloomBeasts game
+ * This handles canvas rendering and web-specific initialization
  */
-class BloomBeastsUI extends UIComponent {
-  // Panel dimensions
-  panelWidth: number = 1280;
-  panelHeight: number = 720;
+export class BloomBeastsWebGame {
+  // Canvas and renderer
+  private canvas: HTMLCanvasElement;
+  private renderer: UIRenderer;
 
   // Game instance
   private game: BloomBeastsGame;
   private playerData = new Binding<PlayerData | null>(null);
 
-  // Platform adapter for persistent storage
-  private platform: HorizonPlatform | null = null;
-  private gameManager: any = null;
+  // Game manager
+  private gameManager: GameManager | null = null;
 
-  // Horizon-specific props for assets
-  // You can add asset definitions here if needed
-  static propsDefinition = createPropsFromAssetList([
-    // UI Elements (if using horizon-specific assets)
-    'img_Background',
-    'img_Menu',
-    'img_CardsContainer',
-    'img_MissionContainer',
-    'img_Playboard',
-  ]);
+  constructor(canvas: HTMLCanvasElement) {
+    this.canvas = canvas;
 
-  constructor() {
-    super();
+    // Initialize renderer
+    this.renderer = new UIRenderer(canvas);
 
     // Initialize the unified game
     this.game = new BloomBeastsGame({
@@ -58,43 +44,35 @@ class BloomBeastsUI extends UIComponent {
       onSettingsChange: this.handleSettingsChange.bind(this),
       onBattleAction: this.handleBattleAction.bind(this)
     });
+
+    // Subscribe to player data changes to trigger re-renders
+    this.playerData.subscribe(() => {
+      this.render();
+    });
   }
 
   /**
-   * Horizon lifecycle - called when component starts
+   * Initialize the game
    */
-  async start() {
-    console.log('[Horizon] BloomBeasts UI starting...');
+  async initialize(): Promise<void> {
+    console.log('[Web] BloomBeasts Game initializing...');
 
-    // Initialize platform adapter
-    this.platform = new HorizonPlatform();
+    // Initialize game manager with web platform
+    this.gameManager = new GameManager();
+    await this.gameManager.initialize(null); // Web doesn't have platform adapter yet
 
-    // Load game manager if available
-    if (typeof GameManager !== 'undefined') {
-      const GM = await import('../../../bloombeasts/gameManager');
-      this.gameManager = new GM.GameManager();
-
-      // Initialize game manager
-      await this.gameManager.initialize(this.platform);
-
-      // Get initial data and set it
-      const initialData = await this.loadPlayerData();
-      if (initialData) {
-        this.playerData.set(initialData);
-      }
+    // Load initial data
+    const initialData = await this.loadPlayerData();
+    if (initialData) {
+      this.playerData.set(initialData);
     }
+
+    // Initial render
+    this.render();
   }
 
   /**
-   * Horizon UI initialization
-   * Returns the unified UI tree
-   */
-  initializeUI(): UINode<any> {
-    return this.game.createUI();
-  }
-
-  /**
-   * Load player data from platform
+   * Load player data from game manager
    */
   private async loadPlayerData(): Promise<PlayerData | null> {
     if (!this.gameManager) {
@@ -126,10 +104,21 @@ class BloomBeastsUI extends UIComponent {
   }
 
   /**
+   * Render the UI to canvas
+   */
+  private render(): void {
+    // Get the UI tree from the unified game
+    const uiTree = this.game.createUI();
+
+    // Render to canvas
+    this.renderer.render(uiTree);
+  }
+
+  /**
    * Handle button clicks from the unified UI
    */
   private async handleButtonClick(buttonId: string): Promise<void> {
-    console.log('[Horizon] Button clicked:', buttonId);
+    console.log('[Web] Button clicked:', buttonId);
 
     if (this.gameManager) {
       switch (buttonId) {
@@ -156,7 +145,7 @@ class BloomBeastsUI extends UIComponent {
    * Handle card selection
    */
   private async handleCardSelect(cardId: string): Promise<void> {
-    console.log('[Horizon] Card selected:', cardId);
+    console.log('[Web] Card selected:', cardId);
 
     if (this.gameManager) {
       await this.gameManager.toggleCardInDeck(cardId);
@@ -174,7 +163,7 @@ class BloomBeastsUI extends UIComponent {
    * Handle mission selection
    */
   private async handleMissionSelect(missionId: string): Promise<void> {
-    console.log('[Horizon] Mission selected:', missionId);
+    console.log('[Web] Mission selected:', missionId);
 
     if (this.gameManager) {
       const battle = await this.gameManager.startBattle(missionId);
@@ -196,7 +185,7 @@ class BloomBeastsUI extends UIComponent {
    * Handle settings change
    */
   private handleSettingsChange(settingId: string, value: any): void {
-    console.log('[Horizon] Settings changed:', settingId, value);
+    console.log('[Web] Settings changed:', settingId, value);
 
     if (this.gameManager?.soundManager) {
       if (settingId === 'reset') {
@@ -208,6 +197,9 @@ class BloomBeastsUI extends UIComponent {
         currentSettings[settingId] = value;
         this.gameManager.soundManager.updateSettings(currentSettings);
       }
+
+      // Save settings to localStorage
+      localStorage.setItem('bloombeasts_settings', JSON.stringify(this.gameManager.soundManager.getSettings()));
     }
   }
 
@@ -215,7 +207,7 @@ class BloomBeastsUI extends UIComponent {
    * Handle battle action
    */
   private async handleBattleAction(action: string): Promise<void> {
-    console.log('[Horizon] Battle action:', action);
+    console.log('[Web] Battle action:', action);
 
     if (this.gameManager) {
       // Handle battle actions
@@ -224,22 +216,41 @@ class BloomBeastsUI extends UIComponent {
   }
 
   /**
-   * Horizon lifecycle - cleanup
+   * Handle canvas resize
    */
-  dispose() {
-    console.log('[Horizon] BloomBeasts UI disposing...');
+  resize(width: number, height: number): void {
+    this.canvas.width = width;
+    this.canvas.height = height;
+    this.render();
+  }
+
+  /**
+   * Cleanup
+   */
+  dispose(): void {
+    console.log('[Web] BloomBeasts Game disposing...');
     this.game.dispose();
+    this.renderer.dispose();
   }
 }
 
-// Helper function to create props from asset list
-function createPropsFromAssetList(assetList: string[]): any {
-  const props: any = {};
-  for (const asset of assetList) {
-    props[asset] = { type: hz.PropTypes.Asset };
+/**
+ * Helper function to create and initialize the game
+ */
+export function createWebGame(canvasId: string): BloomBeastsWebGame | null {
+  const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+  if (!canvas) {
+    console.error(`Canvas with id '${canvasId}' not found`);
+    return null;
   }
-  return props;
-}
 
-// Register the component with Horizon
-UIComponent.register(BloomBeastsUI);
+  const game = new BloomBeastsWebGame(canvas);
+  game.initialize();
+
+  // Handle window resize
+  window.addEventListener('resize', () => {
+    game.resize(window.innerWidth, window.innerHeight);
+  });
+
+  return game;
+}

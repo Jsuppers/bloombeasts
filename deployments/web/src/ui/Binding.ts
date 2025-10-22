@@ -81,6 +81,13 @@ export class Binding<T> extends ValueBindingBase<T> {
         return this._value;
     }
 
+
+    /**
+     * Getter for accessing value directly (compatibility with unified system)
+     */
+    get value(): T {
+        return this._value;
+    }
     /**
      * Reset player-specific values back to global value
      */
@@ -303,6 +310,11 @@ export type Bindable<T> = T | ValueBindingBase<T>;
  * Extract the actual value from a Bindable
  */
 export function resolveBindable<T>(bindable: Bindable<T>, playerId?: string): T {
+    // Check for .get method (works with both direct instances and Proxy wrappers)
+    if (bindable && typeof (bindable as any).get === 'function') {
+        return (bindable as ValueBindingBase<T>).get(playerId);
+    }
+    // Also keep instanceof check for direct instances
     if (bindable instanceof ValueBindingBase) {
         return bindable.get(playerId);
     }
