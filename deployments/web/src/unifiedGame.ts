@@ -30,12 +30,17 @@ export class BloomBeastsWebGame {
 
     this.renderer = new UIRenderer(canvas, ctx);
     this.assetLoader = new AssetLoader();
-    
+
     const platformCallbacks: PlatformCallbacks = {
       setPlayerData: (data: any) => { if (this.playerData) this.playerData.set(data); },
       renderStartMenu: () => {},
       renderMissionSelect: () => {},
-      renderCards: () => {},
+      renderCards: (cards: any[], deckSize: number, deckCardIds: string[], stats: any) => {
+        console.log('[Platform] renderCards called with', cards.length, 'cards');
+        // Store captured data on the instance
+        (this as any).capturedCards = cards;
+        (this as any).capturedDeckIds = deckCardIds;
+      },
       renderBattle: () => {},
       renderSettings: () => {},
       renderCardDetail: () => {},
@@ -73,7 +78,14 @@ export class BloomBeastsWebGame {
     // Create UI tree once
     this.uiTree = this.game.createUI();
 
-    this.playerData.subscribe(() => this.render());
+    this.playerData.subscribe(async () => {
+      // Load card images when player data changes
+      const data = this.playerData.get();
+      if (data && data.cards && data.cards.collected) {
+        await this.loadCardImages(data.cards.collected);
+      }
+      this.render();
+    });
   }
 
   async initialize(): Promise<void> {
@@ -96,6 +108,11 @@ export class BloomBeastsWebGame {
     const initialData = await this.loadPlayerData();
     console.log('[WebGame] Initial player data:', initialData);
     if (initialData) {
+      // Load card images before setting player data
+      if (initialData.cards && initialData.cards.collected) {
+        console.log('[WebGame] Loading initial card images...');
+        await this.loadCardImages(initialData.cards.collected);
+      }
       this.playerData.set(initialData);
     }
     // Initial render
@@ -105,28 +122,23 @@ export class BloomBeastsWebGame {
   }
 
   private async loadPlayerData(): Promise<PlayerData | null> {
-    // Create starter deck cards
-    const starterCards = [
-      { id: 'card1', name: 'Forest Wolf', type: 'Beast', level: 1, attack: 3, health: 2, cost: 1, affinity: 'forest' },
-      { id: 'card2', name: 'Sky Eagle', type: 'Beast', level: 1, attack: 2, health: 3, cost: 1, affinity: 'sky' },
-      { id: 'card3', name: 'Fire Fox', type: 'Beast', level: 1, attack: 4, health: 1, cost: 1, affinity: 'fire' },
-      { id: 'card4', name: 'Water Turtle', type: 'Beast', level: 1, attack: 1, health: 4, cost: 1, affinity: 'water' },
-      { id: 'card5', name: 'Rock Bear', type: 'Beast', level: 1, attack: 3, health: 3, cost: 2, affinity: 'neutral' },
-      { id: 'card6', name: 'Leaf Sprite', type: 'Beast', level: 1, attack: 2, health: 2, cost: 1, affinity: 'forest' },
-      { id: 'card7', name: 'Storm Hawk', type: 'Beast', level: 1, attack: 3, health: 2, cost: 2, affinity: 'sky' },
-      { id: 'card8', name: 'Flame Cat', type: 'Beast', level: 1, attack: 2, health: 2, cost: 1, affinity: 'fire' },
-      { id: 'card9', name: 'Coral Fish', type: 'Beast', level: 1, attack: 2, health: 3, cost: 2, affinity: 'water' },
-      { id: 'card10', name: 'Stone Golem', type: 'Beast', level: 2, attack: 4, health: 4, cost: 3, affinity: 'neutral' },
-    ];
+    // After GameManager.initialize(), trigger showCards() to populate the renderCards callback
+    if (!this.gameManager) return null;
 
-    // Put first 5 in deck, all in collection
-    const deckIds = starterCards.slice(0, 5).map(c => c.id);
+    // Trigger showCards() to call renderCards callback with the starter deck
+    await this.gameManager.showCards();
+
+    // Get the captured data from the renderCards callback
+    const capturedCards = (this as any).capturedCards || [];
+    const capturedDeckIds = (this as any).capturedDeckIds || [];
+
+    console.log('[WebGame] Loaded from GameManager:', capturedCards.length, 'cards,', capturedDeckIds.length, 'in deck');
 
     return {
-      currentScreen: 'menu',
+      currentScreen: 'cards',
       cards: {
-        collected: starterCards as any,
-        deck: deckIds
+        collected: capturedCards,
+        deck: capturedDeckIds
       },
       missions: [],
       stats: { playerLevel: 1, totalXP: 0, tokens: 100, diamonds: 10, serums: 5 },
@@ -140,6 +152,110 @@ export class BloomBeastsWebGame {
         sfxVolume: 80
       } as SoundSettings
     };
+  }
+
+  private async loadCardImages(cards: any[]): Promise<void> {
+    console.log('[WebGame] Loading card images for', cards.length, 'cards');
+
+    // Load base card templates (shared across cards)
+    if (!this.assetLoader.hasImage('baseCard')) {
+      await this.assetLoader.loadBaseCardImage();
+      const baseCard = this.assetLoader.getImage('basecard');
+      if (baseCard) {
+        this.renderer.setImage('baseCard', baseCard);
+        console.log('✓ Loaded base card template');
+      }
+    }
+
+    // Load affinity icons
+    const affinities = ['Forest', 'Water', 'Fire', 'Sky'];
+    for (const affinity of affinities) {
+      const affinityKey = `affinity-${affinity}`;
+      if (!this.assetLoader.hasImage(affinityKey)) {
+        await this.assetLoader.loadAffinityIcon(affinity);
+        const affinityIcon = this.assetLoader.getImage(affinityKey);
+        if (affinityIcon) {
+          this.renderer.setImage(affinityKey, affinityIcon);
+          console.log(`✓ Loaded ${affinity} affinity icon`);
+        }
+      }
+    }
+
+    // Load card-type templates (Magic, Trap, Buff) - one-time load
+    const cardTypes = ['Magic', 'Trap', 'Buff'];
+    for (const cardType of cardTypes) {
+      const templateKey = `${cardType.toLowerCase()}Card`;
+      if (!this.assetLoader.hasImage(templateKey)) {
+        const loadMethod = `load${cardType}CardTemplate` as keyof typeof this.assetLoader;
+        if (typeof this.assetLoader[loadMethod] === 'function') {
+          try {
+            await (this.assetLoader[loadMethod] as any)();
+            const cacheKey = `${cardType.toLowerCase()}-card-template`;
+            const template = this.assetLoader.getImage(cacheKey);
+            if (template) {
+              this.renderer.setImage(templateKey, template);
+              console.log(`✓ Loaded ${cardType} card template`);
+            }
+          } catch (error) {
+            console.warn(`Failed to load ${cardType} template:`, error);
+          }
+        }
+      }
+    }
+
+    // Load affinity-specific habitat templates (HabitatCard.png from affinity folders)
+    const habitatAffinities = ['Forest', 'Water', 'Fire', 'Sky'];
+    for (const habitatAffinity of habitatAffinities) {
+      // UI expects key like 'forest-habitat'
+      const templateKey = `${habitatAffinity.toLowerCase()}-habitat`;
+      if (!this.assetLoader.hasImage(templateKey)) {
+        try {
+          await this.assetLoader.loadHabitatCardTemplate(habitatAffinity);
+          // AssetLoader stores it as 'habitat-card-template-{affinity}'
+          const cacheKey = `habitat-card-template-${habitatAffinity}`;
+          const template = this.assetLoader.getImage(cacheKey);
+          if (template) {
+            this.renderer.setImage(templateKey, template);
+            console.log(`✓ Loaded ${habitatAffinity} habitat card template (${cacheKey} -> ${templateKey})`);
+          }
+        } catch (error) {
+          console.warn(`Failed to load ${habitatAffinity} habitat template:`, error);
+        }
+      }
+    }
+
+    // Load each card's specific assets
+    for (const card of cards) {
+      const cardImageKey = `card-${card.name}`;
+      const beastImageKey = `beast-${card.name}`;
+
+      // Skip if already loaded
+      if (card.type === 'Bloom' && this.assetLoader.hasImage(beastImageKey)) {
+        continue;
+      }
+      if (card.type !== 'Bloom' && this.assetLoader.hasImage(cardImageKey)) {
+        continue;
+      }
+
+      // Load the card image based on card type and affinity
+      try {
+        const assets = await this.assetLoader.loadCardAssets(card, 'default');
+
+        // For Bloom cards, load the beast artwork
+        if (card.type === 'Bloom' && assets.mainImage) {
+          this.renderer.setImage(beastImageKey, assets.mainImage);
+          console.log(`✓ Loaded beast image: ${beastImageKey}`);
+        }
+
+        // For Magic/Trap/Buff/Habitat cards, load the card artwork
+        if (card.type !== 'Bloom' && assets.mainImage) {
+          this.renderer.setImage(cardImageKey, assets.mainImage);
+          console.log(`✓ Loaded card image: ${cardImageKey}`);
+        }
+      } catch (error) {
+        console.warn(`Failed to load card image for ${card.name}:`, error);
+      }
+    }
   }
 
   private render(): void {

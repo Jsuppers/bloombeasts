@@ -13,6 +13,7 @@ import { deckEmoji } from '../../../shared/constants/emojis';
 import type { CardDisplay, MenuStats } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu, createTextRow } from './common/SideMenu';
+import { createCardComponent, CARD_DIMENSIONS } from './common/CardRenderer';
 
 export interface CardsScreenProps {
   cards: any;
@@ -130,91 +131,96 @@ export class CardsScreen {
             left: 0,
           },
         }),
+        // Cards Container image as background
+        Image({
+          source: new Binding({ uri: 'cardsContainer' }),
+          style: {
+            position: 'absolute',
+            left: 40,
+            top: 40,
+            width: 980,
+            height: 640,
+          },
+        }),
         // Main content - card grid
         View({
           style: {
             position: 'absolute',
-            width: 1000,
-            height: '100%',
-            padding: 40,
+            left: 70,
+            top: 70,
+            width: 920,
+            height: 580,
           },
-          children: [
-            View({
-              style: {
-                padding: 30,
-                backgroundColor: COLORS.cardBackground,
-                borderRadius: 10,
-                borderWidth: 2,
-                borderColor: COLORS.borderDefault,
-                flex: 1,
-              },
-              children: Binding.derive(
-                [this.cards, this.scrollOffset, this.deckCardIds],
-                (cards: CardDisplay[], offset: number, deckIds: string[]) => {
-                  if (cards.length === 0) {
-                    return [
-                      View({
-                        style: {
-                          flex: 1,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        },
-                        children: Text({
-                          text: new Binding('No cards yet.'),
-                          style: {
-                            fontSize: DIMENSIONS.fontSize.xl,
-                            color: COLORS.textSecondary,
-                          },
-                        }),
-                      }),
-                    ];
-                  }
+          children: Binding.derive(
+            [this.cards, this.scrollOffset, this.deckCardIds],
+            (cards: CardDisplay[], offset: number, deckIds: string[]) => {
+              if (cards.length === 0) {
+                return [
+                  View({
+                    style: {
+                      flex: 1,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    },
+                    children: Text({
+                      text: new Binding('No cards in your collection yet.'),
+                      style: {
+                        fontSize: DIMENSIONS.fontSize.xl,
+                        color: COLORS.textPrimary,
+                      },
+                    }),
+                  }),
+                ];
+              }
 
-                  // Create card grid inline for reactivity
-                  const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-                  const startIndex = offset * cardsPerPage;
-                  const endIndex = Math.min(startIndex + cardsPerPage, cards.length);
-                  const visibleCards = cards.slice(startIndex, endIndex);
+              // Create card grid inline for reactivity
+              const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+              const startIndex = offset * cardsPerPage;
+              const endIndex = Math.min(startIndex + cardsPerPage, cards.length);
+              const visibleCards = cards.slice(startIndex, endIndex);
 
-                  const rows: UINodeType[] = [];
-                  for (let row = 0; row < this.rowsPerPage; row++) {
-                    const rowCards = visibleCards.slice(
-                      row * this.cardsPerRow,
-                      (row + 1) * this.cardsPerRow
-                    );
+              const rows: UINodeType[] = [];
+              for (let row = 0; row < this.rowsPerPage; row++) {
+                const rowCards = visibleCards.slice(
+                  row * this.cardsPerRow,
+                  (row + 1) * this.cardsPerRow
+                );
 
-                    if (rowCards.length > 0) {
-                      rows.push(
-                        View({
-                          style: {
-                            flexDirection: 'row',
-                            marginBottom: row < this.rowsPerPage - 1 ? GAPS.cards : 0,
-                          },
-                          children: rowCards.map((card: CardDisplay, index: number) =>
-                            View({
-                              style: {
-                                marginRight: index < rowCards.length - 1 ? GAPS.cards : 0,
-                              },
-                              children: this.createCardItem(card, deckIds.includes(card.id)),
-                            })
-                          ),
-                        })
-                      );
-                    }
-                  }
-
-                  return [
+                if (rowCards.length > 0) {
+                  rows.push(
                     View({
                       style: {
-                        flexDirection: 'column',
+                        flexDirection: 'row',
+                        marginBottom: row < this.rowsPerPage - 1 ? GAPS.cards : 0,
                       },
-                      children: rows,
+                      children: rowCards.map((card: CardDisplay, index: number) =>
+                        View({
+                          style: {
+                            marginRight: index < rowCards.length - 1 ? GAPS.cards : 0,
+                          },
+                          children: createCardComponent({
+                            card,
+                            isInDeck: deckIds.includes(card.id),
+                            onClick: this.onCardSelect ? (cardId: string) => this.onCardSelect!(cardId) : undefined,
+                            showDeckIndicator: true,
+                          }),
+                        })
+                      ),
                     })
-                  ];
+                  );
                 }
-              ) as any,
-            }),
-          ],
+              }
+
+              return [
+                View({
+                  style: {
+                    flexDirection: 'column',
+                  },
+                  children: rows,
+                })
+              ];
+            }
+          ) as any,
         }),
         // Sidebar with common side menu
         createSideMenu({
@@ -231,53 +237,6 @@ export class CardsScreen {
             disabled: false,
           },
           stats: this.stats,
-        }),
-      ],
-    });
-  }
-
-  private createCardItem(card: CardDisplay, isInDeck: boolean): UINodeType {
-    return Pressable({
-      onClick: () => {
-        if (this.onCardSelect) this.onCardSelect(card.id);
-      },
-      style: {
-        width: 120,
-        height: 160,
-        backgroundColor: COLORS.panelBackground,
-        borderRadius: 8,
-        borderWidth: isInDeck ? 3 : 2,
-        borderColor: isInDeck ? COLORS.borderSuccess : COLORS.borderDefault,
-        padding: 8,
-        position: 'relative',
-      },
-      children: [
-        View({
-          style: {
-            width: '100%',
-            height: 100,
-            backgroundColor: '#3a3a4e',
-            borderRadius: 4,
-            marginBottom: 8,
-            justifyContent: 'center',
-            alignItems: 'center',
-          },
-          children: Text({
-            text: new Binding(card.type),
-            style: {
-              fontSize: DIMENSIONS.fontSize.sm,
-              color: COLORS.textSecondary,
-            },
-          }),
-        }),
-        Text({
-          text: new Binding(card.name),
-          numberOfLines: 2,
-          style: {
-            fontSize: DIMENSIONS.fontSize.sm,
-            color: COLORS.textPrimary,
-            textAlign: 'center',
-          },
         }),
       ],
     });

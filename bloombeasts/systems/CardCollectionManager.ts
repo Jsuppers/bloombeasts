@@ -115,7 +115,7 @@ export class CardCollectionManager {
         break;
       case 'Habitat':
       case 'Buff':
-        this.addHabitatBuffCardFields(displayCard, cardDef);
+        this.addHabitatBuffCardFields(displayCard, cardDef, card);
         break;
     }
   }
@@ -139,10 +139,15 @@ export class CardCollectionManager {
    * Add Trap-specific fields to card display
    */
   private addTrapCardFields(displayCard: CardDisplay, card: CardInstance, cardDef: any): void {
-    // Include full structured effect data for description generation
+    // First try to use full structured effect data from card definition
     if (cardDef) {
       displayCard.effects = cardDef.effects;
       displayCard.activation = cardDef.activation;
+    }
+
+    // If no structured effects but we have simplified descriptions, use those
+    if ((!displayCard.effects || displayCard.effects.length === 0) && card.effects && card.effects.length > 0) {
+      displayCard.effects = card.effects.map(desc => ({ description: desc }));
     }
   }
 
@@ -157,16 +162,28 @@ export class CardCollectionManager {
     if (cardDef) {
       displayCard.effects = (cardDef as any).effects;
     }
+
+    // If no structured effects but we have simplified descriptions, use those
+    if ((!displayCard.effects || displayCard.effects.length === 0) && card.effects && card.effects.length > 0) {
+      displayCard.effects = card.effects.map(desc => ({ description: desc }));
+    }
   }
 
   /**
    * Add Habitat/Buff-specific fields to card display
    */
-  private addHabitatBuffCardFields(displayCard: CardDisplay, cardDef: any): void {
+  private addHabitatBuffCardFields(displayCard: CardDisplay, cardDef: any, card?: CardInstance): void {
     // Include full structured effect data for description generation
     if (cardDef) {
       displayCard.ongoingEffects = cardDef.ongoingEffects;
       displayCard.onPlayEffects = cardDef.onPlayEffects;
+    }
+
+    // If no structured effects but we have simplified descriptions, use those
+    if (card && card.effects && card.effects.length > 0) {
+      if (!displayCard.ongoingEffects || displayCard.ongoingEffects.length === 0) {
+        displayCard.ongoingEffects = card.effects.map(desc => ({ description: desc }));
+      }
     }
   }
 
@@ -500,9 +517,28 @@ export class CardCollectionManager {
       case 'Habitat':
         descriptions = this.getHabitatCardDescriptions(card, cardDef);
         break;
+      case 'Buff':
+        descriptions = this.getBuffCardDescriptions(card, cardDef);
+        break;
     }
 
     return descriptions.length > 0 ? descriptions : ['Special card'];
+  }
+
+  /**
+   * Get descriptions for Buff card effects
+   */
+  private getBuffCardDescriptions(card: any, cardDef: any): string[] {
+    const descriptions: string[] = [];
+
+    if (card.onPlayEffects || cardDef?.onPlayEffects) {
+      descriptions.push('On Play: Immediate effect');
+    }
+    if (card.ongoingEffects || cardDef?.ongoingEffects) {
+      descriptions.push('Ongoing: Field-wide bonus');
+    }
+
+    return descriptions;
   }
 
   /**
