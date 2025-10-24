@@ -30,7 +30,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Magic/AetherSwap.png"
+          "path": "assets/images/cards_magic_aether-swap.png"
         }
       ]
     },
@@ -66,7 +66,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Magic/CleansingDownpour.png"
+          "path": "assets/images/cards_magic_cleansing-downpour.png"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Magic/ElementalBurst.png"
+          "path": "assets/images/cards_magic_elemental-burst.png"
         }
       ]
     },
@@ -131,7 +131,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Magic/LightningStrike.png"
+          "path": "assets/images/cards_magic_lightning-strike.png"
         }
       ]
     },
@@ -165,7 +165,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Magic/NectarBlock.png"
+          "path": "assets/images/cards_magic_nectar-block.png"
         }
       ]
     },
@@ -204,7 +204,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Magic/NectarDrain.png"
+          "path": "assets/images/cards_magic_nectar-drain.png"
         }
       ]
     },
@@ -243,7 +243,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Magic/NectarSurge.png"
+          "path": "assets/images/cards_magic_nectar-surge.png"
         }
       ]
     },
@@ -277,7 +277,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Magic/Overgrowth.png"
+          "path": "assets/images/cards_magic_overgrowth.png"
         }
       ]
     },
@@ -311,7 +311,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Magic/PowerUp.png"
+          "path": "assets/images/cards_magic_power-up.png"
         }
       ]
     },
@@ -342,7 +342,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Magic/Purify.png"
+          "path": "assets/images/cards_magic_purify.png"
         }
       ]
     }

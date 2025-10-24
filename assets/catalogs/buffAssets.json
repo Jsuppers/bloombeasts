@@ -32,7 +32,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Buff/BattleFury.png"
+          "path": "assets/images/cards_buff_battle-fury.png"
         }
       ]
     },
@@ -65,7 +65,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Buff/MysticShield.png"
+          "path": "assets/images/cards_buff_mystic-shield.png"
         }
       ]
     },
@@ -98,7 +98,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Buff/NaturesBlessing.png"
+          "path": "assets/images/cards_buff_natures-blessing.png"
         }
       ]
     },
@@ -132,7 +132,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Buff/SwiftWind.png"
+          "path": "assets/images/cards_buff_swift-wind.png"
         }
       ]
     }

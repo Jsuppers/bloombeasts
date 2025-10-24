@@ -13,7 +13,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/Background.png"
+          "path": "assets/images/bg_background.png"
         }
       ]
     },
@@ -27,7 +27,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/Menu.png"
+          "path": "assets/images/misc_menu.png"
         }
       ]
     },
@@ -41,7 +41,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/Playboard.png"
+          "path": "assets/images/misc_playboard.png"
         }
       ]
     },
@@ -55,7 +55,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/CardsContainer.png"
+          "path": "assets/images/misc_cards-container.png"
         }
       ]
     },
@@ -69,7 +69,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/MissionContainer.png"
+          "path": "assets/images/misc_mission-container.png"
         }
       ]
     },
@@ -83,7 +83,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/StandardButton.png"
+          "path": "assets/images/misc_standard-button.png"
         }
       ]
     },
@@ -97,7 +97,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/GreenButton.png"
+          "path": "assets/images/misc_green-button.png"
         }
       ]
     },
@@ -111,7 +111,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/RedButton.png"
+          "path": "assets/images/misc_red-button.png"
         }
       ]
     },
@@ -125,7 +125,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/LongGreenButton.png"
+          "path": "assets/images/misc_long-green-button.png"
         }
       ]
     },
@@ -139,7 +139,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/SideMenu.png"
+          "path": "assets/images/misc_side-menu.png"
         }
       ]
     },
@@ -153,7 +153,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/ExperienceBar.png"
+          "path": "assets/images/cards_experience-bar.png"
         }
       ]
     },
@@ -167,7 +167,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/BaseCard.png"
+          "path": "assets/images/cards_base-card.png"
         }
       ]
     },
@@ -181,7 +181,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/MagicCard.png"
+          "path": "assets/images/cards_magic-card.png"
         }
       ]
     },
@@ -195,7 +195,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/MagicCardPlayboard.png"
+          "path": "assets/images/cards_magic-card-playboard.png"
         }
       ]
     },
@@ -209,7 +209,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/TrapCard.png"
+          "path": "assets/images/cards_trap-card.png"
         }
       ]
     },
@@ -223,7 +223,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/TrapCardPlayboard.png"
+          "path": "assets/images/cards_trap-card-playboard.png"
         }
       ]
     },
@@ -237,7 +237,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/BuffCard.png"
+          "path": "assets/images/cards_buff-card.png"
         }
       ]
     },
@@ -251,7 +251,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/BuffCardPlayboard.png"
+          "path": "assets/images/cards_buff-card-playboard.png"
         }
       ]
     },
@@ -265,7 +265,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/menu/Frame1.png"
+          "path": "assets/images/menu_frame-1.png"
         }
       ]
     },
@@ -279,7 +279,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/menu/Frame2.png"
+          "path": "assets/images/menu_frame-2.png"
         }
       ]
     },
@@ -293,7 +293,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/menu/Frame3.png"
+          "path": "assets/images/menu_frame-3.png"
         }
       ]
     },
@@ -307,7 +307,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/menu/Frame4.png"
+          "path": "assets/images/menu_frame-4.png"
         }
       ]
     },
@@ -321,7 +321,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/menu/Frame5.png"
+          "path": "assets/images/menu_frame-5.png"
         }
       ]
     },
@@ -335,7 +335,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/menu/Frame6.png"
+          "path": "assets/images/menu_frame-6.png"
         }
       ]
     },
@@ -349,7 +349,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/menu/Frame7.png"
+          "path": "assets/images/menu_frame-7.png"
         }
       ]
     },
@@ -363,7 +363,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/menu/Frame8.png"
+          "path": "assets/images/menu_frame-8.png"
         }
       ]
     },
@@ -377,7 +377,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/menu/Frame9.png"
+          "path": "assets/images/menu_frame-9.png"
         }
       ]
     },
@@ -391,7 +391,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/menu/Frame10.png"
+          "path": "assets/images/menu_frame-10.png"
         }
       ]
     },
@@ -405,7 +405,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/icons/ability.png"
+          "path": "assets/images/icon_ability.png"
         }
       ]
     },
@@ -419,7 +419,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/icons/attack.png"
+          "path": "assets/images/icon_attack.png"
         }
       ]
     },
@@ -433,7 +433,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/LoseImage.png"
+          "path": "assets/images/misc_lose-image.png"
         }
       ]
     },
@@ -448,7 +448,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/BossMission.png"
+          "path": "assets/images/cards_boss-mission.png"
         }
       ]
     },
@@ -462,12 +462,12 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/TheBloomMaster.png"
+          "path": "assets/images/cards_the-bloom-master.png"
         }
       ]
     },
     {
-      "id": "menu-button-select",
+      "id": "sfx-menu-button-select",
       "type": "ui",
       "category": "other",
       "name": "Menu Button Select SFX",
@@ -476,12 +476,12 @@
         {
           "type": "audio",
           "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
-          "path": "shared/audio/sfx/menuButtonSelect.wav"
+          "path": "assets/audio/sfx_menu-button-select.wav"
         }
       ]
     },
     {
-      "id": "play-card",
+      "id": "sfx-play-card",
       "type": "ui",
       "category": "other",
       "name": "Play Card SFX",
@@ -490,12 +490,12 @@
         {
           "type": "audio",
           "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
-          "path": "shared/audio/sfx/playCard.wav"
+          "path": "assets/audio/sfx_play-card.wav"
         }
       ]
     },
     {
-      "id": "attack-sfx",
+      "id": "sfx-attack",
       "type": "ui",
       "category": "other",
       "name": "Attack SFX",
@@ -504,12 +504,12 @@
         {
           "type": "audio",
           "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
-          "path": "shared/audio/sfx/attack.wav"
+          "path": "assets/audio/sfx_attack.wav"
         }
       ]
     },
     {
-      "id": "trap-activated",
+      "id": "sfx-trap-card-activated",
       "type": "ui",
       "category": "other",
       "name": "Trap Activated SFX",
@@ -518,12 +518,12 @@
         {
           "type": "audio",
           "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
-          "path": "shared/audio/sfx/trapCardActivated.wav"
+          "path": "assets/audio/sfx_trap-card-activated.wav"
         }
       ]
     },
     {
-      "id": "low-health",
+      "id": "sfx-low-health",
       "type": "ui",
       "category": "other",
       "name": "Low Health SFX",
@@ -532,12 +532,12 @@
         {
           "type": "audio",
           "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
-          "path": "shared/audio/sfx/lowHealthSound.wav"
+          "path": "assets/audio/sfx_low-health.wav"
         }
       ]
     },
     {
-      "id": "win-sfx",
+      "id": "sfx-win",
       "type": "ui",
       "category": "other",
       "name": "Win SFX",
@@ -546,12 +546,12 @@
         {
           "type": "audio",
           "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
-          "path": "shared/audio/sfx/win.wav"
+          "path": "assets/audio/sfx_win.wav"
         }
       ]
     },
     {
-      "id": "lose-sfx",
+      "id": "sfx-lose",
       "type": "ui",
       "category": "other",
       "name": "Lose SFX",
@@ -560,12 +560,12 @@
         {
           "type": "audio",
           "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
-          "path": "shared/audio/sfx/lose.wav"
+          "path": "assets/audio/sfx_lose.wav"
         }
       ]
     },
     {
-      "id": "background-music",
+      "id": "music-background",
       "type": "ui",
       "category": "other",
       "name": "Background Music",
@@ -574,12 +574,12 @@
         {
           "type": "audio",
           "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
-          "path": "shared/audio/BackgroundMusic.mp3"
+          "path": "assets/audio/music_background.mp3"
         }
       ]
     },
     {
-      "id": "battle-music",
+      "id": "music-battle",
       "type": "ui",
       "category": "other",
       "name": "Battle Music",
@@ -588,7 +588,7 @@
         {
           "type": "audio",
           "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
-          "path": "shared/audio/BattleMusic.mp3"
+          "path": "assets/audio/music_battle.mp3"
         }
       ]
     }

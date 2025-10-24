@@ -37,15 +37,42 @@
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 1, "atk": 0 },
-            "3": { "hp": 3, "atk": 0 },
-            "4": { "hp": 4, "atk": 1 },
-            "5": { "hp": 6, "atk": 2 },
-            "6": { "hp": 7, "atk": 3 },
-            "7": { "hp": 9, "atk": 4 },
-            "8": { "hp": 10, "atk": 5 },
-            "9": { "hp": 12, "atk": 6 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 1,
+              "atk": 0
+            },
+            "3": {
+              "hp": 3,
+              "atk": 0
+            },
+            "4": {
+              "hp": 4,
+              "atk": 1
+            },
+            "5": {
+              "hp": 6,
+              "atk": 2
+            },
+            "6": {
+              "hp": 7,
+              "atk": 3
+            },
+            "7": {
+              "hp": 9,
+              "atk": 4
+            },
+            "8": {
+              "hp": 10,
+              "atk": 5
+            },
+            "9": {
+              "hp": 12,
+              "atk": 6
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -123,7 +150,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Water/AquaPebble.png"
+          "path": "assets/images/cards_water_aqua-pebble.png"
         }
       ]
     },
@@ -148,22 +175,51 @@
               {
                 "type": "CannotBeTargeted",
                 "target": "Self",
-                "by": ["trap"]
+                "by": [
+                  "trap"
+                ]
               }
             ]
           }
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 2, "atk": 0 },
-            "3": { "hp": 4, "atk": 0 },
-            "4": { "hp": 6, "atk": 1 },
-            "5": { "hp": 8, "atk": 2 },
-            "6": { "hp": 10, "atk": 3 },
-            "7": { "hp": 12, "atk": 4 },
-            "8": { "hp": 14, "atk": 5 },
-            "9": { "hp": 16, "atk": 6 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 2,
+              "atk": 0
+            },
+            "3": {
+              "hp": 4,
+              "atk": 0
+            },
+            "4": {
+              "hp": 6,
+              "atk": 1
+            },
+            "5": {
+              "hp": 8,
+              "atk": 2
+            },
+            "6": {
+              "hp": 10,
+              "atk": 3
+            },
+            "7": {
+              "hp": 12,
+              "atk": 4
+            },
+            "8": {
+              "hp": 14,
+              "atk": 5
+            },
+            "9": {
+              "hp": 16,
+              "atk": 6
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -192,7 +248,10 @@
                     {
                       "type": "CannotBeTargeted",
                       "target": "Self",
-                      "by": ["trap", "magic"]
+                      "by": [
+                        "trap",
+                        "magic"
+                      ]
                     }
                   ]
                 }
@@ -207,7 +266,11 @@
                     {
                       "type": "CannotBeTargeted",
                       "target": "Self",
-                      "by": ["magic", "trap", "abilities"]
+                      "by": [
+                        "magic",
+                        "trap",
+                        "abilities"
+                      ]
                     }
                   ]
                 },
@@ -238,7 +301,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Water/Bubblefin.png"
+          "path": "assets/images/cards_water_bubblefin.png"
         }
       ]
     },
@@ -275,15 +338,42 @@
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 1, "atk": 1 },
-            "3": { "hp": 2, "atk": 2 },
-            "4": { "hp": 4, "atk": 3 },
-            "5": { "hp": 6, "atk": 4 },
-            "6": { "hp": 8, "atk": 5 },
-            "7": { "hp": 10, "atk": 6 },
-            "8": { "hp": 12, "atk": 7 },
-            "9": { "hp": 14, "atk": 8 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 1,
+              "atk": 1
+            },
+            "3": {
+              "hp": 2,
+              "atk": 2
+            },
+            "4": {
+              "hp": 4,
+              "atk": 3
+            },
+            "5": {
+              "hp": 6,
+              "atk": 4
+            },
+            "6": {
+              "hp": 8,
+              "atk": 5
+            },
+            "7": {
+              "hp": 10,
+              "atk": 6
+            },
+            "8": {
+              "hp": 12,
+              "atk": 7
+            },
+            "9": {
+              "hp": 14,
+              "atk": 8
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -371,7 +461,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Water/DewdropDrake.png"
+          "path": "assets/images/cards_water_dewdrop-drake.png"
         }
       ]
     },
@@ -403,15 +493,42 @@
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 1, "atk": 1 },
-            "3": { "hp": 2, "atk": 2 },
-            "4": { "hp": 3, "atk": 3 },
-            "5": { "hp": 4, "atk": 4 },
-            "6": { "hp": 5, "atk": 5 },
-            "7": { "hp": 6, "atk": 6 },
-            "8": { "hp": 7, "atk": 7 },
-            "9": { "hp": 8, "atk": 8 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 1,
+              "atk": 1
+            },
+            "3": {
+              "hp": 2,
+              "atk": 2
+            },
+            "4": {
+              "hp": 3,
+              "atk": 3
+            },
+            "5": {
+              "hp": 4,
+              "atk": 4
+            },
+            "6": {
+              "hp": 5,
+              "atk": 5
+            },
+            "7": {
+              "hp": 6,
+              "atk": 6
+            },
+            "8": {
+              "hp": 7,
+              "atk": 7
+            },
+            "9": {
+              "hp": 8,
+              "atk": 8
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -443,7 +560,11 @@
                     {
                       "type": "Immunity",
                       "target": "Self",
-                      "immuneTo": ["Magic", "Trap", "Abilities"],
+                      "immuneTo": [
+                        "Magic",
+                        "Trap",
+                        "Abilities"
+                      ],
                       "duration": "WhileOnField"
                     }
                   ]
@@ -475,7 +596,11 @@
                     {
                       "type": "Immunity",
                       "target": "Self",
-                      "immuneTo": ["Damage", "Targeting", "NegativeEffects"],
+                      "immuneTo": [
+                        "Damage",
+                        "Targeting",
+                        "NegativeEffects"
+                      ],
                       "duration": "WhileOnField"
                     },
                     {
@@ -496,7 +621,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Water/KelpCub.png"
+          "path": "assets/images/cards_water_kelp-cub.png"
         }
       ]
     },
@@ -534,17 +659,17 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Water/DeepSeaGrotto.png"
+          "path": "assets/images/cards_water_deep-sea-grotto.png"
         },
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Water/HabitatCard.png"
+          "path": "assets/images/cards_water_habitat-card.png"
         },
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Water/HabitatCardPlayboard.png"
+          "path": "assets/images/cards_water_habitat-card-playboard.png"
         }
       ]
     },
@@ -559,7 +684,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Water/WaterMission.png"
+          "path": "assets/images/cards_water_water-mission.png"
         }
       ]
     },
@@ -572,7 +697,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/chests/WaterChestClosed.png"
+          "path": "assets/images/chest_water-chest-closed.png"
         }
       ]
     },
@@ -585,7 +710,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/chests/WaterChestOpened.png"
+          "path": "assets/images/chest_water-chest-opened.png"
         }
       ]
     },
@@ -598,7 +723,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/affinity/WaterIcon.png"
+          "path": "assets/images/affinity_water-icon.png"
         }
       ]
     },
@@ -612,7 +737,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Water/HabitatCard.png"
+          "path": "assets/images/cards_water_habitat-card.png"
         }
       ]
     }

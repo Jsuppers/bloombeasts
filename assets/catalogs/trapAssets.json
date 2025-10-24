@@ -33,7 +33,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Trap/BearTrap.png"
+          "path": "assets/images/cards_trap_bear-trap.png"
         }
       ]
     },
@@ -67,7 +67,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Trap/EmergencyBloom.png"
+          "path": "assets/images/cards_trap_emergency-bloom.png"
         }
       ]
     },
@@ -100,7 +100,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Trap/HabitatLock.png"
+          "path": "assets/images/cards_trap_habitat-lock.png"
         }
       ]
     },
@@ -138,7 +138,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Trap/HabitatShield.png"
+          "path": "assets/images/cards_trap_habitat-shield.png"
         }
       ]
     },
@@ -171,7 +171,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Trap/MagicSheild.png"
+          "path": "assets/images/cards_trap_magic-sheild.png"
         }
       ]
     },
@@ -210,7 +210,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Trap/ThornSnare.png"
+          "path": "assets/images/cards_trap_thorn-snare.png"
         }
       ]
     },
@@ -247,7 +247,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Trap/Vaporize.png"
+          "path": "assets/images/cards_trap_vaporize.png"
         }
       ]
     },
@@ -281,7 +281,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Trap/XPHarvest.png"
+          "path": "assets/images/cards_trap_xpharvest.png"
         }
       ]
     }

@@ -170,17 +170,3 @@ export function getAllDeckConfigs(): AffinityDeckConfig[] {
     habitats: resolveCardIds<HabitatCard>(configIds.habitats),
   }));
 }
-
-/**
- * Get deck configuration IDs (without resolving cards - safe to call before catalogs load)
- */
-export function getDeckConfigIds(affinity: AffinityType): AffinityDeckConfigIds {
-  return AFFINITY_DECK_CONFIG_IDS[affinity];
-}
-
-/**
- * Get all deck configuration IDs
- */
-export function getAllDeckConfigIds(): AffinityDeckConfigIds[] {
-  return Object.values(AFFINITY_DECK_CONFIG_IDS);
-}

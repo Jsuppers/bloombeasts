@@ -117,17 +117,17 @@ export function getAllImageAssetIds(): string[] {
  */
 export enum SoundAssetIds {
   // Music
-  BACKGROUND_MUSIC = 'background-music',
-  BATTLE_MUSIC = 'battle-music',
+  BACKGROUND_MUSIC = 'music-background',
+  BATTLE_MUSIC = 'music-battle',
 
   // SFX
-  MENU_BUTTON_SELECT = 'menu-button-select',
-  PLAY_CARD = 'play-card',
-  ATTACK = 'attack-sfx',
-  TRAP_ACTIVATED = 'trap-activated',
-  LOW_HEALTH = 'low-health',
-  WIN = 'win-sfx',
-  LOSE = 'lose-sfx',
+  MENU_BUTTON_SELECT = 'sfx-menu-button-select',
+  PLAY_CARD = 'sfx-play-card',
+  ATTACK = 'sfx-attack',
+  TRAP_ACTIVATED = 'sfx-trap-card-activated',
+  LOW_HEALTH = 'sfx-low-health',
+  WIN = 'sfx-win',
+  LOSE = 'sfx-lose',
 }
 
 /**

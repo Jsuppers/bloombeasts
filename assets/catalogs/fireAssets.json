@@ -30,15 +30,42 @@
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 0, "atk": 1 },
-            "3": { "hp": 0, "atk": 3 },
-            "4": { "hp": 1, "atk": 5 },
-            "5": { "hp": 1, "atk": 6 },
-            "6": { "hp": 2, "atk": 8 },
-            "7": { "hp": 2, "atk": 9 },
-            "8": { "hp": 3, "atk": 11 },
-            "9": { "hp": 3, "atk": 13 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 0,
+              "atk": 1
+            },
+            "3": {
+              "hp": 0,
+              "atk": 3
+            },
+            "4": {
+              "hp": 1,
+              "atk": 5
+            },
+            "5": {
+              "hp": 1,
+              "atk": 6
+            },
+            "6": {
+              "hp": 2,
+              "atk": 8
+            },
+            "7": {
+              "hp": 2,
+              "atk": 9
+            },
+            "8": {
+              "hp": 3,
+              "atk": 11
+            },
+            "9": {
+              "hp": 3,
+              "atk": 13
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -114,7 +141,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Fire/Blazefinch.png"
+          "path": "assets/images/cards_fire_blazefinch.png"
         }
       ]
     },
@@ -147,15 +174,42 @@
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 1, "atk": 1 },
-            "3": { "hp": 2, "atk": 2 },
-            "4": { "hp": 3, "atk": 3 },
-            "5": { "hp": 4, "atk": 4 },
-            "6": { "hp": 5, "atk": 5 },
-            "7": { "hp": 6, "atk": 6 },
-            "8": { "hp": 7, "atk": 7 },
-            "9": { "hp": 8, "atk": 8 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 1,
+              "atk": 1
+            },
+            "3": {
+              "hp": 2,
+              "atk": 2
+            },
+            "4": {
+              "hp": 3,
+              "atk": 3
+            },
+            "5": {
+              "hp": 4,
+              "atk": 4
+            },
+            "6": {
+              "hp": 5,
+              "atk": 5
+            },
+            "7": {
+              "hp": 6,
+              "atk": 6
+            },
+            "8": {
+              "hp": 7,
+              "atk": 7
+            },
+            "9": {
+              "hp": 8,
+              "atk": 8
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -234,7 +288,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Fire/CinderPup.png"
+          "path": "assets/images/cards_fire_cinder-pup.png"
         }
       ]
     },
@@ -266,15 +320,42 @@
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 1, "atk": 1 },
-            "3": { "hp": 2, "atk": 2 },
-            "4": { "hp": 4, "atk": 3 },
-            "5": { "hp": 5, "atk": 4 },
-            "6": { "hp": 6, "atk": 5 },
-            "7": { "hp": 8, "atk": 6 },
-            "8": { "hp": 9, "atk": 7 },
-            "9": { "hp": 11, "atk": 8 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 1,
+              "atk": 1
+            },
+            "3": {
+              "hp": 2,
+              "atk": 2
+            },
+            "4": {
+              "hp": 4,
+              "atk": 3
+            },
+            "5": {
+              "hp": 5,
+              "atk": 4
+            },
+            "6": {
+              "hp": 6,
+              "atk": 5
+            },
+            "7": {
+              "hp": 8,
+              "atk": 6
+            },
+            "8": {
+              "hp": 9,
+              "atk": 7
+            },
+            "9": {
+              "hp": 11,
+              "atk": 8
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -307,7 +388,10 @@
                     {
                       "type": "Immunity",
                       "target": "Self",
-                      "immuneTo": ["Magic", "Trap"],
+                      "immuneTo": [
+                        "Magic",
+                        "Trap"
+                      ],
                       "duration": "WhileOnField"
                     },
                     {
@@ -329,7 +413,10 @@
                     {
                       "type": "Immunity",
                       "target": "Self",
-                      "immuneTo": ["Magic", "Trap"],
+                      "immuneTo": [
+                        "Magic",
+                        "Trap"
+                      ],
                       "duration": "WhileOnField"
                     },
                     {
@@ -366,7 +453,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Fire/Charcoil.png"
+          "path": "assets/images/cards_fire_charcoil.png"
         }
       ]
     },
@@ -399,15 +486,42 @@
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 2, "atk": 1 },
-            "3": { "hp": 3, "atk": 2 },
-            "4": { "hp": 5, "atk": 3 },
-            "5": { "hp": 7, "atk": 4 },
-            "6": { "hp": 9, "atk": 5 },
-            "7": { "hp": 11, "atk": 6 },
-            "8": { "hp": 13, "atk": 7 },
-            "9": { "hp": 15, "atk": 9 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 2,
+              "atk": 1
+            },
+            "3": {
+              "hp": 3,
+              "atk": 2
+            },
+            "4": {
+              "hp": 5,
+              "atk": 3
+            },
+            "5": {
+              "hp": 7,
+              "atk": 4
+            },
+            "6": {
+              "hp": 9,
+              "atk": 5
+            },
+            "7": {
+              "hp": 11,
+              "atk": 6
+            },
+            "8": {
+              "hp": 13,
+              "atk": 7
+            },
+            "9": {
+              "hp": 15,
+              "atk": 9
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -494,7 +608,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Fire/Magmite.png"
+          "path": "assets/images/cards_fire_magmite.png"
         }
       ]
     },
@@ -530,17 +644,17 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Fire/VolcanicScar.png"
+          "path": "assets/images/cards_fire_volcanic-scar.png"
         },
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Fire/HabitatCard.png"
+          "path": "assets/images/cards_fire_habitat-card.png"
         },
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Fire/HabitatCardPlayboard.png"
+          "path": "assets/images/cards_fire_habitat-card-playboard.png"
         }
       ]
     },
@@ -555,7 +669,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Fire/FireMission.png"
+          "path": "assets/images/cards_fire_fire-mission.png"
         }
       ]
     },
@@ -568,7 +682,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/chests/FireChestClosed.png"
+          "path": "assets/images/chest_fire-chest-closed.png"
         }
       ]
     },
@@ -581,7 +695,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/chests/FireChestOpened.png"
+          "path": "assets/images/chest_fire-chest-opened.png"
         }
       ]
     },
@@ -594,7 +708,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/affinity/FireIcon.png"
+          "path": "assets/images/affinity_fire-icon.png"
         }
       ]
     },
@@ -608,7 +722,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Fire/HabitatCard.png"
+          "path": "assets/images/cards_fire_habitat-card.png"
         }
       ]
     }

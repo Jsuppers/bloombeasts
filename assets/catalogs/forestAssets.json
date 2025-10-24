@@ -25,22 +25,51 @@
               {
                 "type": "CannotBeTargeted",
                 "target": "Self",
-                "by": ["magic"]
+                "by": [
+                  "magic"
+                ]
               }
             ]
           }
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 1, "atk": 0 },
-            "3": { "hp": 2, "atk": 1 },
-            "4": { "hp": 3, "atk": 2 },
-            "5": { "hp": 4, "atk": 3 },
-            "6": { "hp": 5, "atk": 4 },
-            "7": { "hp": 6, "atk": 5 },
-            "8": { "hp": 7, "atk": 6 },
-            "9": { "hp": 8, "atk": 7 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 1,
+              "atk": 0
+            },
+            "3": {
+              "hp": 2,
+              "atk": 1
+            },
+            "4": {
+              "hp": 3,
+              "atk": 2
+            },
+            "5": {
+              "hp": 4,
+              "atk": 3
+            },
+            "6": {
+              "hp": 5,
+              "atk": 4
+            },
+            "7": {
+              "hp": 6,
+              "atk": 5
+            },
+            "8": {
+              "hp": 7,
+              "atk": 6
+            },
+            "9": {
+              "hp": 8,
+              "atk": 7
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -68,7 +97,10 @@
                     {
                       "type": "CannotBeTargeted",
                       "target": "Self",
-                      "by": ["magic", "trap"]
+                      "by": [
+                        "magic",
+                        "trap"
+                      ]
                     }
                   ]
                 }
@@ -83,7 +115,11 @@
                     {
                       "type": "CannotBeTargeted",
                       "target": "Self",
-                      "by": ["magic", "trap", "abilities"]
+                      "by": [
+                        "magic",
+                        "trap",
+                        "abilities"
+                      ]
                     }
                   ]
                 },
@@ -113,7 +149,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Forest/Rootling.png",
+          "path": "assets/images/cards_forest_rootling.png",
           "description": "Rootling card artwork"
         }
       ]
@@ -147,15 +183,42 @@
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 0, "atk": 1 },
-            "3": { "hp": 1, "atk": 1 },
-            "4": { "hp": 1, "atk": 2 },
-            "5": { "hp": 2, "atk": 3 },
-            "6": { "hp": 3, "atk": 4 },
-            "7": { "hp": 4, "atk": 5 },
-            "8": { "hp": 5, "atk": 6 },
-            "9": { "hp": 6, "atk": 7 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 0,
+              "atk": 1
+            },
+            "3": {
+              "hp": 1,
+              "atk": 1
+            },
+            "4": {
+              "hp": 1,
+              "atk": 2
+            },
+            "5": {
+              "hp": 2,
+              "atk": 3
+            },
+            "6": {
+              "hp": 3,
+              "atk": 4
+            },
+            "7": {
+              "hp": 4,
+              "atk": 5
+            },
+            "8": {
+              "hp": 5,
+              "atk": 6
+            },
+            "9": {
+              "hp": 6,
+              "atk": 7
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -182,7 +245,9 @@
                     {
                       "type": "CannotBeTargeted",
                       "target": "Self",
-                      "by": ["trap"]
+                      "by": [
+                        "trap"
+                      ]
                     }
                   ]
                 }
@@ -209,7 +274,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Forest/LeafSprite.png",
+          "path": "assets/images/cards_forest_leaf-sprite.png",
           "description": "Leaf Sprite card artwork"
         }
       ]
@@ -245,15 +310,42 @@
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 1, "atk": 0 },
-            "3": { "hp": 1, "atk": 1 },
-            "4": { "hp": 2, "atk": 2 },
-            "5": { "hp": 3, "atk": 3 },
-            "6": { "hp": 4, "atk": 4 },
-            "7": { "hp": 5, "atk": 5 },
-            "8": { "hp": 6, "atk": 6 },
-            "9": { "hp": 7, "atk": 7 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 1,
+              "atk": 0
+            },
+            "3": {
+              "hp": 1,
+              "atk": 1
+            },
+            "4": {
+              "hp": 2,
+              "atk": 2
+            },
+            "5": {
+              "hp": 3,
+              "atk": 3
+            },
+            "6": {
+              "hp": 4,
+              "atk": 4
+            },
+            "7": {
+              "hp": 5,
+              "atk": 5
+            },
+            "8": {
+              "hp": 6,
+              "atk": 6
+            },
+            "9": {
+              "hp": 7,
+              "atk": 7
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -313,7 +405,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Forest/Mosslet.png",
+          "path": "assets/images/cards_forest_mosslet.png",
           "description": "Mosslet card artwork"
         }
       ]
@@ -348,15 +440,42 @@
         ],
         "levelingConfig": {
           "statGains": {
-            "1": { "hp": 0, "atk": 0 },
-            "2": { "hp": 1, "atk": 0 },
-            "3": { "hp": 2, "atk": 1 },
-            "4": { "hp": 3, "atk": 2 },
-            "5": { "hp": 4, "atk": 3 },
-            "6": { "hp": 5, "atk": 4 },
-            "7": { "hp": 6, "atk": 5 },
-            "8": { "hp": 7, "atk": 6 },
-            "9": { "hp": 8, "atk": 7 }
+            "1": {
+              "hp": 0,
+              "atk": 0
+            },
+            "2": {
+              "hp": 1,
+              "atk": 0
+            },
+            "3": {
+              "hp": 2,
+              "atk": 1
+            },
+            "4": {
+              "hp": 3,
+              "atk": 2
+            },
+            "5": {
+              "hp": 4,
+              "atk": 3
+            },
+            "6": {
+              "hp": 5,
+              "atk": 4
+            },
+            "7": {
+              "hp": 6,
+              "atk": 5
+            },
+            "8": {
+              "hp": 7,
+              "atk": 6
+            },
+            "9": {
+              "hp": 8,
+              "atk": 7
+            }
           },
           "abilityUpgrades": {
             "4": {
@@ -417,7 +536,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Forest/Mushroomancer.png",
+          "path": "assets/images/cards_forest_mushroomancer.png",
           "description": "Mushroomancer card artwork"
         }
       ]
@@ -453,19 +572,19 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Forest/AncientForest.png",
+          "path": "assets/images/cards_forest_ancient-forest.png",
           "description": "Ancient Forest habitat card artwork"
         },
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Forest/HabitatCard.png",
+          "path": "assets/images/cards_forest_habitat-card.png",
           "description": "Forest habitat card template"
         },
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Forest/HabitatCardPlayboard.png",
+          "path": "assets/images/cards_forest_habitat-card-playboard.png",
           "description": "Forest habitat card playboard"
         }
       ]
@@ -481,7 +600,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Forest/ForestMission.png",
+          "path": "assets/images/cards_forest_forest-mission.png",
           "description": "Forest mission card"
         }
       ]
@@ -496,7 +615,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/chests/ForestChestClosed.png"
+          "path": "assets/images/chest_forest-chest-closed.png"
         }
       ]
     },
@@ -510,7 +629,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/chests/ForestChestOpened.png"
+          "path": "assets/images/chest_forest-chest-opened.png"
         }
       ]
     },
@@ -524,7 +643,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/affinity/ForestIcon.png"
+          "path": "assets/images/affinity_forest-icon.png"
         }
       ]
     },
@@ -538,7 +657,7 @@
         {
           "type": "image",
           "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
-          "path": "shared/images/cards/Forest/HabitatCard.png"
+          "path": "assets/images/cards_forest_habitat-card.png"
         }
       ]
     }

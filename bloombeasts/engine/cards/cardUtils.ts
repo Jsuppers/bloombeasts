@@ -18,13 +18,6 @@ export function getCard<T = AnyCard>(id: string): T {
 }
 
 /**
- * Get multiple cards by IDs
- */
-export function getCards<T = AnyCard>(ids: string[]): T[] {
-  return ids.map(id => getCard<T>(id));
-}
-
-/**
  * Get all cards of a specific affinity
  */
 export function getCardsByAffinity(affinity: 'Forest' | 'Fire' | 'Water' | 'Sky'): (BloomBeastCard | HabitatCard)[] {
@@ -32,16 +25,6 @@ export function getCardsByAffinity(affinity: 'Forest' | 'Fire' | 'Water' | 'Sky'
   return allCards.filter(card =>
     'affinity' in card && card.affinity === affinity
   ) as (BloomBeastCard | HabitatCard)[];
-}
-
-/**
- * Get all cards of a specific type
- */
-export function getCardsByType<T extends AnyCard>(
-  type: 'Bloom' | 'Habitat' | 'Magic' | 'Trap' | 'Buff'
-): T[] {
-  const allCards = assetCatalogManager.getAllCardData();
-  return allCards.filter(card => card.type === type) as T[];
 }
 
 /**
@@ -65,38 +48,11 @@ export function getHabitatsByAffinity(affinity: 'Forest' | 'Fire' | 'Water' | 'S
 }
 
 /**
- * Get all magic cards
- */
-export function getAllMagicCards(): MagicCard[] {
-  return getCardsByType<MagicCard>('Magic');
-}
-
-/**
- * Get all trap cards
- */
-export function getAllTrapCards(): TrapCard[] {
-  return getCardsByType<TrapCard>('Trap');
-}
-
-/**
  * Get all buff cards
  */
 export function getAllBuffCards(): BuffCard[] {
-  return getCardsByType<BuffCard>('Buff');
-}
-
-/**
- * Get all beast cards
- */
-export function getAllBeastCards(): BloomBeastCard[] {
-  return getCardsByType<BloomBeastCard>('Bloom');
-}
-
-/**
- * Get all habitat cards
- */
-export function getAllHabitatCards(): HabitatCard[] {
-  return getCardsByType<HabitatCard>('Habitat');
+  const allCards = assetCatalogManager.getAllCardData();
+  return allCards.filter(card => card.type === 'Buff') as BuffCard[];
 }
 
 /**
