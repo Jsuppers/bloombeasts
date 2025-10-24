@@ -3,8 +3,8 @@
  * Simple popup that shows buttons for user choices
  */
 
-import { View, Text, Pressable } from '../../index';
 import { COLORS } from '../../styles/colors';
+import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 
 export interface ButtonPopupProps {
   title: string;
@@ -19,8 +19,8 @@ export interface ButtonPopupProps {
 /**
  * Create a button popup
  */
-export function createButtonPopup(props: ButtonPopupProps): any {
-  const { View: V, Text: T, Pressable: P } = { View, Text, Pressable };
+export function createButtonPopup(ui: UIMethodMappings, props: ButtonPopupProps): any {
+  const { View: V, Text: T, Pressable: P } = ui;
 
   return V({
     style: {

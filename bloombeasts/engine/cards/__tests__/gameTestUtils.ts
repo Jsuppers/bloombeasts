@@ -228,6 +228,7 @@ export function expectBeastStats(
 
 /**
  * Wait for async operations
+ * Note: Uses setTimeout directly since this is test code that runs in Node.js environment
  */
 export async function waitForEffects(): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, 10));

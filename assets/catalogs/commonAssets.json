@@ -12,7 +12,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1341821670869568",
           "path": "assets/images/bg_background.png"
         }
       ]
@@ -26,7 +26,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1341821670869568",
           "path": "assets/images/misc_menu.png"
         }
       ]
@@ -40,7 +40,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "802255839066806",
           "path": "assets/images/misc_playboard.png"
         }
       ]
@@ -54,7 +54,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1360422829007789",
           "path": "assets/images/misc_cards-container.png"
         }
       ]
@@ -68,7 +68,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "828431839717203",
           "path": "assets/images/misc_mission-container.png"
         }
       ]
@@ -82,7 +82,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "740500362349295",
           "path": "assets/images/misc_standard-button.png"
         }
       ]
@@ -96,7 +96,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1454989832255109",
           "path": "assets/images/misc_green-button.png"
         }
       ]
@@ -110,7 +110,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1365262285015644",
           "path": "assets/images/misc_red-button.png"
         }
       ]
@@ -124,7 +124,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1842026620010613",
           "path": "assets/images/misc_long-green-button.png"
         }
       ]
@@ -138,7 +138,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "794839683168713",
           "path": "assets/images/misc_side-menu.png"
         }
       ]
@@ -152,7 +152,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1151343029773719",
           "path": "assets/images/cards_experience-bar.png"
         }
       ]
@@ -166,7 +166,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "823441590335166",
           "path": "assets/images/cards_base-card.png"
         }
       ]
@@ -180,7 +180,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "802428729033291",
           "path": "assets/images/cards_magic-card.png"
         }
       ]
@@ -194,7 +194,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "2991234734402522",
           "path": "assets/images/cards_magic-card-playboard.png"
         }
       ]
@@ -208,7 +208,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "2847974385407960",
           "path": "assets/images/cards_trap-card.png"
         }
       ]
@@ -222,7 +222,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1724877334843483",
           "path": "assets/images/cards_trap-card-playboard.png"
         }
       ]
@@ -236,7 +236,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1962518914567182",
           "path": "assets/images/cards_buff-card.png"
         }
       ]
@@ -250,7 +250,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "2628573627486992",
           "path": "assets/images/cards_buff-card-playboard.png"
         }
       ]
@@ -264,7 +264,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1186506656766961",
           "path": "assets/images/menu_frame-1.png"
         }
       ]
@@ -278,7 +278,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "816845231314389",
           "path": "assets/images/menu_frame-2.png"
         }
       ]
@@ -292,7 +292,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "2012665279305528",
           "path": "assets/images/menu_frame-3.png"
         }
       ]
@@ -306,7 +306,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "803392912558689",
           "path": "assets/images/menu_frame-4.png"
         }
       ]
@@ -320,7 +320,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1141897134114548",
           "path": "assets/images/menu_frame-5.png"
         }
       ]
@@ -334,7 +334,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1962288661350650",
           "path": "assets/images/menu_frame-6.png"
         }
       ]
@@ -348,7 +348,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "781356411339489",
           "path": "assets/images/menu_frame-7.png"
         }
       ]
@@ -362,7 +362,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "844985438202497",
           "path": "assets/images/menu_frame-8.png"
         }
       ]
@@ -376,7 +376,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1340487887747224",
           "path": "assets/images/menu_frame-9.png"
         }
       ]
@@ -390,7 +390,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1866001547625853",
           "path": "assets/images/menu_frame-10.png"
         }
       ]
@@ -404,7 +404,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1550821249252575",
           "path": "assets/images/icon_ability.png"
         }
       ]
@@ -418,7 +418,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "818969787355942",
           "path": "assets/images/icon_attack.png"
         }
       ]
@@ -432,7 +432,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "2155452308310801",
           "path": "assets/images/misc_lose-image.png"
         }
       ]
@@ -447,7 +447,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1879466909654800",
           "path": "assets/images/cards_boss-mission.png"
         }
       ]
@@ -461,7 +461,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1948729499041670",
           "path": "assets/images/cards_the-bloom-master.png"
         }
       ]
@@ -475,7 +475,7 @@
       "assets": [
         {
           "type": "audio",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
+          "horizonAssetId": "3481449071995903",
           "path": "assets/audio/sfx_menu-button-select.wav"
         }
       ]
@@ -489,7 +489,7 @@
       "assets": [
         {
           "type": "audio",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
+          "horizonAssetId": "673115269189210",
           "path": "assets/audio/sfx_play-card.wav"
         }
       ]
@@ -503,7 +503,7 @@
       "assets": [
         {
           "type": "audio",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
+          "horizonAssetId": "1718962638781724",
           "path": "assets/audio/sfx_attack.wav"
         }
       ]
@@ -517,7 +517,7 @@
       "assets": [
         {
           "type": "audio",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
+          "horizonAssetId": "1180175093968172",
           "path": "assets/audio/sfx_trap-card-activated.wav"
         }
       ]
@@ -531,7 +531,7 @@
       "assets": [
         {
           "type": "audio",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
+          "horizonAssetId": "828372796357589",
           "path": "assets/audio/sfx_low-health.wav"
         }
       ]
@@ -545,7 +545,7 @@
       "assets": [
         {
           "type": "audio",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
+          "horizonAssetId": "4241684452770634",
           "path": "assets/audio/sfx_win.wav"
         }
       ]
@@ -559,7 +559,7 @@
       "assets": [
         {
           "type": "audio",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
+          "horizonAssetId": "1323050035978393",
           "path": "assets/audio/sfx_lose.wav"
         }
       ]
@@ -573,7 +573,7 @@
       "assets": [
         {
           "type": "audio",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
+          "horizonAssetId": "802288129374217",
           "path": "assets/audio/music_background.mp3"
         }
       ]
@@ -587,7 +587,7 @@
       "assets": [
         {
           "type": "audio",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_AUDIO_ID",
+          "horizonAssetId": "668023946362739",
           "path": "assets/audio/music_battle.mp3"
         }
       ]

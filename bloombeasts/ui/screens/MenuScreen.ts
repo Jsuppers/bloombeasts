@@ -4,15 +4,18 @@
  * Matches the styling from menuScreen.new.ts
  */
 
-import { View, Text, Image, Binding } from '../index';
 import { COLORS } from '../styles/colors';
 import { DIMENSIONS, GAPS } from '../styles/dimensions';
 import { sideMenuButtonDimensions } from '../constants/dimensions';
 import type { MenuStats } from '../../../bloombeasts/gameManager';
+import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
+import type { AsyncMethods } from '../types/bindings';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu, createResourceRow } from './common/SideMenu';
 
 export interface MenuScreenProps {
+  ui: UIMethodMappings;
+  async: AsyncMethods;
   stats: any;
   onButtonClick?: (buttonId: string) => void;
   onNavigate?: (screen: string) => void;
@@ -23,6 +26,10 @@ export interface MenuScreenProps {
  * Unified Menu Screen that works on both platforms
  */
 export class MenuScreen {
+  // UI methods (injected)
+  private ui: UIMethodMappings;
+  private async: AsyncMethods;
+
   // State bindings
   private currentFrame: any;
   private displayedText: any;
@@ -41,13 +48,15 @@ export class MenuScreen {
   private onNavigate?: (screen: string) => void;
 
   constructor(props: MenuScreenProps) {
+    this.ui = props.ui;
+    this.async = props.async;
     this.stats = props.stats;
     this.onButtonClick = props.onButtonClick;
     this.onNavigate = props.onNavigate;
 
-    // Initialize bindings
-    this.currentFrame = new Binding(1);
-    this.displayedText = new Binding('');
+    // Initialize bindings using injected UI implementation
+    this.currentFrame = new this.ui.Binding(1);
+    this.displayedText = new this.ui.Binding('');
 
     // Start animations
     this.startAnimations();
@@ -56,13 +65,13 @@ export class MenuScreen {
   private startAnimations(): void {
     // Frame animation for character
     if (this.animationInterval) {
-      clearInterval(this.animationInterval);
+      this.async.clearInterval(this.animationInterval);
     }
 
-    this.animationInterval = setInterval(() => {
+    this.animationInterval = this.async.setInterval(() => {
       const current = this.currentFrame.get();
       this.currentFrame.set((current % 10) + 1);
-    }, 200) as unknown as number;
+    }, 200);
 
     // Just show the first quote statically
     this.displayedText.set(this.quotes[0]);
@@ -92,7 +101,7 @@ export class MenuScreen {
 
     // Create custom text content (quote + resources)
     const customTextContent = [
-      View({
+      this.ui.View({
         style: {
           position: 'relative',
         },
@@ -101,13 +110,13 @@ export class MenuScreen {
 
           return [
             // Quote text (lines 0-2)
-            View({
+            this.ui.View({
               style: {
                 position: 'absolute',
                 top: 0,
                 width: 110,
               },
-              children: Text({
+              children: this.ui.Text({
                 text: this.displayedText,
                 numberOfLines: 3,
                 style: {
@@ -119,15 +128,15 @@ export class MenuScreen {
             }),
 
             // Resources (lines 4-6)
-            createResourceRow('🪙', statsVal.tokens, lineHeight * 4),
-            createResourceRow('💎', statsVal.diamonds, lineHeight * 5),
-            createResourceRow('🧪', statsVal.serums, lineHeight * 6),
+            createResourceRow(this.ui, '🪙', statsVal.tokens, lineHeight * 4),
+            createResourceRow(this.ui, '💎', statsVal.diamonds, lineHeight * 5),
+            createResourceRow(this.ui, '🧪', statsVal.serums, lineHeight * 6),
           ];
         }) as any,
       }),
     ];
 
-    return View({
+    return this.ui.View({
       style: {
         width: '100%',
         height: '100%',
@@ -135,8 +144,8 @@ export class MenuScreen {
       },
       children: [
         // Background image (full screen)
-        Image({
-          source: new Binding({ uri: 'background' }),
+        this.ui.Image({
+          source: new this.ui.Binding({ uri: 'background' }),
           style: {
             position: 'absolute',
             width: '100%',
@@ -147,7 +156,7 @@ export class MenuScreen {
         }),
 
         // Main content area with animated character
-        View({
+        this.ui.View({
           style: {
             position: 'absolute',
             width: '100%',
@@ -157,13 +166,13 @@ export class MenuScreen {
           },
           children: [
             // Animated character frame at position (143, 25)
-            View({
+            this.ui.View({
               style: {
                 position: 'absolute',
                 left: 143,
                 top: 25,
               },
-              children: Image({
+              children: this.ui.Image({
                 source: this.currentFrame.derive((f: number) => ({ uri: `menu-frame-${f}` })),
                 style: {
                   width: 750,
@@ -175,7 +184,7 @@ export class MenuScreen {
         }),
 
         // Side menu (positioned absolutely on top)
-        createSideMenu({
+        createSideMenu(this.ui, {
           customTextContent,
           buttons: menuButtons,
           bottomButton: {
@@ -211,11 +220,11 @@ export class MenuScreen {
    */
   dispose(): void {
     if (this.animationInterval) {
-      clearInterval(this.animationInterval);
+      this.async.clearInterval(this.animationInterval);
       this.animationInterval = null;
     }
     if (this.textAnimationInterval) {
-      clearInterval(this.textAnimationInterval);
+      this.async.clearInterval(this.textAnimationInterval);
       this.textAnimationInterval = null;
     }
   }

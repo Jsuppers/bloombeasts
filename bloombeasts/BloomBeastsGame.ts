@@ -18,8 +18,7 @@ import { createButtonPopup } from './ui/screens/common/ButtonPopup';
 import { GameEngine } from './engine/systems/GameEngine';
 import { SoundManager, SoundSettings } from './systems/SoundManager';
 import { CardCollectionManager } from './systems/CardCollectionManager';
-import { BattleDisplayManager, type BattleDisplay } from './systems/BattleDisplayManager';
-import { SaveLoadManager } from './systems/SaveLoadManager';
+import { BattleDisplayManager } from './systems/BattleDisplayManager';
 import { MissionManager } from './screens/missions/MissionManager';
 import { MissionSelectionUI } from './screens/missions/MissionSelectionUI';
 import { MissionBattleUI } from './screens/missions/MissionBattleUI';
@@ -28,13 +27,36 @@ import { CardInstance } from './screens/cards/types';
 import { getAllCards } from './engine/cards';
 import { DECK_SIZE } from './engine/constants/gameRules';
 import { Logger } from './engine/utils/Logger';
-import { type ImageAssetMap, type SoundAssetMap, normalizeSoundId } from './AssetCatalog';
-import type { MenuStats } from './gameManager';
+import type { AsyncMethods } from './ui/types/bindings';
+import { normalizeSoundId } from './AssetCatalog';
+import type { MenuStats, CardDisplay, MissionDisplay, BattleDisplay, ObjectiveDisplay, CardDetailDisplay } from './gameManager';
 
 /**
- * UI Node type - platform-agnostic UI tree structure
+ * XP thresholds for player leveling (cumulative)
+ * Formula: XP = 100 * (2.0 ^ (level - 1))
  */
+const XP_THRESHOLDS = [
+  0,      // Level 1
+  100,    // Level 2: 100 XP
+  300,    // Level 3: 300 XP total
+  700,    // Level 4: 700 XP total
+  1500,   // Level 5: 1500 XP total
+  3100,   // Level 6: 3100 XP total
+  6300,   // Level 7: 6300 XP total
+  12700,  // Level 8: 12700 XP total
+  25500,  // Level 9: 25500 XP total
+];
+
+// UINode type - represents a UI node returned by UI components
 export type UINode = any;
+
+/**
+ * Read-only binding interface (for derived bindings)
+ */
+export interface ReadonlyBindingInterface<T> {
+  get(): T;
+  subscribe(callback: () => void): void;
+}
 
 /**
  * Binding interface - platform-agnostic reactive data binding
@@ -44,7 +66,7 @@ export interface BindingInterface<T> {
   get(): T;
   set(value: T): void;
   subscribe(callback: () => void): void;
-  derive?<U>(fn: (value: T) => U): BindingInterface<U>;
+  derive<U>(fn: (value: T) => U): ReadonlyBindingInterface<U>;
 }
 
 /**
@@ -52,6 +74,10 @@ export interface BindingInterface<T> {
  */
 export type BindingConstructor = {
   new <T>(value: T): BindingInterface<T>;
+  derive<T extends any[], R>(
+    bindings: any[],
+    deriveFn: (...values: T) => R
+  ): ReadonlyBindingInterface<R>;
 };
 
 /**
@@ -121,73 +147,59 @@ export interface PressableProps extends BaseUIProps {
 /**
  * Platform-specific UI method mappings
  * Each platform provides its own implementation of these methods
+ * Screens receive this object and use it to create UI elements
  */
 export interface UIMethodMappings {
-  View: (props: any) => UINode;
-  Text: (props: any) => UINode;
-  Image: (props: any) => UINode;
-  Pressable: (props: any) => UINode;
-  Binding: any; // Platform-specific binding implementation
+  // Core UI components
+  View: (props: any) => any;
+  Text: (props: any) => any;
+  Image: (props: any) => any;
+  Pressable: (props: any) => any;
+  ScrollView?: (props: any) => any;
+
+  // Data binding
+  Binding: BindingConstructor;
+  AnimatedBinding?: any;
+
+  // Animation
+  Animation?: any;
+  Easing?: any;
 }
 
 /**
- * Player data structure that flows through the game
+ * Player item in inventory
+ */
+export interface PlayerItem {
+  itemId: string;
+  quantity: number;
+}
+
+/**
+ * Player data structure - persisted to platform storage
+ * This is the canonical save data format
  */
 export interface PlayerData {
-  currentScreen: string;
+  // Identity and progression
+  name: string;
+  level: number;
+  totalXP: number;
+
+  // Card collection and deck
   cards: {
-    collected: CardDisplay[];
-    deck: string[];
+    collected: any[]; // Raw card instances (CardInstance from CardCollection)
+    deck: string[]; // Card IDs in player's deck
   };
-  missions: MissionDisplay[];
-  stats: MenuStats;
-  settings: SoundSettings;
-  battleState?: {
-    state: string;
-    message: string;
+
+  // Mission tracking
+  missions: {
+    completedMissions: { [missionId: string]: number }; // Mission ID -> completion count
   };
-}
 
-/**
- * Card display data for UI
- */
-export interface CardDisplay {
-  id: string;
-  name: string;
-  type: string;
-  affinity?: string;
-  cost?: number;
-  level: number;
-  experience: number;
-  experienceRequired?: number;
-  count: number;
-  baseAttack?: number;
-  currentAttack?: number;
-  baseHealth?: number;
-  currentHealth?: number;
-  abilities?: any[];
-  effects?: any[];
-  ongoingEffects?: any[];
-  onPlayEffects?: any[];
-  activation?: any;
-  description?: string;
-  counters?: Array<{ type: string; amount: number }>;
-  titleColor?: string;
-}
+  // Item inventory
+  items: PlayerItem[];
 
-/**
- * Mission display data for UI
- */
-export interface MissionDisplay {
-  id: string;
-  name: string;
-  level: number;
-  difficulty: string;
-  isAvailable: boolean;
-  isCompleted: boolean;
-  description: string;
-  affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
-  beastId?: string;
+  // UI preferences (not persisted on all platforms)
+  settings?: SoundSettings;
 }
 
 /**
@@ -244,22 +256,22 @@ export interface PlatformConfig {
   getPlayerData: () => PlayerData | null;
 
   /**
-   * Complete mapping of all image assets
-   * TypeScript ensures all assets from ImageAssetIds are provided
+   * Get an image asset by ID
+   * Platform queries AssetCatalogManager and returns the asset in platform format
    *
-   * For web: Map asset IDs to file paths
-   * For horizon: Map asset IDs to ImageSource objects
+   * For web: Returns string path from catalog (e.g., '/assets/cards/fire/beast.png')
+   * For horizon: Converts catalog horizonAssetId to ImageSource object
    */
-  imageAssets: ImageAssetMap;
+  getImageAsset: (assetId: string) => any;
 
   /**
-   * Complete mapping of all sound assets
-   * TypeScript ensures all assets from SoundAssetIds are provided
+   * Get a sound asset by ID
+   * Platform queries AssetCatalogManager and returns the asset in platform format
    *
-   * For web: Map asset IDs to file paths
-   * For horizon: Map asset IDs to hz.Asset objects
+   * For web: Returns string path from catalog (e.g., '/assets/sounds/music.mp3')
+   * For horizon: Converts catalog horizonAssetId to hz.Asset object
    */
-  soundAssets: SoundAssetMap;
+  getSoundAsset: (assetId: string) => any;
 
   /**
    * Get platform-specific UI method implementations
@@ -268,6 +280,14 @@ export interface PlatformConfig {
    * For horizon: Returns hz.View, hz.Text, hz.Image, hz.Pressable, hz.Binding
    */
   getUIMethodMappings: () => UIMethodMappings;
+
+  /**
+   * Platform-specific async methods (setTimeout, setInterval, etc.)
+   *
+   * For web: Standard window.setTimeout, window.setInterval, etc.
+   * For horizon: component.async.setTimeout, component.async.setInterval, etc.
+   */
+  async: AsyncMethods;
 
   /**
    * Render the UI tree
@@ -299,9 +319,12 @@ export class BloomBeastsGame {
   // Platform-specific UI methods
   private UI: UIMethodMappings;
 
-  // Platform-provided asset maps
-  private imageAssets: ImageAssetMap;
-  private soundAssets: SoundAssetMap;
+  // Platform-specific async methods
+  private asyncMethods: AsyncMethods;
+
+  // Platform-provided asset getters
+  private platformGetImageAsset: (assetId: string) => any;
+  private platformGetSoundAsset: (assetId: string) => any;
 
   // Core game systems
   private gameEngine: GameEngine;
@@ -312,7 +335,13 @@ export class BloomBeastsGame {
   private cardCollection: CardCollection;
   private cardCollectionManager: CardCollectionManager;
   private battleDisplayManager: BattleDisplayManager;
-  private saveLoadManager: SaveLoadManager;
+
+  // Player data state
+  private playerName: string = 'Player';
+  private playerLevel: number = 1;
+  private playerTotalXP: number = 0;
+  private playerItems: PlayerItem[] = [];
+  private completedMissions: { [missionId: string]: number } = {};
 
   // Game state
   private currentScreen: string = 'menu';
@@ -354,15 +383,18 @@ export class BloomBeastsGame {
     // Get platform-specific UI methods
     this.UI = config.getUIMethodMappings();
 
-    // Store platform-provided asset maps
-    this.imageAssets = config.imageAssets;
-    this.soundAssets = config.soundAssets;
+    // Get platform-specific async methods
+    this.asyncMethods = config.async;
+
+    // Store platform-provided asset getters
+    this.platformGetImageAsset = config.getImageAsset;
+    this.platformGetSoundAsset = config.getSoundAsset;
 
     // Initialize core systems
     this.gameEngine = new GameEngine();
     this.missionManager = new MissionManager();
     this.missionUI = new MissionSelectionUI(this.missionManager);
-    this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine);
+    this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine, this.asyncMethods);
 
     // Set up render callback for battle UI to update display during opponent turns
     (this.battleUI as any).renderCallback = () => {
@@ -384,26 +416,6 @@ export class BloomBeastsGame {
     this.cardCollection = new CardCollection();
     this.cardCollectionManager = new CardCollectionManager();
     this.battleDisplayManager = new BattleDisplayManager();
-
-    // Initialize save/load manager with platform storage callbacks
-    this.saveLoadManager = new SaveLoadManager({
-      saveData: async (key: string, data: any) => {
-        // For now, we're just using the platform's setPlayerData directly
-        // SaveLoadManager saves to 'playerData' key
-        if (key === 'playerData') {
-          // Note: This will need mapping from SaveLoadManager's PlayerData to our PlayerData format
-          // For now we just save it as-is
-        }
-      },
-      loadData: async (key: string) => {
-        // SaveLoadManager loads from 'playerData' key
-        if (key === 'playerData') {
-          // Return null for now - will load properly in initialize()
-          return null;
-        }
-        return null;
-      }
-    });
 
     // Initialize sound manager
     this.soundManager = new SoundManager({
@@ -453,8 +465,10 @@ export class BloomBeastsGame {
 
     // No need to subscribe to playerData - we manage state via updateBindingsFromGameState()
 
-    // Create screen instances
+    // Create screen instances (pass UI methods and async to each screen)
     this.menuScreen = new MenuScreen({
+      ui: this.UI,
+      async: this.asyncMethods,
       stats: this.statsBinding,
       onButtonClick: this.handleButtonClick.bind(this),
       onNavigate: this.navigate.bind(this),
@@ -462,6 +476,7 @@ export class BloomBeastsGame {
     });
 
     this.cardsScreen = new CardsScreen({
+      ui: this.UI,
       cards: this.cardsBinding,
       deckSize: this.deckSizeBinding,
       deckCardIds: this.deckCardIdsBinding,
@@ -472,6 +487,7 @@ export class BloomBeastsGame {
     });
 
     this.missionScreen = new MissionScreen({
+      ui: this.UI,
       missions: this.missionsBinding,
       stats: this.statsBinding,
       onMissionSelect: this.handleMissionSelect.bind(this),
@@ -480,6 +496,8 @@ export class BloomBeastsGame {
     });
 
     this.battleScreen = new BattleScreen({
+      ui: this.UI,
+      async: this.asyncMethods,
       battleDisplay: this.battleDisplayBinding,
       message: this.battleMessageBinding,
       onAction: this.handleBattleAction.bind(this),
@@ -488,6 +506,7 @@ export class BloomBeastsGame {
     });
 
     this.settingsScreen = new SettingsScreen({
+      ui: this.UI,
       settings: this.settingsBinding,
       stats: this.statsBinding,
       onSettingChange: this.handleSettingsChange.bind(this),
@@ -501,25 +520,35 @@ export class BloomBeastsGame {
 
   /**
    * Get an image asset by ID
+   * Delegates to platform-specific implementation
    */
   getImageAsset(assetId: string): any {
-    return this.imageAssets[assetId as keyof ImageAssetMap];
+    return this.platformGetImageAsset(assetId);
   }
 
   /**
    * Get a sound asset by ID
    * Supports both new catalog IDs and legacy string IDs
+   * Delegates to platform-specific implementation
    */
   getSoundAsset(assetId: string): any {
     // Normalize legacy IDs to new catalog IDs
     const normalizedId = normalizeSoundId(assetId);
-    const asset = this.soundAssets[normalizedId as keyof SoundAssetMap];
+    const asset = this.platformGetSoundAsset(normalizedId);
 
     if (!asset) {
       console.warn(`⚠️  Sound asset not found for ID: "${assetId}"`);
     }
 
     return asset;
+  }
+
+  /**
+   * Get platform async methods (setTimeout, setInterval, etc.)
+   * Screens can use this to access platform-specific async operations
+   */
+  get async(): AsyncMethods {
+    return this.asyncMethods;
   }
 
   /**
@@ -553,17 +582,119 @@ export class BloomBeastsGame {
    * Load game data from platform storage
    */
   private async loadGameData(): Promise<void> {
-    this.playerDeck = await this.saveLoadManager.loadGameData(
-      this.cardCollection,
-      this.missionManager
-    );
+    const savedData = this.platform.getPlayerData?.();
+
+    if (savedData) {
+      // Load player identity and progression
+      this.playerName = savedData.name || 'Player';
+      this.playerLevel = savedData.level || 1;
+      this.playerTotalXP = savedData.totalXP || 0;
+
+      // Load items
+      this.playerItems = savedData.items || [];
+
+      // Load completed missions
+      this.completedMissions = savedData.missions?.completedMissions || {};
+
+      // Load cards into collection
+      if (savedData.cards?.collected) {
+        savedData.cards.collected.forEach((cardInstance: CardInstance) => {
+          this.cardCollection.addCard(cardInstance);
+        });
+      }
+
+      // Load deck
+      this.playerDeck = savedData.cards?.deck || [];
+
+      // Update player level based on XP
+      this.updatePlayerLevel();
+
+      // Load completed missions into MissionManager
+      this.missionManager.loadCompletedMissions(this.completedMissions);
+
+      Logger.info('[BloomBeastsGame] Player data loaded successfully');
+    } else {
+      Logger.info('[BloomBeastsGame] No saved data found, starting fresh');
+    }
   }
 
   /**
    * Save game data to platform storage
    */
   private async saveGameData(): Promise<void> {
-    await this.saveLoadManager.saveGameData(this.cardCollection, this.playerDeck);
+    const playerData: PlayerData = {
+      name: this.playerName,
+      level: this.playerLevel,
+      totalXP: this.playerTotalXP,
+      cards: {
+        collected: this.cardCollection.getAllCards(),
+        deck: this.playerDeck
+      },
+      missions: {
+        completedMissions: this.completedMissions
+      },
+      items: this.playerItems,
+      settings: this.soundManager.getSettings()
+    };
+
+    this.platform.setPlayerData?.(playerData);
+    Logger.debug('[BloomBeastsGame] Player data saved');
+  }
+
+  /**
+   * Update player level based on XP
+   * Player leveling uses steep exponential scaling
+   */
+  private updatePlayerLevel(): void {
+    for (let level = 9; level >= 1; level--) {
+      if (this.playerTotalXP >= XP_THRESHOLDS[level - 1]) {
+        this.playerLevel = level;
+        break;
+      }
+    }
+  }
+
+  /**
+   * Add XP to player and update level
+   */
+  private addXP(amount: number): void {
+    this.playerTotalXP += amount;
+    this.updatePlayerLevel();
+    Logger.debug(`[BloomBeastsGame] Added ${amount} XP (total: ${this.playerTotalXP}, level: ${this.playerLevel})`);
+  }
+
+  /**
+   * Get the quantity of a specific item from player's items array
+   */
+  private getItemQuantity(itemId: string): number {
+    const item = this.playerItems.find(i => i.itemId === itemId);
+    return item ? item.quantity : 0;
+  }
+
+  /**
+   * Track mission completion
+   */
+  private trackMissionCompletion(missionId: string): void {
+    const currentCount = this.completedMissions[missionId] || 0;
+    this.completedMissions[missionId] = currentCount + 1;
+    Logger.debug(`[BloomBeastsGame] Mission ${missionId} completed ${currentCount + 1} times`);
+  }
+
+  /**
+   * Add items to player's inventory
+   */
+  private addItems(itemId: string, quantity: number): void {
+    const existingItem = this.playerItems.find(i => i.itemId === itemId);
+
+    if (existingItem) {
+      existingItem.quantity += quantity;
+    } else {
+      this.playerItems.push({
+        itemId,
+        quantity,
+      });
+    }
+    Logger.debug(`[BloomBeastsGame] Added ${quantity}x ${itemId} to inventory`);
   }
 
   /**
@@ -587,7 +718,7 @@ export class BloomBeastsGame {
     const displayCards = cards.map(card => this.cardInstanceToDisplay(card));
 
     // Get available missions
-    this.missionUI.setPlayerLevel(this.saveLoadManager.getPlayerData().level);
+    this.missionUI.setPlayerLevel(this.playerLevel);
     const missionList = this.missionUI.getMissionList();
     const displayMissions: MissionDisplay[] = missionList.map(m => ({
       id: m.mission.id,
@@ -601,13 +732,10 @@ export class BloomBeastsGame {
       beastId: m.mission.beastId,
     }));
 
-    // Get player data from SaveLoadManager
-    const playerData = this.saveLoadManager.getPlayerData();
-
     // Get stats
     const stats: MenuStats = {
-      playerLevel: playerData.level,
-      totalXP: playerData.totalXP,
+      playerLevel: this.playerLevel,
+      totalXP: this.playerTotalXP,
       tokens: this.getItemQuantity('token'),
       diamonds: this.getItemQuantity('diamond'),
       serums: this.getItemQuantity('serum'),
@@ -620,13 +748,6 @@ export class BloomBeastsGame {
     this.missionsBinding.set(displayMissions);
     this.statsBinding.set(stats);
     this.settingsBinding.set(this.soundManager.getSettings());
-  }
-
-  /**
-   * Get quantity of a specific item
-   */
-  private getItemQuantity(itemId: string): number {
-    return this.saveLoadManager.getItemQuantity(itemId);
   }
 
   /**
@@ -1071,7 +1192,7 @@ export class BloomBeastsGame {
       console.log('[BloomBeastsGame] Mission victory!', battleState.rewards);
 
       // Award XP
-      this.saveLoadManager.addXP(battleState.rewards.xpGained);
+      this.addXP(battleState.rewards.xpGained);
 
       // Award card XP
       const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
@@ -1089,13 +1210,13 @@ export class BloomBeastsGame {
       // Add items to inventory
       if (battleState.rewards.itemsReceived) {
         battleState.rewards.itemsReceived.forEach((itemReward: any) => {
-          this.saveLoadManager.addItems(itemReward.itemId, itemReward.quantity);
+          this.addItems(itemReward.itemId, itemReward.quantity);
         });
       }
 
       // Track mission completion
       if (battleId) {
-        this.saveLoadManager.trackMissionCompletion(battleId);
+        this.trackMissionCompletion(battleId);
       }
 
       // Play win sound
@@ -1197,17 +1318,17 @@ export class BloomBeastsGame {
     // Create mission complete popup overlay (conditionally rendered when binding has value)
     const missionCompleteOverlay = this.missionCompletePopupBinding.derive((popupProps) => {
       if (!popupProps) return null;
-      return createMissionCompletePopup(popupProps);
+      return createMissionCompletePopup(this.UI, popupProps);
     });
 
     // Create forfeit popup overlay (conditionally rendered when binding has value)
     const forfeitOverlay = this.forfeitPopupBinding.derive((popupProps) => {
       if (!popupProps) return null;
-      return createButtonPopup(popupProps);
+      return createButtonPopup(this.UI, popupProps);
     });
 
     // Return the main container with dynamic screen content and popup overlays
-    return View({
+    return this.UI.View({
       style: {
         width: 1280,
         height: 720
@@ -1250,7 +1371,7 @@ export class BloomBeastsGame {
     }
 
     // Wait for animation duration
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => this.asyncMethods.setTimeout(resolve, 500));
 
     // Clear animation
     const displayWithoutAnimation = this.battleDisplayManager.createBattleDisplay(

@@ -29,7 +29,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1846483789630405",
           "path": "assets/images/cards_magic_aether-swap.png"
         }
       ]
@@ -65,7 +65,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "710755475386192",
           "path": "assets/images/cards_magic_cleansing-downpour.png"
         }
       ]
@@ -97,7 +97,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1585232092889726",
           "path": "assets/images/cards_magic_elemental-burst.png"
         }
       ]
@@ -130,7 +130,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1155953239812167",
           "path": "assets/images/cards_magic_lightning-strike.png"
         }
       ]
@@ -164,7 +164,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1092559439363693",
           "path": "assets/images/cards_magic_nectar-block.png"
         }
       ]
@@ -203,7 +203,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1754732031852523",
           "path": "assets/images/cards_magic_nectar-drain.png"
         }
       ]
@@ -242,7 +242,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1379310950488534",
           "path": "assets/images/cards_magic_nectar-surge.png"
         }
       ]
@@ -276,7 +276,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1489977038895297",
           "path": "assets/images/cards_magic_overgrowth.png"
         }
       ]
@@ -310,7 +310,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1140750044697552",
           "path": "assets/images/cards_magic_power-up.png"
         }
       ]
@@ -341,7 +341,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "681285418362907",
           "path": "assets/images/cards_magic_purify.png"
         }
       ]

@@ -4,9 +4,8 @@
  * Matches the styling from settingsScreen.new.ts
  */
 
-import { View, Text, Image, Pressable, Binding } from '../index';
-import type { ValueBindingBase } from '../index';
 import { COLORS } from '../styles/colors';
+import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { DIMENSIONS } from '../styles/dimensions';
 import type { SoundSettings } from '../../../bloombeasts/systems/SoundManager';
 import type { MenuStats } from '../../../bloombeasts/gameManager';
@@ -14,6 +13,7 @@ import { UINodeType } from './ScreenUtils';
 import { createSideMenu } from './common/SideMenu';
 
 export interface SettingsScreenProps {
+  ui: UIMethodMappings;
   settings: any;
   stats: any;
   onSettingChange?: (settingId: string, value: any) => void;
@@ -25,6 +25,9 @@ export interface SettingsScreenProps {
  * Unified Settings Screen
  */
 export class SettingsScreen {
+  // UI methods (injected)
+  private ui: UIMethodMappings;
+
   private settings: any;
   private stats: any;
   private onSettingChange?: (settingId: string, value: any) => void;
@@ -32,6 +35,7 @@ export class SettingsScreen {
   private onRenderNeeded?: () => void;
 
   constructor(props: SettingsScreenProps) {
+    this.ui = props.ui;
     this.settings = props.settings;
     this.stats = props.stats;
     this.onSettingChange = props.onSettingChange;
@@ -41,7 +45,7 @@ export class SettingsScreen {
   }
 
   createUI(): UINodeType {
-    return View({
+    return this.ui.View({
       style: {
         width: '100%',
         height: '100%',
@@ -49,8 +53,8 @@ export class SettingsScreen {
       },
       children: [
         // Background
-        Image({
-          source: new Binding({ uri: 'background' }),
+        this.ui.Image({
+          source: new this.ui.Binding({ uri: 'background' }),
           style: {
             position: 'absolute',
             width: '100%',
@@ -60,8 +64,8 @@ export class SettingsScreen {
           },
         }),
         // Cards Container image as background
-        Image({
-          source: new Binding({ uri: 'cards-container' }),
+        this.ui.Image({
+          source: new this.ui.Binding({ uri: 'cards-container' }),
           style: {
             position: 'absolute',
             left: 40,
@@ -71,7 +75,7 @@ export class SettingsScreen {
           },
         }),
         // Main content - settings panel
-        View({
+        this.ui.View({
           style: {
             position: 'absolute',
             left: 70,
@@ -91,7 +95,7 @@ export class SettingsScreen {
           ]) as any,
         }),
         // Sidebar with common side menu
-        createSideMenu({
+        createSideMenu(this.ui, {
           title: 'Settings',
           bottomButton: {
             label: 'Back',
@@ -115,28 +119,28 @@ export class SettingsScreen {
     settingId: string,
     settings: SoundSettings
   ): UINodeType {
-    return View({
+    return this.ui.View({
       style: {
         marginBottom: 30,
       },
       children: [
         // Label and value
-        View({
+        this.ui.View({
           style: {
             flexDirection: 'row',
             justifyContent: 'space-between',
             marginBottom: 10,
           },
           children: [
-            Text({
-              text: new Binding(label),
+            this.ui.Text({
+              text: new this.ui.Binding(label),
               style: {
                 fontSize: DIMENSIONS.fontSize.xl,
                 color: COLORS.textPrimary,
               },
             }),
-            Text({
-              text: new Binding(`${settings[settingKey]}%`),
+            this.ui.Text({
+              text: new this.ui.Binding(`${settings[settingKey]}%`),
               style: {
                 fontSize: DIMENSIONS.fontSize.xl,
                 color: COLORS.success,
@@ -146,7 +150,7 @@ export class SettingsScreen {
         }),
 
         // Slider
-        Pressable({
+        this.ui.Pressable({
           onClick: (relativeX?: number) => {
             if (relativeX !== undefined && this.onSettingChange) {
               // Convert relative position (0-1) to volume (0-100)
@@ -177,7 +181,7 @@ export class SettingsScreen {
           },
           children: [
             // Fill
-            View({
+            this.ui.View({
               style: {
                 position: 'absolute',
                 left: 0,
@@ -203,7 +207,7 @@ export class SettingsScreen {
     settingId: string,
     settings: SoundSettings
   ): UINodeType {
-    return View({
+    return this.ui.View({
       style: {
         flexDirection: 'row',
         justifyContent: 'space-between',
@@ -211,8 +215,8 @@ export class SettingsScreen {
         marginBottom: 30,
       },
       children: [
-        Text({
-          text: new Binding(label),
+        this.ui.Text({
+          text: new this.ui.Binding(label),
           style: {
             fontSize: DIMENSIONS.fontSize.xl,
             color: COLORS.textPrimary,
@@ -220,7 +224,7 @@ export class SettingsScreen {
         }),
 
         // Toggle button
-        Pressable({
+        this.ui.Pressable({
           onClick: () => {
             if (this.onSettingChange) {
               const currentSettings = this.settings.get();
@@ -248,8 +252,8 @@ export class SettingsScreen {
           },
           children: [
             // Button background image (standard or green based on state)
-            Image({
-              source: new Binding({ uri: settings[settingKey] ? 'green-button' : 'standard-button' }),
+            this.ui.Image({
+              source: new this.ui.Binding({ uri: settings[settingKey] ? 'green-button' : 'standard-button' }),
               style: {
                 position: 'absolute',
                 width: 120,
@@ -257,7 +261,7 @@ export class SettingsScreen {
               },
             }),
             // Button text centered
-            View({
+            this.ui.View({
               style: {
                 position: 'absolute',
                 width: 120,
@@ -265,8 +269,8 @@ export class SettingsScreen {
                 justifyContent: 'center',
                 alignItems: 'center',
               },
-              children: Text({
-                text: new Binding(settings[settingKey] ? 'ON' : 'OFF'),
+              children: this.ui.Text({
+                text: new this.ui.Binding(settings[settingKey] ? 'ON' : 'OFF'),
                 style: {
                   fontSize: DIMENSIONS.fontSize.md,
                   color: COLORS.textPrimary,

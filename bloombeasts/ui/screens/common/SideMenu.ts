@@ -3,14 +3,14 @@
  * Shared sidebar used across all unified screens (Horizon & Web)
  */
 
-import { View, Text, Image, Pressable, Binding } from '../../index';
-import type { ValueBindingBase } from '../../index';
 import { COLORS } from '../../styles/colors';
 import { DIMENSIONS } from '../../styles/dimensions';
 import { sideMenuButtonDimensions } from '../../constants/dimensions';
 import { sideMenuPositions } from '../../constants/positions';
 import type { MenuStats } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
+import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
+import type { ValueBindingBase } from '../../types/bindings';
 
 // SideMenu-specific constants
 const sideMenuDimensions = {
@@ -43,7 +43,7 @@ export interface SideMenuConfig {
 /**
  * Create a common sidebar used across all screens
  */
-export function createSideMenu(config: SideMenuConfig): UINodeType {
+export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UINodeType {
     const children: UINodeType[] = [];
 
     // Calculate positions relative to sidebar origin (using sideMenuPositions)
@@ -57,14 +57,14 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
     // Title at headerStartPosition (if provided)
     if (config.title) {
         children.push(
-            View({
+            ui.View({
                 style: {
                     position: 'absolute',
                     left: headerRelativeX,
                     top: headerRelativeY,
                 },
-                children: Text({
-                    text: typeof config.title === 'string' ? new Binding(config.title) : config.title,
+                children: ui.Text({
+                    text: typeof config.title === 'string' ? new ui.Binding(config.title) : config.title,
                     style: {
                         fontSize: DIMENSIONS.fontSize.md,
                         color: COLORS.textPrimary,
@@ -78,7 +78,7 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
     // Custom text content at textStartPosition
     if (config.customTextContent && config.customTextContent.length > 0) {
         children.push(
-            View({
+            ui.View({
                 style: {
                     position: 'absolute',
                     left: textRelativeX,
@@ -93,7 +93,7 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
     // Buttons at buttonStartPosition
     if (config.buttons && config.buttons.length > 0) {
         children.push(
-            View({
+            ui.View({
                 style: {
                     position: 'absolute',
                     left: buttonRelativeX,
@@ -102,6 +102,7 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
                 },
                 children: config.buttons.map(button =>
                     createSideMenuButton(
+                        ui,
                         button.label,
                         0,
                         button.yOffset !== undefined ? button.yOffset : 0,
@@ -115,7 +116,7 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
 
     // Player info at bottom of sidebar (aligned to bottom like web deployment)
     children.push(
-        View({
+        ui.View({
             style: {
                 position: 'absolute',
                 left: 0,
@@ -123,7 +124,7 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
                 width: sideMenuDimensions.width,
                 height: 50,
             },
-            children: createPlayerInfo(config.stats, config.onXPBarClick),
+            children: createPlayerInfo(ui, config.stats, config.onXPBarClick),
         })
     );
 
@@ -131,6 +132,7 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
     if (config.bottomButton) {
         children.push(
             createSideMenuButton(
+                ui,
                 config.bottomButton.label,
                 headerRelativeX,
                 headerRelativeY,
@@ -140,7 +142,7 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
         );
     }
 
-    return View({
+    return ui.View({
         style: {
             position: 'absolute',
             left: sideMenuPositions.x,
@@ -151,8 +153,8 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
         },
         children: [
             // Sidebar background image
-            Image({
-                source: new Binding({ uri: 'side-menu' }),
+            ui.Image({
+                source: new ui.Binding({ uri: 'side-menu' }),
                 style: {
                     position: 'absolute',
                     width: sideMenuDimensions.width,
@@ -171,17 +173,18 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
  * Create a side menu button with image background
  */
 function createSideMenuButton(
+    ui: UIMethodMappings,
     label: string | ValueBindingBase<string>,
     x: number,
     y: number,
     onClick: () => void,
     disabled?: boolean | ValueBindingBase<boolean>
 ): UINodeType {
-    const labelBinding = typeof label === 'string' ? new Binding(label) : label;
+    const labelBinding = typeof label === 'string' ? new ui.Binding(label) : label;
     const disabledValue = typeof disabled === 'boolean' ? disabled : false;
     const disabledBinding = typeof disabled === 'object' && 'get' in disabled ? disabled : undefined;
 
-    return Pressable({
+    return ui.Pressable({
         onClick: onClick,
         disabled: disabledBinding || disabledValue,
         style: {
@@ -193,8 +196,8 @@ function createSideMenuButton(
         },
         children: [
             // Button background image
-            Image({
-                source: new Binding({ uri: 'standard-button' }),
+            ui.Image({
+                source: new ui.Binding({ uri: 'standard-button' }),
                 style: {
                     position: 'absolute',
                     width: sideMenuButtonDimensions.width,
@@ -203,7 +206,7 @@ function createSideMenuButton(
                 },
             }),
             // Button text centered
-            View({
+            ui.View({
                 style: {
                     position: 'absolute',
                     width: sideMenuButtonDimensions.width,
@@ -211,7 +214,7 @@ function createSideMenuButton(
                     justifyContent: 'center',
                     alignItems: 'center',
                 },
-                children: Text({
+                children: ui.Text({
                     text: labelBinding,
                     style: {
                         fontSize: DIMENSIONS.fontSize.md,
@@ -231,10 +234,11 @@ function createSideMenuButton(
  * Positioned using sideMenuPositions
  */
 function createPlayerInfo(
+    ui: UIMethodMappings,
     stats: ValueBindingBase<MenuStats | null> | any,
     onXPBarClick?: (title: string, message: string) => void
 ): UINodeType {
-    return View({
+    return ui.View({
         style: {
             position: 'relative',
         },
@@ -252,14 +256,14 @@ function createPlayerInfo(
 
             return [
                 // Player name
-                View({
+                ui.View({
                     style: {
                         position: 'absolute',
                         left: sideMenuPositions.playerName.x,
                         top: 0,
                     },
-                    children: Text({
-                        text: new Binding('Player'),
+                    children: ui.Text({
+                        text: new ui.Binding('Player'),
                         style: {
                             fontSize: sideMenuPositions.playerName.size,
                             color: COLORS.textPrimary,
@@ -269,7 +273,7 @@ function createPlayerInfo(
                 }),
 
                 // XP Bar
-                View({
+                ui.View({
                     style: {
                         position: 'absolute',
                         left: sideMenuPositions.playerExperienceBar.x,
@@ -277,7 +281,7 @@ function createPlayerInfo(
                         width: sideMenuPositions.playerExperienceBar.maxWidth,
                         height: 11,
                     },
-                    children: Pressable({
+                    children: ui.Pressable({
                         onClick: () => {
                             if (onXPBarClick) {
                                 const title = `Level ${currentLevel}`;
@@ -289,8 +293,8 @@ function createPlayerInfo(
                             width: '100%',
                             height: '100%',
                         },
-                        children: Image({
-                            source: new Binding({ uri: 'experience-bar' }),
+                        children: ui.Image({
+                            source: new ui.Binding({ uri: 'experience-bar' }),
                             style: {
                                 width: `${xpPercent}%`,
                                 height: 11,
@@ -300,7 +304,7 @@ function createPlayerInfo(
                 }),
 
                 // Level text (centered on XP bar)
-                View({
+                ui.View({
                     style: {
                         position: 'absolute',
                         left: sideMenuPositions.playerLevel.x,
@@ -310,8 +314,8 @@ function createPlayerInfo(
                         justifyContent: 'center',
                         alignItems: 'center',
                     },
-                    children: Text({
-                        text: new Binding(`${currentLevel}`),
+                    children: ui.Text({
+                        text: new ui.Binding(`${currentLevel}`),
                         style: {
                             fontSize: sideMenuPositions.playerLevel.size,
                             color: COLORS.textPrimary,
@@ -327,14 +331,14 @@ function createPlayerInfo(
 /**
  * Helper: Create a text row component
  */
-export function createTextRow(text: string | ValueBindingBase<string>, top: number = 0): UINodeType {
-    return View({
+export function createTextRow(ui: UIMethodMappings, text: string | ValueBindingBase<string>, top: number = 0): UINodeType {
+    return ui.View({
         style: {
             position: 'absolute',
             top: top,
         },
-        children: Text({
-            text: typeof text === 'string' ? new Binding(text) : text,
+        children: ui.Text({
+            text: typeof text === 'string' ? new ui.Binding(text) : text,
             style: {
                 fontSize: DIMENSIONS.fontSize.md,
                 color: COLORS.textPrimary,
@@ -346,21 +350,21 @@ export function createTextRow(text: string | ValueBindingBase<string>, top: numb
 /**
  * Helper: Create a resource row (emoji + count)
  */
-export function createResourceRow(
+export function createResourceRow(ui: UIMethodMappings, 
     emoji: string,
     amount: number | ValueBindingBase<number>,
     top: number = 0
 ): UINodeType {
     const amountText = typeof amount === 'number'
-        ? new Binding(`${emoji} ${amount}`)
+        ? new ui.Binding(`${emoji} ${amount}`)
         : (amount as any).derive((a: number) => `${emoji} ${a}`);
 
-    return View({
+    return ui.View({
         style: {
             position: 'absolute',
             top: top,
         },
-        children: Text({
+        children: ui.Text({
             text: amountText,
             style: {
                 fontSize: 18,

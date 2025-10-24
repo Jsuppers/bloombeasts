@@ -28,9 +28,10 @@ export function getCardsByAffinity(affinity: 'Forest' | 'Fire' | 'Water' | 'Sky'
 }
 
 /**
- * Get beast cards by affinity
+ * Get beast cards by affinity from catalog
+ * Note: This gets cards from the catalog, not from a battlefield
  */
-export function getBeastsByAffinity(affinity: 'Forest' | 'Fire' | 'Water' | 'Sky'): BloomBeastCard[] {
+export function getBeastCardsFromCatalog(affinity: 'Forest' | 'Fire' | 'Water' | 'Sky'): BloomBeastCard[] {
   const allCards = assetCatalogManager.getAllCardData();
   return allCards.filter(card =>
     card.type === 'Bloom' && 'affinity' in card && card.affinity === affinity
@@ -53,53 +54,4 @@ export function getHabitatsByAffinity(affinity: 'Forest' | 'Fire' | 'Water' | 'S
 export function getAllBuffCards(): BuffCard[] {
   const allCards = assetCatalogManager.getAllCardData();
   return allCards.filter(card => card.type === 'Buff') as BuffCard[];
-}
-
-/**
- * Create a deck instance for any affinity
- * This is a simplified deck class that works for all affinities
- */
-export class Deck {
-  readonly deckName: string;
-  readonly affinity: 'Forest' | 'Fire' | 'Water' | 'Sky';
-  private config: any;
-
-  constructor(affinity: 'Forest' | 'Fire' | 'Water' | 'Sky') {
-    // Import deckConfig here to avoid circular dependency
-    const { getDeckConfig } = require('./deckConfig');
-    this.config = getDeckConfig(affinity);
-    this.affinity = affinity;
-    this.deckName = this.config.name;
-  }
-
-  public getDeckCards() {
-    return {
-      beasts: this.config.beasts,
-      habitats: this.config.habitats,
-    };
-  }
-
-  public getAllCards(): AnyCard[] {
-    const cards: AnyCard[] = [];
-    this.config.beasts.forEach(({ card, quantity }: any) => {
-      for (let i = 0; i < quantity; i++) {
-        cards.push(card);
-      }
-    });
-    this.config.habitats.forEach(({ card, quantity }: any) => {
-      for (let i = 0; i < quantity; i++) {
-        cards.push(card);
-      }
-    });
-    return cards;
-  }
-}
-
-/**
- * Create a deck for a specific affinity
- * @param affinity - The affinity type ('Forest', 'Fire', 'Water', or 'Sky')
- * @returns A Deck instance
- */
-export function createDeck(affinity: 'Forest' | 'Fire' | 'Water' | 'Sky'): Deck {
-  return new Deck(affinity);
 }

@@ -6,48 +6,7 @@
 import { getAllCards } from '../engine/cards';
 import { BloomBeastCard } from '../engine/types/core';
 import { STARTING_HEALTH, TURN_TIME_LIMIT } from '../engine/constants/gameRules';
-
-export interface BattleDisplay {
-  playerHealth: number;
-  playerMaxHealth: number;
-  playerDeckCount: number;
-  playerNectar: number;
-  playerHand: any[];
-  playerTrapZone: any[]; // Player's trap cards (face-down)
-  playerBuffZone: any[]; // Player's active buff cards
-  opponentHealth: number;
-  opponentMaxHealth: number;
-  opponentDeckCount: number;
-  opponentNectar: number;
-  opponentField: any[];
-  opponentTrapZone: any[]; // Opponent's trap cards (face-down)
-  opponentBuffZone: any[]; // Opponent's active buff cards
-  playerField: any[];
-  currentTurn: number;
-  turnPlayer: string;
-  turnTimeRemaining: number;
-  objectives: ObjectiveDisplay[];
-  habitatZone: any | null; // Current habitat card
-  selectedBeastIndex: number | null; // Track selected beast for attacking
-  attackAnimation?: { // Attack animation state
-    attackerPlayer: 'player' | 'opponent';
-    attackerIndex: number;
-    targetPlayer: 'player' | 'opponent' | 'health';
-    targetIndex?: number; // undefined if targeting health
-  } | null;
-  cardPopup?: { // Card popup display (for magic/trap/buff cards)
-    card: any;
-    player: 'player' | 'opponent';
-    showCloseButton?: boolean; // Show close button for manual popups
-  } | null;
-}
-
-export interface ObjectiveDisplay {
-  description: string;
-  progress: number;
-  target: number;
-  isComplete: boolean;
-}
+import type { BattleDisplay, ObjectiveDisplay } from '../gameManager';
 
 export class BattleDisplayManager {
   /**

@@ -2,8 +2,8 @@
  * Mission Screen - Refactored with UI Component System
  */
 
-import { View, Text, Image, Pressable, Binding } from '../index';
 import { COLORS } from '../styles/colors';
+import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { DIMENSIONS, GAPS } from '../styles/dimensions';
 import { sideMenuButtonDimensions } from '../constants/dimensions';
 import type { SimplePosition } from '../constants/positions';
@@ -37,6 +37,7 @@ const cardsUIContainerPosition: SimplePosition = {
 };
 
 export interface MissionScreenProps {
+  ui: UIMethodMappings;
   missions: any;
   stats: any;
   onMissionSelect?: (missionId: string) => void;
@@ -48,10 +49,13 @@ export interface MissionScreenProps {
  * Unified Mission Screen that works on both platforms
  */
 export class MissionScreen {
+  // UI methods (injected)
+  private ui: UIMethodMappings;
+
   // State bindings
   private missions: any;
   private stats: any;
-  private scrollOffset = new Binding(0);
+  private scrollOffset: any;
 
   // Configuration
   private missionsPerRow: number = 3;
@@ -63,6 +67,8 @@ export class MissionScreen {
   private onRenderNeeded?: () => void;
 
   constructor(props: MissionScreenProps) {
+    this.ui = props.ui;
+    this.scrollOffset = new this.ui.Binding(0);
     this.missions = props.missions;
     this.stats = props.stats;
     this.onMissionSelect = props.onMissionSelect;
@@ -81,7 +87,7 @@ export class MissionScreen {
    * Create the missions UI
    */
   createUI(): UINodeType {
-    return View({
+    return this.ui.View({
       style: {
         width: '100%',
         height: '100%',
@@ -104,8 +110,8 @@ export class MissionScreen {
    * Create full-screen background image
    */
   private createBackground(): UINodeType {
-    return Image({
-      source: new Binding({ uri: 'background' }),
+    return this.ui.Image({
+      source: new this.ui.Binding({ uri: 'background' }),
       style: {
         position: 'absolute',
         width: '100%',
@@ -120,7 +126,7 @@ export class MissionScreen {
    * Create main content area with mission grid
    */
   private createMainContent(): UINodeType {
-    return View({
+    return this.ui.View({
       style: {
         position: 'absolute',
         left: cardsUIContainerPosition.x,
@@ -130,8 +136,8 @@ export class MissionScreen {
       },
       children: [
         // Cards container background image
-        Image({
-          source: new Binding({ uri: 'cards-container' }),
+        this.ui.Image({
+          source: new this.ui.Binding({ uri: 'cards-container' }),
           style: {
             position: 'absolute',
             width: cardsUIContainerDimensions.width,
@@ -141,7 +147,7 @@ export class MissionScreen {
           },
         }),
         // Content on top of container image
-        View({
+        this.ui.View({
           style: {
             position: 'relative',
             paddingLeft: DIMENSIONS.spacing.xl,
@@ -149,18 +155,18 @@ export class MissionScreen {
             width: cardsUIContainerDimensions.width,
             height: cardsUIContainerDimensions.height,
           },
-          children: this.missions.derive(missions => {
+          children: this.missions.derive((missions: MissionDisplay[]) => {
             if (missions.length === 0) {
               return [
-                View({
+                this.ui.View({
                   style: {
                     width: '100%',
                     height: '100%',
                     justifyContent: 'center',
                     alignItems: 'center',
                   },
-                  children: Text({
-                    text: new Binding('No missions available yet.'),
+                  children: this.ui.Text({
+                    text: new this.ui.Binding('No missions available yet.'),
                     style: {
                       fontSize: DIMENSIONS.fontSize.xl,
                       color: COLORS.textSecondary,
@@ -190,13 +196,13 @@ export class MissionScreen {
     const spacingX = cardWidth + gapX; // Total horizontal space per card
     const spacingY = cardHeight + gapY; // Total vertical space per card
 
-    return View({
+    return this.ui.View({
       style: {
         position: 'relative',
         width: '100%',
         height: '100%',
       },
-      children: Binding.derive(
+      children: this.ui.Binding.derive(
         [this.missions, this.scrollOffset],
         (missions: MissionDisplay[], offset: number) => {
           const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
@@ -214,7 +220,7 @@ export class MissionScreen {
             const y = startY + row * spacingY;
 
             cards.push(
-              View({
+              this.ui.View({
                 style: {
                   position: 'absolute',
                   left: x,
@@ -246,7 +252,7 @@ export class MissionScreen {
     const cardHeight = missionCardDimensions.height;
     const beastSize = 70; // Beast image size (70x70)
 
-    return Pressable({
+    return this.ui.Pressable({
       onClick: () => {
         if (mission.isAvailable && this.onMissionSelect) {
           this.onMissionSelect(mission.id);
@@ -260,8 +266,8 @@ export class MissionScreen {
       },
       children: [
         // Mission-specific background image (ForestMission, WaterMission, etc.)
-        Image({
-          source: new Binding({ uri: missionImageName }),
+        this.ui.Image({
+          source: new this.ui.Binding({ uri: missionImageName }),
           style: {
             position: 'absolute',
             width: cardWidth,
@@ -273,8 +279,8 @@ export class MissionScreen {
 
         // Beast image (if available)
         mission.beastId
-          ? Image({
-              source: new Binding({ uri: mission.beastId.toLowerCase().replace(/\s+/g, '-') }),
+          ? this.ui.Image({
+              source: new this.ui.Binding({ uri: mission.beastId.toLowerCase().replace(/\s+/g, '-') }),
               style: {
                 position: 'absolute',
                 width: beastSize,
@@ -284,11 +290,11 @@ export class MissionScreen {
                 opacity: mission.isAvailable ? 1 : 0.4,
               },
             })
-          : View({}),
+          : this.ui.View({}),
 
         // Mission name
-        Text({
-          text: new Binding(mission.name),
+        this.ui.Text({
+          text: new this.ui.Binding(mission.name),
           numberOfLines: 1,
           style: {
             position: 'absolute',
@@ -301,8 +307,8 @@ export class MissionScreen {
         }),
 
         // Level
-        Text({
-          text: new Binding(`Level ${mission.level}`),
+        this.ui.Text({
+          text: new this.ui.Binding(`Level ${mission.level}`),
           style: {
             position: 'absolute',
             left: missionCardPositions.level.x,
@@ -313,8 +319,8 @@ export class MissionScreen {
         }),
 
         // Difficulty
-        Text({
-          text: new Binding(`Difficulty: ${mission.difficulty}`),
+        this.ui.Text({
+          text: new this.ui.Binding(`Difficulty: ${mission.difficulty}`),
           style: {
             position: 'absolute',
             left: missionCardPositions.difficulty.x,
@@ -325,8 +331,8 @@ export class MissionScreen {
         }),
 
         // Description
-        Text({
-          text: new Binding(mission.description || ''),
+        this.ui.Text({
+          text: new this.ui.Binding(mission.description || ''),
           numberOfLines: 3,
           style: {
             position: 'absolute',
@@ -340,7 +346,7 @@ export class MissionScreen {
 
         // Dark overlay for locked missions
         !mission.isAvailable
-          ? View({
+          ? this.ui.View({
               style: {
                 position: 'absolute',
                 width: cardWidth,
@@ -349,8 +355,8 @@ export class MissionScreen {
                 left: 0,
                 backgroundColor: 'rgba(0, 0, 0, 0.6)',
               },
-              children: Text({
-                text: new Binding('🔒'),
+              children: this.ui.Text({
+                text: new this.ui.Binding('🔒'),
                 style: {
                   position: 'absolute',
                   left: cardWidth / 2 - 15,
@@ -360,12 +366,12 @@ export class MissionScreen {
                 },
               }),
             })
-          : View({}),
+          : this.ui.View({}),
 
         // Completed checkmark
         mission.isCompleted
-          ? Text({
-              text: new Binding('✅'),
+          ? this.ui.Text({
+              text: new this.ui.Binding('✅'),
               style: {
                 position: 'absolute',
                 right: 10,
@@ -373,7 +379,7 @@ export class MissionScreen {
                 fontSize: 20,
               },
             })
-          : View({}),
+          : this.ui.View({}),
       ],
     });
   }
@@ -404,7 +410,7 @@ export class MissionScreen {
    * Create side menu with controls
    */
   private createSideMenu(): UINodeType {
-    const completionText = Binding.derive(
+    const completionText = this.ui.Binding.derive(
       [this.missions],
       (missions: MissionDisplay[]) => {
         const completedCount = missions.filter((m: MissionDisplay) => m.isCompleted).length;
@@ -412,10 +418,10 @@ export class MissionScreen {
       }
     );
 
-    return createSideMenu({
+    return createSideMenu(this.ui, {
       title: 'Missions',
       customTextContent: [
-        createTextRow(completionText as any, 0),
+        createTextRow(this.ui, completionText as any, 0),
       ],
       buttons: [
         {
@@ -431,7 +437,7 @@ export class MissionScreen {
               this.scrollOffset.set(newOffset);
             }
           },
-          disabled: Binding.derive(
+          disabled: this.ui.Binding.derive(
             [this.missions, this.scrollOffset],
             (missions, offset) => offset <= 0
           ) as any,
@@ -450,7 +456,7 @@ export class MissionScreen {
               this.scrollOffset.set(newOffset);
             }
           },
-          disabled: Binding.derive(
+          disabled: this.ui.Binding.derive(
             [this.missions, this.scrollOffset],
             (missions: MissionDisplay[], offset: number) => {
               const missionsPerPage = this.missionsPerRow * this.rowsPerPage;

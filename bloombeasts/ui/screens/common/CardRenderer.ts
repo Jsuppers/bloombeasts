@@ -3,12 +3,12 @@
  * Reusable card display with multi-layer rendering
  */
 
-import { View, Text, Image, Pressable, Binding } from '../../index';
 import { COLORS } from '../../styles/colors';
 import { DIMENSIONS } from '../../styles/dimensions';
 import type { CardDisplay } from '../../../../bloombeasts/gameManager';
 import { getCardDescription } from '../../../engine/utils/cardDescriptionGenerator';
 import { UINodeType } from '../ScreenUtils';
+import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 
 export interface CardRendererProps {
   card: CardDisplay;
@@ -28,7 +28,7 @@ export interface CardRendererProps {
  * - Layer 6: Text overlays (name, cost, stats, level, ability)
  * - Layer 7: Deck indicator (if showDeckIndicator is true)
  */
-export function createCardComponent(props: CardRendererProps): UINodeType {
+export function createCardComponent(ui: UIMethodMappings, props: CardRendererProps): UINodeType {
   const { card, isInDeck = false, onClick, showDeckIndicator = true } = props;
 
   // Standard card dimensions from shared constants
@@ -100,8 +100,8 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
       // Layer 1: Card/Beast artwork image (185x185)
       // For Bloom cards: use beast image
       // For other cards (Magic/Trap/Buff/Habitat): use card artwork image
-      Image({
-        source: new Binding({ uri: card.type === 'Bloom' ? beastImageKey : cardImageKey }),
+      ui.Image({
+        source: new ui.Binding({ uri: card.type === 'Bloom' ? beastImageKey : cardImageKey }),
         style: {
           width: beastImageWidth,
           height: beastImageHeight,
@@ -112,8 +112,8 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
       }),
 
       // Layer 2: Base card frame (210x280) - ALL cards use BaseCard.png
-      Image({
-        source: new Binding({ uri: baseCardKey }),
+      ui.Image({
+        source: new ui.Binding({ uri: baseCardKey }),
         style: {
           width: cardWidth,
           height: cardHeight,
@@ -125,8 +125,8 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
 
       // Layer 2.5: Template overlay for non-Bloom cards (Magic/Trap/Buff/Habitat)
       ...(templateKey ? [
-        Image({
-          source: new Binding({ uri: templateKey }),
+        ui.Image({
+          source: new ui.Binding({ uri: templateKey }),
           style: {
             width: cardWidth,
             height: cardHeight,
@@ -139,8 +139,8 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
 
       // Layer 3: Affinity icon (for Bloom cards)
       ...(card.type === 'Bloom' && card.affinity && affinityKey ? [
-        Image({
-          source: new Binding({ uri: affinityKey }),
+        ui.Image({
+          source: new ui.Binding({ uri: affinityKey }),
           style: {
             width: 30,
             height: 30,
@@ -153,8 +153,8 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
 
       // Layer 4: Experience bar (for Bloom cards with level)
       ...(card.type === 'Bloom' && card.level ? [
-        Image({
-          source: new Binding({ uri: expBarKey }),
+        ui.Image({
+          source: new ui.Binding({ uri: expBarKey }),
           style: {
             width: 120,
             height: 20,
@@ -167,8 +167,8 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
 
       // Layer 5: Text overlays
       // Card name
-      Text({
-        text: new Binding(card.name || ''),
+      ui.Text({
+        text: new ui.Binding(card.name || ''),
         style: {
           position: 'absolute',
           top: positions.name.y,
@@ -182,8 +182,8 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
 
       // Cost (top-left)
       ...(card.cost !== undefined ? [
-        Text({
-          text: new Binding(String(card.cost)),
+        ui.Text({
+          text: new ui.Binding(String(card.cost)),
           style: {
             position: 'absolute',
             top: positions.cost.y,
@@ -198,7 +198,7 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
 
       // Attack and Health (for Bloom cards)
       ...(card.type === 'Bloom' && ((card as any).currentAttack !== undefined || (card as any).baseAttack !== undefined) ? [
-        Text({
+        ui.Text({
           text: String((card as any).currentAttack ?? (card as any).baseAttack ?? 0),
           style: {
             position: 'absolute',
@@ -213,7 +213,7 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
       ] : []),
 
       ...(card.type === 'Bloom' && ((card as any).currentHealth !== undefined || (card as any).baseHealth !== undefined) ? [
-        Text({
+        ui.Text({
           text: String((card as any).currentHealth ?? (card as any).baseHealth ?? 0),
           style: {
             position: 'absolute',
@@ -229,8 +229,8 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
 
       // Level (for all cards)
       ...(card.level !== undefined ? [
-        Text({
-          text: new Binding(`Level ${card.level}`),
+        ui.Text({
+          text: new ui.Binding(`Level ${card.level}`),
           style: {
             position: 'absolute',
             top: positions.level.y,
@@ -245,8 +245,8 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
 
       // Ability/Effect text (for all cards)
       ...(abilityText ? [
-        Text({
-          text: new Binding(abilityText),
+        ui.Text({
+          text: new ui.Binding(abilityText),
           numberOfLines: 3,
           style: {
             position: 'absolute',
@@ -262,7 +262,7 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
 
       // Deck indicator border if in deck and showDeckIndicator is true
       ...(isInDeck && showDeckIndicator ? [
-        View({
+        ui.View({
           style: {
             position: 'absolute',
             top: 0,
@@ -283,7 +283,7 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
   // Only wrap in Pressable if onClick is provided
   // Otherwise use View to avoid blocking parent click handlers
   if (onClick) {
-    return Pressable({
+    return ui.Pressable({
       onClick: () => onClick(card.id),
       style: {
         width: cardWidth,
@@ -293,7 +293,7 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
       children: filteredChildren,
     });
   } else {
-    return View({
+    return ui.View({
       style: {
         width: cardWidth,
         height: cardHeight,

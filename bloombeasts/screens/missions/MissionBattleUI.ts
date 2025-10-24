@@ -13,6 +13,7 @@ import { getAllBeasts } from '../../engine/utils/fieldUtils';
 import { pickRandom, shuffle } from '../../engine/utils/random';
 import { OpponentAI } from './OpponentAI';
 import { BattleStateManager } from './BattleStateManager';
+import type { AsyncMethods } from '../../ui/types/bindings';
 
 export interface BattleUIState {
   mission: Mission;
@@ -25,6 +26,7 @@ export interface BattleUIState {
 export class MissionBattleUI {
   private missionManager: MissionManager;
   private gameEngine: GameEngine;
+  private async: AsyncMethods;
   private currentBattle: BattleUIState | null = null;
   private renderCallback: (() => void) | null = null;
   private opponentActionCallback: ((action: string) => void) | null = null;
@@ -33,11 +35,13 @@ export class MissionBattleUI {
   private opponentAI: OpponentAI;
   private shouldStopAI: boolean = false; // Flag to stop AI turn processing
 
-  constructor(missionManager: MissionManager, gameEngine: GameEngine) {
+  constructor(missionManager: MissionManager, gameEngine: GameEngine, async: AsyncMethods) {
     this.missionManager = missionManager;
     this.gameEngine = gameEngine;
+    this.async = async;
     this.battleStateManager = new BattleStateManager();
     this.opponentAI = new OpponentAI({
+      async,
       onAction: (action: string) => {
         if (this.opponentActionCallback) this.opponentActionCallback(action);
       },
@@ -380,7 +384,7 @@ export class MissionBattleUI {
     const player = this.currentBattle.gameState.players[0];
 
     // Helper function for delays
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const delay = (ms: number) => new Promise(resolve => this.async.setTimeout(resolve, ms));
 
     // Draw a card
     this.drawCard(opponent);

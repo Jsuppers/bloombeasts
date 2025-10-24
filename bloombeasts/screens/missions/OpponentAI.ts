@@ -11,8 +11,10 @@
 import { Player } from '../../engine/types/game';
 import { Logger } from '../../engine/utils/Logger';
 import { pickRandom } from '../../engine/utils/random';
+import type { AsyncMethods } from '../../ui/types/bindings';
 
 export interface AICallbacks {
+  async: AsyncMethods;
   onAction?: (action: string) => void;
   onRender?: () => void;
 }
@@ -27,9 +29,11 @@ export interface AIDecision {
 
 export class OpponentAI {
   private callbacks: AICallbacks;
+  private async: AsyncMethods;
 
-  constructor(callbacks: AICallbacks = {}) {
+  constructor(callbacks: AICallbacks) {
     this.callbacks = callbacks;
+    this.async = callbacks.async;
   }
 
   /**
@@ -55,7 +59,7 @@ export class OpponentAI {
     },
     shouldStopGetter?: () => boolean
   ): Promise<void> {
-    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    const delay = (ms: number) => new Promise(resolve => this.async.setTimeout(resolve, ms));
 
     // Play cards phase
     const cardDecisions = this.decideCardPlays(opponent, player, gameState);

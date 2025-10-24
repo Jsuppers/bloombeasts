@@ -3,13 +3,13 @@
  * Shows card details in a popup overlay with action buttons
  */
 
-import { View, Text, Image, Pressable, Binding } from '../../index';
 import { COLORS } from '../../styles/colors';
 import { DIMENSIONS, GAPS } from '../../styles/dimensions';
 import { sideMenuButtonDimensions } from '../../constants/dimensions';
 import type { CardDetailDisplay, MenuStats } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
 import { createCardComponent } from './CardRenderer';
+import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 
 export interface CardDetailPopupProps {
   cardDetail: CardDetailDisplay;
@@ -19,7 +19,7 @@ export interface CardDetailPopupProps {
 /**
  * Create a card detail popup overlay
  */
-export function createCardDetailPopup(props: CardDetailPopupProps): UINodeType {
+export function createCardDetailPopup(ui: UIMethodMappings, props: CardDetailPopupProps): UINodeType {
   const { cardDetail, onButtonClick } = props;
 
   const cardWidth = 210; // Standard card width
@@ -35,7 +35,7 @@ export function createCardDetailPopup(props: CardDetailPopupProps): UINodeType {
   const contentX = (screenWidth - totalWidth) / 2;
   const contentY = (screenHeight - cardHeight) / 2;
 
-  return View({
+  return ui.View({
     style: {
       position: 'absolute',
       width: '100%',
@@ -45,7 +45,7 @@ export function createCardDetailPopup(props: CardDetailPopupProps): UINodeType {
     },
     children: [
       // Black backdrop - clicking closes the popup
-      Pressable({
+      ui.Pressable({
         onClick: () => onButtonClick('btn-card-close'),
         style: {
           position: 'absolute',
@@ -56,7 +56,7 @@ export function createCardDetailPopup(props: CardDetailPopupProps): UINodeType {
       }),
 
       // Content container (centered)
-      View({
+      ui.View({
         style: {
           position: 'absolute',
           left: contentX,
@@ -66,20 +66,20 @@ export function createCardDetailPopup(props: CardDetailPopupProps): UINodeType {
         },
         children: [
           // Card display
-          createCardComponent({
+          createCardComponent(ui, {
             card: cardDetail.card,
             isInDeck: cardDetail.isInDeck,
             showDeckIndicator: false, // Don't show deck indicator in detail view
           }),
 
           // Buttons to the right
-          View({
+          ui.View({
             style: {
               marginLeft: DIMENSIONS.spacing.xl,
               flexDirection: 'column',
             },
             children: (cardDetail.buttons || []).filter(b => b).map((buttonText, index) =>
-              Pressable({
+              ui.Pressable({
                 onClick: () => {
                   // Prevent backdrop click
                   const buttonId = `btn-card-${buttonText.toLowerCase().replace(/ /g, '-')}`;
@@ -93,8 +93,8 @@ export function createCardDetailPopup(props: CardDetailPopupProps): UINodeType {
                 },
                 children: [
                   // Button background image
-                  Image({
-                    source: new Binding({
+                  ui.Image({
+                    source: new ui.Binding({
                       uri: buttonText === 'Add' ? 'green-button' :
                            buttonText === 'Remove' ? 'red-button' :
                            'standard-button'
@@ -108,7 +108,7 @@ export function createCardDetailPopup(props: CardDetailPopupProps): UINodeType {
                     },
                   }),
                   // Button text
-                  View({
+                  ui.View({
                     style: {
                       position: 'absolute',
                       width: buttonWidth,
@@ -116,8 +116,8 @@ export function createCardDetailPopup(props: CardDetailPopupProps): UINodeType {
                       justifyContent: 'center',
                       alignItems: 'center',
                     },
-                    children: Text({
-                      text: new Binding(buttonText),
+                    children: ui.Text({
+                      text: new ui.Binding(buttonText),
                       style: {
                         fontSize: DIMENSIONS.fontSize.md,
                         color: COLORS.textPrimary,

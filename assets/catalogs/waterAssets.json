@@ -149,7 +149,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "2542562209453452",
           "path": "assets/images/cards_water_aqua-pebble.png"
         }
       ]
@@ -300,7 +300,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "2957682524429594",
           "path": "assets/images/cards_water_bubblefin.png"
         }
       ]
@@ -460,7 +460,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1232407695362881",
           "path": "assets/images/cards_water_dewdrop-drake.png"
         }
       ]
@@ -620,7 +620,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "2278603722605464",
           "path": "assets/images/cards_water_kelp-cub.png"
         }
       ]
@@ -658,17 +658,17 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "594002380404766",
           "path": "assets/images/cards_water_deep-sea-grotto.png"
         },
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "797144049734620",
           "path": "assets/images/cards_water_habitat-card.png"
         },
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "805465575687502",
           "path": "assets/images/cards_water_habitat-card-playboard.png"
         }
       ]
@@ -683,7 +683,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1204438218330106",
           "path": "assets/images/cards_water_water-mission.png"
         }
       ]
@@ -696,7 +696,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1502977104283894",
           "path": "assets/images/chest_water-chest-closed.png"
         }
       ]
@@ -709,7 +709,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "817919940747617",
           "path": "assets/images/chest_water-chest-opened.png"
         }
       ]
@@ -722,7 +722,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "803389222302576",
           "path": "assets/images/affinity_water-icon.png"
         }
       ]
@@ -736,7 +736,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "797144049734620",
           "path": "assets/images/cards_water_habitat-card.png"
         }
       ]

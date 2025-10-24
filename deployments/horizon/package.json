@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "build": "cd ../.. && node bundle-with-namespace.js",
-    "deploy": "npm run build && node deploy.js",
     "clean": "rm -rf ../../dist"
   },
   "dependencies": {},

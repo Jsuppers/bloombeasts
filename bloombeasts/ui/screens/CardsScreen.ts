@@ -4,9 +4,8 @@
  * Matches the styling from cardsScreen.new.ts
  */
 
-import { View, Text, Image, Pressable, Binding } from '../index';
-import type { ValueBindingBase } from '../index';
 import { COLORS } from '../styles/colors';
+import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { DIMENSIONS, GAPS } from '../styles/dimensions';
 import { sideMenuButtonDimensions } from '../constants/dimensions';
 import { deckEmoji } from '../constants/emojis';
@@ -17,6 +16,7 @@ import { createCardComponent, CARD_DIMENSIONS } from './common/CardRenderer';
 import { createCardDetailPopup } from './common/CardDetailPopup';
 
 export interface CardsScreenProps {
+  ui: UIMethodMappings;
   cards: any;
   deckSize: any;
   deckCardIds: any;
@@ -30,12 +30,15 @@ export interface CardsScreenProps {
  * Unified Cards Screen
  */
 export class CardsScreen {
+  // UI methods (injected)
+  private ui: UIMethodMappings;
+
   private cards: any;
   private deckSize: any;
   private deckCardIds: any;
   private stats: any;
   private scrollOffset: any;
-  private selectedCardDetail = new Binding<CardDetailDisplay | null>(null);
+  private selectedCardDetail: any;
   private cardsPerRow = 4;
   private rowsPerPage = 2;
   private onCardSelect?: (cardId: string) => void;
@@ -43,6 +46,8 @@ export class CardsScreen {
   private onRenderNeeded?: () => void;
 
   constructor(props: CardsScreenProps) {
+    this.ui = props.ui;
+    this.selectedCardDetail = new this.ui.Binding<CardDetailDisplay | null>(null);
     this.cards = props.cards;
     this.deckSize = props.deckSize;
     this.deckCardIds = props.deckCardIds;
@@ -50,7 +55,7 @@ export class CardsScreen {
     this.onCardSelect = props.onCardSelect;
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
-    this.scrollOffset = new Binding(0);
+    this.scrollOffset = new this.ui.Binding(0);
 
     // Subscribe to selectedCardDetail changes to trigger re-renders
     this.selectedCardDetail.subscribe(() => {
@@ -82,7 +87,7 @@ export class CardsScreen {
             }
           }
         },
-        disabled: Binding.derive(
+        disabled: this.ui.Binding.derive(
           [this.cards, this.scrollOffset],
           (cards: any[], offset: number) => offset <= 0
         ) as any,
@@ -107,7 +112,7 @@ export class CardsScreen {
             }
           }
         },
-        disabled: Binding.derive(
+        disabled: this.ui.Binding.derive(
           [this.cards, this.scrollOffset],
           (cards: any[], offset: number) => {
             const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
@@ -122,7 +127,7 @@ export class CardsScreen {
     // Deck info text
     const deckInfoText = this.deckSize.derive((size: number) => `${deckEmoji} ${size}/30`);
 
-    return View({
+    return this.ui.View({
       style: {
         width: '100%',
         height: '100%',
@@ -130,8 +135,8 @@ export class CardsScreen {
       },
       children: [
         // Background
-        Image({
-          source: new Binding({ uri: 'background' }),
+        this.ui.Image({
+          source: new this.ui.Binding({ uri: 'background' }),
           style: {
             position: 'absolute',
             width: '100%',
@@ -141,8 +146,8 @@ export class CardsScreen {
           },
         }),
         // Cards Container image as background
-        Image({
-          source: new Binding({ uri: 'cards-container' }),
+        this.ui.Image({
+          source: new this.ui.Binding({ uri: 'cards-container' }),
           style: {
             position: 'absolute',
             left: 40,
@@ -152,7 +157,7 @@ export class CardsScreen {
           },
         }),
         // Main content - card grid
-        View({
+        this.ui.View({
           style: {
             position: 'absolute',
             left: 70,
@@ -160,19 +165,19 @@ export class CardsScreen {
             width: 920,
             height: 580,
           },
-          children: Binding.derive(
+          children: this.ui.Binding.derive(
             [this.cards, this.scrollOffset, this.deckCardIds],
             (cards: CardDisplay[], offset: number, deckIds: string[]) => {
               if (cards.length === 0) {
                 return [
-                  View({
+                  this.ui.View({
                     style: {
                       flex: 1,
                       justifyContent: 'center',
                       alignItems: 'center',
                     },
-                    children: Text({
-                      text: new Binding('No cards in your collection yet.'),
+                    children: this.ui.Text({
+                      text: new this.ui.Binding('No cards in your collection yet.'),
                       style: {
                         fontSize: DIMENSIONS.fontSize.xl,
                         color: COLORS.textPrimary,
@@ -197,7 +202,7 @@ export class CardsScreen {
 
                 if (rowCards.length > 0) {
                   rows.push(
-                    View({
+                    this.ui.View({
                       style: {
                         flexDirection: 'row',
                         marginBottom: row < this.rowsPerPage - 1 ? GAPS.cards : 0,
@@ -205,11 +210,11 @@ export class CardsScreen {
                       children: rowCards
                         .filter((card: CardDisplay) => card && card.id)
                         .map((card: CardDisplay, index: number) =>
-                          View({
+                          this.ui.View({
                             style: {
                               marginRight: index < rowCards.length - 1 ? GAPS.cards : 0,
                             },
-                            children: createCardComponent({
+                            children: createCardComponent(this.ui, {
                               card,
                               isInDeck: deckIds.includes(card.id),
                               onClick: (cardId: string) => this.handleCardClick(cardId),
@@ -223,7 +228,7 @@ export class CardsScreen {
               }
 
               return [
-                View({
+                this.ui.View({
                   style: {
                     flexDirection: 'column',
                   },
@@ -234,10 +239,10 @@ export class CardsScreen {
           ) as any,
         }),
         // Sidebar with common side menu
-        createSideMenu({
+        createSideMenu(this.ui, {
           title: 'Cards',
           customTextContent: [
-            createTextRow(deckInfoText, 0),
+            createTextRow(this.ui, deckInfoText, 0),
           ],
           buttons: scrollButtons,
           bottomButton: {
@@ -251,7 +256,7 @@ export class CardsScreen {
         }),
 
         // Card detail popup overlay container (always present)
-        View({
+        this.ui.View({
           style: {
             position: 'absolute',
             width: '100%',
@@ -259,12 +264,12 @@ export class CardsScreen {
             top: 0,
             left: 0,
           },
-          children: this.selectedCardDetail.derive((cardDetail) => {
+          children: this.selectedCardDetail.derive((cardDetail: CardDetailDisplay | null) => {
             if (!cardDetail) {
               return []; // No popup
             }
 
-            return [createCardDetailPopup({
+            return [createCardDetailPopup(this.ui, {
               cardDetail,
               onButtonClick: (buttonId: string) => this.handlePopupButtonClick(buttonId),
             })];

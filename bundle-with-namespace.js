@@ -152,6 +152,13 @@ function processFile(filePath) {
   }
   if (normalizedPath.includes('.test.') || normalizedPath.includes('__tests__')) return;
 
+  // Skip bloombeasts/ui/index.ts - it just re-exports from web and would cause issues in namespace
+  if (normalizedPath.includes('bloombeasts\\ui\\index.ts') ||
+      normalizedPath.includes('bloombeasts/ui/index.ts')) {
+    console.log(`Skipping re-export file: ${path.relative(__dirname, normalizedPath)}`);
+    return;
+  }
+
   console.log(`Processing: ${path.relative(__dirname, normalizedPath)}`);
   processedFiles.add(normalizedPath);
 
@@ -181,22 +188,26 @@ console.log('Building standalone TypeScript bundle with namespace...\n');
 // Track const/let/var declarations to detect duplicates
 const declaredConstants = new Map();
 
-// Process entry point
+// Process entry point - core game engine
 const entryPoint = path.resolve(__dirname, './bloombeasts/engine/index.ts');
 processFile(entryPoint);
 
-// Process other key files
+// Process core game logic
 processFile(path.resolve(__dirname, './bloombeasts/gameManager.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/systems/CardCollectionManager.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/systems/SoundManager.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/systems/BattleDisplayManager.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/screens/missions/BattleStateManager.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/screens/missions/OpponentAI.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/screens/missions/MissionManager.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/screens/missions/MissionSelectionUI.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/screens/missions/MissionBattleUI.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/screens/missions/definitions/index.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/screens/cards/CardCollection.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/AssetCatalog.ts'));
 
-// Process shared styles (needed for Horizon UI)
-processFile(path.resolve(__dirname, './shared/styles/colors.ts'));
-processFile(path.resolve(__dirname, './shared/styles/dimensions.ts'));
-processFile(path.resolve(__dirname, './shared/styles/layouts.ts'));
-processFile(path.resolve(__dirname, './shared/ui/types.ts'));
-processFile(path.resolve(__dirname, './shared/ui/presets.ts'));
+// Process BloomBeastsGame (main game controller)
+processFile(path.resolve(__dirname, './bloombeasts/BloomBeastsGame.ts'));
 
 // Handle duplicate const declarations
 // Don't rename - namespaces already provide isolation
@@ -229,91 +240,13 @@ const bundle = `/**
 
 // ==================== Global Type Declarations ====================
 
-// Augment Meta Horizon's Console interface with basic methods
-// Only includes log, warn, and error for maximum compatibility
-interface Console {
-  log(...args: unknown[]): void;
-  warn(...args: unknown[]): void;
-  error(...args: unknown[]): void;
-}
-
-type TimerHandler = (...args: any[]) => any;
-declare function setTimeout(callback: TimerHandler, timeout?: number, ...args: unknown[]): number;
-declare function setInterval(callback: TimerHandler, timeout?: number, ...args: unknown[]): number;
-declare function clearInterval(id: number): void;
-declare function clearTimeout(id: number): void;
-
-type CanvasTextAlign = "start" | "end" | "left" | "right" | "center";
-type CanvasTextBaseline = "top" | "hanging" | "middle" | "alphabetic" | "ideographic" | "bottom";
-
-interface CanvasRenderingContext2D {
-  fillStyle: string | CanvasGradient | CanvasPattern;
-  strokeStyle: string | CanvasGradient | CanvasPattern;
-  lineWidth: number;
-  lineCap: string;
-  lineJoin: string;
-  miterLimit: number;
-  lineDashOffset: number;
-  font: string;
-  textAlign: CanvasTextAlign;
-  textBaseline: CanvasTextBaseline;
-  direction: string;
-  globalAlpha: number;
-  globalCompositeOperation: string;
-  imageSmoothingEnabled: boolean;
-  shadowBlur: number;
-  shadowColor: string;
-  shadowOffsetX: number;
-  shadowOffsetY: number;
-
-  fillRect(x: number, y: number, w: number, h: number): void;
-  strokeRect(x: number, y: number, w: number, h: number): void;
-  clearRect(x: number, y: number, w: number, h: number): void;
-  fillText(text: string, x: number, y: number, maxWidth?: number): void;
-  strokeText(text: string, x: number, y: number, maxWidth?: number): void;
-  measureText(text: string): TextMetrics;
-  beginPath(): void;
-  closePath(): void;
-  moveTo(x: number, y: number): void;
-  lineTo(x: number, y: number): void;
-  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number, anticlockwise?: boolean): void;
-  arcTo(x1: number, y1: number, x2: number, y2: number, radius: number): void;
-  bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void;
-  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
-  rect(x: number, y: number, w: number, h: number): void;
-  fill(): void;
-  stroke(): void;
-  clip(): void;
-  save(): void;
-  restore(): void;
-  scale(x: number, y: number): void;
-  rotate(angle: number): void;
-  translate(x: number, y: number): void;
-  transform(a: number, b: number, c: number, d: number, e: number, f: number): void;
-  setTransform(a: number, b: number, c: number, d: number, e: number, f: number): void;
-  resetTransform(): void;
-  drawImage(image: unknown, dx: number, dy: number): void;
-  drawImage(image: unknown, dx: number, dy: number, dw: number, dh: number): void;
-  drawImage(image: unknown, sx: number, sy: number, sw: number, sh: number, dx: number, dy: number, dw: number, dh: number): void;
-}
-
-interface TextMetrics {
-  width: number;
-  actualBoundingBoxLeft?: number;
-  actualBoundingBoxRight?: number;
-  actualBoundingBoxAscent?: number;
-  actualBoundingBoxDescent?: number;
-}
-
-interface CanvasGradient {
-  addColorStop(offset: number, color: string): void;
-}
-
-interface CanvasPattern {}
-
 // ==================== BloomBeasts Namespace ====================
 
 namespace BloomBeasts {
+
+  // ==================== Game Engine Code ====================
+  // All type declarations and implementations are included from source files below.
+  // UI implementations are provided by the platform via UIMethodMappings interface.
 
 ${fileContents.map(file => {
   if (!file.content.trim()) return '';
@@ -329,6 +262,9 @@ ${fileContents.map(file => {
 
 }
 
+// Export the namespace as a module
+export { BloomBeasts };
+
 // Make BloomBeasts available globally
 if (typeof globalThis !== 'undefined') {
   (globalThis as any).BloomBeasts = BloomBeasts;
@@ -336,7 +272,7 @@ if (typeof globalThis !== 'undefined') {
 `;
 
 // Write output
-const outputDir = path.resolve(__dirname, 'dist');
+const outputDir = path.resolve(__dirname, 'deployments/horizon/src');
 const outputPath = path.join(outputDir, 'BloomBeasts-GameEngine-Standalone.ts');
 fs.mkdirSync(outputDir, { recursive: true });
 fs.writeFileSync(outputPath, bundle, 'utf8');

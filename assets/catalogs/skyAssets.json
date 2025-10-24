@@ -164,7 +164,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1857788838498496",
           "path": "assets/images/cards_sky_aero-moth.png"
         }
       ]
@@ -318,7 +318,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "849446287592530",
           "path": "assets/images/cards_sky_cirrus-floof.png"
         }
       ]
@@ -473,7 +473,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1854780382097596",
           "path": "assets/images/cards_sky_gale-glider.png"
         }
       ]
@@ -641,7 +641,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "737222956003560",
           "path": "assets/images/cards_sky_star-bloom.png"
         }
       ]
@@ -674,17 +674,17 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1941325056416004",
           "path": "assets/images/cards_sky_clear-zenith.png"
         },
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1140855177628973",
           "path": "assets/images/cards_sky_habitat-card.png"
         },
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "674037762415336",
           "path": "assets/images/cards_sky_habitat-card-playboard.png"
         }
       ]
@@ -699,7 +699,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1076415204381099",
           "path": "assets/images/cards_sky_sky-mission.png"
         }
       ]
@@ -712,7 +712,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1988442925266143",
           "path": "assets/images/chest_sky-chest-closed.png"
         }
       ]
@@ -725,7 +725,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "766596743048030",
           "path": "assets/images/chest_sky-chest-opened.png"
         }
       ]
@@ -738,7 +738,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "2078365889573892",
           "path": "assets/images/affinity_sky-icon.png"
         }
       ]
@@ -752,7 +752,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1140855177628973",
           "path": "assets/images/cards_sky_habitat-card.png"
         }
       ]

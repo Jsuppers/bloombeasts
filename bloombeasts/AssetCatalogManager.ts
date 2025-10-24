@@ -4,6 +4,10 @@
  * This replaces the dynamic asset ID generation with a JSON-based catalog system.
  * All asset information (paths, Horizon IDs, metadata) is stored in JSON files
  * organized by affinity and category.
+ *
+ * PLATFORM-SPECIFIC LOADING:
+ * - Web: See deployments/web/src/main.ts for fetch()-based loading
+ * - Horizon: See deployments/horizon/src/AssetCatalogLoader.ts for fetchAsData()-based loading
  */
 
 export interface AssetReference {
@@ -62,49 +66,28 @@ export interface AssetCatalog {
  * AssetCatalogManager - Manages loading and querying of asset catalogs
  */
 export class AssetCatalogManager {
+  private static instance: AssetCatalogManager;
+
   private catalogs: Map<string, AssetCatalog> = new Map();
   private assetIndex: Map<string, CardAssetEntry | MissionAssetEntry | UIAssetEntry> = new Map();
   private pathToIdMap: Map<string, string> = new Map(); // Maps asset paths to IDs
   private horizonIdMap: Map<string, string> = new Map(); // Maps Horizon IDs to asset IDs
 
   /**
-   * Load an asset catalog from JSON
+   * Get singleton instance
    */
-  async loadCatalog(catalogPath: string): Promise<void> {
-    try {
-      const response = await fetch(catalogPath);
-      const catalog: AssetCatalog = await response.json();
-
-      const catalogKey = catalog.category;
-      this.catalogs.set(catalogKey, catalog);
-
-      // Index all assets by ID for quick lookup
-      catalog.data.forEach(entry => {
-        this.assetIndex.set(entry.id, entry);
-
-        // Create reverse mappings for quick lookups
-        entry.assets.forEach(asset => {
-          // Map path to entry ID
-          this.pathToIdMap.set(asset.path, entry.id);
-
-          // Map Horizon ID to entry ID (if available)
-          if (asset.horizonAssetId) {
-            this.horizonIdMap.set(asset.horizonAssetId, entry.id);
-          }
-        });
-      });
-
-      console.log(`Loaded ${catalog.category} catalog with ${catalog.data.length} entries`);
-    } catch (error) {
-      console.error(`Failed to load catalog ${catalogPath}:`, error);
-      throw error;
+  static getInstance(): AssetCatalogManager {
+    if (!AssetCatalogManager.instance) {
+      AssetCatalogManager.instance = new AssetCatalogManager();
     }
+    return AssetCatalogManager.instance;
   }
 
   /**
-   * Load catalog from JSON object (for testing or embedded catalogs)
+   * Load catalog from JSON object
+   * Platform-specific code should fetch/load the JSON and pass it here
    */
-  loadCatalogFromJson(catalog: AssetCatalog): void {
+  loadCatalog(catalog: AssetCatalog): void {
     const catalogKey = catalog.category;
     this.catalogs.set(catalogKey, catalog);
 
@@ -120,28 +103,8 @@ export class AssetCatalogManager {
         }
       });
     });
-  }
 
-  /**
-   * Load all standard asset catalogs
-   */
-  async loadAllCatalogs(basePath: string = '/assets/catalogs'): Promise<void> {
-    const catalogFiles = [
-      'fireAssets.json',
-      'forestAssets.json',
-      'skyAssets.json',
-      'waterAssets.json',
-      'buffAssets.json',
-      'trapAssets.json',
-      'magicAssets.json',
-      'commonAssets.json'
-    ];
-
-    await Promise.all(
-      catalogFiles.map(file =>
-        this.loadCatalog(`${basePath}/${file}`)
-      )
-    );
+    console.log(`Loaded ${catalog.category} catalog with ${catalog.data.length} entries`);
   }
 
   /**
@@ -335,4 +298,4 @@ export class AssetCatalogManager {
 }
 
 // Singleton instance
-export const assetCatalogManager = new AssetCatalogManager();
+export const assetCatalogManager = AssetCatalogManager.getInstance();

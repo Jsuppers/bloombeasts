@@ -4,8 +4,8 @@
  */
 
 // Export bindings
-export { Binding, AnimatedBinding, DerivedBinding, AnimatedInterpolation, resolveBindable } from './Binding';
-export type { Bindable, ValueBindingBase } from './Binding';
+export { Binding, AnimatedBinding, DerivedBinding, AnimatedInterpolation, resolveBindable, ValueBindingBase } from './Binding';
+export type { Bindable } from './Binding';
 
 // Export animations
 export { Animation, Easing } from './Animation';

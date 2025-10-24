@@ -4,7 +4,6 @@
  * Exactly mimics the UI from bloombeasts/screens/missions/MissionCompletePopup.ts
  */
 
-import { View, Text, Image, Pressable, Binding } from '../../index';
 import { DIMENSIONS } from '../../styles/dimensions';
 import {
   missionCompleteCardDimensions,
@@ -13,6 +12,7 @@ import {
 } from '../../constants/dimensions';
 import { missionCompleteCardPositions } from '../../constants/positions';
 import { UINodeType } from '../ScreenUtils';
+import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 
 export interface MissionCompletePopupProps {
   mission: {
@@ -40,7 +40,7 @@ export interface MissionCompletePopupProps {
 /**
  * Unified Mission Complete Popup that exactly replicates canvas version
  */
-export function createMissionCompletePopup(props: MissionCompletePopupProps): UINodeType {
+export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionCompletePopupProps): UINodeType {
   const { mission, rewards, chestOpened, onClaimRewards, onContinue } = props;
   const isFailed = !rewards;
 
@@ -49,7 +49,7 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
   const centerX = (1280 - containerWidth) / 2;
   const centerY = (720 - containerHeight) / 2;
 
-  return View({
+  return ui.View({
     style: {
       position: 'absolute',
       width: '100%',
@@ -60,7 +60,7 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
     },
     children: [
       // Semi-transparent backdrop
-      View({
+      ui.View({
         style: {
           position: 'absolute',
           width: '100%',
@@ -70,7 +70,7 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
       }),
 
       // Content container (centered)
-      View({
+      ui.View({
         style: {
           position: 'absolute',
           left: centerX,
@@ -80,8 +80,8 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
         },
         children: [
           // Container background image
-          Image({
-            source: new Binding({ uri: 'mission-container' }),
+          ui.Image({
+            source: new ui.Binding({ uri: 'mission-container' }),
             style: {
               position: 'absolute',
               width: containerWidth,
@@ -90,7 +90,7 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
           }),
 
           // Content overlay
-          View({
+          ui.View({
             style: {
               position: 'absolute',
               width: containerWidth,
@@ -98,14 +98,14 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
             },
             children: [
           // Title
-          View({
+          ui.View({
             style: {
               position: 'absolute',
               left: missionCompleteCardPositions.title.x,
               top: missionCompleteCardPositions.title.y,
               width: containerWidth - missionCompleteCardPositions.title.x * 2,
             },
-            children: Text({
+            children: ui.Text({
               text: isFailed ? 'MISSION FAILED' : 'MISSION COMPLETE!',
               style: {
                 fontSize: missionCompleteCardPositions.title.size,
@@ -118,8 +118,8 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
 
           // Chest or lose image
           isFailed
-            ? Image({
-                source: new Binding({ uri: 'lose-image' }),
+            ? ui.Image({
+                source: new ui.Binding({ uri: 'lose-image' }),
                 style: {
                   position: 'absolute',
                   left: missionCompleteCardPositions.chestImage.x,
@@ -128,8 +128,8 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
                   height: chestImageMissionCompleteDimensions.height,
                 },
               })
-            : Image({
-                source: new Binding({
+            : ui.Image({
+                source: new ui.Binding({
                   uri: chestOpened
                     ? `${mission.affinity || 'Forest'}-chest-opened`.toLowerCase()
                     : `${mission.affinity || 'Forest'}-chest-closed`.toLowerCase(),
@@ -144,7 +144,7 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
               }),
 
           // Info text
-          View({
+          ui.View({
             style: {
               position: 'absolute',
               left: missionCompleteCardPositions.infoText.x,
@@ -152,14 +152,14 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
               width: containerWidth - missionCompleteCardPositions.infoText.x - 30, // 30px right margin
             },
             children: isFailed
-              ? createFailedInfo()
+              ? createFailedInfo(ui)
               : chestOpened
-              ? createDetailedRewards(rewards)
-              : createBasicInfo(rewards),
+              ? createDetailedRewards(ui, rewards)
+              : createBasicInfo(ui, rewards),
           }),
 
           // Claim/Continue button
-          Pressable({
+          ui.Pressable({
             onClick: () => {
               console.log('[MissionCompletePopup] Button clicked, isFailed:', isFailed, 'chestOpened:', chestOpened);
               if (isFailed || chestOpened) {
@@ -180,8 +180,8 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
             },
             children: [
               // Button background image
-              Image({
-                source: new Binding({ uri: 'long-green-button' }),
+              ui.Image({
+                source: new ui.Binding({ uri: 'long-green-button' }),
                 style: {
                   position: 'absolute',
                   width: longButtonDimensions.width,
@@ -189,7 +189,7 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
                 },
               }),
               // Button text
-              View({
+              ui.View({
                 style: {
                   position: 'absolute',
                   width: longButtonDimensions.width,
@@ -197,7 +197,7 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
                   justifyContent: 'center',
                   alignItems: 'center',
                 },
-                children: Text({
+                children: ui.Text({
                   text: isFailed ? 'CONTINUE' : chestOpened ? 'CONTINUE' : 'CLAIM REWARDS',
                   style: {
                     fontSize: 18,
@@ -220,15 +220,15 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
 /**
  * Create failed mission info text
  */
-function createFailedInfo(): UINodeType {
-  return View({
+function createFailedInfo(ui: UIMethodMappings): UINodeType {
+  return ui.View({
     style: {
       flexDirection: 'column',
       alignItems: 'center',
       width: '100%',
     },
     children: [
-      Text({
+      ui.Text({
         text: 'Better luck next time!\n\nKeep training your beasts\nand try again.',
         style: {
           fontSize: 14,
@@ -244,19 +244,19 @@ function createFailedInfo(): UINodeType {
 /**
  * Create basic info (before chest opened)
  */
-function createBasicInfo(rewards: any): UINodeType {
+function createBasicInfo(ui: UIMethodMappings, rewards: any): UINodeType {
   const minutes = Math.floor(rewards.completionTimeSeconds / 60);
   const seconds = rewards.completionTimeSeconds % 60;
   const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
 
   const lines = [`Time: ${timeString}`, '', `Player XP: +${rewards.xpGained}`, `Beast XP: +${rewards.beastXP}`];
 
-  return View({
+  return ui.View({
     style: {
       flexDirection: 'column',
     },
     children: lines.map((line, index) =>
-      Text({
+      ui.Text({
         text: line,
         style: {
           fontSize: missionCompleteCardPositions.infoText.size,
@@ -272,13 +272,13 @@ function createBasicInfo(rewards: any): UINodeType {
 /**
  * Create detailed rewards (after chest opened)
  */
-function createDetailedRewards(rewards: any): UINodeType {
+function createDetailedRewards(ui: UIMethodMappings, rewards: any): UINodeType {
   const elements: UINodeType[] = [];
 
   // Cards received
   if (rewards.cardsReceived && rewards.cardsReceived.length > 0) {
     elements.push(
-      Text({
+      ui.Text({
         text: 'Cards Received:',
         style: {
           fontSize: missionCompleteCardPositions.infoText.size,
@@ -291,7 +291,7 @@ function createDetailedRewards(rewards: any): UINodeType {
 
     rewards.cardsReceived.forEach((card: any, index: number) => {
       elements.push(
-        Text({
+        ui.Text({
           text: `  • ${card.name}`,
           style: {
             fontSize: missionCompleteCardPositions.infoText.size,
@@ -305,7 +305,7 @@ function createDetailedRewards(rewards: any): UINodeType {
 
     // Extra spacing
     elements.push(
-      View({
+      ui.View({
         style: { height: 10 },
       })
     );
@@ -314,7 +314,7 @@ function createDetailedRewards(rewards: any): UINodeType {
   // Items received
   if (rewards.itemsReceived && rewards.itemsReceived.length > 0) {
     elements.push(
-      Text({
+      ui.Text({
         text: 'Items Received:',
         style: {
           fontSize: missionCompleteCardPositions.infoText.size,
@@ -329,7 +329,7 @@ function createDetailedRewards(rewards: any): UINodeType {
       const emoji = itemReward.emoji || '';
       const itemName = itemReward.name || itemReward.itemId;
       elements.push(
-        Text({
+        ui.Text({
           text: `  ${emoji} ${itemName} x${itemReward.quantity}`,
           style: {
             fontSize: missionCompleteCardPositions.infoText.size,
@@ -343,13 +343,13 @@ function createDetailedRewards(rewards: any): UINodeType {
 
     // Extra spacing
     elements.push(
-      View({
+      ui.View({
         style: { height: 10 },
       })
     );
   }
 
-  return View({
+  return ui.View({
     style: {
       flexDirection: 'column',
     },

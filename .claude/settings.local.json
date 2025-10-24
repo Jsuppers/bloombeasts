@@ -8,7 +8,16 @@
       "Bash(test:*)",
       "Bash(npm run build:web:prod:*)",
       "Bash(npm run:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)",
+      "Bash(for:*)",
+      "Bash(do)",
+      "Bash(done)",
+      "Bash(npx rollup:*)",
+      "Bash(do echo \"=== $f ===\")",
+      "Bash(node bundle-with-namespace.js:*)",
+      "Bash(npm test:*)",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []

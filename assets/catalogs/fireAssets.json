@@ -140,7 +140,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "3218250765004566",
           "path": "assets/images/cards_fire_blazefinch.png"
         }
       ]
@@ -287,7 +287,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "913214814369510",
           "path": "assets/images/cards_fire_cinder-pup.png"
         }
       ]
@@ -452,7 +452,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "785856391096811",
           "path": "assets/images/cards_fire_charcoil.png"
         }
       ]
@@ -607,7 +607,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "25339017082348952",
           "path": "assets/images/cards_fire_magmite.png"
         }
       ]
@@ -643,17 +643,17 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1878791053043603",
           "path": "assets/images/cards_fire_volcanic-scar.png"
         },
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1762741407742835",
           "path": "assets/images/cards_fire_habitat-card.png"
         },
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1863280224222620",
           "path": "assets/images/cards_fire_habitat-card-playboard.png"
         }
       ]
@@ -668,7 +668,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "795064546836933",
           "path": "assets/images/cards_fire_fire-mission.png"
         }
       ]
@@ -681,7 +681,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1168387145201364",
           "path": "assets/images/chest_fire-chest-closed.png"
         }
       ]
@@ -694,7 +694,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "3716217982005558",
           "path": "assets/images/chest_fire-chest-opened.png"
         }
       ]
@@ -707,7 +707,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "2011015256402906",
           "path": "assets/images/affinity_fire-icon.png"
         }
       ]
@@ -721,7 +721,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1762741407742835",
           "path": "assets/images/cards_fire_habitat-card.png"
         }
       ]

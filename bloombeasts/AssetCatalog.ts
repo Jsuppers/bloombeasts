@@ -195,8 +195,3 @@ export function getAllSoundAssetIds(): string[] {
 export function normalizeSoundId(soundId: string): string {
   return LEGACY_SOUND_ID_MAP[soundId] || soundId;
 }
-
-
-// Types for asset maps that platforms must provide
-export type ImageAssetMap = Record<string, any>;
-export type SoundAssetMap = Record<string, any>; // More flexible to support both catalog IDs and paths

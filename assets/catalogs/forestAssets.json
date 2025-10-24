@@ -148,7 +148,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1170317305016635",
           "path": "assets/images/cards_forest_rootling.png",
           "description": "Rootling card artwork"
         }
@@ -273,7 +273,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1733091247346351",
           "path": "assets/images/cards_forest_leaf-sprite.png",
           "description": "Leaf Sprite card artwork"
         }
@@ -404,7 +404,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1344114090714721",
           "path": "assets/images/cards_forest_mosslet.png",
           "description": "Mosslet card artwork"
         }
@@ -535,7 +535,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1393693032328550",
           "path": "assets/images/cards_forest_mushroomancer.png",
           "description": "Mushroomancer card artwork"
         }
@@ -571,19 +571,19 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1625867191715184",
           "path": "assets/images/cards_forest_ancient-forest.png",
           "description": "Ancient Forest habitat card artwork"
         },
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "787776974149741",
           "path": "assets/images/cards_forest_habitat-card.png",
           "description": "Forest habitat card template"
         },
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "805969505504149",
           "path": "assets/images/cards_forest_habitat-card-playboard.png",
           "description": "Forest habitat card playboard"
         }
@@ -599,7 +599,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1351984712974001",
           "path": "assets/images/cards_forest_forest-mission.png",
           "description": "Forest mission card"
         }
@@ -614,7 +614,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "678586941962889",
           "path": "assets/images/chest_forest-chest-closed.png"
         }
       ]
@@ -628,7 +628,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1859963367965524",
           "path": "assets/images/chest_forest-chest-opened.png"
         }
       ]
@@ -642,7 +642,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1869425844004279",
           "path": "assets/images/affinity_forest-icon.png"
         }
       ]
@@ -656,7 +656,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "787776974149741",
           "path": "assets/images/cards_forest_habitat-card.png"
         }
       ]

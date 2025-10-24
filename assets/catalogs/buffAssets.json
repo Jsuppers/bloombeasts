@@ -31,7 +31,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "1514404306279605",
           "path": "assets/images/cards_buff_battle-fury.png"
         }
       ]
@@ -64,7 +64,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "787965707330770",
           "path": "assets/images/cards_buff_mystic-shield.png"
         }
       ]
@@ -97,7 +97,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "4100038783597004",
           "path": "assets/images/cards_buff_natures-blessing.png"
         }
       ]
@@ -131,7 +131,7 @@
       "assets": [
         {
           "type": "image",
-          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "horizonAssetId": "657351040536713",
           "path": "assets/images/cards_buff_swift-wind.png"
         }
       ]

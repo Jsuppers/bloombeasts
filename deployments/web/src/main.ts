@@ -7,19 +7,36 @@ import { BloomBeastsGame, PlatformConfig, type PlayerData } from '../../../bloom
 import { assetCatalogManager, AssetCatalogManager } from '../../../bloombeasts/AssetCatalogManager';
 import { UIRenderer } from './ui/UIRenderer';
 import { View, Text, Image, Pressable, Binding } from './ui';
-import { AnimatedBinding, Animation, Easing } from './ui/AnimatedBinding';
-
-type ImageAssetMap = Record<string, string>;
-type SoundAssetMap = Record<string, string>;
+import { AnimatedBinding, Animation, Easing } from './ui';
 
 /**
  * Initialize and load all asset catalogs using the singleton instance
+ * Web-specific: Uses fetch to load JSON files
  */
 async function initializeAssetCatalogs() {
     console.log('📦 Initializing Asset Catalogs...');
 
+    const catalogFiles = [
+        'fireAssets.json',
+        'forestAssets.json',
+        'skyAssets.json',
+        'waterAssets.json',
+        'buffAssets.json',
+        'trapAssets.json',
+        'magicAssets.json',
+        'commonAssets.json'
+    ];
+
+    const basePath = '/assets/catalogs';
+
     try {
-        await assetCatalogManager.loadAllCatalogs('/assets/catalogs');
+        await Promise.all(
+            catalogFiles.map(async file => {
+                const response = await fetch(`${basePath}/${file}`);
+                const catalog = await response.json();
+                assetCatalogManager.loadCatalog(catalog);
+            })
+        );
         console.log('✅ Asset catalogs loaded successfully');
         console.log('   Categories:', assetCatalogManager.getLoadedCategories());
     } catch (error) {
@@ -28,34 +45,6 @@ async function initializeAssetCatalogs() {
     }
 
     return assetCatalogManager;
-}
-
-/**
- * Create web image asset mappings from catalogs
- */
-function createWebImageAssets(manager: AssetCatalogManager): ImageAssetMap {
-    const mappings = manager.getWebAssetMappings();
-    // Add leading slash for web server absolute paths
-    const webImages: ImageAssetMap = {};
-    for (const [id, path] of Object.entries(mappings.images)) {
-        webImages[id] = path.startsWith('/') ? path : `/${path}`;
-    }
-    return webImages;
-}
-
-/**
- * Create web sound asset mappings from catalogs
- */
-function createWebSoundAssets(manager: AssetCatalogManager): SoundAssetMap {
-    const mappings = manager.getWebAssetMappings();
-    // Add leading slash for web server absolute paths
-    const webSounds: SoundAssetMap = {};
-    for (const [id, path] of Object.entries(mappings.sounds)) {
-        webSounds[id] = path.startsWith('/') ? path : `/${path}`;
-    }
-
-    console.log('🔊 Sound assets loaded:', Object.keys(webSounds).length);
-    return webSounds;
 }
 
 /**
@@ -141,11 +130,21 @@ class WebGameApp {
                 }
             },
 
-            // Image assets: web-specific path mappings from catalogs
-            imageAssets: createWebImageAssets(manager),
+            // Image assets: getter function that queries catalog manager
+            getImageAsset: (assetId: string) => {
+                const path = manager.getAssetPath(assetId, 'image');
+                if (!path) return undefined;
+                // Add leading slash for web server absolute paths
+                return path.startsWith('/') ? path : `/${path}`;
+            },
 
-            // Sound assets: web-specific path mappings from catalogs
-            soundAssets: createWebSoundAssets(manager),
+            // Sound assets: getter function that queries catalog manager
+            getSoundAsset: (assetId: string) => {
+                const path = manager.getAssetPath(assetId, 'audio');
+                if (!path) return undefined;
+                // Add leading slash for web server absolute paths
+                return path.startsWith('/') ? path : `/${path}`;
+            },
 
             // UI methods: web implementations
             getUIMethodMappings: () => ({
@@ -158,6 +157,14 @@ class WebGameApp {
                 Animation,
                 Easing
             }),
+
+            // Async methods: standard browser APIs
+            async: {
+                setTimeout: (callback, timeout) => window.setTimeout(callback, timeout ?? 0),
+                clearTimeout: (id) => window.clearTimeout(id),
+                setInterval: (callback, timeout) => window.setInterval(callback, timeout ?? 0),
+                clearInterval: (id) => window.clearInterval(id)
+            },
 
             // Rendering: canvas renderer
             render: (uiNode) => {
@@ -248,14 +255,19 @@ class WebGameApp {
      */
     private async loadAllImages(manager: AssetCatalogManager): Promise<void> {
         console.log('📦 Loading image assets...');
-        const imageAssets = createWebImageAssets(manager);
-        const assetIds = Object.keys(imageAssets);
+
+        // Get all asset IDs from the catalog manager
+        const mappings = manager.getWebAssetMappings();
+        const assetIds = Object.keys(mappings.images);
 
         let loaded = 0;
         let failed = 0;
 
         for (const assetId of assetIds) {
-            const path = imageAssets[assetId];
+            const relativePath = mappings.images[assetId];
+            // Add leading slash for web server absolute paths
+            const path = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
+
             try {
                 const img = await this.loadImage(path);
                 this.renderer.setImage(assetId, img);

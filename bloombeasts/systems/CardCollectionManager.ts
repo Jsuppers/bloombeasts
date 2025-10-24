@@ -11,30 +11,7 @@ import { getAllCards } from '../engine/cards';
 import { getStarterDeck } from '../engine/utils/deckBuilder';
 import { Logger } from '../engine/utils/Logger';
 import { DECK_SIZE } from '../engine/constants/gameRules';
-
-export interface CardDisplay {
-  id: string;
-  name: string;
-  type: string;
-  affinity?: string;
-  cost?: number;
-  level: number;
-  experience: number;
-  experienceRequired?: number;
-  count: number;
-  baseAttack?: number;
-  currentAttack?: number;
-  baseHealth?: number;
-  currentHealth?: number;
-  abilities?: any[]; // Array of all abilities for Bloom cards (used for description generation)
-  effects?: any[]; // For Magic/Trap/Buff cards
-  ongoingEffects?: any[]; // For Buff/Habitat cards
-  onPlayEffects?: any[]; // For Habitat cards
-  activation?: any; // For Trap cards
-  description?: string;
-  counters?: Array<{ type: string; amount: number }>;
-  titleColor?: string; // Custom title color (hex color)
-}
+import type { CardDisplay } from '../gameManager';
 
 export class CardCollectionManager {
   private levelingSystem: LevelingSystem;
