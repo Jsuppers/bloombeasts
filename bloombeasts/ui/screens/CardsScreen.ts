@@ -6,10 +6,10 @@
 
 import { View, Text, Image, Pressable, Binding } from '../index';
 import type { ValueBindingBase } from '../index';
-import { COLORS } from '../../../shared/styles/colors';
-import { DIMENSIONS, GAPS } from '../../../shared/styles/dimensions';
-import { sideMenuButtonDimensions } from '../../../shared/constants/dimensions';
-import { deckEmoji } from '../../../shared/constants/emojis';
+import { COLORS } from '../styles/colors';
+import { DIMENSIONS, GAPS } from '../styles/dimensions';
+import { sideMenuButtonDimensions } from '../constants/dimensions';
+import { deckEmoji } from '../constants/emojis';
 import type { CardDisplay, MenuStats, CardDetailDisplay } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu, createTextRow } from './common/SideMenu';

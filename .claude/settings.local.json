@@ -3,7 +3,8 @@
     "allow": [
       "Bash(chmod:*)",
       "Bash(bash:*)",
-      "Bash(node update-image-catalogs.cjs:*)"
+      "Bash(node update-image-catalogs.cjs:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

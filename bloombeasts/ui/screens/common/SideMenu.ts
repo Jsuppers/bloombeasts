@@ -5,12 +5,18 @@
 
 import { View, Text, Image, Pressable, Binding } from '../../index';
 import type { ValueBindingBase } from '../../index';
-import { COLORS } from '../../../../shared/styles/colors';
-import { DIMENSIONS } from '../../../../shared/styles/dimensions';
-import { sideMenuDimensions, sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
-import { sideMenuPositions } from '../../../../shared/constants/positions';
+import { COLORS } from '../../styles/colors';
+import { DIMENSIONS } from '../../styles/dimensions';
+import { sideMenuButtonDimensions } from '../../constants/dimensions';
+import { sideMenuPositions } from '../../constants/positions';
 import type { MenuStats } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
+
+// SideMenu-specific constants
+const sideMenuDimensions = {
+  width: 127,
+  height: 465,
+};
 
 export interface SideMenuButton {
     label: string | ValueBindingBase<string>;

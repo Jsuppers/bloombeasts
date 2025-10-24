@@ -6,8 +6,8 @@
 
 import { View, Text, Image, Pressable, Binding } from '../index';
 import type { ValueBindingBase } from '../index';
-import { COLORS } from '../../../shared/styles/colors';
-import { DIMENSIONS } from '../../../shared/styles/dimensions';
+import { COLORS } from '../styles/colors';
+import { DIMENSIONS } from '../styles/dimensions';
 import type { SoundSettings } from '../../../bloombeasts/systems/SoundManager';
 import type { MenuStats } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';

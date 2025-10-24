@@ -5,13 +5,13 @@
  */
 
 import { View, Text, Image, Pressable, Binding } from '../../index';
-import { DIMENSIONS } from '../../../../shared/styles/dimensions';
+import { DIMENSIONS } from '../../styles/dimensions';
 import {
   missionCompleteCardDimensions,
   chestImageMissionCompleteDimensions,
   longButtonDimensions,
-} from '../../../../shared/constants/dimensions';
-import { missionCompleteCardPositions } from '../../../../shared/constants/positions';
+} from '../../constants/dimensions';
+import { missionCompleteCardPositions } from '../../constants/positions';
 import { UINodeType } from '../ScreenUtils';
 
 export interface MissionCompletePopupProps {

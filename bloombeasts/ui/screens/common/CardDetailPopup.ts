@@ -4,9 +4,9 @@
  */
 
 import { View, Text, Image, Pressable, Binding } from '../../index';
-import { COLORS } from '../../../../shared/styles/colors';
-import { DIMENSIONS, GAPS } from '../../../../shared/styles/dimensions';
-import { sideMenuButtonDimensions } from '../../../../shared/constants/dimensions';
+import { COLORS } from '../../styles/colors';
+import { DIMENSIONS, GAPS } from '../../styles/dimensions';
+import { sideMenuButtonDimensions } from '../../constants/dimensions';
 import type { CardDetailDisplay, MenuStats } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
 import { createCardComponent } from './CardRenderer';

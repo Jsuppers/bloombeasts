@@ -3,14 +3,38 @@
  */
 
 import { View, Text, Image, Pressable, Binding } from '../index';
-import { COLORS } from '../../../shared/styles/colors';
-import { DIMENSIONS, GAPS } from '../../../shared/styles/dimensions';
-import { sideMenuButtonDimensions, missionCardDimensions, cardsUIContainerDimensions } from '../../../shared/constants/dimensions';
-import { missionCardPositions, cardsUIContainerPosition } from '../../../shared/constants/positions';
-import { missionEmoji } from '../../../shared/constants/emojis';
+import { COLORS } from '../styles/colors';
+import { DIMENSIONS, GAPS } from '../styles/dimensions';
+import { sideMenuButtonDimensions } from '../constants/dimensions';
+import type { SimplePosition } from '../constants/positions';
+import { missionEmoji } from '../constants/emojis';
 import type { MissionDisplay, MenuStats } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu, createTextRow } from './common/SideMenu';
+
+// MissionScreen-specific constants
+const missionCardDimensions = {
+  width: 290,
+  height: 185,
+};
+
+const cardsUIContainerDimensions = {
+  width: 950,
+  height: 640,
+};
+
+const missionCardPositions = {
+  name: { x: 97, y: 10, size: DIMENSIONS.fontSize.xl, textAlign: 'left' as const, textBaseline: 'top' as const },
+  image: { x: 16, y: 16 },
+  level: { x: 97, y: 43, size: DIMENSIONS.fontSize.xs, textAlign: 'left' as const, textBaseline: 'top' as const },
+  difficulty: { x: 97, y: 66, size: DIMENSIONS.fontSize.xs, textAlign: 'left' as const, textBaseline: 'top' as const },
+  description: { x: 13, y: 98, size: DIMENSIONS.fontSize.sm, textAlign: 'left' as const, textBaseline: 'top' as const },
+};
+
+const cardsUIContainerPosition: SimplePosition = {
+  x: 103,
+  y: 41,
+};
 
 export interface MissionScreenProps {
   missions: any;

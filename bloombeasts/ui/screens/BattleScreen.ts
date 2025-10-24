@@ -5,27 +5,86 @@
  */
 
 import { View, Text, Image, Pressable, Binding } from '../index';
-import { COLORS } from '../../../shared/styles/colors';
-import { DIMENSIONS, GAPS } from '../../../shared/styles/dimensions';
-import {
-  standardCardDimensions,
-  buffCardDimensions,
-  trapCardDimensions,
-  habitatShiftCardDimensions,
-  sideMenuButtonDimensions,
-  gameDimensions
-} from '../../../shared/constants/dimensions';
-import {
-  battleBoardAssetPositions,
-  playboardImagePositions,
-  sideMenuPositions
-} from '../../../shared/constants/positions';
-import { nectarEmoji, deckEmoji } from '../../../shared/constants/emojis';
+import { COLORS } from '../styles/colors';
+import { DIMENSIONS, GAPS } from '../styles/dimensions';
+import { standardCardDimensions, sideMenuButtonDimensions } from '../constants/dimensions';
+import { sideMenuPositions } from '../constants/positions';
+import type { SimplePosition, BattleBoardAssetPositions } from '../constants/positions';
+import { nectarEmoji, deckEmoji } from '../constants/emojis';
 import type { BattleDisplay, ObjectiveDisplay } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu, createTextRow } from './common/SideMenu';
 import { createCardComponent, CARD_DIMENSIONS } from './common/CardRenderer';
 import { createCardDetailPopup } from './common/CardDetailPopup';
+
+// BattleScreen-specific constants
+const gameDimensions = {
+  panelWidth: 1280,
+  panelHeight: 720,
+};
+
+const buffCardDimensions = {
+  width: 128,
+  height: 130,
+};
+
+const trapCardDimensions = {
+  width: 85,
+  height: 85,
+};
+
+const habitatShiftCardDimensions = {
+  width: 100,
+  height: 100,
+};
+
+const playboardImagePositions: SimplePosition = {
+  x: 64,
+  y: 72,
+};
+
+const battleBoardAssetPositions: BattleBoardAssetPositions = {
+  playerOne: {
+    beastOne: { x: 64, y: 72 },
+    beastTwo: { x: 284, y: 72 },
+    beastThree: { x: 504, y: 72 },
+    buffOne: { x: 724, y: 72 },
+    buffTwo: { x: 861, y: 72 },
+    trapOne: { x: 725, y: 212 },
+    trapTwo: { x: 814, y: 212 },
+    trapThree: { x: 903, y: 212 },
+    health: { x: 915, y: 324 },
+  },
+  playOneInfoPosition: { x: 1015, y: 88 },
+  playerTwo: {
+    beastOne: { x: 64, y: 363 },
+    beastTwo: { x: 284, y: 363 },
+    beastThree: { x: 504, y: 363 },
+    buffOne: { x: 724, y: 514 },
+    buffTwo: { x: 861, y: 514 },
+    trapOne: { x: 725, y: 420 },
+    trapTwo: { x: 814, y: 420 },
+    trapThree: { x: 903, y: 420 },
+    health: { x: 915, y: 378 },
+  },
+  playerTwoInfoPosition: { x: 1015, y: 379 },
+  habitatZone: { x: 725, y: 310 },
+  cardTextPositions: {
+    cost: { x: 20, y: 10, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
+    affinity: { x: 175, y: 7 },
+    beastImage: { x: 12, y: 13 },
+    level: { x: 105, y: 182, size: DIMENSIONS.fontSize.xs, textAlign: 'center', textBaseline: 'top' },
+    experienceBar: { x: 44, y: 182 },
+    name: { x: 105, y: 13, size: DIMENSIONS.fontSize.md, textAlign: 'center', textBaseline: 'top' },
+    ability: { x: 21, y: 212, size: DIMENSIONS.fontSize.xs, textAlign: 'left', textBaseline: 'top' },
+    attack: { x: 20, y: 176, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
+    health: { x: 188, y: 176, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
+    icons: {
+      attack: { x: 17, y: 44, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
+      ability: { x: 157, y: 44, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
+    }
+  },
+};
 
 export interface BattleScreenProps {
   battleState?: any; // Can be BindingInterface<string> OR BindingInterface<BattleDisplay>

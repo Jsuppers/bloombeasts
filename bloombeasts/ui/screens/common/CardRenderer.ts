@@ -4,8 +4,8 @@
  */
 
 import { View, Text, Image, Pressable, Binding } from '../../index';
-import { COLORS } from '../../../../shared/styles/colors';
-import { DIMENSIONS } from '../../../../shared/styles/dimensions';
+import { COLORS } from '../../styles/colors';
+import { DIMENSIONS } from '../../styles/dimensions';
 import type { CardDisplay } from '../../../../bloombeasts/gameManager';
 import { getCardDescription } from '../../../engine/utils/cardDescriptionGenerator';
 import { UINodeType } from '../ScreenUtils';

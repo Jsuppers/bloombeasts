@@ -1,50 +1,79 @@
-import { BattleBoardAssetPositions, CardTextPositions, SideMenuPositions, SimplePosition, UIButtonPositions, UITextSafeZone } from "../types/positions";
 import { DIMENSIONS } from "../styles/dimensions";
 
-/**
- * Card text overlay positions
- * These are offsets within card image templates and should remain as absolute positions
- */
-export const standardCardPositions: CardTextPositions = {
-  cost: { x: 20, y: 10, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
-  affinity: { x: 175, y: 7 },
-  beastImage: { x: 12, y: 13 },
-  level: { x: 105, y: 182, size: DIMENSIONS.fontSize.xs, textAlign: 'center', textBaseline: 'top' },
-  experienceBar: { x: 44, y: 182 },
-  name: { x: 105, y: 13, size: DIMENSIONS.fontSize.md, textAlign: 'center', textBaseline: 'top' },
-  ability: { x: 21, y: 212, size: DIMENSIONS.fontSize.xs, textAlign: 'left', textBaseline: 'top' },
-  attack: { x: 20, y: 176, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
-  health: { x: 188, y: 176, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
+// Type definitions
+export interface SimplePosition {
+  x: number;
+  y: number;
+}
+
+interface PlayerCardPositions {
+  beastOne: SimplePosition;
+  beastTwo: SimplePosition;
+  beastThree: SimplePosition;
+  buffOne: SimplePosition;
+  buffTwo: SimplePosition;
+  trapOne: SimplePosition;
+  trapTwo: SimplePosition;
+  trapThree: SimplePosition;
+  health: SimplePosition;
+}
+
+interface CardTextInfo extends SimplePosition {
+  size: number;
+  textAlign?: 'left' | 'right' | 'center' | 'start' | 'end';
+  textBaseline?: 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom';
+}
+
+export interface CardTextPositions {
+  cost: CardTextInfo;
+  affinity: SimplePosition;
+  level: CardTextInfo;
+  experienceBar: SimplePosition;
+  name: CardTextInfo;
+  ability: CardTextInfo;
+  attack: CardTextInfo;
+  health: CardTextInfo;
+  beastImage: SimplePosition;
   icons: {
-    attack: { x: 17, y: 44, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
-    ability: { x: 157, y: 44, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
-  }
-};
+    attack: CardTextInfo;
+    ability: CardTextInfo;
+  };
+}
 
-/**
- * Mission card text overlay positions
- * These are offsets within mission card image templates
- */
-export const missionCardPositions = {
-  name: { x: 97, y: 10, size: DIMENSIONS.fontSize.xl, textAlign: 'left', textBaseline: 'top' },
-  image: { x: 16, y: 16 },
-  level: { x: 97, y: 43, size: DIMENSIONS.fontSize.xs, textAlign: 'left', textBaseline: 'top' },
-  difficulty: { x: 97, y: 66, size: DIMENSIONS.fontSize.xs, textAlign: 'left', textBaseline: 'top' },
-  description: { x: 13, y: 98, size: DIMENSIONS.fontSize.sm, textAlign: 'left', textBaseline: 'top' },
-};
+export interface UIButtonPositions {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  spacing: number;
+}
 
-/**
- * UI Container positions (absolute canvas positions)
- */
-export const cardsUIContainerPosition: SimplePosition = {
-  x: 103,
-  y: 41,
-};
+export interface UITextSafeZone {
+  x: number;
+  y: number;
+  lineHeight: number;
+}
 
-export const playboardImagePositions: SimplePosition = {
-  x: 64,
-  y: 72,
-};
+export interface SideMenuPositions {
+  x: number;
+  y: number;
+  headerStartPosition: SimplePosition;
+  textStartPosition: SimplePosition;
+  buttonStartPosition: SimplePosition;
+  playerName: CardTextInfo;
+  playerLevel: CardTextInfo;
+  playerExperienceBar: SimplePosition & { maxWidth: number };
+}
+
+export interface BattleBoardAssetPositions {
+  playerOne: PlayerCardPositions;
+  playOneInfoPosition: SimplePosition;
+  playerTwo: PlayerCardPositions;
+  playerTwoInfoPosition: SimplePosition;
+  habitatZone: SimplePosition;
+  cardTextPositions: CardTextPositions;
+}
+
 
 /**
  * Safe zone for UI buttons and interactive elements
@@ -91,38 +120,4 @@ export const missionCompleteCardPositions = {
   chestImage: { x: 73, y: 76 },
   infoText: { x: 245, y: 98, size: DIMENSIONS.fontSize.sm, textAlign: 'left', textBaseline: 'top' },
   claimRewardButton: { x: 175, y: 271 },
-};
-
-/**
- * Battle board asset positions
- * These are absolute positions for cards, buffs, traps, and health displays on the battle board
- * Could potentially be calculated using the layout system in the future
- */
-export const battleBoardAssetPositions: BattleBoardAssetPositions = {
-  playerOne: {
-    beastOne: { x: 64, y: 72 },
-    beastTwo: { x: 284, y: 72 },
-    beastThree: { x: 504, y: 72 },
-    buffOne: { x: 724, y: 72 },
-    buffTwo: { x: 861, y: 72 },
-    trapOne: { x: 725, y: 212 },
-    trapTwo: { x: 814, y: 212 },
-    trapThree: { x: 903, y: 212 },
-    health: { x: 915, y: 324 },
-  },
-  playOneInfoPosition: { x: 1015, y: 88 },
-  playerTwo: {
-    beastOne: { x: 64, y: 363 },
-    beastTwo: { x: 284, y: 363 },
-    beastThree: { x: 504, y: 363 },
-    buffOne: { x: 724, y: 514 },
-    buffTwo: { x: 861, y: 514 },
-    trapOne: { x: 725, y: 420 },
-    trapTwo: { x: 814, y: 420 },
-    trapThree: { x: 903, y: 420 },
-    health: { x: 915, y: 378 },
-  },
-  playerTwoInfoPosition: { x: 1015, y: 379 },
-  habitatZone: { x: 725, y: 310 },
-  cardTextPositions: standardCardPositions,
 };

@@ -4,7 +4,7 @@
  */
 
 import { View, Text, Pressable } from '../../index';
-import { COLORS } from '../../../../shared/styles/colors';
+import { COLORS } from '../../styles/colors';
 
 export interface ButtonPopupProps {
   title: string;
