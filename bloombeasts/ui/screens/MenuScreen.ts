@@ -163,7 +163,7 @@ export class MenuScreen {
                 top: 25,
               },
               children: Image({
-                source: this.currentFrame.derive((f: number) => ({ uri: `menuFrame${f}` })),
+                source: this.currentFrame.derive((f: number) => ({ uri: `menu-frame-${f}` })),
                 style: {
                   width: 750,
                   height: 700,

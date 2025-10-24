@@ -44,12 +44,24 @@ export class CardCollectionManager {
   }
 
   /**
+   * Extract base card ID from instance ID
+   * Card IDs may have timestamp suffixes (e.g., "nectar-block-1761200302194-0")
+   * We need to extract the base ID (e.g., "nectar-block") to match catalog IDs
+   */
+  private extractBaseCardId(cardId: string): string {
+    // Remove timestamp pattern: -digits-digits at the end
+    return cardId.replace(/-\d+-\d+$/, '');
+  }
+
+  /**
    * Convert a CardInstance to CardDisplay format
    * This centralizes all the logic for enriching card instances with definition data
    */
   cardInstanceToDisplay(card: CardInstance): CardDisplay {
     const allCardDefs = getAllCards();
-    const cardDef = allCardDefs.find((c: any) => c && c.id === card.cardId);
+    // Extract base ID to match against card definitions
+    const baseCardId = this.extractBaseCardId(card.cardId);
+    const cardDef = allCardDefs.find((c: any) => c && c.id === baseCardId);
 
     // Build base display card with common properties
     const displayCard: CardDisplay = this.buildBaseCardDisplay(card, cardDef);
@@ -139,15 +151,13 @@ export class CardCollectionManager {
    * Add Trap-specific fields to card display
    */
   private addTrapCardFields(displayCard: CardDisplay, card: CardInstance, cardDef: any): void {
-    // First try to use full structured effect data from card definition
+    // Copy abilities and activation from card definition
     if (cardDef) {
-      displayCard.effects = cardDef.effects;
       displayCard.activation = cardDef.activation;
-    }
-
-    // If no structured effects but we have simplified descriptions, use those
-    if ((!displayCard.effects || displayCard.effects.length === 0) && card.effects && card.effects.length > 0) {
-      displayCard.effects = card.effects.map(desc => ({ description: desc }));
+      displayCard.abilities = cardDef.abilities;
+      console.log(`[Trap] ${card.name}: Found cardDef, abilities:`, displayCard.abilities);
+    } else {
+      console.error(`[Trap] ${card.name} (${card.cardId}): CardDef NOT FOUND!`);
     }
   }
 
@@ -155,17 +165,16 @@ export class CardCollectionManager {
    * Add Magic-specific fields to card display
    */
   private addMagicCardFields(displayCard: CardDisplay, card: CardInstance): void {
-    // Include full structured effect data for description generation
+    // Copy abilities from card definition for description generation
     const allCardDefs = getAllCards();
-    const cardDef = allCardDefs.find((c: any) => c && c.id === card.cardId);
+    const baseCardId = this.extractBaseCardId(card.cardId);
+    const cardDef = allCardDefs.find((c: any) => c && c.id === baseCardId);
 
     if (cardDef) {
-      displayCard.effects = (cardDef as any).effects;
-    }
-
-    // If no structured effects but we have simplified descriptions, use those
-    if ((!displayCard.effects || displayCard.effects.length === 0) && card.effects && card.effects.length > 0) {
-      displayCard.effects = card.effects.map(desc => ({ description: desc }));
+      displayCard.abilities = (cardDef as any).abilities;
+      console.log(`[Magic] ${card.name}: Found cardDef, abilities:`, displayCard.abilities);
+    } else {
+      console.error(`[Magic] ${card.name} (${card.cardId} -> ${baseCardId}): CardDef NOT FOUND!`);
     }
   }
 
@@ -173,17 +182,12 @@ export class CardCollectionManager {
    * Add Habitat/Buff-specific fields to card display
    */
   private addHabitatBuffCardFields(displayCard: CardDisplay, cardDef: any, card?: CardInstance): void {
-    // Include full structured effect data for description generation
+    // Copy abilities from card definition for description generation
     if (cardDef) {
-      displayCard.ongoingEffects = cardDef.ongoingEffects;
-      displayCard.onPlayEffects = cardDef.onPlayEffects;
-    }
-
-    // If no structured effects but we have simplified descriptions, use those
-    if (card && card.effects && card.effects.length > 0) {
-      if (!displayCard.ongoingEffects || displayCard.ongoingEffects.length === 0) {
-        displayCard.ongoingEffects = card.effects.map(desc => ({ description: desc }));
-      }
+      displayCard.abilities = cardDef.abilities;
+      console.log(`[Habitat/Buff] ${card?.name || 'Unknown'}: Found cardDef, abilities:`, displayCard.abilities);
+    } else {
+      console.error(`[Habitat/Buff] ${card?.name || 'Unknown'} (${card?.cardId}): CardDef NOT FOUND!`);
     }
   }
 
@@ -193,8 +197,9 @@ export class CardCollectionManager {
   getAbilitiesForLevel(cardInstance: CardInstance): { abilities: any[] } {
     // Get the base card definition
     const allCards = getAllCards();
+    const baseCardId = this.extractBaseCardId(cardInstance.cardId);
     const cardDef = allCards.find((card: any) =>
-      card && card.id === cardInstance.cardId
+      card && card.id === baseCardId
     ) as BloomBeastCard | undefined;
 
     if (!cardDef || cardDef.type !== 'Bloom') {
@@ -257,8 +262,9 @@ export class CardCollectionManager {
           deckCards.push(bloomCard);
         } else {
           // For non-Bloom cards, find the original card definition
+          const baseCardId = this.extractBaseCardId(cardInstance.cardId);
           const originalCard = allCardDefs.find((card: any) =>
-            card && card.id === cardInstance.cardId
+            card && card.id === baseCardId
           );
 
           if (originalCard) {
@@ -316,7 +322,8 @@ export class CardCollectionManager {
 
       if (cardInstance.type === 'Bloom') {
         // For Bloom beasts, use the LevelingSystem
-        const cardDef = allCardDefs.find((c: any) => c && c.id === cardInstance.cardId) as BloomBeastCard | undefined;
+        const baseCardId = this.extractBaseCardId(cardInstance.cardId);
+        const cardDef = allCardDefs.find((c: any) => c && c.id === baseCardId) as BloomBeastCard | undefined;
 
         if (cardDef) {
           let currentLevel = cardInstance.level || 1;
@@ -503,7 +510,8 @@ export class CardCollectionManager {
   getEffectDescriptions(card: any): string[] {
     const allCardDefs = getAllCards();
     const lookupId = card.cardId || card.id;
-    const cardDef = allCardDefs.find((c: any) => c && c.id === lookupId);
+    const baseCardId = this.extractBaseCardId(lookupId);
+    const cardDef = allCardDefs.find((c: any) => c && c.id === baseCardId);
 
     let descriptions: string[] = [];
 

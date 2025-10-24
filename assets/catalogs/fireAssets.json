@@ -1,0 +1,616 @@
+{
+  "version": "1.0.0",
+  "category": "fire",
+  "description": "Fire affinity cards and assets",
+  "data": [
+    {
+      "id": "blazefinch",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "fire",
+      "data": {
+        "id": "blazefinch",
+        "name": "Blazefinch",
+        "type": "Bloom",
+        "affinity": "Fire",
+        "cost": 1,
+        "baseAttack": 1,
+        "baseHealth": 2,
+        "abilities": [
+          {
+            "name": "Quick Strike",
+            "trigger": "Passive",
+            "effects": [
+              {
+                "type": "RemoveSummoningSickness",
+                "target": "Self"
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 0, "atk": 1 },
+            "3": { "hp": 0, "atk": 3 },
+            "4": { "hp": 1, "atk": 5 },
+            "5": { "hp": 1, "atk": 6 },
+            "6": { "hp": 2, "atk": 8 },
+            "7": { "hp": 2, "atk": 9 },
+            "8": { "hp": 3, "atk": 11 },
+            "9": { "hp": 3, "atk": 13 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Ember Strike",
+                  "trigger": "OnAttack",
+                  "effects": [
+                    {
+                      "type": "AttackModification",
+                      "target": "Self",
+                      "modification": "triple-damage",
+                      "condition": {
+                        "type": "IsDamaged"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Lightning Speed",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "RemoveSummoningSickness",
+                      "target": "Self"
+                    },
+                    {
+                      "type": "AttackModification",
+                      "target": "Self",
+                      "modification": "attack-twice"
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Phoenix Form",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "AttackModification",
+                      "target": "Self",
+                      "modification": "attack-twice"
+                    }
+                  ]
+                },
+                {
+                  "name": "Annihilation",
+                  "trigger": "OnAttack",
+                  "effects": [
+                    {
+                      "type": "AttackModification",
+                      "target": "Self",
+                      "modification": "instant-destroy",
+                      "condition": {
+                        "type": "IsDamaged"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Fire/Blazefinch.png"
+        }
+      ]
+    },
+    {
+      "id": "cinder-pup",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "fire",
+      "data": {
+        "id": "cinder-pup",
+        "name": "Cinder Pup",
+        "type": "Bloom",
+        "affinity": "Fire",
+        "cost": 2,
+        "baseAttack": 2,
+        "baseHealth": 3,
+        "abilities": [
+          {
+            "name": "Burning Passion",
+            "trigger": "OnAttack",
+            "effects": [
+              {
+                "type": "ApplyCounter",
+                "target": "Target",
+                "counter": "Burn",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 1, "atk": 1 },
+            "3": { "hp": 2, "atk": 2 },
+            "4": { "hp": 3, "atk": 3 },
+            "5": { "hp": 4, "atk": 4 },
+            "6": { "hp": 5, "atk": 5 },
+            "7": { "hp": 6, "atk": 6 },
+            "8": { "hp": 7, "atk": 7 },
+            "9": { "hp": 8, "atk": 8 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Inferno Bite",
+                  "trigger": "OnAttack",
+                  "effects": [
+                    {
+                      "type": "ApplyCounter",
+                      "target": "Target",
+                      "counter": "Burn",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Flame Burst",
+                  "trigger": "Activated",
+                  "cost": {
+                    "type": "Discard",
+                    "value": 1
+                  },
+                  "effects": [
+                    {
+                      "type": "ApplyCounter",
+                      "target": "AllEnemies",
+                      "counter": "Burn",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Wildfire Aura",
+                  "trigger": "OnAttack",
+                  "effects": [
+                    {
+                      "type": "ApplyCounter",
+                      "target": "Target",
+                      "counter": "Burn",
+                      "value": 3
+                    }
+                  ]
+                },
+                {
+                  "name": "Apocalypse Flame",
+                  "trigger": "Activated",
+                  "effects": [
+                    {
+                      "type": "ApplyCounter",
+                      "target": "AllEnemies",
+                      "counter": "Burn",
+                      "value": 3
+                    },
+                    {
+                      "type": "DealDamage",
+                      "target": "OpponentGardener",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Fire/CinderPup.png"
+        }
+      ]
+    },
+    {
+      "id": "charcoil",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "fire",
+      "data": {
+        "id": "charcoil",
+        "name": "Charcoil",
+        "type": "Bloom",
+        "affinity": "Fire",
+        "cost": 2,
+        "baseAttack": 3,
+        "baseHealth": 4,
+        "abilities": [
+          {
+            "name": "Flame Retaliation",
+            "trigger": "OnDamage",
+            "effects": [
+              {
+                "type": "Retaliation",
+                "target": "Attacker",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 1, "atk": 1 },
+            "3": { "hp": 2, "atk": 2 },
+            "4": { "hp": 4, "atk": 3 },
+            "5": { "hp": 5, "atk": 4 },
+            "6": { "hp": 6, "atk": 5 },
+            "7": { "hp": 8, "atk": 6 },
+            "8": { "hp": 9, "atk": 7 },
+            "9": { "hp": 11, "atk": 8 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Burning Retaliation",
+                  "trigger": "OnDamage",
+                  "effects": [
+                    {
+                      "type": "Retaliation",
+                      "target": "Attacker",
+                      "value": 2
+                    },
+                    {
+                      "type": "ApplyCounter",
+                      "target": "Attacker",
+                      "counter": "Burn",
+                      "value": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Smoke Screen",
+                  "trigger": "OnDamage",
+                  "effects": [
+                    {
+                      "type": "Immunity",
+                      "target": "Self",
+                      "immuneTo": ["Magic", "Trap"],
+                      "duration": "WhileOnField"
+                    },
+                    {
+                      "type": "ApplyCounter",
+                      "target": "Target",
+                      "counter": "Soot",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Blazing Vengeance",
+                  "trigger": "OnDamage",
+                  "effects": [
+                    {
+                      "type": "Immunity",
+                      "target": "Self",
+                      "immuneTo": ["Magic", "Trap"],
+                      "duration": "WhileOnField"
+                    },
+                    {
+                      "type": "ApplyCounter",
+                      "target": "Attacker",
+                      "counter": "Burn",
+                      "value": 3
+                    }
+                  ]
+                },
+                {
+                  "name": "Infernal Reflection",
+                  "trigger": "OnDamage",
+                  "effects": [
+                    {
+                      "type": "Retaliation",
+                      "target": "Attacker",
+                      "value": "reflected"
+                    },
+                    {
+                      "type": "ApplyCounter",
+                      "target": "Attacker",
+                      "counter": "Burn",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Fire/Charcoil.png"
+        }
+      ]
+    },
+    {
+      "id": "magmite",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "fire",
+      "data": {
+        "id": "magmite",
+        "name": "Magmite",
+        "type": "Bloom",
+        "affinity": "Fire",
+        "cost": 3,
+        "baseAttack": 4,
+        "baseHealth": 6,
+        "abilities": [
+          {
+            "name": "Hardened Shell",
+            "trigger": "Passive",
+            "effects": [
+              {
+                "type": "DamageReduction",
+                "target": "Self",
+                "value": 1,
+                "duration": "WhileOnField"
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 2, "atk": 1 },
+            "3": { "hp": 3, "atk": 2 },
+            "4": { "hp": 5, "atk": 3 },
+            "5": { "hp": 7, "atk": 4 },
+            "6": { "hp": 9, "atk": 5 },
+            "7": { "hp": 11, "atk": 6 },
+            "8": { "hp": 13, "atk": 7 },
+            "9": { "hp": 15, "atk": 9 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Molten Armor",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "DamageReduction",
+                      "target": "Self",
+                      "value": 2,
+                      "duration": "WhileOnField"
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Eruption",
+                  "trigger": "OnDestroy",
+                  "effects": [
+                    {
+                      "type": "DealDamage",
+                      "target": "OpponentGardener",
+                      "value": 5
+                    },
+                    {
+                      "type": "DealDamage",
+                      "target": "AllEnemies",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Obsidian Carapace",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "DamageReduction",
+                      "target": "Self",
+                      "value": 3,
+                      "duration": "WhileOnField"
+                    },
+                    {
+                      "type": "Retaliation",
+                      "target": "Attacker",
+                      "value": 2
+                    }
+                  ]
+                },
+                {
+                  "name": "Cataclysm",
+                  "trigger": "OnDestroy",
+                  "effects": [
+                    {
+                      "type": "DealDamage",
+                      "target": "OpponentGardener",
+                      "value": 8
+                    },
+                    {
+                      "type": "Destroy",
+                      "target": "AllEnemies",
+                      "condition": {
+                        "type": "HealthBelow",
+                        "value": 4,
+                        "comparison": "Less"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Fire/Magmite.png"
+        }
+      ]
+    },
+    {
+      "id": "volcanic-scar",
+      "type": "habitat",
+      "affinity": "fire",
+      "data": {
+        "id": "volcanic-scar",
+        "name": "Volcanic Scar",
+        "type": "Habitat",
+        "affinity": "Fire",
+        "cost": 1,
+        "abilities": [
+          {
+            "name": "Volcanic Eruption",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "DealDamage",
+                "target": "AllUnits",
+                "value": 1,
+                "condition": {
+                  "type": "affinity-not-matches",
+                  "value": "Fire"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Fire/VolcanicScar.png"
+        },
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Fire/HabitatCard.png"
+        },
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Fire/HabitatCardPlayboard.png"
+        }
+      ]
+    },
+    {
+      "id": "fire-mission",
+      "type": "mission",
+      "affinity": "fire",
+      "missionNumber": 1,
+      "name": "Fire Mission",
+      "description": "Fire affinity mission",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Fire/FireMission.png"
+        }
+      ]
+    },
+    {
+      "id": "fire-chest-closed",
+      "type": "ui",
+      "category": "chest",
+      "name": "Fire Chest Closed",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/chests/FireChestClosed.png"
+        }
+      ]
+    },
+    {
+      "id": "fire-chest-opened",
+      "type": "ui",
+      "category": "chest",
+      "name": "Fire Chest Opened",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/chests/FireChestOpened.png"
+        }
+      ]
+    },
+    {
+      "id": "fire-icon",
+      "type": "ui",
+      "category": "icon",
+      "name": "Fire Icon",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/affinity/FireIcon.png"
+        }
+      ]
+    },
+    {
+      "id": "fire-habitat",
+      "type": "ui",
+      "category": "card-template",
+      "name": "Fire Habitat Card Template",
+      "description": "Template overlay for fire habitat cards",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Fire/HabitatCard.png"
+        }
+      ]
+    }
+  ]
+}

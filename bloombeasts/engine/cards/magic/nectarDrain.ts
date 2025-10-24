@@ -2,8 +2,8 @@
  * Nectar Drain - Drain nectar from opponent
  */
 
-import { MagicCard } from '../../types/core';
-import { ResourceGainEffect, DrawCardEffect, EffectType, AbilityTarget, ResourceType, EffectDuration } from '../../types/abilities';
+import { MagicCard, Ability } from '../../types/core';
+import { ResourceGainEffect, DrawCardEffect, EffectType, AbilityTarget, ResourceType, EffectDuration, StructuredAbility, AbilityTrigger } from '../../types/abilities';
 
 const drainEffect: ResourceGainEffect = {
   type: EffectType.GainResource,
@@ -19,11 +19,17 @@ const drawEffect: DrawCardEffect = {
   value: 1
 };
 
+const nectarDrainAbility: StructuredAbility = {
+  name: 'Nectar Drain',
+  trigger: AbilityTrigger.OnSummon, // Magic cards trigger immediately when played
+  effects: [drainEffect, drawEffect]
+};
+
 export const NECTAR_DRAIN: MagicCard = {
   id: 'nectar-drain',
   name: 'Nectar Drain',
   type: 'Magic',
   cost: 1,
-  effects: [drainEffect, drawEffect],
+  abilities: [nectarDrainAbility],
   targetRequired: false
 };

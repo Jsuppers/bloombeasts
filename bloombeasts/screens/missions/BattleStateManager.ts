@@ -43,7 +43,8 @@ export class BattleStateManager {
     cardIndex: number,
     player: Player,
     opponent: Player,
-    gameState: GameState
+    gameState: GameState,
+    targetIndex?: number
   ): PlayCardResult {
     // Validate card index
     if (cardIndex < 0 || cardIndex >= player.hand.length) {
@@ -65,7 +66,7 @@ export class BattleStateManager {
         return this.playBloomCard(cardIndex, player, opponent);
 
       case 'Magic':
-        return this.playMagicCard(cardIndex, player, opponent);
+        return this.playMagicCard(cardIndex, player, opponent, targetIndex);
 
       case 'Trap':
         return this.playTrapCard(cardIndex, player);
@@ -136,14 +137,26 @@ export class BattleStateManager {
   /**
    * Play a Magic card
    */
-  private playMagicCard(cardIndex: number, player: Player, opponent: Player): PlayCardResult {
+  private playMagicCard(cardIndex: number, player: Player, opponent: Player, targetIndex?: number): PlayCardResult {
     const magicCard: any = player.hand.splice(cardIndex, 1)[0];
     player.currentNectar -= magicCard.cost;
 
+    // Get the target beast if targetIndex is provided
+    let target = null;
+    if (targetIndex !== undefined && targetIndex >= 0 && targetIndex < opponent.field.length) {
+      target = opponent.field[targetIndex];
+      Logger.debug(`Magic card targeting opponent beast at index ${targetIndex}: ${target?.name}`);
+    }
+
     // Process magic card effects immediately
-    if (magicCard.effects && Array.isArray(magicCard.effects)) {
-      for (const effect of magicCard.effects) {
-        this.processMagicEffect(effect, player, opponent);
+    // Magic cards use the structured ability system with abilities array
+    if (magicCard.abilities && Array.isArray(magicCard.abilities)) {
+      for (const ability of magicCard.abilities) {
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            this.processMagicEffect(effect, player, opponent, { target });
+          }
+        }
       }
     }
 
@@ -250,8 +263,8 @@ export class BattleStateManager {
     // Process OnAttack trigger
     this.processOnAttackTrigger(attacker, player, opponent);
 
-    // Check for trap activation
-    this.checkAndActivateTraps(opponent, player, 'attack', onTrapCallback);
+    // Check for trap activation - pass the attacking beast
+    this.checkAndActivateTraps(opponent, attacker, 'attack', onTrapCallback);
 
     // Deal damage to each other
     const attackerDamage = attacker.currentAttack || 0;
@@ -321,8 +334,8 @@ export class BattleStateManager {
     // Process OnAttack trigger
     this.processOnAttackTrigger(attacker, player, opponent);
 
-    // Check for trap activation
-    this.checkAndActivateTraps(opponent, player, 'attack', onTrapCallback);
+    // Check for trap activation - pass the attacking beast
+    this.checkAndActivateTraps(opponent, attacker, 'attack', onTrapCallback);
 
     opponent.health -= damage;
 
@@ -556,10 +569,10 @@ export class BattleStateManager {
   /**
    * Process a magic card effect
    */
-  processMagicEffect(effect: any, player: any, opponent: any): void {
+  processMagicEffect(effect: any, player: any, opponent: any, context?: { attacker?: any, target?: any }): void {
     switch (effect.type) {
       case 'deal-damage':
-        const damageTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        const damageTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
         damageTarget.forEach((target: any) => {
           if (target.currentHealth !== undefined) {
             target.currentHealth -= effect.value || 0;
@@ -580,7 +593,7 @@ export class BattleStateManager {
         break;
 
       case 'heal':
-        const healTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        const healTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
         healTarget.forEach((target: any) => {
           if (target.currentHealth !== undefined && target.maxHealth !== undefined) {
             target.currentHealth = Math.min(target.maxHealth, target.currentHealth + (effect.value || 0));
@@ -608,7 +621,7 @@ export class BattleStateManager {
         break;
 
       case 'destroy':
-        const destroyTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        const destroyTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
         destroyTarget.forEach((target: any) => {
           if (target.currentHealth !== undefined) {
             const ownerField = player.field.includes(target) ? player.field : opponent.field;
@@ -624,7 +637,7 @@ export class BattleStateManager {
         break;
 
       case 'modify-stats':
-        const statTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        const statTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
         const magicDuration = effect.duration || 'permanent';
         statTarget.forEach((target: any) => {
           if (target.currentAttack !== undefined) {
@@ -660,7 +673,7 @@ export class BattleStateManager {
         break;
 
       case 'remove-counter':
-        const removeTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        const removeTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
         removeTargets.forEach((target: any) => {
           if (target.counters && Array.isArray(target.counters)) {
             if (effect.counter) {
@@ -739,8 +752,8 @@ export class BattleStateManager {
         break;
 
       case 'remove-counter':
-        const removeTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition);
-        removeTargets.forEach((target: any) => {
+        const removeTargetsHabitat = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        removeTargetsHabitat.forEach((target: any) => {
           if (target.counters && Array.isArray(target.counters)) {
             if (effect.counter) {
               target.counters = target.counters.filter((c: any) => c.type !== effect.counter);
@@ -755,8 +768,8 @@ export class BattleStateManager {
         break;
 
       case 'deal-damage':
-        const damageTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition);
-        damageTargets.forEach((target: any) => {
+        const damageTargetsHabitat = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+        damageTargetsHabitat.forEach((target: any) => {
           if (target.currentHealth !== undefined) {
             target.currentHealth -= effect.value || 0;
             if (target.currentHealth <= 0) {
@@ -783,7 +796,7 @@ export class BattleStateManager {
   /**
    * Get effect targets based on target type
    */
-  private getEffectTargets(targetType: string, player: any, opponent: any, condition?: any): any[] {
+  private getEffectTargets(targetType: string, player: any, opponent: any, condition?: any, context?: { attacker?: any, target?: any }): any[] {
     let targets: any[] = [];
 
     switch (targetType) {
@@ -805,6 +818,14 @@ export class BattleStateManager {
         break;
       case 'all-units':
         targets = [...player.field, ...opponent.field];
+        break;
+      case 'attacker':
+        // For trap cards - the attacker who triggered the trap
+        targets = context?.attacker ? [context.attacker] : [];
+        break;
+      case 'target':
+        // For targeted spells - specific target selected by player
+        targets = context?.target ? [context.target] : [];
         break;
       default:
         targets = [];
@@ -1024,23 +1045,41 @@ export class BattleStateManager {
     for (let i = defender.trapZone.length - 1; i >= 0; i--) {
       const trap: any = defender.trapZone[i];
 
-      if (triggerType === 'attack' && trap.trigger === 'OnAttack') {
+      // Check the activation trigger correctly - trap cards have activation.trigger property
+      const trapTrigger = trap.activation?.trigger || trap.trigger;
+
+      // Map triggerType to expected trap trigger values
+      let shouldActivate = false;
+      if (triggerType === 'attack') {
+        // OnAttack trigger should activate on attack
+        shouldActivate = trapTrigger === 'OnAttack' || trapTrigger === 'OnPlayerAttack';
+      }
+
+      if (shouldActivate) {
         Logger.debug(`Trap activated: ${trap.name}!`);
 
         if (onTrapCallback) {
-          onTrapCallback('trap-activated');
+          onTrapCallback(trap.name);
         }
 
-        // Process trap effects
-        if (trap.effects && Array.isArray(trap.effects)) {
-          for (const effect of trap.effects) {
-            this.processMagicEffect(effect, defender, attacker);
+        // Process trap effects using the abilities structure
+        // Pass context with attacker information for trap effects that target the attacker
+        if (trap.abilities && Array.isArray(trap.abilities)) {
+          for (const ability of trap.abilities) {
+            if (ability.effects && Array.isArray(ability.effects)) {
+              for (const effect of ability.effects) {
+                this.processMagicEffect(effect, defender, attacker, { attacker: attacker });
+              }
+            }
           }
         }
 
         // Remove trap from zone
         const activatedTrap = defender.trapZone.splice(i, 1)[0];
         defender.graveyard.push(activatedTrap);
+
+        // Only activate ONE trap per event
+        break;
       }
     }
   }

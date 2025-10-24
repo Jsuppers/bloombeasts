@@ -2,8 +2,8 @@
  * Cleansing Downpour - Remove all counters from all beasts
  */
 
-import { MagicCard } from '../../types/core';
-import { RemoveCounterEffect, DrawCardEffect, EffectType, AbilityTarget } from '../../types/abilities';
+import { MagicCard, Ability } from '../../types/core';
+import { RemoveCounterEffect, DrawCardEffect, EffectType, AbilityTarget, StructuredAbility, AbilityTrigger } from '../../types/abilities';
 
 const removeAllCounters: RemoveCounterEffect = {
   type: EffectType.RemoveCounter,
@@ -17,11 +17,17 @@ const cleansingDownpourDraw: DrawCardEffect = {
   value: 1
 };
 
+const cleansingDownpourAbility: StructuredAbility = {
+  name: 'Cleansing Downpour',
+  trigger: AbilityTrigger.OnSummon, // Magic cards trigger immediately when played
+  effects: [removeAllCounters, cleansingDownpourDraw]
+};
+
 export const CLEANSING_DOWNPOUR: MagicCard = {
   id: 'cleansing-downpour',
   name: 'Cleansing Downpour',
   type: 'Magic',
   cost: 2,
-  effects: [removeAllCounters, cleansingDownpourDraw],
+  abilities: [cleansingDownpourAbility],
   targetRequired: false
 };

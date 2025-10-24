@@ -78,7 +78,7 @@ export class MissionBattleUI {
     const player: Player = {
       id: 'player',
       name: 'Player',
-      health: 30,
+      health: 1,
       maxHealth: 30,
       deck: playerDeckCards,
       hand: [],
@@ -95,12 +95,16 @@ export class MissionBattleUI {
     console.log('mission.opponentDeck.cards', mission.opponentDeck.cards);
 
     // Create AI opponent with mission-specific configuration
+    // IMPORTANT: Create a copy of the deck cards to avoid mutation
+    const opponentDeckCopy = [...mission.opponentDeck.cards];
+    console.log('opponentDeckCopy', opponentDeckCopy);
+
     const opponent: Player = {
       id: 'opponent',
       name: mission.opponentAI?.name || 'Opponent',
       health: 1,
       maxHealth: 1,
-      deck: mission.opponentDeck.cards,
+      deck: opponentDeckCopy,
       hand: [],
       field: [],
       graveyard: [],
@@ -170,9 +174,14 @@ export class MissionBattleUI {
 
     // Handle different action types
     if (action.startsWith('play-card-')) {
-      // Extract card index from action (e.g., 'play-card-0' -> 0)
-      const cardIndex = parseInt(action.substring('play-card-'.length), 10);
-      result = this.playCard(cardIndex);
+      // Extract card index and optional target from action
+      // Format: 'play-card-X' or 'play-card-X-target-Y'
+      const parts = action.substring('play-card-'.length).split('-target-');
+      const cardIndex = parseInt(parts[0], 10);
+      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
+
+      console.log('[MissionBattleUI] Playing card:', { cardIndex, targetIndex });
+      result = this.playCard(cardIndex, targetIndex);
     } else if (action.startsWith('use-ability-')) {
       // Extract beast index (e.g., 'use-ability-0' -> 0)
       const beastIndex = parseInt(action.substring('use-ability-'.length), 10);
@@ -210,7 +219,7 @@ export class MissionBattleUI {
   /**
    * Play a card from the player's hand
    */
-  private playCard(cardIndex: number): any {
+  private playCard(cardIndex: number, targetIndex?: number): any {
     if (!this.currentBattle || !this.currentBattle.gameState) {
       return { success: false, message: 'No active battle' };
     }
@@ -218,7 +227,7 @@ export class MissionBattleUI {
     const player = this.currentBattle.gameState.players[0];
     const opponent = this.currentBattle.gameState.players[1];
 
-    return this.battleStateManager.playCard(cardIndex, player, opponent, this.currentBattle.gameState);
+    return this.battleStateManager.playCard(cardIndex, player, opponent, this.currentBattle.gameState, targetIndex);
   }
 
   /**

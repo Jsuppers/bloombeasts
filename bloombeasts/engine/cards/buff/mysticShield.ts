@@ -7,13 +7,15 @@
  * Fantasy card game art style, magical defensive aura, square format 185x185px."
  */
 
-import { BuffCard } from '../../types/core';
+import { BuffCard, Ability } from '../../types/core';
 import {
   StatModificationEffect,
   EffectType,
   AbilityTarget,
   StatType,
   EffectDuration,
+  StructuredAbility,
+  AbilityTrigger,
 } from '../../types/abilities';
 
 // Ongoing effect: All your Beasts gain +2 Health
@@ -25,10 +27,16 @@ const defenseBoost: StatModificationEffect = {
   duration: EffectDuration.WhileOnField,
 };
 
+const mysticShieldAbility: StructuredAbility = {
+  name: 'Mystic Shield',
+  trigger: AbilityTrigger.Passive, // Ongoing effect
+  effects: [defenseBoost]
+};
+
 export const MYSTIC_SHIELD: BuffCard = {
   id: 'mystic-shield',
   name: 'Mystic Shield',
   type: 'Buff',
   cost: 3,
-  ongoingEffects: [defenseBoost],
+  abilities: [mysticShieldAbility],
 };

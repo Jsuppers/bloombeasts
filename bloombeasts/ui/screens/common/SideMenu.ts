@@ -146,7 +146,7 @@ export function createSideMenu(config: SideMenuConfig): UINodeType {
         children: [
             // Sidebar background image
             Image({
-                source: new Binding({ uri: 'sideMenu' }),
+                source: new Binding({ uri: 'side-menu' }),
                 style: {
                     position: 'absolute',
                     width: sideMenuDimensions.width,
@@ -188,7 +188,7 @@ function createSideMenuButton(
         children: [
             // Button background image
             Image({
-                source: new Binding({ uri: 'standardButton' }),
+                source: new Binding({ uri: 'standard-button' }),
                 style: {
                     position: 'absolute',
                     width: sideMenuButtonDimensions.width,
@@ -284,7 +284,7 @@ function createPlayerInfo(
                             height: '100%',
                         },
                         children: Image({
-                            source: new Binding({ uri: 'experienceBar' }),
+                            source: new Binding({ uri: 'experience-bar' }),
                             style: {
                                 width: `${xpPercent}%`,
                                 height: 11,

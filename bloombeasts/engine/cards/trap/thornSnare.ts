@@ -2,8 +2,8 @@
  * Thorn Snare - Prevent an attack and damage the attacker
  */
 
-import { TrapCard, TrapTrigger } from '../../types/core';
-import { PreventEffect, DamageEffect, EffectType, AbilityTarget, EffectDuration } from '../../types/abilities';
+import { TrapCard, TrapTrigger, Ability } from '../../types/core';
+import { PreventEffect, DamageEffect, EffectType, AbilityTarget, EffectDuration, StructuredAbility, AbilityTrigger } from '../../types/abilities';
 
 const preventAttack: PreventEffect = {
   type: EffectType.PreventAttack,
@@ -17,6 +17,12 @@ const snareDamage: DamageEffect = {
   value: 2
 };
 
+const thornSnareAbility: StructuredAbility = {
+  name: 'Thorn Snare',
+  trigger: AbilityTrigger.OnSummon, // Trap effects trigger when the trap is activated
+  effects: [preventAttack, snareDamage]
+};
+
 export const THORN_SNARE: TrapCard = {
   id: 'thorn-snare',
   name: 'Thorn Snare',
@@ -25,5 +31,5 @@ export const THORN_SNARE: TrapCard = {
   activation: {
     trigger: TrapTrigger.OnAttack
   },
-  effects: [preventAttack, snareDamage]
+  abilities: [thornSnareAbility]
 };

@@ -1,0 +1,140 @@
+{
+  "version": "1.0.0",
+  "category": "buff",
+  "description": "Buff cards and assets",
+  "data": [
+    {
+      "id": "battle-fury",
+      "type": "buff",
+      "cardType": "Buff",
+      "data": {
+        "id": "battle-fury",
+        "name": "Battle Fury",
+        "type": "Buff",
+        "cost": 3,
+        "abilities": [
+          {
+            "name": "Battle Fury",
+            "trigger": "Passive",
+            "effects": [
+              {
+                "type": "ModifyStats",
+                "target": "AllAllies",
+                "stat": "Attack",
+                "value": 2,
+                "duration": "WhileOnField"
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Buff/BattleFury.png"
+        }
+      ]
+    },
+    {
+      "id": "mystic-shield",
+      "type": "buff",
+      "cardType": "Buff",
+      "data": {
+        "id": "mystic-shield",
+        "name": "Mystic Shield",
+        "type": "Buff",
+        "cost": 3,
+        "abilities": [
+          {
+            "name": "Mystic Shield",
+            "trigger": "Passive",
+            "effects": [
+              {
+                "type": "ModifyStats",
+                "target": "AllAllies",
+                "stat": "Health",
+                "value": 2,
+                "duration": "WhileOnField"
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Buff/MysticShield.png"
+        }
+      ]
+    },
+    {
+      "id": "natures-blessing",
+      "type": "buff",
+      "cardType": "Buff",
+      "affinity": "forest",
+      "data": {
+        "id": "natures-blessing",
+        "name": "Nature's Blessing",
+        "type": "Buff",
+        "affinity": "Forest",
+        "cost": 4,
+        "abilities": [
+          {
+            "name": "Nature's Blessing",
+            "trigger": "OnOwnStartOfTurn",
+            "effects": [
+              {
+                "type": "Heal",
+                "target": "AllAllies",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Buff/NaturesBlessing.png"
+        }
+      ]
+    },
+    {
+      "id": "swift-wind",
+      "type": "buff",
+      "cardType": "Buff",
+      "affinity": "sky",
+      "data": {
+        "id": "swift-wind",
+        "name": "Swift Wind",
+        "type": "Buff",
+        "affinity": "Sky",
+        "cost": 2,
+        "abilities": [
+          {
+            "name": "Swift Wind",
+            "trigger": "OnOwnStartOfTurn",
+            "effects": [
+              {
+                "type": "GainResource",
+                "target": "PlayerGardener",
+                "resource": "Nectar",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Buff/SwiftWind.png"
+        }
+      ]
+    }
+  ]
+}

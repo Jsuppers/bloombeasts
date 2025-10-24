@@ -2,11 +2,13 @@
  * Clear Zenith - Sky Habitat Card
  */
 
-import { HabitatCard } from '../../types/core';
+import { HabitatCard, Ability } from '../../types/core';
 import {
   DrawCardEffect,
   EffectType,
-  AbilityTarget
+  AbilityTarget,
+  StructuredAbility,
+  AbilityTrigger
 } from '../../types/abilities';
 
 // On play effect: Draw 1 card
@@ -16,6 +18,12 @@ const clearZenithDraw: DrawCardEffect = {
   value: 1
 };
 
+const skyDrawAbility: StructuredAbility = {
+  name: 'Sky Vision',
+  trigger: AbilityTrigger.OnSummon, // On play effect
+  effects: [clearZenithDraw]
+};
+
 export const CLEAR_ZENITH: HabitatCard = {
   id: 'clear-zenith',
   name: 'Clear Zenith',
@@ -23,6 +31,5 @@ export const CLEAR_ZENITH: HabitatCard = {
   affinity: 'Sky',
   cost: 1,
   titleColor: '#000000',  // Black title for better contrast on light background
-  onPlayEffects: [clearZenithDraw],
-  ongoingEffects: []
+  abilities: [skyDrawAbility]
 };

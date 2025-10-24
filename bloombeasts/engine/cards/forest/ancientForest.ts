@@ -2,7 +2,7 @@
  * Ancient Forest - Forest Habitat Card
  */
 
-import { HabitatCard } from '../../types/core';
+import { HabitatCard, Ability } from '../../types/core';
 import {
   StatModificationEffect,
   RemoveCounterEffect,
@@ -10,7 +10,9 @@ import {
   AbilityTarget,
   StatType,
   EffectDuration,
-  ConditionType
+  ConditionType,
+  StructuredAbility,
+  AbilityTrigger
 } from '../../types/abilities';
 
 // Ongoing effect: All Forest Beasts gain +0/+1
@@ -39,12 +41,25 @@ const removeFreezeCounters: RemoveCounterEffect = {
   counter: 'Freeze'
 };
 
+// Ongoing ability
+const forestBonusAbility: StructuredAbility = {
+  name: 'Forest Blessing',
+  trigger: AbilityTrigger.Passive, // Ongoing effect
+  effects: [forestBeastBonus]
+};
+
+// On play ability
+const cleansingAbility: StructuredAbility = {
+  name: 'Natural Cleansing',
+  trigger: AbilityTrigger.OnSummon, // On play effect
+  effects: [removeBurnCounters, removeFreezeCounters]
+};
+
 export const ANCIENT_FOREST: HabitatCard = {
   id: 'ancient-forest',
   name: 'Ancient Forest',
   type: 'Habitat',
   affinity: 'Forest',
   cost: 1,
-  ongoingEffects: [forestBeastBonus],
-  onPlayEffects: [removeBurnCounters, removeFreezeCounters]
+  abilities: [forestBonusAbility, cleansingAbility]
 };

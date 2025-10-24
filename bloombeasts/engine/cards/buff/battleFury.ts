@@ -7,13 +7,15 @@
  * Fantasy card game art style, vibrant colors, square format 185x185px."
  */
 
-import { BuffCard } from '../../types/core';
+import { BuffCard, Ability } from '../../types/core';
 import {
   StatModificationEffect,
   EffectType,
   AbilityTarget,
   StatType,
   EffectDuration,
+  StructuredAbility,
+  AbilityTrigger,
 } from '../../types/abilities';
 
 // Ongoing effect: All your Beasts gain +2 Attack
@@ -25,10 +27,16 @@ const attackBoost: StatModificationEffect = {
   duration: EffectDuration.WhileOnField,
 };
 
+const battleFuryAbility: StructuredAbility = {
+  name: 'Battle Fury',
+  trigger: AbilityTrigger.Passive, // Ongoing effect
+  effects: [attackBoost]
+};
+
 export const BATTLE_FURY: BuffCard = {
   id: 'battle-fury',
   name: 'Battle Fury',
   type: 'Buff',
   cost: 3,
-  ongoingEffects: [attackBoost],
+  abilities: [battleFuryAbility],
 };

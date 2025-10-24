@@ -8128,7 +8128,7 @@ namespace BloomBeasts {
   // ==================== bloombeasts\screens\missions\definitions\mission02.ts ====================
 
   /**
-   * Mission 02: Fuzzlet
+   * Mission 02: Mosslet
    * Forest Affinity Mission
    */
 

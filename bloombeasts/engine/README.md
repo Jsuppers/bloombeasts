@@ -95,20 +95,20 @@ if (validation.valid) {
 
 ```typescript
 import { LevelingSystem } from './bloombeasts/systems/LevelingSystem';
-import { FUZZLET } from './bloombeasts/data/forestDeck';
+import { MOSSLET } from './bloombeasts/data/forestDeck';
 
 // Create a beast instance
-const fuzzlet = LevelingSystem.createBeastInstance(FUZZLET, 'fuzzlet-001', 0);
+const mosslet = LevelingSystem.createBeastInstance(MOSSLET, 'mosslet-001', 0);
 
 // Add combat XP
-let leveledFuzzlet = LevelingSystem.addCombatXP(fuzzlet);
+let leveledMosslet = LevelingSystem.addCombatXP(mosslet);
 
 // Add nectar XP
-leveledFuzzlet = LevelingSystem.addNectarXP(leveledFuzzlet, 1);
+leveledMosslet = LevelingSystem.addNectarXP(leveledMosslet, 1);
 
 // Check level and stats
-console.log(`Level: ${leveledFuzzlet.currentLevel}`);
-console.log(`ATK: ${leveledFuzzlet.currentAttack}, HP: ${leveledFuzzlet.currentHealth}`);
+console.log(`Level: ${leveledMosslet.currentLevel}`);
+console.log(`ATK: ${leveledMosslet.currentAttack}, HP: ${leveledMosslet.currentHealth}`);
 ```
 
 ### Assigning Perks

@@ -8,7 +8,7 @@ import { buildForestDeck } from '../../../engine/utils/deckBuilder';
 
 // test deck just has Rootling
 const testDeck = buildForestDeck();
-testDeck.cards = testDeck.cards.filter((card) => card.id === 'Rootling');
+testDeck.cards = testDeck.cards.filter((card) => card.id === 'rootling');
 testDeck.totalCards = testDeck.cards.length;
 console.log('testDeck', testDeck);
 

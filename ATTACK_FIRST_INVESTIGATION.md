@@ -105,9 +105,9 @@ Created comprehensive integration tests for Gale Glider (2 ATK / 2 HP with attac
 
 ### Key Findings from Tests
 
-**Test 1: Gale Glider (2/2) vs Fuzzlet (2/4)**
-- Expected: Fuzzlet should die (takes 2 damage, has 4 HP base)
-- **Actual: Fuzzlet survived at 2 HP** ✓ Correct (base HP is 4, not 2)
+**Test 1: Gale Glider (2/2) vs Mosslet (2/4)**
+- Expected: Mosslet should die (takes 2 damage, has 4 HP base)
+- **Actual: Mosslet survived at 2 HP** ✓ Correct (base HP is 4, not 2)
 - Gale Glider: **Stayed at 2 HP** (took NO damage)
 
 **Test 2: Gale Glider (2/2) vs Charcoil (3/3)**
@@ -116,10 +116,10 @@ Created comprehensive integration tests for Gale Glider (2 ATK / 2 HP with attac
   - Charcoil: 1 HP (took 2 damage from 3 HP base) ✓ Correct
   - Gale Glider: **2 HP** (took NO damage) ❌ Should have taken 3 damage and died
 
-**Test 3: Gale Glider (2/2) vs Modified Fuzzlet (2/3)**
+**Test 3: Gale Glider (2/2) vs Modified Mosslet (2/3)**
 - Expected: Gale Glider should die (takes 2 damage)
 - **Actual: Gale Glider stayed at 2 HP** (took NO damage)
-- Modified Fuzzlet: 1 HP ✓ Correct
+- Modified Mosslet: 1 HP ✓ Correct
 
 ### Conclusion from Tests
 
@@ -158,9 +158,9 @@ Low Priority:
 ## Example Use Cases (When Implemented)
 
 ### Scenario 1: Attack-First Saves the Attacker
-- **Gale Glider (2/2 attack-first)** attacks **Fuzzlet (2/2)**
+- **Gale Glider (2/2 attack-first)** attacks **Mosslet (2/2)**
 - Without attack-first: Both deal 2 damage simultaneously → Both die
-- **With attack-first**: Gale Glider deals 2 first → Fuzzlet dies → Dead beasts can't counter → **Gale Glider survives** ✓
+- **With attack-first**: Gale Glider deals 2 first → Mosslet dies → Dead beasts can't counter → **Gale Glider survives** ✓
 
 ### Scenario 2: Attack-First Doesn't Help
 - **Gale Glider (2/2 attack-first)** attacks **Charcoil (3/3)**

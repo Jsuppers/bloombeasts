@@ -1,0 +1,350 @@
+{
+  "version": "1.0.0",
+  "category": "magic",
+  "description": "Magic cards and assets",
+  "data": [
+    {
+      "id": "aether-swap",
+      "type": "magic",
+      "cardType": "Magic",
+      "data": {
+        "id": "aether-swap",
+        "name": "Aether Swap",
+        "type": "Magic",
+        "cost": 1,
+        "targetRequired": true,
+        "abilities": [
+          {
+            "name": "Aether Swap",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "SwapPositions",
+                "target": "Target"
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Magic/AetherSwap.png"
+        }
+      ]
+    },
+    {
+      "id": "cleansing-downpour",
+      "type": "magic",
+      "cardType": "Magic",
+      "data": {
+        "id": "cleansing-downpour",
+        "name": "Cleansing Downpour",
+        "type": "Magic",
+        "cost": 2,
+        "targetRequired": false,
+        "abilities": [
+          {
+            "name": "Cleansing Downpour",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "RemoveCounter",
+                "target": "AllUnits"
+              },
+              {
+                "type": "DrawCards",
+                "target": "PlayerGardener",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Magic/CleansingDownpour.png"
+        }
+      ]
+    },
+    {
+      "id": "elemental-burst",
+      "type": "magic",
+      "cardType": "Magic",
+      "data": {
+        "id": "elemental-burst",
+        "name": "Elemental Burst",
+        "type": "Magic",
+        "cost": 3,
+        "targetRequired": false,
+        "abilities": [
+          {
+            "name": "Elemental Burst",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "DealDamage",
+                "target": "AllEnemies",
+                "value": 2
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Magic/ElementalBurst.png"
+        }
+      ]
+    },
+    {
+      "id": "lightning-strike",
+      "type": "magic",
+      "cardType": "Magic",
+      "data": {
+        "id": "lightning-strike",
+        "name": "Lightning Strike",
+        "type": "Magic",
+        "cost": 2,
+        "targetRequired": true,
+        "abilities": [
+          {
+            "name": "Lightning Strike",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "DealDamage",
+                "target": "Target",
+                "value": 5,
+                "piercing": true
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Magic/LightningStrike.png"
+        }
+      ]
+    },
+    {
+      "id": "nectar-block",
+      "type": "magic",
+      "cardType": "Magic",
+      "data": {
+        "id": "nectar-block",
+        "name": "Nectar Block",
+        "type": "Magic",
+        "cost": 0,
+        "targetRequired": false,
+        "abilities": [
+          {
+            "name": "Nectar Block",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "GainResource",
+                "target": "PlayerGardener",
+                "resource": "Nectar",
+                "value": 2,
+                "duration": "ThisTurn"
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Magic/NectarBlock.png"
+        }
+      ]
+    },
+    {
+      "id": "nectar-drain",
+      "type": "magic",
+      "cardType": "Magic",
+      "data": {
+        "id": "nectar-drain",
+        "name": "Nectar Drain",
+        "type": "Magic",
+        "cost": 1,
+        "targetRequired": false,
+        "abilities": [
+          {
+            "name": "Nectar Drain",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "GainResource",
+                "target": "PlayerGardener",
+                "resource": "Nectar",
+                "value": 2,
+                "duration": "ThisTurn"
+              },
+              {
+                "type": "DrawCards",
+                "target": "PlayerGardener",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Magic/NectarDrain.png"
+        }
+      ]
+    },
+    {
+      "id": "nectar-surge",
+      "type": "magic",
+      "cardType": "Magic",
+      "data": {
+        "id": "nectar-surge",
+        "name": "Nectar Surge",
+        "type": "Magic",
+        "cost": 1,
+        "targetRequired": false,
+        "abilities": [
+          {
+            "name": "Nectar Surge",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "GainResource",
+                "target": "PlayerGardener",
+                "resource": "Nectar",
+                "value": 3,
+                "duration": "ThisTurn"
+              },
+              {
+                "type": "DrawCards",
+                "target": "PlayerGardener",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Magic/NectarSurge.png"
+        }
+      ]
+    },
+    {
+      "id": "overgrowth",
+      "type": "magic",
+      "cardType": "Magic",
+      "data": {
+        "id": "overgrowth",
+        "name": "Overgrowth",
+        "type": "Magic",
+        "cost": 3,
+        "targetRequired": false,
+        "abilities": [
+          {
+            "name": "Overgrowth",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "ModifyStats",
+                "target": "AllAllies",
+                "stat": "Both",
+                "value": 2,
+                "duration": "Permanent"
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Magic/Overgrowth.png"
+        }
+      ]
+    },
+    {
+      "id": "power-up",
+      "type": "magic",
+      "cardType": "Magic",
+      "data": {
+        "id": "power-up",
+        "name": "Power Up",
+        "type": "Magic",
+        "cost": 2,
+        "targetRequired": true,
+        "abilities": [
+          {
+            "name": "Power Up",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "ModifyStats",
+                "target": "Target",
+                "stat": "Both",
+                "value": 3,
+                "duration": "Permanent"
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Magic/PowerUp.png"
+        }
+      ]
+    },
+    {
+      "id": "purify",
+      "type": "magic",
+      "cardType": "Magic",
+      "data": {
+        "id": "purify",
+        "name": "Purify",
+        "type": "Magic",
+        "cost": 1,
+        "targetRequired": true,
+        "abilities": [
+          {
+            "name": "Purify",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "RemoveCounter",
+                "target": "Target"
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Magic/Purify.png"
+        }
+      ]
+    }
+  ]
+}

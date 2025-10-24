@@ -3,7 +3,7 @@
  */
 
 // Forest Cards
-export { FUZZLET } from './engine/cards/forest/fuzzlet';
+export { MOSSLET } from './engine/cards/forest/mosslet';
 export { MUSHROOMANCER } from './engine/cards/forest/mushroomancer';
 export { LEAF_SPRITE } from './engine/cards/forest/leafSprite';
 export { ROOTLING } from './engine/cards/forest/rootling';

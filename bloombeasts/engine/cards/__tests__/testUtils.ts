@@ -64,6 +64,27 @@ export function validateStructuredAbility(ability: StructuredAbility): void {
 }
 
 /**
+ * Validates an ability (can be SimpleAbility or StructuredAbility)
+ */
+export function validateAbility(ability: any): void {
+  expect(ability).toBeDefined();
+  expect(ability.name).toBeDefined();
+  expect(typeof ability.name).toBe('string');
+
+  // Check if it's a StructuredAbility (has effects array)
+  if (ability.effects) {
+    validateStructuredAbility(ability);
+  }
+  // Otherwise it's a SimpleAbility, just check the trigger if present
+  else if (ability.trigger) {
+    expect([
+      'OnSummon', 'OnAllySummon', 'OnAttack', 'OnDamage', 'OnDestroy',
+      'StartOfTurn', 'EndOfTurn', 'Passive', 'Activated'
+    ]).toContain(ability.trigger);
+  }
+}
+
+/**
  * Validates an ability effect
  */
 export function validateAbilityEffect(effect: AbilityEffect): void {
@@ -115,11 +136,13 @@ export function validateLevelingConfig(card: BloomBeastCard): void {
 export function validateMagicCard(card: MagicCard): void {
   validateBaseCard(card);
   expect(card.type).toBe('Magic');
-  expect(card.effects).toBeDefined();
-  expect(Array.isArray(card.effects)).toBe(true);
-  expect(card.effects.length).toBeGreaterThan(0);
-  card.effects.forEach(effect => validateAbilityEffect(effect));
-  expect(typeof card.targetRequired).toBe('boolean');
+  expect(card.abilities).toBeDefined();
+  expect(Array.isArray(card.abilities)).toBe(true);
+  expect(card.abilities.length).toBeGreaterThan(0);
+  card.abilities.forEach(ability => validateAbility(ability));
+  if (card.targetRequired !== undefined) {
+    expect(typeof card.targetRequired).toBe('boolean');
+  }
 }
 
 /**
@@ -130,10 +153,10 @@ export function validateTrapCard(card: TrapCard): void {
   expect(card.type).toBe('Trap');
   expect(card.activation).toBeDefined();
   expect(card.activation.trigger).toBeDefined();
-  expect(card.effects).toBeDefined();
-  expect(Array.isArray(card.effects)).toBe(true);
-  expect(card.effects.length).toBeGreaterThan(0);
-  card.effects.forEach(effect => validateAbilityEffect(effect));
+  expect(card.abilities).toBeDefined();
+  expect(Array.isArray(card.abilities)).toBe(true);
+  expect(card.abilities.length).toBeGreaterThan(0);
+  card.abilities.forEach(ability => validateAbility(ability));
 }
 
 /**
@@ -144,9 +167,9 @@ export function validateHabitatCard(card: HabitatCard): void {
   expect(card.type).toBe('Habitat');
   expect(card.affinity).toBeDefined();
   expect(['Forest', 'Fire', 'Water', 'Sky', 'Generic']).toContain(card.affinity);
-  expect(card.ongoingEffects).toBeDefined();
-  expect(Array.isArray(card.ongoingEffects)).toBe(true);
-  card.ongoingEffects.forEach(effect => validateAbilityEffect(effect));
+  expect(card.abilities).toBeDefined();
+  expect(Array.isArray(card.abilities)).toBe(true);
+  card.abilities.forEach(ability => validateAbility(ability));
 }
 
 /**
@@ -155,9 +178,9 @@ export function validateHabitatCard(card: HabitatCard): void {
 export function validateBuffCard(card: BuffCard): void {
   validateBaseCard(card);
   expect(card.type).toBe('Buff');
-  expect(card.ongoingEffects).toBeDefined();
-  expect(Array.isArray(card.ongoingEffects)).toBe(true);
-  card.ongoingEffects.forEach(effect => validateAbilityEffect(effect));
+  expect(card.abilities).toBeDefined();
+  expect(Array.isArray(card.abilities)).toBe(true);
+  card.abilities.forEach(ability => validateAbility(ability));
 
   if (card.affinity) {
     expect(['Forest', 'Fire', 'Water', 'Sky', 'Generic']).toContain(card.affinity);
@@ -204,4 +227,45 @@ export function validateStatGainsProgression(card: BloomBeastCard): void {
     expect(curr.hp).toBeGreaterThanOrEqual(prev.hp);
     expect(curr.atk).toBeGreaterThanOrEqual(prev.atk);
   }
+}
+
+/**
+ * Load a card from JSON catalog by ID
+ *
+ * @param cardId - The ID of the card to load (e.g., 'mosslet', 'blazefinch')
+ * @param catalogName - The catalog name (e.g., 'forest', 'fire', 'water', 'sky', 'magic', 'trap', 'buff')
+ * @returns The card data from the JSON catalog
+ */
+export function loadCardFromJSON(cardId: string, catalogName: string): any {
+  const fs = require('fs');
+  const path = require('path');
+
+  // Path to catalog file from test location
+  // Tests are in bloombeasts/engine/cards/__tests__/
+  // Catalogs are in assets/catalogs/
+  const catalogPath = path.join(__dirname, '../../../../assets/catalogs', `${catalogName}Assets.json`);
+
+  // Read and parse the JSON file
+  const catalogData = JSON.parse(fs.readFileSync(catalogPath, 'utf-8'));
+
+  // Find the card by ID in the data array
+  const cardEntry = catalogData.data.find((entry: any) => entry.id === cardId);
+
+  if (!cardEntry) {
+    throw new Error(`Card '${cardId}' not found in ${catalogName}Assets.json`);
+  }
+
+  // Return the card data
+  return cardEntry.data;
+}
+
+/**
+ * Load multiple cards from JSON catalog by IDs
+ *
+ * @param cardIds - Array of card IDs to load
+ * @param catalogName - The catalog name
+ * @returns Array of card data from the JSON catalog
+ */
+export function loadCardsFromJSON(cardIds: string[], catalogName: string): any[] {
+  return cardIds.map(id => loadCardFromJSON(id, catalogName));
 }

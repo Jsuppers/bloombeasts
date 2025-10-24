@@ -13,7 +13,7 @@ This checklist provides actionable refactoring recommendations to reduce codebas
 - [x] Create `CardBuilder` factory class with fluent API
 - [x] Migrate fire affinity cards to use CardBuilder (blazefinch, charcoil, cinderpup, magmite updated with structured approach)
 - [x] Migrate water affinity cards to use CardBuilder (bubblefin updated with structured approach)
-- [x] Migrate forest affinity cards to use CardBuilder (fuzzlet and others)
+- [x] Migrate forest affinity cards to use CardBuilder (mosslet and others)
 - [x] Migrate sky affinity cards to use CardBuilder (cirrusFloof and others)
 - [x] Remove old card definition boilerplate (COMPLETE - no old boilerplate exists, all 40 card files use StructuredAbility)
 - **Impact**: Migration complete - cards are clean and maintainable
@@ -92,7 +92,6 @@ This checklist provides actionable refactoring recommendations to reduce codebas
 ### 4. Clean Up Dead Code
 
 - [x] Address TODOs in `CombatSystem.ts` lines 42-46 (replaced with implementation notes explaining GameEngine handles this)
-- [x] Fix Spore counter calculations in `fuzzlet.ts` (replaced TODO with implementation notes)
 - [x] Fix Spore counter calculations in `mosslet.ts` (replaced TODO with implementation notes)
 - [x] Timer TODO in `GameManager.ts` line 1182 (now uses TURN_TIME_LIMIT constant)
 - [x] Review and resolve remaining TODOs in screens/ subdirectory:

@@ -2,13 +2,19 @@
  * Bear Trap - Damage attacker when triggered
  */
 
-import { TrapCard, TrapTrigger } from '../../types/core';
-import { DamageEffect, EffectType, AbilityTarget } from '../../types/abilities';
+import { TrapCard, TrapTrigger, Ability } from '../../types/core';
+import { DamageEffect, EffectType, AbilityTarget, StructuredAbility, AbilityTrigger } from '../../types/abilities';
 
 const trapDamage: DamageEffect = {
   type: EffectType.DealDamage,
   target: AbilityTarget.Attacker,
   value: 3
+};
+
+const bearTrapAbility: StructuredAbility = {
+  name: 'Bear Trap',
+  trigger: AbilityTrigger.OnSummon, // Trap effects trigger when the trap is activated
+  effects: [trapDamage]
 };
 
 export const BEAR_TRAP: TrapCard = {
@@ -19,5 +25,5 @@ export const BEAR_TRAP: TrapCard = {
   activation: {
     trigger: TrapTrigger.OnAttack
   },
-  effects: [trapDamage]
+  abilities: [bearTrapAbility]
 };

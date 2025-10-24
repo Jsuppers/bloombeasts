@@ -24,7 +24,7 @@ const fileOrder = [
   'game/cards/BaseDeck.ts',
 
   // Individual cards
-  'game/cards/forest/fuzzlet.ts',
+  'game/cards/forest/mosslet.ts',
   'game/cards/forest/mushroomancer.ts',
   'game/cards/forest/leafSprite.ts',
   'game/cards/forest/rootling.ts',

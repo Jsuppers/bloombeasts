@@ -1,0 +1,546 @@
+{
+  "version": "1.0.0",
+  "category": "forest",
+  "description": "Forest affinity cards and assets",
+  "data": [
+    {
+      "id": "rootling",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "forest",
+      "data": {
+        "id": "rootling",
+        "name": "Rootling",
+        "displayName": "Rootling",
+        "type": "Bloom",
+        "affinity": "Forest",
+        "cost": 1,
+        "baseAttack": 1,
+        "baseHealth": 3,
+        "abilities": [
+          {
+            "name": "Deep Roots",
+            "trigger": "Passive",
+            "effects": [
+              {
+                "type": "CannotBeTargeted",
+                "target": "Self",
+                "by": ["magic"]
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 1, "atk": 0 },
+            "3": { "hp": 2, "atk": 1 },
+            "4": { "hp": 3, "atk": 2 },
+            "5": { "hp": 4, "atk": 3 },
+            "6": { "hp": 5, "atk": 4 },
+            "7": { "hp": 6, "atk": 5 },
+            "8": { "hp": 7, "atk": 6 },
+            "9": { "hp": 8, "atk": 7 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Abundant Nourish",
+                  "trigger": "OnDestroy",
+                  "effects": [
+                    {
+                      "type": "GainResource",
+                      "target": "PlayerGardener",
+                      "resource": "Nectar",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Ancient Roots",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "CannotBeTargeted",
+                      "target": "Self",
+                      "by": ["magic", "trap"]
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Eternal Roots",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "CannotBeTargeted",
+                      "target": "Self",
+                      "by": ["magic", "trap", "abilities"]
+                    }
+                  ]
+                },
+                {
+                  "name": "Harvest Feast",
+                  "trigger": "OnDestroy",
+                  "effects": [
+                    {
+                      "type": "GainResource",
+                      "target": "PlayerGardener",
+                      "resource": "Nectar",
+                      "value": 2
+                    },
+                    {
+                      "type": "DrawCards",
+                      "target": "PlayerGardener",
+                      "value": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Forest/Rootling.png",
+          "description": "Rootling card artwork"
+        }
+      ]
+    },
+    {
+      "id": "leaf-sprite",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "forest",
+      "data": {
+        "id": "leaf-sprite",
+        "name": "Leaf Sprite",
+        "displayName": "Leaf Sprite",
+        "type": "Bloom",
+        "affinity": "Forest",
+        "cost": 1,
+        "baseAttack": 1,
+        "baseHealth": 2,
+        "abilities": [
+          {
+            "name": "Nimble",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "DrawCards",
+                "target": "PlayerGardener",
+                "value": 1
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 0, "atk": 1 },
+            "3": { "hp": 1, "atk": 1 },
+            "4": { "hp": 1, "atk": 2 },
+            "5": { "hp": 2, "atk": 3 },
+            "6": { "hp": 3, "atk": 4 },
+            "7": { "hp": 4, "atk": 5 },
+            "8": { "hp": 5, "atk": 6 },
+            "9": { "hp": 6, "atk": 7 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Swiftness",
+                  "trigger": "OnSummon",
+                  "effects": [
+                    {
+                      "type": "DrawCards",
+                      "target": "PlayerGardener",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Evasive",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "CannotBeTargeted",
+                      "target": "Self",
+                      "by": ["trap"]
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Sprint",
+                  "trigger": "OnSummon",
+                  "effects": [
+                    {
+                      "type": "RemoveSummoningSickness",
+                      "target": "Self"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Forest/LeafSprite.png",
+          "description": "Leaf Sprite card artwork"
+        }
+      ]
+    },
+    {
+      "id": "mosslet",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "forest",
+      "data": {
+        "id": "mosslet",
+        "name": "Mosslet",
+        "displayName": "Mosslet",
+        "type": "Bloom",
+        "affinity": "Forest",
+        "cost": 2,
+        "baseAttack": 2,
+        "baseHealth": 2,
+        "abilities": [
+          {
+            "name": "Growth",
+            "trigger": "OnOwnEndOfTurn",
+            "effects": [
+              {
+                "type": "ModifyStats",
+                "target": "Self",
+                "stat": "Both",
+                "value": 1,
+                "duration": "Permanent"
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 1, "atk": 0 },
+            "3": { "hp": 1, "atk": 1 },
+            "4": { "hp": 2, "atk": 2 },
+            "5": { "hp": 3, "atk": 3 },
+            "6": { "hp": 4, "atk": 4 },
+            "7": { "hp": 5, "atk": 5 },
+            "8": { "hp": 6, "atk": 6 },
+            "9": { "hp": 7, "atk": 7 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Rapid Growth",
+                  "trigger": "OnOwnEndOfTurn",
+                  "effects": [
+                    {
+                      "type": "ModifyStats",
+                      "target": "Self",
+                      "stat": "Both",
+                      "value": 2,
+                      "duration": "Permanent"
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Mossy Armor",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "DamageReduction",
+                      "target": "Self",
+                      "value": 1,
+                      "duration": "WhileOnField"
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Overgrowth",
+                  "trigger": "OnOwnEndOfTurn",
+                  "effects": [
+                    {
+                      "type": "ModifyStats",
+                      "target": "Self",
+                      "stat": "Both",
+                      "value": 3,
+                      "duration": "Permanent"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Forest/Mosslet.png",
+          "description": "Mosslet card artwork"
+        }
+      ]
+    },
+    {
+      "id": "mushroomancer",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "forest",
+      "data": {
+        "id": "mushroomancer",
+        "name": "Mushroomancer",
+        "displayName": "Mushroomancer",
+        "type": "Bloom",
+        "affinity": "Forest",
+        "cost": 3,
+        "baseAttack": 3,
+        "baseHealth": 4,
+        "abilities": [
+          {
+            "name": "Sporogenesis",
+            "trigger": "OnSummon",
+            "effects": [
+              {
+                "type": "ApplyCounter",
+                "target": "AllEnemies",
+                "counter": "Spore",
+                "value": 2
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 1, "atk": 0 },
+            "3": { "hp": 2, "atk": 1 },
+            "4": { "hp": 3, "atk": 2 },
+            "5": { "hp": 4, "atk": 3 },
+            "6": { "hp": 5, "atk": 4 },
+            "7": { "hp": 6, "atk": 5 },
+            "8": { "hp": 7, "atk": 6 },
+            "9": { "hp": 8, "atk": 7 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Virulent Spores",
+                  "trigger": "OnSummon",
+                  "effects": [
+                    {
+                      "type": "ApplyCounter",
+                      "target": "AllEnemies",
+                      "counter": "Spore",
+                      "value": 3
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Spore Burst",
+                  "trigger": "OnDestroy",
+                  "effects": [
+                    {
+                      "type": "ApplyCounter",
+                      "target": "AllEnemies",
+                      "counter": "Spore",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Fungal Network",
+                  "trigger": "OnOwnEndOfTurn",
+                  "effects": [
+                    {
+                      "type": "DealDamage",
+                      "target": "AllEnemies",
+                      "value": 1,
+                      "condition": {
+                        "type": "HasCounter",
+                        "value": "Spore"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Forest/Mushroomancer.png",
+          "description": "Mushroomancer card artwork"
+        }
+      ]
+    },
+    {
+      "id": "ancient-forest",
+      "type": "habitat",
+      "affinity": "forest",
+      "data": {
+        "id": "ancient-forest",
+        "name": "Ancient Forest",
+        "displayName": "Ancient Forest",
+        "type": "Habitat",
+        "affinity": "Forest",
+        "cost": 0,
+        "abilities": [
+          {
+            "name": "Forest Sanctuary",
+            "trigger": "Passive",
+            "effects": [
+              {
+                "type": "ModifyStats",
+                "target": "AllAllies",
+                "stat": "Health",
+                "value": 1,
+                "duration": "WhileOnField"
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Forest/AncientForest.png",
+          "description": "Ancient Forest habitat card artwork"
+        },
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Forest/HabitatCard.png",
+          "description": "Forest habitat card template"
+        },
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Forest/HabitatCardPlayboard.png",
+          "description": "Forest habitat card playboard"
+        }
+      ]
+    },
+    {
+      "id": "forest-mission",
+      "type": "mission",
+      "affinity": "forest",
+      "missionNumber": 2,
+      "name": "Forest Mission",
+      "description": "Forest affinity mission",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Forest/ForestMission.png",
+          "description": "Forest mission card"
+        }
+      ]
+    },
+    {
+      "id": "forest-chest-closed",
+      "type": "ui",
+      "category": "chest",
+      "name": "Forest Chest Closed",
+      "description": "Forest chest in closed state",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/chests/ForestChestClosed.png"
+        }
+      ]
+    },
+    {
+      "id": "forest-chest-opened",
+      "type": "ui",
+      "category": "chest",
+      "name": "Forest Chest Opened",
+      "description": "Forest chest in opened state",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/chests/ForestChestOpened.png"
+        }
+      ]
+    },
+    {
+      "id": "forest-icon",
+      "type": "ui",
+      "category": "icon",
+      "name": "Forest Icon",
+      "description": "Forest affinity icon",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/affinity/ForestIcon.png"
+        }
+      ]
+    },
+    {
+      "id": "forest-habitat",
+      "type": "ui",
+      "category": "card-template",
+      "name": "Forest Habitat Card Template",
+      "description": "Template overlay for forest habitat cards",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Forest/HabitatCard.png"
+        }
+      ]
+    }
+  ]
+}

@@ -1,12 +1,12 @@
 /**
- * Unified Mission Screen Component
- * Works on both Horizon and Web platforms
+ * Mission Screen - Refactored with UI Component System
  */
 
 import { View, Text, Image, Pressable, Binding } from '../index';
 import { COLORS } from '../../../shared/styles/colors';
 import { DIMENSIONS, GAPS } from '../../../shared/styles/dimensions';
-import { sideMenuButtonDimensions } from '../../../shared/constants/dimensions';
+import { sideMenuButtonDimensions, missionCardDimensions, cardsUIContainerDimensions } from '../../../shared/constants/dimensions';
+import { missionCardPositions, cardsUIContainerPosition } from '../../../shared/constants/positions';
 import { missionEmoji } from '../../../shared/constants/emojis';
 import type { MissionDisplay, MenuStats } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
@@ -24,11 +24,16 @@ export interface MissionScreenProps {
  * Unified Mission Screen that works on both platforms
  */
 export class MissionScreen {
+  // State bindings
   private missions: any;
   private stats: any;
-  private scrollOffset: any;
-  private missionsPerRow = 3;
-  private rowsPerPage = 3;
+  private scrollOffset = new Binding(0);
+
+  // Configuration
+  private missionsPerRow: number = 3;
+  private rowsPerPage: number = 3;
+
+  // Callbacks
   private onMissionSelect?: (missionId: string) => void;
   private onNavigate?: (screen: string) => void;
   private onRenderNeeded?: () => void;
@@ -39,69 +44,19 @@ export class MissionScreen {
     this.onMissionSelect = props.onMissionSelect;
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
-    this.scrollOffset = new Binding(0);
+
+    // Subscribe to scrollOffset changes to trigger re-renders
+    this.scrollOffset.subscribe(() => {
+      if (this.onRenderNeeded) {
+        this.onRenderNeeded();
+      }
+    });
   }
 
   /**
-   * Create the unified mission UI
+   * Create the missions UI
    */
   createUI(): UINodeType {
-    // Create scroll buttons for the side menu
-    const scrollButtons = [
-      {
-        label: '↑',
-        onClick: () => {
-          const current = this.scrollOffset.get();
-          const missions = this.missions.get();
-          const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-          const totalPages = Math.ceil(missions.length / missionsPerPage);
-
-          const newOffset = current - 1;
-          if (newOffset >= 0) {
-            this.scrollOffset.set(newOffset);
-            // Trigger re-render after updating scroll position
-            if (this.onRenderNeeded) this.onRenderNeeded();
-          }
-        },
-        disabled: Binding.derive(
-          [this.missions, this.scrollOffset],
-          (missions: any[], offset: number) => offset <= 0
-        ) as any,
-        yOffset: 0,
-      },
-      {
-        label: '↓',
-        onClick: () => {
-          const current = this.scrollOffset.get();
-          const missions = this.missions.get();
-          const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-          const totalPages = Math.ceil(missions.length / missionsPerPage);
-
-          const newOffset = current + 1;
-          if (newOffset < totalPages) {
-            this.scrollOffset.set(newOffset);
-            // Trigger re-render after updating scroll position
-            if (this.onRenderNeeded) this.onRenderNeeded();
-          }
-        },
-        disabled: Binding.derive(
-          [this.missions, this.scrollOffset],
-          (missions: any[], offset: number) => {
-            const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-            const totalPages = Math.ceil(missions.length / missionsPerPage);
-            return offset >= totalPages - 1;
-          }
-        ) as any,
-        yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
-      },
-    ];
-
-    // Mission completion text
-    const completionText = this.missions.derive((missions: MissionDisplay[]) => {
-      const completedCount = missions.filter((m: MissionDisplay) => m.isCompleted).length;
-      return `${missionEmoji} ${completedCount}/${missions.length}`;
-    });
-
     return View({
       style: {
         width: '100%',
@@ -109,220 +64,396 @@ export class MissionScreen {
         position: 'relative',
       },
       children: [
-        // Background
+        // Background image (full screen)
+        this.createBackground(),
+
+        // Main content area with mission grid
+        this.createMainContent(),
+
+        // Side menu with controls (absolutely positioned)
+        this.createSideMenu(),
+      ],
+    });
+  }
+
+  /**
+   * Create full-screen background image
+   */
+  private createBackground(): UINodeType {
+    return Image({
+      source: new Binding({ uri: 'background' }),
+      style: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        top: 0,
+        left: 0,
+      },
+    });
+  }
+
+  /**
+   * Create main content area with mission grid
+   */
+  private createMainContent(): UINodeType {
+    return View({
+      style: {
+        position: 'absolute',
+        left: cardsUIContainerPosition.x,
+        top: cardsUIContainerPosition.y,
+        width: cardsUIContainerDimensions.width,
+        height: cardsUIContainerDimensions.height,
+      },
+      children: [
+        // Cards container background image
         Image({
-          source: new Binding({ uri: 'background' }),
+          source: new Binding({ uri: 'cards-container' }),
           style: {
             position: 'absolute',
-            width: '100%',
-            height: '100%',
+            width: cardsUIContainerDimensions.width,
+            height: cardsUIContainerDimensions.height,
             top: 0,
             left: 0,
           },
         }),
-        // Main content - mission grid
+        // Content on top of container image
         View({
           style: {
-            position: 'absolute',
-            width: 1100,
-            height: '100%',
-            padding: 40,
+            position: 'relative',
+            paddingLeft: DIMENSIONS.spacing.xl,
+            paddingTop: DIMENSIONS.spacing.xl,
+            width: cardsUIContainerDimensions.width,
+            height: cardsUIContainerDimensions.height,
           },
-          children: [
-            View({
-              style: {
-                padding: 30,
-                backgroundColor: COLORS.cardBackground,
-                borderRadius: 10,
-                borderWidth: 2,
-                borderColor: COLORS.borderDefault,
-                flex: 1,
-              },
-              children: Binding.derive(
-                [this.missions, this.scrollOffset],
-                (missions: MissionDisplay[], offset: number) => {
-                  if (missions.length === 0) {
-                    return [
-                      View({
-                        style: {
-                          flex: 1,
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        },
-                        children: Text({
-                          text: new Binding('No missions available.'),
-                          style: {
-                            fontSize: DIMENSIONS.fontSize.xl,
-                            color: COLORS.textSecondary,
-                          },
-                        }),
-                      }),
-                    ];
-                  }
+          children: this.missions.derive(missions => {
+            if (missions.length === 0) {
+              return [
+                View({
+                  style: {
+                    width: '100%',
+                    height: '100%',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  },
+                  children: Text({
+                    text: new Binding('No missions available yet.'),
+                    style: {
+                      fontSize: DIMENSIONS.fontSize.xl,
+                      color: COLORS.textSecondary,
+                    },
+                  }),
+                }),
+              ];
+            }
 
-                  // Create mission grid inline for reactivity
-                  const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-                  const startIndex = offset * missionsPerPage;
-                  const endIndex = Math.min(startIndex + missionsPerPage, missions.length);
-                  const visibleMissions = missions.slice(startIndex, endIndex);
-
-                  const rows: UINodeType[] = [];
-                  for (let row = 0; row < this.rowsPerPage; row++) {
-                    const rowMissions = visibleMissions.slice(
-                      row * this.missionsPerRow,
-                      (row + 1) * this.missionsPerRow
-                    );
-
-                    if (rowMissions.length > 0) {
-                      rows.push(
-                        View({
-                          style: {
-                            flexDirection: 'row',
-                            marginBottom: row < this.rowsPerPage - 1 ? GAPS.missions : 0,
-                          },
-                          children: rowMissions.map((mission: MissionDisplay, index: number) =>
-                            View({
-                              style: {
-                                marginRight: index < rowMissions.length - 1 ? GAPS.missions : 0,
-                              },
-                              children: this.createMissionCard(mission),
-                            })
-                          ),
-                        })
-                      );
-                    }
-                  }
-
-                  return [
-                    View({
-                      style: {
-                        flexDirection: 'column',
-                      },
-                      children: rows,
-                    })
-                  ];
-                }
-              ) as any,
-            }),
-          ],
-        }),
-        // Sidebar with common side menu
-        createSideMenu({
-          title: 'Missions',
-          customTextContent: [
-            createTextRow(completionText as any, 0),
-          ],
-          buttons: scrollButtons,
-          bottomButton: {
-            label: 'Back',
-            onClick: () => {
-              if (this.onNavigate) this.onNavigate('menu');
-            },
-            disabled: false,
-          },
-          stats: this.stats,
+            return [this.createMissionGrid()];
+          }) as any,
         }),
       ],
     });
   }
 
   /**
-   * Create mission card
+   * Create the mission grid
    */
-  private createMissionCard(mission: MissionDisplay): UINodeType {
-    const difficultyColor = {
-      easy: COLORS.success,
-      medium: COLORS.warning,
-      hard: COLORS.error
-    }[mission.difficulty as 'easy' | 'medium' | 'hard'] || COLORS.textSecondary;
+  private createMissionGrid(): UINodeType {
+    const cardWidth = missionCardDimensions.width;
+    const cardHeight = missionCardDimensions.height;
+    const gapX = 12; // Gap between cards horizontally
+    const gapY = 12; // Gap between cards vertically
+    const startX = 24; // Left offset from container edge
+    const startY = 24; // Top offset from container edge
+    const spacingX = cardWidth + gapX; // Total horizontal space per card
+    const spacingY = cardHeight + gapY; // Total vertical space per card
+
+    return View({
+      style: {
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+      },
+      children: Binding.derive(
+        [this.missions, this.scrollOffset],
+        (missions, offset) => {
+          const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+          const startIndex = offset * missionsPerPage;
+          const endIndex = Math.min(startIndex + missionsPerPage, missions.length);
+          const visibleMissions = missions.slice(startIndex, endIndex);
+
+          // Create absolutely positioned cards
+          const cards: UINodeType[] = [];
+          for (let i = 0; i < visibleMissions.length; i++) {
+            const mission = visibleMissions[i];
+            const row = Math.floor(i / this.missionsPerRow);
+            const col = i % this.missionsPerRow;
+            const x = startX + col * spacingX;
+            const y = startY + row * spacingY;
+
+            cards.push(
+              View({
+                style: {
+                  position: 'absolute',
+                  left: x,
+                  top: y,
+                },
+                children: this.createMissionItem(mission),
+              })
+            );
+          }
+
+          return cards;
+        }
+      ) as any,
+    });
+  }
+
+  /**
+   * Create a single mission item
+   */
+  private createMissionItem(mission: MissionDisplay): UINodeType {
+    // Determine mission background image based on affinity
+    let missionImageName = 'forest-mission'; // Default
+    if (mission.affinity === 'Water') missionImageName = 'water-mission';
+    else if (mission.affinity === 'Fire') missionImageName = 'fire-mission';
+    else if (mission.affinity === 'Sky') missionImageName = 'sky-mission';
+    else if (mission.affinity === 'Boss') missionImageName = 'boss-mission';
+
+    const cardWidth = missionCardDimensions.width;
+    const cardHeight = missionCardDimensions.height;
+    const beastSize = 70; // Beast image size (70x70)
 
     return Pressable({
       onClick: () => {
-        if (!mission.isCompleted && this.onMissionSelect) {
+        if (mission.isAvailable && this.onMissionSelect) {
           this.onMissionSelect(mission.id);
         }
       },
       style: {
-        width: 280,
-        backgroundColor: mission.isCompleted ? COLORS.disabled : COLORS.panelBackground,
-        borderRadius: 12,
-        borderWidth: 2,
-        borderColor: mission.isCompleted ? COLORS.borderDefault : COLORS.primary,
-        padding: 15,
-        opacity: mission.isCompleted ? 0.6 : 1,
+        width: cardWidth,
+        height: cardHeight,
+        position: 'relative',
+        opacity: mission.isAvailable ? 1 : 0.4,
       },
       children: [
-        // Title
+        // Mission-specific background image (ForestMission, WaterMission, etc.)
+        Image({
+          source: new Binding({ uri: missionImageName }),
+          style: {
+            position: 'absolute',
+            width: cardWidth,
+            height: cardHeight,
+            top: 0,
+            left: 0,
+          },
+        }),
+
+        // Beast image (if available)
+        mission.beastId
+          ? Image({
+              source: new Binding({ uri: mission.beastId.toLowerCase().replace(/\s+/g, '-') }),
+              style: {
+                position: 'absolute',
+                width: beastSize,
+                height: beastSize,
+                left: missionCardPositions.image.x,
+                top: missionCardPositions.image.y,
+                opacity: mission.isAvailable ? 1 : 0.4,
+              },
+            })
+          : View({}),
+
+        // Mission name
         Text({
           text: new Binding(mission.name),
-          numberOfLines: 2,
+          numberOfLines: 1,
           style: {
-            fontSize: DIMENSIONS.fontSize.lg,
-            fontWeight: 'bold',
+            position: 'absolute',
+            left: missionCardPositions.name.x,
+            top: missionCardPositions.name.y,
+            fontSize: DIMENSIONS.fontSize.xl,
             color: COLORS.textPrimary,
-            marginBottom: 10,
+            fontWeight: 'bold',
           },
         }),
+
+        // Level
+        Text({
+          text: new Binding(`Level ${mission.level}`),
+          style: {
+            position: 'absolute',
+            left: missionCardPositions.level.x,
+            top: missionCardPositions.level.y,
+            fontSize: DIMENSIONS.fontSize.xs,
+            color: COLORS.textSecondary,
+          },
+        }),
+
+        // Difficulty
+        Text({
+          text: new Binding(`Difficulty: ${mission.difficulty}`),
+          style: {
+            position: 'absolute',
+            left: missionCardPositions.difficulty.x,
+            top: missionCardPositions.difficulty.y,
+            fontSize: DIMENSIONS.fontSize.xs,
+            color: this.getDifficultyColor(mission.difficulty),
+          },
+        }),
+
         // Description
         Text({
-          text: new Binding(mission.description),
+          text: new Binding(mission.description || ''),
           numberOfLines: 3,
           style: {
+            position: 'absolute',
+            left: missionCardPositions.description.x,
+            top: missionCardPositions.description.y,
+            width: cardWidth - 26, // Some padding
             fontSize: DIMENSIONS.fontSize.sm,
-            color: COLORS.textSecondary,
-            marginBottom: 10,
+            color: COLORS.textPrimary,
           },
         }),
-        // Footer with difficulty and level
-        View({
-          style: {
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          },
-          children: [
-            Text({
-              text: new Binding(`Level ${mission.level}`),
-              style: {
-                fontSize: DIMENSIONS.fontSize.sm,
-                color: COLORS.textSecondary,
-              },
-            }),
-            Text({
-              text: new Binding(mission.difficulty.toUpperCase()),
-              style: {
-                fontSize: DIMENSIONS.fontSize.sm,
-                fontWeight: 'bold',
-                color: difficultyColor,
-              },
-            }),
-          ],
-        }),
-        // Status badge
-        mission.isCompleted
+
+        // Dark overlay for locked missions
+        !mission.isAvailable
           ? View({
               style: {
                 position: 'absolute',
-                top: 10,
-                right: 10,
-                backgroundColor: COLORS.success,
-                borderRadius: 4,
-                padding: 4,
+                width: cardWidth,
+                height: cardHeight,
+                top: 0,
+                left: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.6)',
               },
               children: Text({
-                text: new Binding('✓'),
+                text: new Binding('🔒'),
                 style: {
-                  fontSize: DIMENSIONS.fontSize.sm,
-                  color: '#fff',
+                  position: 'absolute',
+                  left: cardWidth / 2 - 15,
+                  top: cardHeight / 2 - 15,
+                  fontSize: 30,
+                  color: COLORS.textPrimary,
                 },
               }),
+            })
+          : View({}),
+
+        // Completed checkmark
+        mission.isCompleted
+          ? Text({
+              text: new Binding('✅'),
+              style: {
+                position: 'absolute',
+                right: 10,
+                top: 10,
+                fontSize: 20,
+              },
             })
           : View({}),
       ],
     });
   }
 
+  /**
+   * Get difficulty color for UI
+   */
+  private getDifficultyColor(difficulty: string): string {
+    switch (difficulty) {
+      case 'tutorial':
+        return '#90EE90'; // Light green
+      case 'easy':
+        return '#87CEEB'; // Sky blue
+      case 'normal':
+        return '#FFD700'; // Gold
+      case 'hard':
+        return '#FF6347'; // Tomato red
+      case 'expert':
+        return '#8B008B'; // Dark magenta
+      case 'legendary':
+        return '#FF1493'; // Deep pink
+      default:
+        return COLORS.textSecondary;
+    }
+  }
+
+  /**
+   * Create side menu with controls
+   */
+  private createSideMenu(): UINodeType {
+    const completionText = Binding.derive(
+      [this.missions],
+      (missions) => {
+        const completedCount = missions.filter((m: MissionDisplay) => m.isCompleted).length;
+        return `${missionEmoji} ${completedCount}/${missions.length}`;
+      }
+    );
+
+    return createSideMenu({
+      title: 'Missions',
+      customTextContent: [
+        createTextRow(completionText as any, 0),
+      ],
+      buttons: [
+        {
+          label: '↑',
+          onClick: () => {
+            const missions = this.missions.get();
+            const currentOffset = this.scrollOffset.get();
+            const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+            const totalPages = Math.ceil(missions.length / missionsPerPage);
+
+            const newOffset = currentOffset - 1;
+            if (newOffset >= 0) {
+              this.scrollOffset.set(newOffset);
+            }
+          },
+          disabled: Binding.derive(
+            [this.missions, this.scrollOffset],
+            (missions, offset) => offset <= 0
+          ) as any,
+          yOffset: 0,
+        },
+        {
+          label: '↓',
+          onClick: () => {
+            const missions = this.missions.get();
+            const currentOffset = this.scrollOffset.get();
+            const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+            const totalPages = Math.ceil(missions.length / missionsPerPage);
+
+            const newOffset = currentOffset + 1;
+            if (newOffset < totalPages) {
+              this.scrollOffset.set(newOffset);
+            }
+          },
+          disabled: Binding.derive(
+            [this.missions, this.scrollOffset],
+            (missions, offset) => {
+              const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+              const totalPages = Math.ceil(missions.length / missionsPerPage);
+              return offset >= totalPages - 1;
+            }
+          ) as any,
+          yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
+        },
+      ],
+      bottomButton: {
+        label: 'Back',
+        onClick: () => {
+          if (this.onNavigate) {
+            this.onNavigate('menu');
+          }
+        },
+        disabled: false,
+      },
+      stats: this.stats,
+    });
+  }
+
+  /**
+   * Cleanup
+   */
   dispose(): void {
-    // Cleanup
+    // No animations to clean up
   }
 }

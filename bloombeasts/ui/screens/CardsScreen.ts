@@ -10,10 +10,11 @@ import { COLORS } from '../../../shared/styles/colors';
 import { DIMENSIONS, GAPS } from '../../../shared/styles/dimensions';
 import { sideMenuButtonDimensions } from '../../../shared/constants/dimensions';
 import { deckEmoji } from '../../../shared/constants/emojis';
-import type { CardDisplay, MenuStats } from '../../../bloombeasts/gameManager';
+import type { CardDisplay, MenuStats, CardDetailDisplay } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu, createTextRow } from './common/SideMenu';
 import { createCardComponent, CARD_DIMENSIONS } from './common/CardRenderer';
+import { createCardDetailPopup } from './common/CardDetailPopup';
 
 export interface CardsScreenProps {
   cards: any;
@@ -34,6 +35,7 @@ export class CardsScreen {
   private deckCardIds: any;
   private stats: any;
   private scrollOffset: any;
+  private selectedCardDetail = new Binding<CardDetailDisplay | null>(null);
   private cardsPerRow = 4;
   private rowsPerPage = 2;
   private onCardSelect?: (cardId: string) => void;
@@ -49,6 +51,13 @@ export class CardsScreen {
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
     this.scrollOffset = new Binding(0);
+
+    // Subscribe to selectedCardDetail changes to trigger re-renders
+    this.selectedCardDetail.subscribe(() => {
+      if (this.onRenderNeeded) {
+        this.onRenderNeeded();
+      }
+    });
   }
 
   createUI(): UINodeType {
@@ -133,7 +142,7 @@ export class CardsScreen {
         }),
         // Cards Container image as background
         Image({
-          source: new Binding({ uri: 'cardsContainer' }),
+          source: new Binding({ uri: 'cards-container' }),
           style: {
             position: 'absolute',
             left: 40,
@@ -193,19 +202,21 @@ export class CardsScreen {
                         flexDirection: 'row',
                         marginBottom: row < this.rowsPerPage - 1 ? GAPS.cards : 0,
                       },
-                      children: rowCards.map((card: CardDisplay, index: number) =>
-                        View({
-                          style: {
-                            marginRight: index < rowCards.length - 1 ? GAPS.cards : 0,
-                          },
-                          children: createCardComponent({
-                            card,
-                            isInDeck: deckIds.includes(card.id),
-                            onClick: this.onCardSelect ? (cardId: string) => this.onCardSelect!(cardId) : undefined,
-                            showDeckIndicator: true,
-                          }),
-                        })
-                      ),
+                      children: rowCards
+                        .filter((card: CardDisplay) => card && card.id)
+                        .map((card: CardDisplay, index: number) =>
+                          View({
+                            style: {
+                              marginRight: index < rowCards.length - 1 ? GAPS.cards : 0,
+                            },
+                            children: createCardComponent({
+                              card,
+                              isInDeck: deckIds.includes(card.id),
+                              onClick: (cardId: string) => this.handleCardClick(cardId),
+                              showDeckIndicator: true,
+                            }),
+                          })
+                        ),
                     })
                   );
                 }
@@ -216,7 +227,7 @@ export class CardsScreen {
                   style: {
                     flexDirection: 'column',
                   },
-                  children: rows,
+                  children: rows.filter(r => r),
                 })
               ];
             }
@@ -238,8 +249,77 @@ export class CardsScreen {
           },
           stats: this.stats,
         }),
+
+        // Card detail popup overlay container (always present)
+        View({
+          style: {
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            top: 0,
+            left: 0,
+            pointerEvents: 'none', // Allow clicks through when empty
+          },
+          children: this.selectedCardDetail.derive((cardDetail) => {
+            if (!cardDetail) {
+              return []; // No popup
+            }
+
+            return [createCardDetailPopup({
+              cardDetail,
+              onButtonClick: (buttonId: string) => this.handlePopupButtonClick(buttonId),
+            })];
+          }) as any,
+        }),
       ],
     });
+  }
+
+  /**
+   * Handle card click - show popup with Add/Remove options
+   */
+  private handleCardClick(cardId: string): void {
+    const cards = this.cards.get();
+    const deckIds = this.deckCardIds.get();
+
+    const card = cards.find((c: CardDisplay) => c.id === cardId);
+    if (!card) return;
+
+    const isInDeck = deckIds.includes(cardId);
+    const buttons = isInDeck ? ['Remove', 'Close'] : ['Add', 'Close'];
+
+    this.selectedCardDetail.set({
+      card,
+      buttons,
+      isInDeck,
+    });
+  }
+
+  /**
+   * Handle popup button clicks
+   */
+  private handlePopupButtonClick(buttonId: string): void {
+    const cardDetail = this.selectedCardDetail.get();
+    if (!cardDetail) return;
+
+    if (buttonId === 'btn-card-add') {
+      // Add card to deck
+      if (this.onCardSelect) {
+        this.onCardSelect(cardDetail.card.id);
+      }
+      // Close popup
+      this.selectedCardDetail.set(null);
+    } else if (buttonId === 'btn-card-remove') {
+      // Remove card from deck
+      if (this.onCardSelect) {
+        this.onCardSelect(cardDetail.card.id);
+      }
+      // Close popup
+      this.selectedCardDetail.set(null);
+    } else if (buttonId === 'btn-card-close') {
+      // Just close popup
+      this.selectedCardDetail.set(null);
+    }
   }
 
   dispose(): void {

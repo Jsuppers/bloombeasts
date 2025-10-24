@@ -1,255 +1,314 @@
 /**
  * Main Entry Point for Web Deployment
- * Uses the new Unified UI System
+ * Minimal wrapper using the new unified BloomBeastsGame architecture with centralized asset catalog
  */
 
-import { Platform, setPlatform, UIRenderer, Binding } from '../../../bloombeasts/ui';
-import { BloomBeastsGame, type PlayerData } from '../../../bloombeasts/ui/screens';
-import { GameManager, type PlatformCallbacks, type MenuStats, type CardDisplay, type MissionDisplay, type BattleDisplay, type CardDetailDisplay } from '../../../bloombeasts/gameManager';
-import type { SoundSettings } from '../../../bloombeasts/systems/SoundManager';
+import { BloomBeastsGame, PlatformConfig, type PlayerData } from '../../../bloombeasts/BloomBeastsGame';
+import { AssetCatalogManager } from '../../../bloombeasts/AssetCatalogManager';
+import { UIRenderer } from './ui/UIRenderer';
+import { View, Text, Image, Pressable, Binding } from './ui';
+import { AnimatedBinding, Animation, Easing } from './ui/AnimatedBinding';
 
-// Set platform to Web
-setPlatform(Platform.web);
+type ImageAssetMap = Record<string, string>;
+type SoundAssetMap = Record<string, string>;
+
+/**
+ * Global asset catalog manager instance
+ */
+let catalogManager: AssetCatalogManager | null = null;
+
+/**
+ * Initialize and load all asset catalogs
+ */
+async function initializeAssetCatalogs(): Promise<AssetCatalogManager> {
+    if (catalogManager) {
+        return catalogManager;
+    }
+
+    console.log('📦 Initializing Asset Catalogs...');
+    catalogManager = new AssetCatalogManager();
+
+    try {
+        await catalogManager.loadAllCatalogs('/assets/catalogs');
+        console.log('✅ Asset catalogs loaded successfully');
+        console.log('   Categories:', catalogManager.getLoadedCategories());
+    } catch (error) {
+        console.error('❌ Failed to load asset catalogs:', error);
+        throw error;
+    }
+
+    return catalogManager;
+}
+
+/**
+ * Create web image asset mappings from catalogs
+ */
+function createWebImageAssets(manager: AssetCatalogManager): ImageAssetMap {
+    const mappings = manager.getWebAssetMappings();
+    // Add leading slash for web server absolute paths
+    const webImages: ImageAssetMap = {};
+    for (const [id, path] of Object.entries(mappings.images)) {
+        webImages[id] = path.startsWith('/') ? path : `/${path}`;
+    }
+    return webImages;
+}
+
+/**
+ * Create web sound asset mappings from catalogs
+ */
+function createWebSoundAssets(manager: AssetCatalogManager): SoundAssetMap {
+    const mappings = manager.getWebAssetMappings();
+    // Add leading slash for web server absolute paths
+    const webSounds: SoundAssetMap = {};
+    for (const [id, path] of Object.entries(mappings.sounds)) {
+        webSounds[id] = path.startsWith('/') ? path : `/${path}`;
+    }
+
+    console.log('🔊 Sound assets loaded:', Object.keys(webSounds).length);
+    return webSounds;
+}
 
 /**
  * Web Game Application
- * Wraps the unified game with canvas rendering
+ * Minimal platform-specific wrapper
  */
 class WebGameApp {
-    private canvas: HTMLCanvasElement;
+    private game: BloomBeastsGame | null = null;
     private renderer: UIRenderer;
-    private game: BloomBeastsGame;
-    private gameManager: GameManager;
-    private playerData = new Binding(null);
-    private uiTree: any = null; // Store the UI tree
-    private gameCallbacks: {
-        onButtonClick: ((buttonId: string) => void) | null;
-        onCardSelect: ((cardId: string) => void) | null;
-        onMissionSelect: ((missionId: string) => void) | null;
-        onSettingsChange: ((settingId: string, value: any) => void) | null;
-    };
+    private canvas: HTMLCanvasElement;
+    private assetManager: AssetCatalogManager | null = null;
+
+    // Audio system
+    private musicAudio: HTMLAudioElement | null = null;
+    private sfxAudioPool: HTMLAudioElement[] = [];
+    private currentMusicVolume: number = 0.5;
+    private currentSfxVolume: number = 0.5;
 
     constructor() {
+        console.log('🎮 WebGameApp: Constructor started');
+
         // Get canvas element
         this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
         if (!this.canvas) {
+            console.error('❌ Canvas element not found!');
             throw new Error('Canvas element not found');
         }
+        console.log('✅ Canvas element found');
 
-        // Initialize renderer with canvas and context
+        // Initialize renderer
         const ctx = this.canvas.getContext('2d');
         if (!ctx) {
+            console.error('❌ Failed to get 2D context from canvas!');
             throw new Error('Failed to get 2D context from canvas');
         }
+        console.log('✅ Canvas 2D context created');
         this.renderer = new UIRenderer(this.canvas, ctx);
+        console.log('✅ UIRenderer created');
 
-        // Initialize the unified game
-        this.game = new BloomBeastsGame({
-            playerData: this.playerData,
-            onRenderNeeded: () => this.render()
-        });
+        // Initialize audio system
+        this.initializeAudio();
+        console.log('✅ Audio system initialized');
+    }
 
-        // Create the UI tree once
-        this.uiTree = this.game.createUI();
+    /**
+     * Initialize audio system
+     */
+    private initializeAudio(): void {
+        // Create music audio element
+        this.musicAudio = new Audio();
+        this.musicAudio.loop = true;
+        this.musicAudio.volume = this.currentMusicVolume;
 
-        // Store reference to game for callback updates
-        this.gameCallbacks = {
-            onButtonClick: null,
-            onCardSelect: null,
-            onMissionSelect: null,
-            onSettingsChange: null
-        };
+        // Create SFX audio pool (5 concurrent sounds)
+        for (let i = 0; i < 5; i++) {
+            const sfxAudio = new Audio();
+            sfxAudio.volume = this.currentSfxVolume;
+            this.sfxAudioPool.push(sfxAudio);
+        }
+    }
 
-        // Create platform callbacks for GameManager
-        const platformCallbacks: PlatformCallbacks = {
-            // Player data
-            setPlayerData: (data: any) => {
-                // Update our player data binding when game state changes
-                this.updatePlayerData();
-            },
-
-            // UI Rendering callbacks (these update our unified UI state)
-            renderStartMenu: (options: string[], stats: MenuStats) => {
-                const data = this.playerData.value || this.createDefaultPlayerData();
-                data.currentScreen = 'menu';
-                data.stats = stats;
-                this.playerData.set(data);
-            },
-
-            renderMissionSelect: (missions: MissionDisplay[], stats: MenuStats) => {
-                const data = this.playerData.value || this.createDefaultPlayerData();
-                data.currentScreen = 'missions';
-                data.missions = missions;
-                data.stats = stats;
-                this.playerData.set(data);
-            },
-
-            renderCards: (cards: CardDisplay[], deckSize: number, deckCardIds: string[], stats: MenuStats) => {
-                const data = this.playerData.value || this.createDefaultPlayerData();
-                data.currentScreen = 'cards';
-                data.cards = {
-                    collected: cards,
-                    deck: deckCardIds
-                };
-                data.stats = stats;
-                this.playerData.set(data);
-            },
-
-            renderBattle: (battleState: BattleDisplay) => {
-                const data = this.playerData.value || this.createDefaultPlayerData();
-                data.currentScreen = 'battle';
-                // Simplified battle state for now
-                data.battleState = {
-                    state: 'in_progress',
-                    message: 'Battle in progress'
-                };
-                this.playerData.set(data);
-            },
-
-            renderSettings: (settings: SoundSettings, stats: MenuStats) => {
-                const data = this.playerData.value || this.createDefaultPlayerData();
-                data.currentScreen = 'settings';
-                data.settings = settings;
-                data.stats = stats;
-                this.playerData.set(data);
-            },
-
-            renderCardDetail: (cardDetail: CardDetailDisplay, stats: MenuStats) => {
-                // Handle card detail view if needed
-                console.log('Card detail:', cardDetail);
-            },
-
-            // Input handling callbacks
-            onButtonClick: (callback: (buttonId: string) => void) => {
-                // Store callback for later use
-                this.gameCallbacks.onButtonClick = callback;
-                // Recreate game with updated callbacks
-                this.updateGameCallbacks();
-            },
-
-            onCardSelect: (callback: (cardId: string) => void) => {
-                // Store callback for later use
-                this.gameCallbacks.onCardSelect = callback;
-                // Recreate game with updated callbacks
-                this.updateGameCallbacks();
-            },
-
-            onMissionSelect: (callback: (missionId: string) => void) => {
-                // Store callback for later use
-                this.gameCallbacks.onMissionSelect = callback;
-                // Recreate game with updated callbacks
-                this.updateGameCallbacks();
-            },
-
-            onSettingsChange: (callback: (settingId: string, value: any) => void) => {
-                // Store callback for later use
-                this.gameCallbacks.onSettingsChange = callback;
-                // Recreate game with updated callbacks
-                this.updateGameCallbacks();
-            },
-
-            // Asset loading
-            loadCardImage: async (cardId: string) => {
-                // For now, return a placeholder
-                return null;
-            },
-
-            loadBackground: async (backgroundId: string) => {
-                console.log('Load background:', backgroundId);
-                return null;
-            },
-
-            playSound: (soundId: string) => {
-                console.log('Play sound:', soundId);
-            },
-
-            // Audio control
-            playMusic: (src: string, loop: boolean, volume: number) => {
-                console.log('Play music:', src, loop, volume);
-            },
-
-            stopMusic: () => {
-                console.log('Stop music');
-            },
-
-            playSfx: (src: string, volume: number) => {
-                console.log('Play SFX:', src, volume);
-            },
-
-            setMusicVolume: (volume: number) => {
-                console.log('Music volume:', volume);
-            },
-
-            setSfxVolume: (volume: number) => {
-                console.log('SFX volume:', volume);
-            },
-
-            // Storage - Use localStorage for web
-            saveData: async (key: string, data: any): Promise<void> => {
+    /**
+     * Create platform configuration with asset mappings
+     */
+    private createPlatformConfig(manager: AssetCatalogManager): PlatformConfig {
+        return {
+            // Storage: localStorage
+            setPlayerData: (data: PlayerData) => {
                 try {
-                    localStorage.setItem(key, JSON.stringify(data));
+                    localStorage.setItem('bloombeasts_playerData', JSON.stringify(data));
                 } catch (error) {
-                    console.error('Failed to save data:', error);
-                    throw error;
+                    console.error('Failed to save player data:', error);
                 }
             },
 
-            loadData: async (key: string): Promise<any> => {
+            getPlayerData: () => {
                 try {
-                    const data = localStorage.getItem(key);
-                    return data ? JSON.parse(data) : null;
+                    const stored = localStorage.getItem('bloombeasts_playerData');
+                    return stored ? JSON.parse(stored) : null;
                 } catch (error) {
-                    console.error('Failed to load data:', error);
+                    console.error('Failed to load player data:', error);
                     return null;
                 }
             },
 
-            // Dialogs
-            showDialog: async (title: string, message: string, buttons: string[] = ['OK']) => {
-                return new Promise((resolve) => {
-                    // Show HTML modal
-                    this.showModal(title, message, buttons, resolve);
-                });
+            // Image assets: web-specific path mappings from catalogs
+            imageAssets: createWebImageAssets(manager),
+
+            // Sound assets: web-specific path mappings from catalogs
+            soundAssets: createWebSoundAssets(manager),
+
+            // UI methods: web implementations
+            getUIMethodMappings: () => ({
+                View,
+                Text,
+                Image,
+                Pressable,
+                Binding,
+                AnimatedBinding,
+                Animation,
+                Easing
+            }),
+
+            // Rendering: canvas renderer
+            render: (uiNode) => {
+                this.renderer.render(uiNode);
             },
 
-            showRewards: async (rewards: any) => {
-                const message = `You earned: ${rewards.tokens || 0} tokens, ${rewards.diamonds || 0} diamonds`;
-                await platformCallbacks.showDialog('Rewards!', message, ['Awesome!']);
+            // Audio: web audio implementation
+            playMusic: (src: string, loop: boolean, volume: number) => {
+                if (!this.musicAudio) return;
+
+                try {
+                    // Don't restart if already playing the same music
+                    if (this.musicAudio.src.endsWith(src)) {
+                        return;
+                    }
+
+                    this.musicAudio.src = src;
+                    this.musicAudio.loop = loop;
+                    this.musicAudio.volume = volume;
+                    this.currentMusicVolume = volume;
+
+                    this.musicAudio.play().catch(err => {
+                        console.warn('Music autoplay blocked - will play on interaction');
+                        // Try playing on next user interaction
+                        const playOnInteraction = () => {
+                            this.musicAudio?.play().catch(() => {});
+                            document.removeEventListener('click', playOnInteraction);
+                            document.removeEventListener('keydown', playOnInteraction);
+                        };
+                        document.addEventListener('click', playOnInteraction);
+                        document.addEventListener('keydown', playOnInteraction);
+                    });
+                } catch (error) {
+                    console.error('Failed to play music:', error);
+                }
+            },
+
+            playSfx: (src: string, volume: number) => {
+                try {
+                    // Find an available audio element from the pool
+                    const availableAudio = this.sfxAudioPool.find(audio => audio.paused);
+                    if (availableAudio) {
+                        availableAudio.src = src;
+                        availableAudio.volume = volume;
+                        this.currentSfxVolume = volume;
+                        availableAudio.play().catch(() => {});
+                    }
+                } catch (error) {
+                    console.error('Failed to play SFX:', error);
+                }
+            },
+
+            stopMusic: () => {
+                if (this.musicAudio) {
+                    this.musicAudio.pause();
+                    this.musicAudio.currentTime = 0;
+                }
+            },
+
+            setMusicVolume: (volume: number) => {
+                this.currentMusicVolume = volume;
+                if (this.musicAudio) {
+                    this.musicAudio.volume = volume;
+                }
+            },
+
+            setSfxVolume: (volume: number) => {
+                this.currentSfxVolume = volume;
+                // Volume will be applied on next SFX play
             }
         };
+    }
 
-        // Initialize game manager with platform callbacks
-        this.gameManager = new GameManager(platformCallbacks);
-
-        // Subscribe to player data changes to trigger re-renders
-        this.playerData.subscribe(() => {
-            this.render();
+    /**
+     * Load an image from a path
+     */
+    private async loadImage(path: string): Promise<HTMLImageElement> {
+        return new Promise((resolve, reject) => {
+            const img = document.createElement('img');
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error(`Failed to load image: ${path}`));
+            img.src = path;
         });
     }
 
-    private updateGameCallbacks(): void {
-        // Recreate the game with updated callbacks
-        this.game = new BloomBeastsGame({
-            playerData: this.playerData,
-            onButtonClick: this.gameCallbacks.onButtonClick || undefined,
-            onCardSelect: this.gameCallbacks.onCardSelect || undefined,
-            onMissionSelect: this.gameCallbacks.onMissionSelect || undefined,
-            onSettingsChange: this.gameCallbacks.onSettingsChange || undefined,
-            onRenderNeeded: () => this.render()
-        });
-        // Recreate the UI tree with the new game instance
-        this.uiTree = this.game.createUI();
-        // Trigger re-render with new game instance
-        this.render();
+    /**
+     * Load all images into the renderer
+     */
+    private async loadAllImages(manager: AssetCatalogManager): Promise<void> {
+        console.log('📦 Loading image assets...');
+        const imageAssets = createWebImageAssets(manager);
+        const assetIds = Object.keys(imageAssets);
+
+        let loaded = 0;
+        let failed = 0;
+
+        for (const assetId of assetIds) {
+            const path = imageAssets[assetId];
+            try {
+                const img = await this.loadImage(path);
+                this.renderer.setImage(assetId, img);
+                loaded++;
+                if (loaded % 10 === 0) {
+                    console.log(`  Loaded ${loaded}/${assetIds.length} images...`);
+                }
+            } catch (error) {
+                console.warn(`  ⚠️  Failed to load ${assetId} from ${path}`);
+                failed++;
+            }
+        }
+
+        console.log(`✅ Loaded ${loaded} images (${failed} failed)`);
     }
 
+    /**
+     * Initialize the game
+     */
     async initialize(): Promise<void> {
-        console.log('🎮 BloomBeasts - Unified UI Web Version');
-        console.log('Platform:', Platform.web);
+        console.log('========================================');
+        console.log('🌸 BloomBeasts - Starting Up 🌸');
+        console.log('========================================');
+        console.log('🎮 Web Platform - JSON Asset Catalogs');
+        console.log('========================================');
 
         try {
-            // Initialize game manager
-            await this.gameManager.initialize();
+            // Step 1: Load asset catalogs
+            console.log('📦 Step 1: Loading asset catalogs...');
+            this.assetManager = await initializeAssetCatalogs();
+
+            // Step 2: Create game with platform config
+            console.log('🎮 Step 2: Creating game instance...');
+            const platformConfig = this.createPlatformConfig(this.assetManager);
+            this.game = new BloomBeastsGame(platformConfig);
+
+            // Step 3: Load all images
+            console.log('🖼️  Step 3: Loading images...');
+            await this.loadAllImages(this.assetManager);
+
+            // Step 4: Initialize the game
+            console.log('🎲 Step 4: Initializing game...');
+            await this.game.initialize();
 
             // Hide loading screen
             const loadingDiv = document.getElementById('loading');
@@ -257,60 +316,21 @@ class WebGameApp {
                 loadingDiv.classList.add('hidden');
             }
 
-            // Initial render will happen when GameManager calls renderStartMenu
-            console.log('✅ Game initialized successfully with unified UI!');
+            console.log('✅ Game initialized successfully!');
+            console.log('========================================');
         } catch (error) {
             console.error('❌ Failed to initialize game:', error);
             this.showError(error);
         }
     }
 
-    private createDefaultPlayerData(): PlayerData {
-        return {
-            currentScreen: 'menu',
-            cards: {
-                collected: [],
-                deck: []
-            },
-            missions: [],
-            stats: {
-                playerLevel: 1,
-                totalXP: 0,
-                tokens: 100,
-                diamonds: 10,
-                serums: 3,
-                level: '1',
-                experience: '0/100',
-                deckSize: 0,
-                totalCards: 0
-            } as any,
-            settings: {
-                musicVolume: 50,
-                sfxVolume: 50,
-                musicEnabled: true,
-                sfxEnabled: true
-            }
-        };
-    }
+    /**
+     * Show error modal
+     */
+    private showError(error: any): void {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const stack = error instanceof Error ? error.stack : '';
 
-    private updatePlayerData(): void {
-        // This would be called when game state changes
-        // For now, just trigger a re-render
-        const data = this.playerData.value;
-        if (data) {
-            this.playerData.set({ ...data });
-        }
-    }
-
-    private render(): void {
-        console.log('[WebGameApp] render() called');
-        // Render the stored UI tree (it's reactive via bindings)
-        if (this.uiTree) {
-            this.renderer.render(this.uiTree);
-        }
-    }
-
-    private showModal(title: string, message: string, buttons: string[], callback: (button: string) => void): void {
         const modalOverlay = document.getElementById('modal-overlay');
         const modalTitle = document.getElementById('modal-title');
         const modalMessage = document.getElementById('modal-message');
@@ -318,37 +338,30 @@ class WebGameApp {
 
         if (modalOverlay && modalTitle && modalMessage && modalButtons) {
             modalOverlay.classList.add('active');
-            modalTitle.textContent = title;
-            modalMessage.textContent = message;
+            modalTitle.textContent = 'Error';
+            modalMessage.textContent = `Failed to start the game.\n\nError: ${errorMessage}\n\n${stack}`;
 
             modalButtons.innerHTML = '';
-            buttons.forEach(button => {
-                const btn = document.createElement('button');
-                btn.className = 'modal-btn';
-                btn.textContent = button;
-                btn.onclick = () => {
-                    modalOverlay.classList.remove('active');
-                    callback(button);
-                };
-                modalButtons.appendChild(btn);
-            });
+            const btn = document.createElement('button');
+            btn.className = 'modal-btn';
+            btn.textContent = 'Reload';
+            btn.onclick = () => location.reload();
+            modalButtons.appendChild(btn);
         }
     }
 
-    private showError(error: any): void {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        this.showModal('Error', 'Failed to start the game. Please refresh and try again.\n\nError: ' + errorMessage, ['Reload'], () => {
-            location.reload();
-        });
+    /**
+     * Dispose resources
+     */
+    dispose(): void {
+        if (this.game) {
+            this.game.dispose();
+        }
     }
 }
 
 // Initialize the game when DOM is ready
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('========================================');
-    console.log('🌸 BloomBeasts - Starting Up 🌸');
-    console.log('========================================');
-
     const app = new WebGameApp();
     await app.initialize();
 

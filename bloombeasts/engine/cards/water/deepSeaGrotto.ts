@@ -2,14 +2,16 @@
  * Deep Sea Grotto - Water Habitat Card
  */
 
-import { HabitatCard } from '../../types/core';
+import { HabitatCard, Ability } from '../../types/core';
 import {
   StatModificationEffect,
   EffectType,
   AbilityTarget,
   StatType,
   EffectDuration,
-  ConditionType
+  ConditionType,
+  StructuredAbility,
+  AbilityTrigger
 } from '../../types/abilities';
 
 // Ongoing effect: All Water Beasts gain +1 Attack
@@ -25,12 +27,17 @@ const waterBeastBonus: StatModificationEffect = {
   }
 };
 
+const waterBonusAbility: StructuredAbility = {
+  name: 'Aquatic Empowerment',
+  trigger: AbilityTrigger.Passive, // Ongoing effect
+  effects: [waterBeastBonus]
+};
+
 export const DEEP_SEA_GROTTO: HabitatCard = {
   id: 'deep-sea-grotto',
   name: 'Deep Sea Grotto',
   type: 'Habitat',
   affinity: 'Water',
   cost: 1,
-  ongoingEffects: [waterBeastBonus],
-  onPlayEffects: []
+  abilities: [waterBonusAbility]
 };

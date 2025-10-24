@@ -14,7 +14,8 @@ import {
   AbilityEffect,
   EffectType,
   AbilityTarget,
-  ResourceType
+  ResourceType,
+  AbilityTrigger
 } from '../types/abilities';
 import { Logger } from '../utils/Logger';
 import { STARTING_HEALTH, MAX_NECTAR, FIELD_SIZE } from '../constants/gameRules';
@@ -421,7 +422,8 @@ export class GameEngine {
         if (emptyBuffSlot !== -1) {
           player.buffZone[emptyBuffSlot] = card;
           Logger.debug(`Played buff card: ${card.name}`);
-          // TODO: Apply ongoing buff effects to beasts
+          // Apply any OnSummon effects immediately
+          this.applyBuffCardEffects(card as any, player);
         } else {
           // No buff slots available, send to graveyard
           Logger.debug('No buff slots available');
@@ -439,49 +441,58 @@ export class GameEngine {
   private processMagicCard(card: MagicCard, player: Player, target?: any): void {
     const opponent = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
 
-    // Process each effect in the magic card
-    for (const effect of card.effects) {
-      switch (effect.type) {
-        case EffectType.GainResource:
-          if (effect.resource === ResourceType.Nectar) {
-            player.currentNectar = Math.min(MAX_NECTAR, player.currentNectar + effect.value);
-          }
-          break;
+    // Process each ability in the magic card (usually just one with OnSummon trigger)
+    for (const ability of card.abilities) {
+      // Magic cards typically have OnSummon trigger - process their effects immediately
+      if (ability.trigger === AbilityTrigger.OnSummon || !ability.trigger) {
+        // Type guard: only process structured abilities with effects
+        if (!('effects' in ability)) continue;
 
-        case EffectType.DrawCards:
-          this.drawCards(player, effect.value);
-          break;
+        // Process each effect in the ability
+        for (const effect of ability.effects) {
+          switch (effect.type) {
+            case EffectType.GainResource:
+              if (effect.resource === ResourceType.Nectar) {
+                player.currentNectar = Math.min(MAX_NECTAR, player.currentNectar + effect.value);
+              }
+              break;
 
-        case EffectType.RemoveCounter:
-          // Remove counters based on target
-          if (effect.target === AbilityTarget.AllUnits) {
-            // Remove from all beasts on both sides
-            for (const beast of player.field) {
-              if (beast) {
-                if (effect.counter) {
-                  // Remove specific counter type
-                  beast.counters = beast.counters.filter(c => c.type !== effect.counter);
-                } else {
-                  // Remove all counters
-                  beast.counters = [];
+            case EffectType.DrawCards:
+              this.drawCards(player, effect.value);
+              break;
+
+            case EffectType.RemoveCounter:
+              // Remove counters based on target
+              if (effect.target === AbilityTarget.AllUnits) {
+                // Remove from all beasts on both sides
+                for (const beast of player.field) {
+                  if (beast) {
+                    if (effect.counter) {
+                      // Remove specific counter type
+                      beast.counters = beast.counters.filter(c => c.type !== effect.counter);
+                    } else {
+                      // Remove all counters
+                      beast.counters = [];
+                    }
+                  }
+                }
+                for (const beast of opponent.field) {
+                  if (beast) {
+                    if (effect.counter) {
+                      beast.counters = beast.counters.filter(c => c.type !== effect.counter);
+                    } else {
+                      beast.counters = [];
+                    }
+                  }
                 }
               }
-            }
-            for (const beast of opponent.field) {
-              if (beast) {
-                if (effect.counter) {
-                  beast.counters = beast.counters.filter(c => c.type !== effect.counter);
-                } else {
-                  beast.counters = [];
-                }
-              }
-            }
-          }
-          break;
+              break;
 
-        // Add more effect types as needed
-        default:
-          Logger.debug(`Unhandled magic card effect type: ${effect.type}`);
+            // Add more effect types as needed
+            default:
+              Logger.debug(`Unhandled magic card effect type: ${effect.type}`);
+          }
+        }
       }
     }
   }
@@ -496,15 +507,23 @@ export class GameEngine {
     const activePlayer = this.gameState.players[this.gameState.activePlayer];
     const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
 
-    // Apply on-play effects immediately
-    if (habitat.onPlayEffects) {
-      for (const effect of habitat.onPlayEffects) {
-        this.processHabitatEffect(effect, activePlayer, opposingPlayer);
+    // Process each ability in the habitat card
+    for (const ability of habitat.abilities) {
+      // Apply on-play effects immediately (OnSummon trigger)
+      if (ability.trigger === AbilityTrigger.OnSummon) {
+        // Type guard: only process structured abilities with effects
+        if (!('effects' in ability)) continue;
+
+        for (const effect of ability.effects) {
+          this.processHabitatEffect(effect, activePlayer, opposingPlayer);
+        }
       }
+      // Note: Passive abilities are handled elsewhere during combat/ability processing
     }
 
-    // Ongoing effects are applied continuously and checked during combat/ability processing
-    Logger.debug(`Habitat ${habitat.name} active with ${habitat.ongoingEffects?.length || 0} ongoing effects`);
+    // Count ongoing (passive) abilities for logging
+    const ongoingCount = habitat.abilities.filter(a => a.trigger === AbilityTrigger.Passive).length;
+    Logger.debug(`Habitat ${habitat.name} active with ${ongoingCount} ongoing abilities`);
   }
 
   /**
@@ -543,6 +562,62 @@ export class GameEngine {
 
       default:
         Logger.debug(`Unhandled habitat effect type: ${effect.type}`);
+    }
+  }
+
+  /**
+   * Apply buff card effects when played
+   */
+  private applyBuffCardEffects(buffCard: any, player: Player): void {
+    const opponent = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+
+    // Process each ability in the buff card
+    for (const ability of buffCard.abilities) {
+      // Apply on-play effects immediately (OnSummon trigger)
+      if (ability.trigger === AbilityTrigger.OnSummon) {
+        // Type guard: only process structured abilities with effects
+        if (!('effects' in ability)) continue;
+
+        for (const effect of ability.effects) {
+          this.processBuffEffect(effect, player, opponent);
+        }
+      }
+      // Note: Passive and trigger-based abilities (OnOwnStartOfTurn, etc.) are handled
+      // elsewhere during turn phases or by the AbilityProcessor
+    }
+
+    // Count ongoing abilities for logging
+    const ongoingCount = buffCard.abilities.filter((a: any) =>
+      a.trigger === AbilityTrigger.Passive ||
+      a.trigger === AbilityTrigger.OnOwnStartOfTurn ||
+      a.trigger === AbilityTrigger.OnOwnEndOfTurn
+    ).length;
+    Logger.debug(`Buff ${buffCard.name} active with ${ongoingCount} ongoing/triggered abilities`);
+  }
+
+  /**
+   * Process a single buff effect
+   */
+  private processBuffEffect(effect: AbilityEffect, player: Player, opponent: Player): void {
+    switch (effect.type) {
+      case EffectType.GainResource:
+        if (effect.resource === ResourceType.Nectar) {
+          player.currentNectar = Math.min(MAX_NECTAR, player.currentNectar + effect.value);
+          Logger.debug(`Buff grants ${effect.value} Nectar`);
+        }
+        break;
+
+      case EffectType.ModifyStats:
+        Logger.debug(`Buff provides stat modifications (handled by AbilityProcessor during combat)`);
+        break;
+
+      case EffectType.DrawCards:
+        this.drawCards(player, effect.value);
+        break;
+
+      // Ongoing effects like stat boosts are handled by the AbilityProcessor
+      default:
+        Logger.debug(`Buff effect type ${effect.type} (handled by AbilityProcessor if ongoing)`);
     }
   }
 
@@ -591,7 +666,7 @@ export class GameEngine {
       // Generic triggers
       stateTriggers.push('OnAnyStartOfTurn');
 
-      // Own/Opponent relative triggers
+      // Own/Opponent relative triggers for beasts
       for (const beast of activePlayer.field) {
         if (beast) {
           await this.triggerBeastAbility(beast, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
@@ -600,6 +675,19 @@ export class GameEngine {
       for (const beast of opposingPlayer.field) {
         if (beast) {
           await this.triggerBeastAbility(beast, 'OnOpponentStartOfTurn', opposingPlayer, activePlayer);
+        }
+      }
+
+      // Trigger OnOwnStartOfTurn for active player's buff cards
+      for (const buffCard of activePlayer.buffZone) {
+        if (buffCard) {
+          await this.triggerBuffCardAbility(buffCard, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
+        }
+      }
+      // Trigger OnOpponentStartOfTurn for opposing player's buff cards
+      for (const buffCard of opposingPlayer.buffZone) {
+        if (buffCard) {
+          await this.triggerBuffCardAbility(buffCard, 'OnOpponentStartOfTurn', opposingPlayer, activePlayer);
         }
       }
     } else {
@@ -613,7 +701,7 @@ export class GameEngine {
       // Generic triggers
       stateTriggers.push('OnAnyEndOfTurn');
 
-      // Own/Opponent relative triggers
+      // Own/Opponent relative triggers for beasts
       for (const beast of activePlayer.field) {
         if (beast) {
           await this.triggerBeastAbility(beast, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
@@ -622,6 +710,19 @@ export class GameEngine {
       for (const beast of opposingPlayer.field) {
         if (beast) {
           await this.triggerBeastAbility(beast, 'OnOpponentEndOfTurn', opposingPlayer, activePlayer);
+        }
+      }
+
+      // Trigger OnOwnEndOfTurn for active player's buff cards
+      for (const buffCard of activePlayer.buffZone) {
+        if (buffCard) {
+          await this.triggerBuffCardAbility(buffCard, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
+        }
+      }
+      // Trigger OnOpponentEndOfTurn for opposing player's buff cards
+      for (const buffCard of opposingPlayer.buffZone) {
+        if (buffCard) {
+          await this.triggerBuffCardAbility(buffCard, 'OnOpponentEndOfTurn', opposingPlayer, activePlayer);
         }
       }
     }
@@ -668,7 +769,28 @@ export class GameEngine {
     }
   }
 
+  /**
+   * Trigger all abilities for a buff card that match a specific trigger
+   */
+  private async triggerBuffCardAbility(
+    buffCard: any,
+    trigger: string,
+    controllingPlayer: Player,
+    opposingPlayer: Player
+  ): Promise<void> {
+    // Process each ability in the buff card
+    for (const ability of buffCard.abilities) {
+      if (ability.trigger === trigger) {
+        // Type guard: only process structured abilities with effects
+        if (!('effects' in ability)) continue;
 
+        // Process each effect in the ability
+        for (const effect of ability.effects) {
+          this.processBuffEffect(effect, controllingPlayer, opposingPlayer);
+        }
+      }
+    }
+  }
 
   /**
    * Trigger summon abilities
@@ -1194,50 +1316,59 @@ export class GameEngine {
     opponent: Player,
     data?: any
   ): Promise<void> {
-    // Process each effect in the trap card
-    for (const effect of trap.effects) {
-      switch (effect.type) {
-        case EffectType.NullifyEffect:
-          // Counter/nullify the triggering effect
-          if (data && data.habitatCard) {
-            Logger.debug(`Habitat countered by ${trap.name}`);
-            data.countered = true;
-          }
-          if (data && data.attackNegated !== undefined) {
-            data.attackNegated = true;
-            Logger.debug(`Attack negated by ${trap.name}`);
-          }
-          break;
+    // Process each ability in the trap card (usually just one with OnSummon trigger)
+    for (const ability of trap.abilities) {
+      // Trap abilities trigger when activated (OnSummon for immediate effects)
+      if (ability.trigger === AbilityTrigger.OnSummon || !ability.trigger) {
+        // Type guard: only process structured abilities with effects
+        if (!('effects' in ability)) continue;
 
-        case EffectType.DealDamage:
-          // Deal damage based on target
-          if (effect.target === AbilityTarget.AllEnemies) {
-            for (const beast of opponent.field) {
-              if (beast) {
-                const damage = typeof effect.value === 'number' ? effect.value : 0;
-                beast.currentHealth = Math.max(0, beast.currentHealth - damage);
-                if (beast.currentHealth <= 0) {
-                  const index = opponent.field.indexOf(beast);
-                  if (index !== -1) {
-                    opponent.field[index] = null;
-                    opponent.graveyard.push(beast as any);
+        // Process each effect in the ability
+        for (const effect of ability.effects) {
+          switch (effect.type) {
+            case EffectType.NullifyEffect:
+              // Counter/nullify the triggering effect
+              if (data && data.habitatCard) {
+                Logger.debug(`Habitat countered by ${trap.name}`);
+                data.countered = true;
+              }
+              if (data && data.attackNegated !== undefined) {
+                data.attackNegated = true;
+                Logger.debug(`Attack negated by ${trap.name}`);
+              }
+              break;
+
+            case EffectType.DealDamage:
+              // Deal damage based on target
+              if (effect.target === AbilityTarget.AllEnemies) {
+                for (const beast of opponent.field) {
+                  if (beast) {
+                    const damage = typeof effect.value === 'number' ? effect.value : 0;
+                    beast.currentHealth = Math.max(0, beast.currentHealth - damage);
+                    if (beast.currentHealth <= 0) {
+                      const index = opponent.field.indexOf(beast);
+                      if (index !== -1) {
+                        opponent.field[index] = null;
+                        opponent.graveyard.push(beast as any);
+                      }
+                    }
                   }
                 }
+              } else if (effect.target === AbilityTarget.OpponentGardener) {
+                const damage = typeof effect.value === 'number' ? effect.value : 0;
+                opponent.health = Math.max(0, opponent.health - damage);
               }
-            }
-          } else if (effect.target === AbilityTarget.OpponentGardener) {
-            const damage = typeof effect.value === 'number' ? effect.value : 0;
-            opponent.health = Math.max(0, opponent.health - damage);
+              break;
+
+            case EffectType.DrawCards:
+              this.drawCards(trapOwner, effect.value);
+              break;
+
+            // Add more effect types as needed
+            default:
+              Logger.debug(`Unhandled trap effect type: ${effect.type}`);
           }
-          break;
-
-        case EffectType.DrawCards:
-          this.drawCards(trapOwner, effect.value);
-          break;
-
-        // Add more effect types as needed
-        default:
-          Logger.debug(`Unhandled trap effect type: ${effect.type}`);
+        }
       }
     }
   }

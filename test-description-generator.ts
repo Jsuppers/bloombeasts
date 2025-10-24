@@ -2,13 +2,13 @@
  * Test script for ability description generator
  */
 
-import { FUZZLET } from './bloombeasts/engine/cards/forest/fuzzlet';
+import { MOSSLET } from './bloombeasts/engine/cards/forest/mosslet';
 import { getAbilityDescription } from './bloombeasts/engine/utils/getAbilityDescription';
 
 console.log('=== Testing Ability Description Generator ===\n');
 
-// Test Fuzzlet's abilities
-const card = FUZZLET;
+// Test Mosslet's abilities
+const card = MOSSLET;
 
 console.log(`Card: ${card.name}`);
 console.log(`\nBase Ability: ${card.ability.name}`);

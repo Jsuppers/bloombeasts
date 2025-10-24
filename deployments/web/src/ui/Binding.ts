@@ -3,7 +3,7 @@
  * Mimics Horizon's Binding API for dynamic UI updates
  */
 
-type BindingChangeCallback = () => void;
+type BindingChangeCallback = (value?: any) => void;
 
 /**
  * Base class for value-based bindings
@@ -28,7 +28,9 @@ export abstract class ValueBindingBase<T> {
      * Notify all subscribers of a change
      */
     protected notify(): void {
-        this._callbacks.forEach(cb => cb());
+        // Call callbacks with the new value as per Horizon Binding API
+        const currentValue = (this as any).get ? (this as any).get() : undefined;
+        this._callbacks.forEach(cb => cb(currentValue));
     }
 
     protected get callbacks(): Set<BindingChangeCallback> {

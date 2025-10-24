@@ -2,12 +2,14 @@
  * Volcanic Scar - Fire Habitat Card
  */
 
-import { HabitatCard } from '../../types/core';
+import { HabitatCard, Ability } from '../../types/core';
 import {
   DamageEffect,
   EffectType,
   AbilityTarget,
-  ConditionType
+  ConditionType,
+  StructuredAbility,
+  AbilityTrigger
 } from '../../types/abilities';
 
 // On play effect: Deal 1 damage to all non-Fire beasts
@@ -21,12 +23,17 @@ const damageNonFire: DamageEffect = {
   }
 };
 
+const volcanicEruptionAbility: StructuredAbility = {
+  name: 'Volcanic Eruption',
+  trigger: AbilityTrigger.OnSummon, // On play effect
+  effects: [damageNonFire]
+};
+
 export const VOLCANIC_SCAR: HabitatCard = {
   id: 'volcanic-scar',
   name: 'Volcanic Scar',
   type: 'Habitat',
   affinity: 'Fire',
   cost: 1,
-  onPlayEffects: [damageNonFire],
-  ongoingEffects: []
+  abilities: [volcanicEruptionAbility]
 };

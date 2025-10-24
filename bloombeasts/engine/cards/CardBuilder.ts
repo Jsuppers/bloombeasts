@@ -109,15 +109,25 @@ export class MagicCardBuilder {
   }
 
   effects(effects: AbilityEffect[]): this {
-    this.card.effects = effects;
+    // Convert to StructuredAbility format
+    this.card.abilities = [{
+      name: this.card.name || 'Magic Effect',
+      trigger: 'OnSummon' as any,
+      effects
+    }] as StructuredAbility[];
     return this;
   }
 
   effect(effect: AbilityEffect): this {
-    if (!this.card.effects) {
-      this.card.effects = [];
+    // Convert to StructuredAbility format
+    if (!this.card.abilities || this.card.abilities.length === 0) {
+      this.card.abilities = [{
+        name: this.card.name || 'Magic Effect',
+        trigger: 'OnSummon' as any,
+        effects: []
+      }] as StructuredAbility[];
     }
-    this.card.effects.push(effect);
+    (this.card.abilities[0] as StructuredAbility).effects.push(effect);
     return this;
   }
 
@@ -135,8 +145,8 @@ export class MagicCardBuilder {
     if (!this.card.id) throw new Error('Card ID is required');
     if (!this.card.name) throw new Error('Card name is required');
     if (this.card.cost === undefined) throw new Error('Card cost is required');
-    if (!this.card.effects || this.card.effects.length === 0) {
-      throw new Error('Card must have at least one effect');
+    if (!this.card.abilities || this.card.abilities.length === 0) {
+      throw new Error('Card must have at least one ability');
     }
 
     return this.card as MagicCard;
@@ -167,15 +177,25 @@ export class TrapCardBuilder {
   }
 
   effects(effects: AbilityEffect[]): this {
-    this.card.effects = effects;
+    // Convert to StructuredAbility format
+    this.card.abilities = [{
+      name: this.card.name || 'Trap Effect',
+      trigger: 'OnSummon' as any,
+      effects
+    }] as StructuredAbility[];
     return this;
   }
 
   effect(effect: AbilityEffect): this {
-    if (!this.card.effects) {
-      this.card.effects = [];
+    // Convert to StructuredAbility format
+    if (!this.card.abilities || this.card.abilities.length === 0) {
+      this.card.abilities = [{
+        name: this.card.name || 'Trap Effect',
+        trigger: 'OnSummon' as any,
+        effects: []
+      }] as StructuredAbility[];
     }
-    this.card.effects.push(effect);
+    (this.card.abilities[0] as StructuredAbility).effects.push(effect);
     return this;
   }
 
@@ -189,8 +209,8 @@ export class TrapCardBuilder {
     if (!this.card.name) throw new Error('Card name is required');
     if (this.card.cost === undefined) throw new Error('Card cost is required');
     if (!this.card.activation) throw new Error('Card activation is required');
-    if (!this.card.effects || this.card.effects.length === 0) {
-      throw new Error('Card must have at least one effect');
+    if (!this.card.abilities || this.card.abilities.length === 0) {
+      throw new Error('Card must have at least one ability');
     }
 
     return this.card as TrapCard;
@@ -221,12 +241,28 @@ export class HabitatCardBuilder {
   }
 
   ongoingEffects(effects: AbilityEffect[]): this {
-    this.card.ongoingEffects = effects;
+    // Convert to StructuredAbility format with Passive trigger
+    if (!this.card.abilities) {
+      this.card.abilities = [];
+    }
+    this.card.abilities.push({
+      name: `${this.card.name || 'Habitat'} Ongoing Effect`,
+      trigger: 'Passive' as any,
+      effects
+    });
     return this;
   }
 
   onPlayEffects(effects: AbilityEffect[]): this {
-    this.card.onPlayEffects = effects;
+    // Convert to StructuredAbility format with OnSummon trigger
+    if (!this.card.abilities) {
+      this.card.abilities = [];
+    }
+    this.card.abilities.push({
+      name: `${this.card.name || 'Habitat'} On Play`,
+      trigger: 'OnSummon' as any,
+      effects
+    });
     return this;
   }
 
@@ -240,8 +276,8 @@ export class HabitatCardBuilder {
     if (!this.card.name) throw new Error('Card name is required');
     if (this.card.cost === undefined) throw new Error('Card cost is required');
     if (!this.card.affinity) throw new Error('Card affinity is required');
-    if (!this.card.ongoingEffects || this.card.ongoingEffects.length === 0) {
-      throw new Error('Habitat must have at least one ongoing effect');
+    if (!this.card.abilities || this.card.abilities.length === 0) {
+      throw new Error('Habitat must have at least one ability');
     }
 
     return this.card as HabitatCard;
@@ -272,12 +308,28 @@ export class BuffCardBuilder {
   }
 
   ongoingEffects(effects: AbilityEffect[]): this {
-    this.card.ongoingEffects = effects;
+    // Convert to StructuredAbility format with Passive trigger
+    if (!this.card.abilities) {
+      this.card.abilities = [];
+    }
+    this.card.abilities.push({
+      name: `${this.card.name || 'Buff'} Ongoing Effect`,
+      trigger: 'Passive' as any,
+      effects
+    });
     return this;
   }
 
   onPlayEffects(effects: AbilityEffect[]): this {
-    this.card.onPlayEffects = effects;
+    // Convert to StructuredAbility format with OnSummon trigger
+    if (!this.card.abilities) {
+      this.card.abilities = [];
+    }
+    this.card.abilities.push({
+      name: `${this.card.name || 'Buff'} On Play`,
+      trigger: 'OnSummon' as any,
+      effects
+    });
     return this;
   }
 
@@ -295,8 +347,8 @@ export class BuffCardBuilder {
     if (!this.card.id) throw new Error('Card ID is required');
     if (!this.card.name) throw new Error('Card name is required');
     if (this.card.cost === undefined) throw new Error('Card cost is required');
-    if (!this.card.ongoingEffects || this.card.ongoingEffects.length === 0) {
-      throw new Error('Buff must have at least one ongoing effect');
+    if (!this.card.abilities || this.card.abilities.length === 0) {
+      throw new Error('Buff must have at least one ability');
     }
 
     return this.card as BuffCard;

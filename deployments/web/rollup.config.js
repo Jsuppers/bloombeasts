@@ -5,7 +5,7 @@ const sharedPlugins = [
   typescript({
     tsconfig: './tsconfig.json',
     include: ['src/**/*.ts', '../../bloombeasts/**/*.ts', '../../shared/**/*.ts'],
-    exclude: ['**/*.test.ts', '**/*.integration.test.ts', '**/__tests__/**'],
+    exclude: ['**/*.test.ts', '**/*.integration.test.ts', '**/__tests__/**', 'src/unifiedGame.ts', 'src/webGameExample.ts', 'src/main.new.ts'],
     compilerOptions: {
       target: 'ES2017',
       module: 'ES2015',
@@ -30,16 +30,6 @@ export default [
     input: 'src/main.ts',
     output: {
       file: 'dist/bundle.js',
-      format: 'es',
-      sourcemap: true
-    },
-    plugins: sharedPlugins,
-    external: []
-  },
-  {
-    input: 'src/unifiedGame.ts',
-    output: {
-      file: 'dist/unifiedGame.js',
       format: 'es',
       sourcemap: true
     },

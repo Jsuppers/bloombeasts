@@ -2,13 +2,19 @@
  * Emergency Bloom - Draw cards when your unit is destroyed
  */
 
-import { TrapCard, TrapTrigger } from '../../types/core';
-import { DrawCardEffect, EffectType, AbilityTarget } from '../../types/abilities';
+import { TrapCard, TrapTrigger, Ability } from '../../types/core';
+import { DrawCardEffect, EffectType, AbilityTarget, StructuredAbility, AbilityTrigger } from '../../types/abilities';
 
 const drawCards: DrawCardEffect = {
   type: EffectType.DrawCards,
   target: AbilityTarget.PlayerGardener,
   value: 2
+};
+
+const emergencyBloomAbility: StructuredAbility = {
+  name: 'Emergency Bloom',
+  trigger: AbilityTrigger.OnSummon, // Trap effects trigger when the trap is activated
+  effects: [drawCards]
 };
 
 export const EMERGENCY_BLOOM: TrapCard = {
@@ -19,5 +25,5 @@ export const EMERGENCY_BLOOM: TrapCard = {
   activation: {
     trigger: TrapTrigger.OnDestroy
   },
-  effects: [drawCards]
+  abilities: [emergencyBloomAbility]
 };

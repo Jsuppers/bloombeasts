@@ -1,0 +1,620 @@
+{
+  "version": "1.0.0",
+  "category": "water",
+  "description": "Water affinity cards and assets",
+  "data": [
+    {
+      "id": "aqua-pebble",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "water",
+      "data": {
+        "id": "aqua-pebble",
+        "name": "Aqua Pebble",
+        "type": "Bloom",
+        "affinity": "Water",
+        "cost": 1,
+        "baseAttack": 1,
+        "baseHealth": 4,
+        "abilities": [
+          {
+            "name": "Tide Flow",
+            "trigger": "OnAllySummon",
+            "effects": [
+              {
+                "type": "ModifyStats",
+                "target": "Self",
+                "stat": "Attack",
+                "value": 1,
+                "duration": "EndOfTurn",
+                "condition": {
+                  "type": "AffinityMatches",
+                  "value": "Water"
+                }
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 1, "atk": 0 },
+            "3": { "hp": 3, "atk": 0 },
+            "4": { "hp": 4, "atk": 1 },
+            "5": { "hp": 6, "atk": 2 },
+            "6": { "hp": 7, "atk": 3 },
+            "7": { "hp": 9, "atk": 4 },
+            "8": { "hp": 10, "atk": 5 },
+            "9": { "hp": 12, "atk": 6 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Tidal Surge",
+                  "trigger": "OnAllySummon",
+                  "effects": [
+                    {
+                      "type": "ModifyStats",
+                      "target": "Self",
+                      "stat": "Attack",
+                      "value": 2,
+                      "duration": "EndOfTurn",
+                      "condition": {
+                        "type": "AffinityMatches",
+                        "value": "Water"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Rejuvenation",
+                  "trigger": "OnOwnEndOfTurn",
+                  "effects": [
+                    {
+                      "type": "Heal",
+                      "target": "AllAllies",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Tsunami Force",
+                  "trigger": "OnAllySummon",
+                  "effects": [
+                    {
+                      "type": "ModifyStats",
+                      "target": "Self",
+                      "stat": "Attack",
+                      "value": 3,
+                      "duration": "Permanent",
+                      "condition": {
+                        "type": "AffinityMatches",
+                        "value": "Water"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "name": "Fountain of Life",
+                  "trigger": "OnOwnEndOfTurn",
+                  "effects": [
+                    {
+                      "type": "Heal",
+                      "target": "AllAllies",
+                      "value": "Full"
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Water/AquaPebble.png"
+        }
+      ]
+    },
+    {
+      "id": "bubblefin",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "water",
+      "data": {
+        "id": "bubblefin",
+        "name": "Bubblefin",
+        "type": "Bloom",
+        "affinity": "Water",
+        "cost": 2,
+        "baseAttack": 2,
+        "baseHealth": 5,
+        "abilities": [
+          {
+            "name": "Emerge",
+            "trigger": "Passive",
+            "effects": [
+              {
+                "type": "CannotBeTargeted",
+                "target": "Self",
+                "by": ["trap"]
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 2, "atk": 0 },
+            "3": { "hp": 4, "atk": 0 },
+            "4": { "hp": 6, "atk": 1 },
+            "5": { "hp": 8, "atk": 2 },
+            "6": { "hp": 10, "atk": 3 },
+            "7": { "hp": 12, "atk": 4 },
+            "8": { "hp": 14, "atk": 5 },
+            "9": { "hp": 16, "atk": 6 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Tidal Shield",
+                  "trigger": "OnDamage",
+                  "effects": [
+                    {
+                      "type": "ModifyStats",
+                      "target": "Attacker",
+                      "stat": "Attack",
+                      "value": -2,
+                      "duration": "EndOfTurn"
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Deep Dive",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "CannotBeTargeted",
+                      "target": "Self",
+                      "by": ["trap", "magic"]
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Ocean Sanctuary",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "CannotBeTargeted",
+                      "target": "Self",
+                      "by": ["magic", "trap", "abilities"]
+                    }
+                  ]
+                },
+                {
+                  "name": "Crushing Depths",
+                  "trigger": "OnDamage",
+                  "effects": [
+                    {
+                      "type": "ModifyStats",
+                      "target": "Attacker",
+                      "stat": "Attack",
+                      "value": -3,
+                      "duration": "Permanent"
+                    },
+                    {
+                      "type": "Heal",
+                      "target": "Self",
+                      "value": 2
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Water/Bubblefin.png"
+        }
+      ]
+    },
+    {
+      "id": "dewdrop-drake",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "water",
+      "data": {
+        "id": "dewdrop-drake",
+        "name": "Dewdrop Drake",
+        "type": "Bloom",
+        "affinity": "Water",
+        "cost": 3,
+        "baseAttack": 3,
+        "baseHealth": 6,
+        "abilities": [
+          {
+            "name": "Mist Screen",
+            "trigger": "Passive",
+            "effects": [
+              {
+                "type": "AttackModification",
+                "target": "Self",
+                "modification": "attack-first",
+                "condition": {
+                  "type": "UnitsOnField",
+                  "value": 1,
+                  "comparison": "Equal"
+                }
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 1, "atk": 1 },
+            "3": { "hp": 2, "atk": 2 },
+            "4": { "hp": 4, "atk": 3 },
+            "5": { "hp": 6, "atk": 4 },
+            "6": { "hp": 8, "atk": 5 },
+            "7": { "hp": 10, "atk": 6 },
+            "8": { "hp": 12, "atk": 7 },
+            "9": { "hp": 14, "atk": 8 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Deluge",
+                  "trigger": "OnAttack",
+                  "cost": {
+                    "type": "Nectar",
+                    "value": 1
+                  },
+                  "effects": [
+                    {
+                      "type": "DealDamage",
+                      "target": "OpponentGardener",
+                      "value": 3
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Fog Veil",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "AttackModification",
+                      "target": "Self",
+                      "modification": "attack-first"
+                    },
+                    {
+                      "type": "DamageReduction",
+                      "target": "Self",
+                      "value": 1,
+                      "duration": "WhileOnField"
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Storm Guardian",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "AttackModification",
+                      "target": "Self",
+                      "modification": "attack-first"
+                    },
+                    {
+                      "type": "DamageReduction",
+                      "target": "Self",
+                      "value": 2,
+                      "duration": "WhileOnField"
+                    }
+                  ]
+                },
+                {
+                  "name": "Maelstrom",
+                  "trigger": "OnAttack",
+                  "effects": [
+                    {
+                      "type": "DealDamage",
+                      "target": "OpponentGardener",
+                      "value": 5
+                    },
+                    {
+                      "type": "ApplyCounter",
+                      "target": "RandomEnemy",
+                      "counter": "Freeze",
+                      "value": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Water/DewdropDrake.png"
+        }
+      ]
+    },
+    {
+      "id": "kelp-cub",
+      "type": "beast",
+      "cardType": "Bloom",
+      "affinity": "water",
+      "data": {
+        "id": "kelp-cub",
+        "name": "Kelp Cub",
+        "type": "Bloom",
+        "affinity": "Water",
+        "cost": 2,
+        "baseAttack": 3,
+        "baseHealth": 3,
+        "abilities": [
+          {
+            "name": "Entangle",
+            "trigger": "OnAttack",
+            "effects": [
+              {
+                "type": "PreventAttack",
+                "target": "Target",
+                "duration": "StartOfNextTurn"
+              }
+            ]
+          }
+        ],
+        "levelingConfig": {
+          "statGains": {
+            "1": { "hp": 0, "atk": 0 },
+            "2": { "hp": 1, "atk": 1 },
+            "3": { "hp": 2, "atk": 2 },
+            "4": { "hp": 3, "atk": 3 },
+            "5": { "hp": 4, "atk": 4 },
+            "6": { "hp": 5, "atk": 5 },
+            "7": { "hp": 6, "atk": 6 },
+            "8": { "hp": 7, "atk": 7 },
+            "9": { "hp": 8, "atk": 8 }
+          },
+          "abilityUpgrades": {
+            "4": {
+              "abilities": [
+                {
+                  "name": "Binding Vines",
+                  "trigger": "OnAttack",
+                  "effects": [
+                    {
+                      "type": "PreventAttack",
+                      "target": "Target",
+                      "duration": "StartOfNextTurn"
+                    },
+                    {
+                      "type": "PreventAbilities",
+                      "target": "Target",
+                      "duration": "StartOfNextTurn"
+                    }
+                  ]
+                }
+              ]
+            },
+            "7": {
+              "abilities": [
+                {
+                  "name": "Deep Anchor",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "Immunity",
+                      "target": "Self",
+                      "immuneTo": ["Magic", "Trap", "Abilities"],
+                      "duration": "WhileOnField"
+                    }
+                  ]
+                }
+              ]
+            },
+            "9": {
+              "abilities": [
+                {
+                  "name": "Strangling Grasp",
+                  "trigger": "OnAttack",
+                  "effects": [
+                    {
+                      "type": "PreventAttack",
+                      "target": "Target",
+                      "duration": "Permanent"
+                    },
+                    {
+                      "type": "PreventAbilities",
+                      "target": "Target",
+                      "duration": "Permanent"
+                    }
+                  ]
+                },
+                {
+                  "name": "Immovable Force",
+                  "trigger": "Passive",
+                  "effects": [
+                    {
+                      "type": "Immunity",
+                      "target": "Self",
+                      "immuneTo": ["Damage", "Targeting", "NegativeEffects"],
+                      "duration": "WhileOnField"
+                    },
+                    {
+                      "type": "Retaliation",
+                      "target": "Self",
+                      "value": 0,
+                      "applyCounter": "Entangle",
+                      "counterValue": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        }
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Water/KelpCub.png"
+        }
+      ]
+    },
+    {
+      "id": "deep-sea-grotto",
+      "type": "habitat",
+      "affinity": "water",
+      "data": {
+        "id": "deep-sea-grotto",
+        "name": "Deep Sea Grotto",
+        "type": "Habitat",
+        "affinity": "Water",
+        "cost": 1,
+        "abilities": [
+          {
+            "name": "Aquatic Empowerment",
+            "trigger": "Passive",
+            "effects": [
+              {
+                "type": "ModifyStats",
+                "target": "AllAllies",
+                "stat": "Attack",
+                "value": 1,
+                "duration": "WhileOnField",
+                "condition": {
+                  "type": "AffinityMatches",
+                  "value": "Water"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Water/DeepSeaGrotto.png"
+        },
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Water/HabitatCard.png"
+        },
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Water/HabitatCardPlayboard.png"
+        }
+      ]
+    },
+    {
+      "id": "water-mission",
+      "type": "mission",
+      "affinity": "water",
+      "missionNumber": 3,
+      "name": "Water Mission",
+      "description": "Water affinity mission",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Water/WaterMission.png"
+        }
+      ]
+    },
+    {
+      "id": "water-chest-closed",
+      "type": "ui",
+      "category": "chest",
+      "name": "Water Chest Closed",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/chests/WaterChestClosed.png"
+        }
+      ]
+    },
+    {
+      "id": "water-chest-opened",
+      "type": "ui",
+      "category": "chest",
+      "name": "Water Chest Opened",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/chests/WaterChestOpened.png"
+        }
+      ]
+    },
+    {
+      "id": "water-icon",
+      "type": "ui",
+      "category": "icon",
+      "name": "Water Icon",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/affinity/WaterIcon.png"
+        }
+      ]
+    },
+    {
+      "id": "water-habitat",
+      "type": "ui",
+      "category": "card-template",
+      "name": "Water Habitat Card Template",
+      "description": "Template overlay for water habitat cards",
+      "assets": [
+        {
+          "type": "image",
+          "horizonAssetId": "REPLACE_WITH_HORIZON_ID",
+          "path": "shared/images/cards/Water/HabitatCard.png"
+        }
+      ]
+    }
+  ]
+}

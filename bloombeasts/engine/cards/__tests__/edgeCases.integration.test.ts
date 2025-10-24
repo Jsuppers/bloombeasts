@@ -5,18 +5,7 @@
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { GameEngine } from '../../systems/GameEngine';
-import { FUZZLET } from '../forest/fuzzlet.js';
-import { CHARCOIL } from '../fire/charcoil.js';
-import { BLAZEFINCH } from '../fire/blazefinch.js';
-import { BUBBLEFIN } from '../water/bubblefin.js';
-import { LEAF_SPRITE } from '../forest/leafSprite.js';
-import { MOSSLET } from '../forest/mosslet.js';
-import { BATTLE_FURY } from '../buff/battleFury.js';
-import { CLEANSING_DOWNPOUR } from '../magic/cleansingDownpour.js';
-import { NECTAR_SURGE } from '../magic/nectarSurge.js';
-import { HABITAT_LOCK } from '../trap/habitatLock.js';
-import { ANCIENT_FOREST } from '../forest/ancientForest.js';
-import { VOLCANIC_SCAR } from '../fire/volcanicScar.js';
+import { loadCardFromJSON } from './testUtils.js';
 import {
   createTestGame,
   createDeck,
@@ -31,6 +20,19 @@ import {
   getCounterAmount,
 } from './gameTestUtils.js';
 
+// Load cards from JSON catalogs
+const CHARCOIL = loadCardFromJSON('charcoil', 'fire');
+const BLAZEFINCH = loadCardFromJSON('blazefinch', 'fire');
+const BUBBLEFIN = loadCardFromJSON('bubblefin', 'water');
+const LEAF_SPRITE = loadCardFromJSON('leaf-sprite', 'forest');
+const MOSSLET = loadCardFromJSON('mosslet', 'forest');
+const BATTLE_FURY = loadCardFromJSON('battle-fury', 'buff');
+const CLEANSING_DOWNPOUR = loadCardFromJSON('cleansing-downpour', 'magic');
+const NECTAR_SURGE = loadCardFromJSON('nectar-surge', 'magic');
+const HABITAT_LOCK = loadCardFromJSON('habitat-lock', 'trap');
+const ANCIENT_FOREST = loadCardFromJSON('ancient-forest', 'forest');
+const VOLCANIC_SCAR = loadCardFromJSON('volcanic-scar', 'fire');
+
 describe('Edge Cases - Integration Tests', () => {
   let game: GameEngine;
 
@@ -42,7 +44,7 @@ describe('Edge Cases - Integration Tests', () => {
     test('should handle drawing from empty deck', async () => {
       await game.startMatch(
         createDeck([]), // Empty deck
-        createDeck([FUZZLET])
+        createDeck([MOSSLET])
       );
 
       let state = game.getState();
@@ -63,7 +65,7 @@ describe('Edge Cases - Integration Tests', () => {
     });
 
     test('should handle very large deck', async () => {
-      const largeDeck = Array(100).fill(FUZZLET);
+      const largeDeck = Array(100).fill(MOSSLET);
 
       await game.startMatch(
         createDeck(largeDeck),
@@ -79,7 +81,7 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should handle deck with only one card', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([CHARCOIL])
       );
 
@@ -116,7 +118,7 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should not allow negative nectar', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([])
       );
 
@@ -140,14 +142,14 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should handle playing card with exactly enough nectar', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([])
       );
 
       let state = game.getState();
       let player = state.players[0];
 
-      setHand(player, [FUZZLET]); // Costs 2
+      setHand(player, [MOSSLET]); // Costs 2
       giveNectar(player, 1); // Now has 2 total (1 from turn + 1 given)
 
       const result = await game.playCard(player, 0);
@@ -163,7 +165,7 @@ describe('Edge Cases - Integration Tests', () => {
   describe('Field Management Edge Cases', () => {
     test('should handle full field (3 beasts)', async () => {
       await game.startMatch(
-        createDeck([FUZZLET, MOSSLET, LEAF_SPRITE, CHARCOIL]),
+        createDeck([MOSSLET, MOSSLET, LEAF_SPRITE, CHARCOIL]),
         createDeck([])
       );
 
@@ -171,7 +173,7 @@ describe('Edge Cases - Integration Tests', () => {
       let player = state.players[0];
 
       // Fill the field
-      setHand(player, [FUZZLET, MOSSLET, LEAF_SPRITE]);
+      setHand(player, [MOSSLET, MOSSLET, LEAF_SPRITE]);
       giveNectar(player, 10);
 
       await game.playCard(player, 0);
@@ -202,14 +204,14 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should handle beast at each field position', async () => {
       await game.startMatch(
-        createDeck([FUZZLET, MOSSLET, LEAF_SPRITE]),
+        createDeck([MOSSLET, MOSSLET, LEAF_SPRITE]),
         createDeck([])
       );
 
       const state = game.getState();
       const player = state.players[0];
 
-      const beast1 = createTestBeast(FUZZLET);
+      const beast1 = createTestBeast(MOSSLET);
       const beast2 = createTestBeast(MOSSLET);
       const beast3 = createTestBeast(LEAF_SPRITE);
 
@@ -217,14 +219,14 @@ describe('Edge Cases - Integration Tests', () => {
       placeBeast(player, beast2, 1);
       placeBeast(player, beast3, 2);
 
-      expect(player.field[0]?.cardId).toBe('fuzzlet');
+      expect(player.field[0]?.cardId).toBe('mosslet');
       expect(player.field[1]?.cardId).toBe('mosslet');
       expect(player.field[2]?.cardId).toBe('leaf-sprite');
     });
 
     test('should handle removing beast from middle of field', async () => {
       await game.startMatch(
-        createDeck([FUZZLET, MOSSLET, LEAF_SPRITE]),
+        createDeck([MOSSLET, MOSSLET, LEAF_SPRITE]),
         createDeck([CHARCOIL])
       );
 
@@ -233,7 +235,7 @@ describe('Edge Cases - Integration Tests', () => {
       const player2 = state.players[1];
 
       // Place 3 beasts on player 1's field
-      const beast1 = createTestBeast(FUZZLET);
+      const beast1 = createTestBeast(MOSSLET);
       const beast2 = createTestBeast(MOSSLET, { currentHealth: 1 });
       const beast3 = createTestBeast(LEAF_SPRITE);
 
@@ -385,7 +387,7 @@ describe('Edge Cases - Integration Tests', () => {
   describe('Combat Edge Cases', () => {
     test('should handle attacking with 0 attack beast', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([CHARCOIL])
       );
 
@@ -393,7 +395,7 @@ describe('Edge Cases - Integration Tests', () => {
       const player1 = state.players[0];
       const player2 = state.players[1];
 
-      const weakBeast = createTestBeast(FUZZLET, { currentAttack: 0 });
+      const weakBeast = createTestBeast(MOSSLET, { currentAttack: 0 });
       weakBeast.summoningSickness = false;
       placeBeast(player1, weakBeast, 0);
 
@@ -410,7 +412,7 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should handle overkill damage (100 damage to 1 HP beast)', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([CHARCOIL])
       );
 
@@ -418,7 +420,7 @@ describe('Edge Cases - Integration Tests', () => {
       const player1 = state.players[0];
       const player2 = state.players[1];
 
-      const weakBeast = createTestBeast(FUZZLET, { currentHealth: 1 });
+      const weakBeast = createTestBeast(MOSSLET, { currentHealth: 1 });
       placeBeast(player1, weakBeast, 0);
 
       const strongBeast = createTestBeast(CHARCOIL, { currentAttack: 100 });
@@ -440,7 +442,7 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should handle simultaneous near-death beasts', async () => {
       await game.startMatch(
-        createDeck([FUZZLET, MOSSLET]),
+        createDeck([MOSSLET, MOSSLET]),
         createDeck([CHARCOIL])
       );
 
@@ -449,7 +451,7 @@ describe('Edge Cases - Integration Tests', () => {
       const player2 = state.players[1];
 
       // Both beasts at 1 HP
-      const beast1 = createTestBeast(FUZZLET, { currentHealth: 1 });
+      const beast1 = createTestBeast(MOSSLET, { currentHealth: 1 });
       const beast2 = createTestBeast(MOSSLET, { currentHealth: 1 });
       placeBeast(player1, beast1, 0);
       placeBeast(player1, beast2, 1);
@@ -489,7 +491,7 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should handle attacking with summoning sickness (should fail)', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([CHARCOIL])
       );
 
@@ -497,7 +499,7 @@ describe('Edge Cases - Integration Tests', () => {
       const player1 = state.players[0];
       const player2 = state.players[1];
 
-      const beast = createTestBeast(FUZZLET);
+      const beast = createTestBeast(MOSSLET);
       beast.summoningSickness = true; // Has summoning sickness
       placeBeast(player1, beast, 0);
 
@@ -514,14 +516,14 @@ describe('Edge Cases - Integration Tests', () => {
   describe('Counter and Status Effect Edge Cases', () => {
     test('should handle beast with multiple counter types', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([])
       );
 
       const state = game.getState();
       const player = state.players[0];
 
-      const beast = createTestBeast(FUZZLET);
+      const beast = createTestBeast(MOSSLET);
       beast.counters.push({ type: 'Burn', amount: 2 });
       beast.counters.push({ type: 'Freeze', amount: 1 });
       beast.counters.push({ type: 'Poison', amount: 1 });
@@ -544,7 +546,7 @@ describe('Edge Cases - Integration Tests', () => {
       let state = game.getState();
       let player = state.players[0];
 
-      const beast = createTestBeast(FUZZLET);
+      const beast = createTestBeast(MOSSLET);
       beast.counters.push({ type: 'Burn', amount: 2 });
       beast.counters.push({ type: 'Spore', amount: 3 }); // Positive counter
       placeBeast(player, beast, 0);
@@ -565,14 +567,14 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should handle very high counter amounts', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([])
       );
 
       const state = game.getState();
       const player = state.players[0];
 
-      const beast = createTestBeast(FUZZLET);
+      const beast = createTestBeast(MOSSLET);
       beast.counters.push({ type: 'Spore', amount: 999 });
       placeBeast(player, beast, 0);
 
@@ -583,7 +585,7 @@ describe('Edge Cases - Integration Tests', () => {
   describe('Hand Size Edge Cases', () => {
     test('should handle very large hand', async () => {
       await game.startMatch(
-        createDeck(Array(50).fill(FUZZLET)),
+        createDeck(Array(50).fill(MOSSLET)),
         createDeck([])
       );
 
@@ -591,7 +593,7 @@ describe('Edge Cases - Integration Tests', () => {
       let player = state.players[0];
 
       // Give player many cards
-      giveCards(player, Array(20).fill(FUZZLET));
+      giveCards(player, Array(20).fill(MOSSLET));
 
       state = game.getState();
       player = state.players[0];
@@ -602,7 +604,7 @@ describe('Edge Cases - Integration Tests', () => {
     test('should handle empty hand', async () => {
       await game.startMatch(
         createDeck([]),
-        createDeck([FUZZLET])
+        createDeck([MOSSLET])
       );
 
       const state = game.getState();
@@ -617,14 +619,14 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should handle playing last card in hand', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([])
       );
 
       let state = game.getState();
       let player = state.players[0];
 
-      setHand(player, [FUZZLET]); // Only one card
+      setHand(player, [MOSSLET]); // Only one card
       giveNectar(player, 10);
 
       const result = await game.playCard(player, 0);
@@ -640,7 +642,7 @@ describe('Edge Cases - Integration Tests', () => {
   describe('Graveyard Edge Cases', () => {
     test('should handle very large graveyard', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([])
       );
 
@@ -649,7 +651,7 @@ describe('Edge Cases - Integration Tests', () => {
 
       // Manually add many cards to graveyard
       for (let i = 0; i < 100; i++) {
-        player.graveyard.push(FUZZLET);
+        player.graveyard.push(MOSSLET);
       }
 
       expect(player.graveyard.length).toBe(100);
@@ -657,7 +659,7 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should track different card types in graveyard', async () => {
       await game.startMatch(
-        createDeck([FUZZLET, BATTLE_FURY, CLEANSING_DOWNPOUR, HABITAT_LOCK]),
+        createDeck([MOSSLET, BATTLE_FURY, CLEANSING_DOWNPOUR, HABITAT_LOCK]),
         createDeck([])
       );
 
@@ -684,7 +686,7 @@ describe('Edge Cases - Integration Tests', () => {
   describe('Turn Management Edge Cases', () => {
     test('should handle many turn cycles', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([CHARCOIL])
       );
 
@@ -704,7 +706,7 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should properly alternate active players', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([CHARCOIL])
       );
 
@@ -722,7 +724,7 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should increment nectar each turn up to 10', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([CHARCOIL])
       );
 
@@ -754,14 +756,14 @@ describe('Edge Cases - Integration Tests', () => {
   describe('Summoning Sickness Edge Cases', () => {
     test('should remove summoning sickness at start of turn', async () => {
       await game.startMatch(
-        createDeck([FUZZLET]),
+        createDeck([MOSSLET]),
         createDeck([])
       );
 
       let state = game.getState();
       let player = state.players[0];
 
-      const beast = createTestBeast(FUZZLET);
+      const beast = createTestBeast(MOSSLET);
       beast.summoningSickness = true;
       placeBeast(player, beast, 0);
 
@@ -784,14 +786,14 @@ describe('Edge Cases - Integration Tests', () => {
 
     test('should respect one summon per turn limit', async () => {
       await game.startMatch(
-        createDeck([FUZZLET, MOSSLET]),
+        createDeck([MOSSLET, MOSSLET]),
         createDeck([])
       );
 
       let state = game.getState();
       let player = state.players[0];
 
-      setHand(player, [FUZZLET, MOSSLET]);
+      setHand(player, [MOSSLET, MOSSLET]);
       giveNectar(player, 10);
 
       const result1 = await game.playCard(player, 0);

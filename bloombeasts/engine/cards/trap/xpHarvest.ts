@@ -2,13 +2,19 @@
  * XP Harvest - Reduce attacker to level 1 when your unit is destroyed
  */
 
-import { TrapCard, TrapTrigger } from '../../types/core';
-import { RemoveCounterEffect, EffectType, AbilityTarget } from '../../types/abilities';
+import { TrapCard, TrapTrigger, Ability } from '../../types/core';
+import { RemoveCounterEffect, EffectType, AbilityTarget, StructuredAbility, AbilityTrigger } from '../../types/abilities';
 
 const removeXP: RemoveCounterEffect = {
   type: EffectType.RemoveCounter,
   target: AbilityTarget.Attacker,  // The unit that destroyed your unit
   counter: 'XP'  // Remove all XP counters, resetting to level 1
+};
+
+const xpHarvestAbility: StructuredAbility = {
+  name: 'XP Harvest',
+  trigger: AbilityTrigger.OnSummon, // Trap effects trigger when the trap is activated
+  effects: [removeXP]
 };
 
 export const XP_HARVEST: TrapCard = {
@@ -19,5 +25,5 @@ export const XP_HARVEST: TrapCard = {
   activation: {
     trigger: TrapTrigger.OnDestroy
   },
-  effects: [removeXP]
+  abilities: [xpHarvestAbility]
 };

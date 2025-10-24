@@ -57,7 +57,7 @@ Created **67 real gameplay integration tests** that simulate actual game mechani
    - Need to implement ongoing effect application system
 
 3. **Beast Abilities**:
-   - OnDamage abilities don't trigger (e.g., Fuzzlet's Spore counter)
+   - OnDamage abilities don't trigger (e.g., Mosslet's Spore counter)
    - OnAttack abilities not tested yet
    - OnDestroy abilities not tested yet
 
@@ -111,7 +111,7 @@ expect(BATTLE_FURY.name).toBe('Battle Fury'); // Just checks data
 ```typescript
 // Real gameplay simulation:
 await game.startMatch(decks);
-placeBeast(player, fuzzlet, 0);
+placeBeast(player, mosslet, 0);
 await game.playCard(player, buffCardIndex); // Play Battle Fury
 await game.executeAttack(player, 0, 'beast', 0);
 // Verify buffed damage

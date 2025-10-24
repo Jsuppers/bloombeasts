@@ -1,141 +1,137 @@
 /**
- * Battle Screen - Simplified placeholder with UI Component System
- * TODO: Implement full battle rendering logic
+ * Battle Screen - Web platform adapter for unified BattleScreen component
+ * Uses the comprehensive BattleScreen implementation from bloombeasts/ui/screens/BattleScreen.ts
  */
 
 // Import from unified BloomBeasts UI system
-import { View, Text, Pressable, UINode, Binding } from '../ui';
-import { COLORS } from '../../../../shared/styles/colors';
-import { DIMENSIONS } from '../../../../shared/styles/dimensions';
-
+import { UINode, Binding } from '../ui';
+import { BattleScreen } from '../../../../bloombeasts/ui/screens/BattleScreen';
+import type { BattleDisplay } from '../../../../bloombeasts/gameManager';
 
 export class BattleScreenNew {
     // State bindings
-    private battleState: Binding<string> = new Binding('initializing');
-    private message: Binding<string> = new Binding('Battle starting...');
+    private battleState: Binding<BattleDisplay | null> = new Binding(null);
+
+    // Unified battle screen instance
+    private battleScreen: BattleScreen | null = null;
 
     // Callbacks
     private onActionCallback: ((action: string) => void) | null = null;
+    private renderNeeded = false;
 
     /**
-     * Create the battle UI
+     * Create the battle UI using the unified BattleScreen
      */
     createUI(): UINode {
-        return View({
-            style: {
-                width: '100%',
-                height: '100%',
-                backgroundColor: COLORS.background,
-                justifyContent: 'center',
-                alignItems: 'center',
-            },
-            children: [
-                // Battle arena placeholder
-                View({
-                    style: {
-                        width: '80%',
-                        height: '60%',
-                        backgroundColor: COLORS.cardBackground,
-                        borderRadius: 10,
-                        borderWidth: 2,
-                        borderColor: COLORS.borderDefault,
-                        padding: 20,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                    },
-                    children: [
-                        Text({
-                            text: new Binding('Battle Screen'),
-                            style: {
-                                fontSize: DIMENSIONS.fontSize.xxl,
-                                color: COLORS.textPrimary,
-                                fontWeight: 'bold',
-                                marginBottom: 20,
-                            },
-                        }),
+        console.log('[BattleScreenNew] createUI called');
+        const state = this.battleState.get();
+        console.log('[BattleScreenNew] Current state:', state ? 'Present' : 'Null', 'turnPlayer:', state?.turnPlayer);
 
-                        Text({
-                            text: this.message,
-                            style: {
-                                fontSize: DIMENSIONS.fontSize.lg,
-                                color: COLORS.textSecondary,
-                                textAlign: 'center',
-                                marginBottom: 20,
-                            },
-                        }),
-
-                        Text({
-                            text: new Binding('(Full battle UI coming soon)'),
-                            style: {
-                                fontSize: DIMENSIONS.fontSize.md,
-                                color: COLORS.textMuted,
-                                textAlign: 'center',
-                            },
-                        }),
-                    ],
-                }),
-
-                // Action buttons
-                View({
-                    style: {
-                        position: 'absolute',
-                        bottom: 40,
-                        flexDirection: 'row',
-                    },
-                    children: [
-                        this.createActionButton('End Turn'),
-                        View({ style: { width: 20 } }),
-                        this.createActionButton('Flee'),
-                    ],
-                }),
-            ],
-        });
-    }
-
-    /**
-     * Create an action button
-     */
-    private createActionButton(label: string): UINode {
-        return Pressable({
-            onClick: () => {
-                if (this.onActionCallback) {
-                    this.onActionCallback(label.toLowerCase());
-                }
-            },
-            style: {
-                padding: 15,
-                backgroundColor: COLORS.buttonPrimary,
-                borderRadius: 8,
-                borderWidth: 2,
-                borderColor: COLORS.borderPrimary,
-                minWidth: 120,
-            },
-            children: Text({
-                text: new Binding(label),
-                style: {
-                    fontSize: DIMENSIONS.fontSize.md,
-                    color: COLORS.textPrimary,
-                    textAlign: 'center',
-                    fontWeight: 'bold',
+        // Create the unified battle screen ONCE and reuse it
+        if (!this.battleScreen) {
+            console.log('[BattleScreenNew] Creating new BattleScreen instance');
+            this.battleScreen = new BattleScreen({
+                battleDisplay: this.battleState, // Pass as battleDisplay for full battle mode
+                onAction: (action) => {
+                    console.log('[BattleScreenNew] Action:', action);
+                    if (this.onActionCallback) {
+                        this.onActionCallback(action);
+                    }
                 },
-            }),
-        });
+                onNavigate: (screen) => {
+                    console.log('[BattleScreenNew] Navigate:', screen);
+                    // Handle navigation if needed
+                    if (this.onActionCallback) {
+                        if (screen === 'menu' || screen === 'missions') {
+                            this.onActionCallback('btn-back');
+                        }
+                    }
+                },
+                onRenderNeeded: () => {
+                    // Flag that render is needed
+                    this.renderNeeded = true;
+                    // In web platform, we might need to trigger a re-render
+                    // This will be handled by the platform's render loop
+                    console.log('[BattleScreenNew] Render needed');
+
+                    // For production mode, we need to tell the platform to re-render
+                    // This is a temporary solution - ideally the platform would have a render loop
+                    if (typeof (window as any).renderCurrentScreen === 'function') {
+                        (window as any).renderCurrentScreen();
+                    }
+                }
+            });
+        } else {
+            console.log('[BattleScreenNew] Reusing existing BattleScreen instance');
+        }
+
+        console.log('[BattleScreenNew] Creating battle UI from BattleScreen...');
+        try {
+            const ui = this.battleScreen.createUI();
+            console.log('[BattleScreenNew] Battle UI created:', ui ? 'Success' : 'Failed');
+            return ui;
+        } catch (error) {
+            console.error('[BattleScreenNew] Error creating battle UI:', error);
+            throw error;
+        }
     }
 
     /**
      * Update battle state
      */
-    update(state: any, onAction: (action: string) => void): void {
-        this.battleState.set(state?.phase || 'active');
-        this.message.set(state?.message || 'Battle in progress...');
+    update(state: BattleDisplay, onAction: (action: string) => void): void {
+        console.log('[BattleScreenNew] ==========================================');
+        console.log('[BattleScreenNew] UPDATE() called with battle state:');
+        console.log('[BattleScreenNew] turnPlayer:', state.turnPlayer);
+        console.log('[BattleScreenNew] currentTurn:', state.currentTurn);
+        console.log('[BattleScreenNew] playerHealth:', state.playerHealth);
+        console.log('[BattleScreenNew] opponentHealth:', state.opponentHealth);
+        console.log('[BattleScreenNew] ==========================================');
+
+        // Update the battle state binding
+        console.log('[BattleScreenNew] Setting this.battleState binding...');
+        this.battleState.set(state);
+        console.log('[BattleScreenNew] this.battleState.get():', this.battleState.get());
+
+        // Store the action callback
         this.onActionCallback = onAction;
+
+        // If we have a battle screen instance, it will automatically re-render
+        // due to the binding update, but we may need to recreate the UI
+        if (this.renderNeeded && this.battleScreen) {
+            this.renderNeeded = false;
+            // The platform will call createUI again to get the updated UI
+        }
+    }
+
+    /**
+     * Check if render is needed
+     */
+    needsRender(): boolean {
+        return this.renderNeeded;
+    }
+
+    /**
+     * Clear render flag
+     */
+    clearRenderFlag(): void {
+        this.renderNeeded = false;
     }
 
     /**
      * Cleanup
      */
     destroy(): void {
-        // Cleanup any battle animations
+        // Cleanup battle screen
+        if (this.battleScreen) {
+            this.battleScreen.cleanup();
+            this.battleScreen = null;
+        }
+
+        // Clear state
+        this.battleState.set(null);
+        this.onActionCallback = null;
+        this.renderNeeded = false;
     }
 
     /**

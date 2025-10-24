@@ -296,6 +296,13 @@ export class WebPlatformNew implements PlatformCallbacks {
     }
 
     renderBattle(battleData: BattleDisplay): void {
+        console.log('[Platform] renderBattle called with data:', {
+            playerHealth: battleData.playerHealth,
+            opponentHealth: battleData.opponentHealth,
+            currentTurn: battleData.currentTurn,
+            turnPlayer: battleData.turnPlayer
+        });
+
         if (this.currentScreen === 'cards') {
             // Cleanup cards screen animations if needed
         }
@@ -304,14 +311,31 @@ export class WebPlatformNew implements PlatformCallbacks {
 
         // Update battle screen
         this.battleScreen.update(battleData, (action: string) => {
-            console.log('Battle action:', action);
-            // TODO: Wire up battle actions
+            console.log('[Platform] Battle action:', action);
+            // Forward action to game manager via button click callback
+            if (this.buttonClickCallback) {
+                this.buttonClickCallback(action);
+            }
         });
 
         // Create and render UI
-        const ui = this.battleScreen.createUI();
-        this.currentUI = ui;
-        this.renderCurrentScreenWithDialogs();
+        console.log('[Platform] Creating battle UI...');
+        try {
+            const ui = this.battleScreen.createUI();
+            console.log('[Platform] Battle UI created:', ui ? 'Success' : 'Failed');
+            this.currentUI = ui;
+            console.log('[Platform] Calling renderCurrentScreenWithDialogs...');
+            this.renderCurrentScreenWithDialogs();
+            console.log('[Platform] renderBattle complete');
+        } catch (error) {
+            console.error('[Platform] Error creating battle UI:', error);
+            // Show error dialog
+            this.showDialog(
+                'Battle Error',
+                `Failed to create battle screen: ${error instanceof Error ? error.message : String(error)}`,
+                ['OK']
+            );
+        }
     }
 
     // Legacy methods for compatibility

@@ -50,35 +50,53 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
     health: { x: 188, y: 176 },
   };
 
+  // Extract base card ID for asset lookup
+  // Card IDs may have timestamp suffixes (e.g., "nectar-block-1761200302194-0")
+  // We need to extract the base ID (e.g., "nectar-block") to match catalog IDs
+  const extractBaseId = (id: string | undefined): string => {
+    if (!id) {
+      console.warn('[CardRenderer] Card missing id, using name fallback:', card.name);
+      // Fallback: use card name converted to kebab-case
+      return card.name.toLowerCase().replace(/\s+/g, '-');
+    }
+    // Remove timestamp pattern: -digits-digits at the end
+    return id.replace(/-\d+-\d+$/, '');
+  };
+
   // Generate unique image URI keys for this card
-  const cardImageKey = `card-${card.name}`; // For non-Bloom cards
-  const beastImageKey = `beast-${card.name}`; // For Bloom cards
-  const baseCardKey = 'baseCard'; // All cards use BaseCard as the frame
+  // Extract base ID from card.id to match asset catalog IDs
+  const baseId = extractBaseId(card.id);
+  const cardImageKey = baseId; // Card images use the base card ID
+  const beastImageKey = baseId; // Beast images use the base card ID
+  const baseCardKey = 'base-card'; // All cards use base-card as the frame
 
   // Type-specific template overlay
-  // Habitat cards use HabitatCard.png from affinity folders (e.g., Forest/HabitatCard.png)
+  // Habitat cards use habitat templates from affinity folders
   let templateKey = '';
   if (card.type === 'Habitat' && card.affinity) {
     // Template key format: affinity-habitat (e.g., 'forest-habitat')
     templateKey = `${card.affinity.toLowerCase()}-habitat`;
   } else if (card.type !== 'Bloom') {
-    templateKey = `${card.type.toLowerCase()}Card`;
+    templateKey = `${card.type.toLowerCase()}-card`;
   }
 
-  const affinityKey = card.affinity ? `affinity-${card.affinity}` : '';
-  const expBarKey = 'experienceBar';
+  // Affinity icon key format: affinity-icon (e.g., 'forest-icon', 'fire-icon')
+  const affinityKey = card.affinity ? `${card.affinity.toLowerCase()}-icon` : '';
+  const expBarKey = 'experience-bar';
 
   // Get card description for ability text using the official cardDescriptionGenerator
   const abilityText = getCardDescription(card);
 
-  return Pressable({
-    onClick: onClick ? () => onClick(card.id) : undefined,
-    style: {
-      width: cardWidth,
-      height: cardHeight,
-      position: 'relative',
-    },
-    children: [
+  // Debug logging for cards without descriptions
+  if ((!abilityText || abilityText.trim() === '') && card.type !== 'Bloom') {
+    console.log(`[CardRenderer] ❌ No description for ${card.name} (${card.type}, id: ${card.id})`);
+    console.log(`  Abilities:`, card.abilities);
+    console.log(`  Generated abilityText: "${abilityText}"`);
+  } else if (card.type !== 'Bloom') {
+    console.log(`[CardRenderer] ✅ ${card.name} (${card.type}): "${abilityText}"`);
+  }
+
+  const children = [
       // Layer 1: Card/Beast artwork image (185x185)
       // For Bloom cards: use beast image
       // For other cards (Magic/Trap/Buff/Habitat): use card artwork image
@@ -179,9 +197,9 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
       ] : []),
 
       // Attack and Health (for Bloom cards)
-      ...(card.type === 'Bloom' && (card as any).baseAttack !== undefined ? [
+      ...(card.type === 'Bloom' && ((card as any).currentAttack !== undefined || (card as any).baseAttack !== undefined) ? [
         Text({
-          text: new Binding(String((card as any).baseAttack)),
+          text: String((card as any).currentAttack ?? (card as any).baseAttack ?? 0),
           style: {
             position: 'absolute',
             top: positions.attack.y,
@@ -194,9 +212,9 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
         })
       ] : []),
 
-      ...(card.type === 'Bloom' && (card as any).baseHealth !== undefined ? [
+      ...(card.type === 'Bloom' && ((card as any).currentHealth !== undefined || (card as any).baseHealth !== undefined) ? [
         Text({
-          text: new Binding(String((card as any).baseHealth)),
+          text: String((card as any).currentHealth ?? (card as any).baseHealth ?? 0),
           style: {
             position: 'absolute',
             top: positions.health.y,
@@ -258,8 +276,33 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
           },
         })
       ] : []),
-    ],
-  });
+    ];
+
+  // Filter out any undefined values to prevent rendering errors
+  const filteredChildren = children.filter(child => child !== undefined && child !== null);
+
+  // Only wrap in Pressable if onClick is provided
+  // Otherwise use View to avoid blocking parent click handlers
+  if (onClick) {
+    return Pressable({
+      onClick: () => onClick(card.id),
+      style: {
+        width: cardWidth,
+        height: cardHeight,
+        position: 'relative',
+      },
+      children: filteredChildren,
+    });
+  } else {
+    return View({
+      style: {
+        width: cardWidth,
+        height: cardHeight,
+        position: 'relative',
+      },
+      children: filteredChildren,
+    });
+  }
 }
 
 /**

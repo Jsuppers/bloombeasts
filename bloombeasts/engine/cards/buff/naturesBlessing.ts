@@ -7,19 +7,26 @@
  * Fantasy card game art style, natural and peaceful colors, square format 185x185px."
  */
 
-import { BuffCard } from '../../types/core';
+import { BuffCard, Ability } from '../../types/core';
 import {
   HealEffect,
   EffectType,
   AbilityTarget,
+  StructuredAbility,
+  AbilityTrigger,
 } from '../../types/abilities';
 
-// Ongoing effect: Heal all your Beasts for 1 HP at the start of your turn
-// Note: This would require StartOfTurn trigger support in the buff system
+// Heal all your Beasts for 1 HP at the start of your turn
 const healingAura: HealEffect = {
   type: EffectType.Heal,
   target: AbilityTarget.AllAllies,
   value: 1,
+};
+
+const naturesBlessingAbility: StructuredAbility = {
+  name: "Nature's Blessing",
+  trigger: AbilityTrigger.OnOwnStartOfTurn, // Triggers at the start of your turn
+  effects: [healingAura]
 };
 
 export const NATURES_BLESSING: BuffCard = {
@@ -28,5 +35,5 @@ export const NATURES_BLESSING: BuffCard = {
   type: 'Buff',
   affinity: 'Forest',
   cost: 4,
-  ongoingEffects: [healingAura],
+  abilities: [naturesBlessingAbility],
 };

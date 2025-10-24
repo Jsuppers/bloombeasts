@@ -59,34 +59,36 @@ export class SettingsScreen {
             left: 0,
           },
         }),
+        // Cards Container image as background
+        Image({
+          source: new Binding({ uri: 'cards-container' }),
+          style: {
+            position: 'absolute',
+            left: 40,
+            top: 40,
+            width: 980,
+            height: 640,
+          },
+        }),
         // Main content - settings panel
         View({
           style: {
             position: 'absolute',
-            width: 1100,
-            height: '100%',
+            left: 70,
+            top: 70,
+            width: 920,
+            height: 580,
             padding: 40,
           },
-          children: [
-            View({
-              style: {
-                padding: 40,
-                backgroundColor: COLORS.cardBackground,
-                borderRadius: 10,
-                borderWidth: 2,
-                borderColor: COLORS.borderDefault,
-              },
-              children: this.settings.derive((settings: SoundSettings) => [
-                // Music settings
-                this.createVolumeControl('Music Volume', 'musicVolume', 'music-volume', settings),
-                this.createToggleControl('Music', 'musicEnabled', 'music-enabled', settings),
+          children: this.settings.derive((settings: SoundSettings) => [
+            // Music settings
+            this.createVolumeControl('Music Volume', 'musicVolume', 'music-volume', settings),
+            this.createToggleControl('Music', 'musicEnabled', 'music-enabled', settings),
 
-                // SFX settings
-                this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfx-volume', settings),
-                this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfx-enabled', settings),
-              ]) as any,
-            }),
-          ],
+            // SFX settings
+            this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfx-volume', settings),
+            this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfx-enabled', settings),
+          ]) as any,
         }),
         // Sidebar with common side menu
         createSideMenu({
@@ -240,22 +242,41 @@ export class SettingsScreen {
             }
           },
           style: {
+            position: 'relative',
             width: 120,
-            padding: 12,
-            backgroundColor: settings[settingKey] ? COLORS.buttonSuccess : COLORS.buttonPrimary,
-            borderRadius: 6,
-            borderWidth: 2,
-            borderColor: settings[settingKey] ? COLORS.borderSuccess : COLORS.borderDefault,
+            height: 40,
           },
-          children: Text({
-            text: new Binding(settings[settingKey] ? 'ON' : 'OFF'),
-            style: {
-              fontSize: DIMENSIONS.fontSize.md,
-              color: COLORS.textPrimary,
-              textAlign: 'center',
-              fontWeight: 'bold',
-            },
-          }),
+          children: [
+            // Button background image (standard or green based on state)
+            Image({
+              source: new Binding({ uri: settings[settingKey] ? 'green-button' : 'standard-button' }),
+              style: {
+                position: 'absolute',
+                width: 120,
+                height: 40,
+              },
+            }),
+            // Button text centered
+            View({
+              style: {
+                position: 'absolute',
+                width: 120,
+                height: 40,
+                justifyContent: 'center',
+                alignItems: 'center',
+              },
+              children: Text({
+                text: new Binding(settings[settingKey] ? 'ON' : 'OFF'),
+                style: {
+                  fontSize: DIMENSIONS.fontSize.md,
+                  color: COLORS.textPrimary,
+                  textAlign: 'center',
+                  fontWeight: 'bold',
+                  textAlignVertical: 'center',
+                },
+              }),
+            }),
+          ],
         }),
       ],
     });

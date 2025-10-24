@@ -9,6 +9,7 @@ import { BloomBeastsGame, type PlayerData } from '../../../bloombeasts/ui/screen
 import { GameManager, type PlatformCallbacks, type MenuStats, type MissionDisplay, type CardDisplay, type BattleDisplay, type RewardDisplay } from '../../../bloombeasts/gameManager';
 import type { SoundSettings } from '../../../bloombeasts/systems/SoundManager';
 import { AssetLoader } from './utils/assetLoader';
+import { BattleScreenNew } from './screens/battleScreen.new';
 
 setPlatform(Platform.web);
 
@@ -21,6 +22,8 @@ export class BloomBeastsWebGame {
   private gameManager: GameManager | null = null;
   private assetLoader: AssetLoader;
   private uiTree: any = null; // Store UI tree once
+  private battleScreen: BattleScreenNew | null = null;
+  private currentScreen: string = 'start-menu';
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -41,7 +44,10 @@ export class BloomBeastsWebGame {
         (this as any).capturedCards = cards;
         (this as any).capturedDeckIds = deckCardIds;
       },
-      renderBattle: () => {},
+      renderBattle: (battleData: BattleDisplay) => {
+        console.log('[Platform] renderBattle called with battle data');
+        this.renderBattleScreen(battleData);
+      },
       renderSettings: () => {},
       renderCardDetail: () => {},
       onButtonClick: () => {},
@@ -64,16 +70,40 @@ export class BloomBeastsWebGame {
     
     this.gameManager = new GameManager(platformCallbacks);
     this.playerData = new Binding<PlayerData | null>(null);
-    
+
+    // example what I want for web
     this.game = new BloomBeastsGame({
-      playerData: this.playerData as any,
-      onButtonClick: this.handleButtonClick.bind(this),
-      onCardSelect: this.handleCardSelect.bind(this),
-      onMissionSelect: this.handleMissionSelect.bind(this),
-      onSettingsChange: this.handleSettingsChange.bind(this),
-      onBattleAction: this.handleBattleAction.bind(this),
-      onRenderNeeded: () => this.render()
+      setPlayerData: (data: PlayerData) => { localStorage.setItem('playerData', JSON.stringify(data)); },
+      getPlayerData: () => { return localStorage.getItem('playerData') ? JSON.parse(localStorage.getItem('playerData')!) : null; },
+      getImageAssetMappings: () => {
+        return {
+          background: '/shared/images/background.png',
+          menu: '/shared/images/menu.png',
+          ...
+        };
+      },
+      getSoundAssetMappings: () => {
+        return {
+          backgroundMusic: '/shared/sounds/backgroundMusic.mp3',
+          sfx: '/shared/sounds/sfx.mp3',
+          ...
+        };
+      },
+      getUIMethodMappings 
+      render: (uiNode: UINode) => {
+        this.renderer.render(uiNode);
+      }
     });
+    
+    // this.game = new BloomBeastsGame({
+    //   playerData: this.playerData as any,
+    //   onButtonClick: this.handleButtonClick.bind(this),
+    //   onCardSelect: this.handleCardSelect.bind(this),
+    //   onMissionSelect: this.handleMissionSelect.bind(this),
+    //   onSettingsChange: this.handleSettingsChange.bind(this),
+    //   onBattleAction: this.handleBattleAction.bind(this),
+    //   onRenderNeeded: () => this.render()
+    // });
 
     // Create UI tree once
     this.uiTree = this.game.createUI();
@@ -102,6 +132,25 @@ export class BloomBeastsWebGame {
       this.renderer.setImage(key, img);
     });
     console.log('[WebGame] Images set in renderer, count:', Object.keys(images).length);
+
+    // Ensure battle-specific images are loaded with proper names
+    // Map some common battle assets
+    const battleAssetMappings = {
+      'playboard': 'playboard',
+      'sideMenu': 'sideMenu',
+      'greenButton': 'greenButton',
+      'standardButton': 'standardButton',
+      'attackIcon': 'attackIcon',
+      'abilityIcon': 'abilityIcon',
+      'experienceBar': 'experienceBar',
+      'TrapCardPlayboard': 'TrapCardPlayboard'
+    };
+
+    for (const [key, value] of Object.entries(battleAssetMappings)) {
+      if (images[value]) {
+        this.renderer.setImage(key, images[value]);
+      }
+    }
 
     if (!this.gameManager) throw new Error('GameManager not initialized');
     await this.gameManager.initialize();
@@ -268,6 +317,39 @@ export class BloomBeastsWebGame {
       this.renderer.render(this.uiTree);
       console.log('[WebGame] render() complete');
     }
+  }
+
+  private renderBattleScreen(battleData: BattleDisplay): void {
+    console.log('[WebGame] renderBattleScreen called:', {
+      playerHealth: battleData.playerHealth,
+      opponentHealth: battleData.opponentHealth,
+      currentTurn: battleData.currentTurn
+    });
+
+    // Create battle screen if not exists
+    if (!this.battleScreen) {
+      this.battleScreen = new BattleScreenNew();
+    }
+
+    // Update screen state
+    this.currentScreen = 'battle';
+
+    // Update battle screen with data and action callback
+    this.battleScreen.update(battleData, (action: string) => {
+      console.log('[WebGame] Battle action:', action);
+      // Forward action to game manager
+      if (this.gameManager) {
+        (this.gameManager as any).handleButtonClick?.(action);
+      }
+    });
+
+    // Create and render the battle UI
+    const battleUI = this.battleScreen.createUI();
+    this.uiTree = battleUI;
+
+    // Render the updated UI
+    this.renderer.render(this.uiTree);
+    console.log('[WebGame] Battle screen rendered');
   }
 
   private async handleButtonClick(buttonId: string): Promise<void> {

@@ -69,6 +69,7 @@ export class UIRenderer {
      * Render a UI tree
      */
     render(root: UINode): void {
+        console.log('[UIRenderer] render() called');
         // Clear previous state
         this.clickRegions = [];
 
@@ -84,6 +85,7 @@ export class UIRenderer {
         };
 
         this.renderNode(root, containerBox);
+        console.log('[UIRenderer] render() completed');
     }
 
     /**
@@ -95,12 +97,18 @@ export class UIRenderer {
             return null;
         }
 
+        // Debug: Log node type
+        if (node.type === 'image') {
+            console.log('🖼️ renderNode: Found image node!', node);
+        }
+
         switch (node.type) {
             case 'view':
                 return this.renderView(node as UINode<ViewProps>, parentBox);
             case 'text':
                 return this.renderText(node as UINode<TextProps>, parentBox);
             case 'image':
+                console.log('🎨 Calling renderImage...');
                 return this.renderImage(node as UINode<ImageProps>, parentBox);
             case 'pressable':
                 return this.renderPressable(node as UINode<PressableProps>, parentBox);
@@ -147,6 +155,10 @@ export class UIRenderer {
     private renderText(node: UINode<TextProps>, parentBox: LayoutBox): LayoutBox {
         const style = this.resolveStyle(node.props.style || {}) as TextStyle;
         const text = this.resolveAndTrack<string>(node.props.text);
+        // Debug log for timer text
+        if (text && (text.includes('(') || text.includes('Enemy Turn'))) {
+            console.log('[UIRenderer] Rendering timer text:', text);
+        }
         const box = this.calculateLayout(style, parentBox);
 
 
@@ -196,18 +208,26 @@ export class UIRenderer {
      * Render an Image component
      */
     private renderImage(node: UINode<ImageProps>, parentBox: LayoutBox): LayoutBox {
+        console.log('📸 renderImage called!');
         const style = this.resolveStyle(node.props.style || {});
         const box = this.calculateLayout(style, parentBox);
+        console.log('📸 Image box:', box);
 
         // Get image source
         const source = this.resolveAndTrack<{ uri: string }>(node.props.source);
+        console.log('📸 Image source:', source);
+
         if (source && source.uri) {
             const img = this.imageCache.get(source.uri);
+            console.log(`📸 Looking for image "${source.uri}" in cache:`, img ? 'FOUND' : 'NOT FOUND');
+
             if (img && img.complete) {
                 // Draw the image
+                console.log(`✅ Drawing image "${source.uri}" at`, box);
                 this.ctx.drawImage(img, box.x, box.y, box.width, box.height);
             } else {
                 // Draw placeholder if image not loaded
+                console.log(`⚠️ Image "${source.uri}" not loaded, drawing placeholder`);
                 this.ctx.fillStyle = '#333';
                 this.ctx.fillRect(box.x, box.y, box.width, box.height);
                 this.ctx.fillStyle = '#666';
@@ -218,6 +238,7 @@ export class UIRenderer {
             }
         } else {
             // Draw placeholder if no source
+            console.log('❌ No image source provided, drawing placeholder');
             this.ctx.fillStyle = '#cccccc';
             this.ctx.fillRect(box.x, box.y, box.width, box.height);
         }
@@ -233,8 +254,16 @@ export class UIRenderer {
         const box = this.calculateLayout(style, parentBox);
         const disabled = this.resolveAndTrack<boolean>(node.props.disabled || false);
 
+        console.log('🔘 Pressable:', {
+            box,
+            disabled,
+            hasOnClick: !!node.props.onClick,
+            parentBox
+        });
+
         // Register click region
         if (!disabled) {
+            console.log('✅ Click region registered:', box);
             this.clickRegions.push({
                 box,
                 onClick: node.props.onClick,
@@ -312,6 +341,15 @@ export class UIRenderer {
         } else if (children) {
             childArray = [children];
         }
+
+        // Resolve any bindings in the child array
+        childArray = childArray.map(child => {
+            if (child instanceof ValueBindingBase) {
+                this.trackBinding(child);
+                return child.get();
+            }
+            return child;
+        });
 
         // Filter out null/undefined children
         childArray = childArray.filter(child => child != null);
@@ -674,18 +712,32 @@ export class UIRenderer {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
+        console.log(`👆 Canvas clicked at (${x.toFixed(0)}, ${y.toFixed(0)}), ${this.clickRegions.length} regions`);
+
         // Find clicked region (reverse order for z-index)
+        let foundRegion = false;
         for (let i = this.clickRegions.length - 1; i >= 0; i--) {
             const region = this.clickRegions[i];
-            if (this.isPointInBox(x, y, region.box)) {
+            const inBox = this.isPointInBox(x, y, region.box);
+
+            if (inBox) {
+                console.log(`🎯 Hit region ${i}:`, region.box);
+                foundRegion = true;
                 if (region.onClick) {
+                    console.log('🖱️ Calling onClick handler');
                     // Calculate relative position within the box (0 to 1)
                     const relativeX = (x - region.box.x) / region.box.width;
                     const relativeY = (y - region.box.y) / region.box.height;
                     region.onClick(relativeX, relativeY);
+                } else {
+                    console.log('⚠️ Region has no onClick handler');
                 }
                 break;
             }
+        }
+
+        if (!foundRegion) {
+            console.log('❌ No click region found at this position');
         }
     }
 
