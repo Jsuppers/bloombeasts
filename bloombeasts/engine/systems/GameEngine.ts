@@ -325,6 +325,9 @@ export class GameEngine {
     player.field[position] = instance;
     player.summonsThisTurn++;
 
+    // Apply passive buff card stat modifications to the newly summoned beast
+    this.applyPassiveBuffStats(instance, player);
+
     // Trigger summon abilities on the summoned beast
     this.triggerSummonAbilities(instance);
 
@@ -582,8 +585,37 @@ export class GameEngine {
           this.processBuffEffect(effect, player, opponent);
         }
       }
-      // Note: Passive and trigger-based abilities (OnOwnStartOfTurn, etc.) are handled
-      // elsewhere during turn phases or by the AbilityProcessor
+
+      // Apply passive stat modifications to all existing beasts
+      if (ability.trigger === AbilityTrigger.Passive) {
+        // Type guard: only process structured abilities with effects
+        if (!('effects' in ability)) continue;
+
+        for (const effect of ability.effects) {
+          if (effect.type === EffectType.ModifyStats) {
+            // Apply to all beasts that match the target
+            const targetPlayers = effect.target === AbilityTarget.AllAllies || effect.target === AbilityTarget.AllUnits
+              ? [player]
+              : [];
+
+            for (const targetPlayer of targetPlayers) {
+              for (const beast of targetPlayer.field) {
+                if (!beast) continue;
+
+                // Apply the stat modification
+                if (effect.stat === StatType.Health) {
+                  beast.currentHealth += effect.value;
+                  beast.maxHealth += effect.value;
+                  Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Health to ${beast.name}`);
+                } else if (effect.stat === StatType.Attack) {
+                  beast.currentAttack += effect.value;
+                  Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Attack to ${beast.name}`);
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
     // Count ongoing abilities for logging
@@ -618,6 +650,47 @@ export class GameEngine {
       // Ongoing effects like stat boosts are handled by the AbilityProcessor
       default:
         Logger.debug(`Buff effect type ${effect.type} (handled by AbilityProcessor if ongoing)`);
+    }
+  }
+
+  /**
+   * Apply passive buff card stat modifications to a beast
+   */
+  private applyPassiveBuffStats(beast: BloomBeastInstance, player: Player): void {
+    // Check all buff cards in the player's buff zone
+    for (const buffCard of player.buffZone) {
+      if (!buffCard) continue;
+
+      // Process each ability in the buff card
+      for (const ability of buffCard.abilities) {
+        // Only process passive abilities
+        if (ability.trigger !== AbilityTrigger.Passive) continue;
+
+        // Type guard: only process structured abilities with effects
+        if (!('effects' in ability)) continue;
+
+        // Process each effect
+        for (const effect of ability.effects) {
+          if (effect.type !== EffectType.ModifyStats) continue;
+
+          // Check if this effect applies to this beast
+          const applies =
+            effect.target === AbilityTarget.AllAllies ||
+            effect.target === AbilityTarget.AllUnits;
+
+          if (!applies) continue;
+
+          // Apply the stat modification
+          if (effect.stat === StatType.Health) {
+            beast.currentHealth += effect.value;
+            beast.maxHealth += effect.value;
+            Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Health to ${beast.name}`);
+          } else if (effect.stat === StatType.Attack) {
+            beast.currentAttack += effect.value;
+            Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Attack to ${beast.name}`);
+          }
+        }
+      }
     }
   }
 

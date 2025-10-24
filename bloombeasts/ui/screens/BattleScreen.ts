@@ -55,6 +55,10 @@ export class BattleScreen {
   private targetingCardIndex: number | null = null;
   private targetingCard: any | null = null;
 
+  // Temporary card display (for showing played cards)
+  private playedCardDisplay: any | null = null;
+  private playedCardTimeout: NodeJS.Timeout | null = null;
+
   // Timer management
   private timerInterval: NodeJS.Timeout | null = null;
 
@@ -241,6 +245,23 @@ export class BattleScreen {
 
           // Layer 7: Card detail popup (if active)
           state.cardPopup ? this.createCardPopup(state.cardPopup) : null,
+
+          // Layer 7.25: Selected card detail popup (from clicking buff/trap cards)
+          this.selectedCardDetail.get() ? createCardDetailPopup({
+            cardDetail: {
+              card: this.selectedCardDetail.get(),
+              isInDeck: false,
+              buttons: ['Close']
+            },
+            onButtonClick: (buttonId: string) => {
+              console.log('[BattleScreen] Closing selected card detail, buttonId:', buttonId);
+              this.selectedCardDetail.set(null);
+              this.onRenderNeeded?.();
+            }
+          }) : null,
+
+          // Layer 7.5: Played card popup (temporary 2-second display)
+          this.playedCardDisplay ? this.createPlayedCardPopup(this.playedCardDisplay) : null,
 
           // Layer 8: Attack animation overlays
           this.createAttackAnimations(state),
@@ -537,14 +558,24 @@ export class BattleScreen {
 
               // Check if we're in targeting mode
               if (this.targetingCardIndex !== null && player === 'opponent') {
-                // Play the card with the selected target
-                console.log(`[BattleScreen] Playing card ${this.targetingCardIndex} targeting opponent beast ${index}`);
-                this.onAction?.(`play-card-${this.targetingCardIndex}-target-${index}`);
+                // Show card popup first, then play with target
+                const cardIndex = this.targetingCardIndex;
+                const card = this.targetingCard;
 
                 // Exit targeting mode
                 this.targetingCardIndex = null;
                 this.targetingCard = null;
-                this.onRenderNeeded?.();
+
+                if (card && (card.type === 'Magic' || card.type === 'Buff')) {
+                  this.showPlayedCard(card, () => {
+                    console.log(`[BattleScreen] Playing card ${cardIndex} targeting opponent beast ${index} after popup`);
+                    this.onAction?.(`play-card-${cardIndex}-target-${index}`);
+                  });
+                } else {
+                  // Play immediately for other card types
+                  console.log(`[BattleScreen] Playing card ${cardIndex} targeting opponent beast ${index}`);
+                  this.onAction?.(`play-card-${cardIndex}-target-${index}`);
+                }
               } else {
                 // Normal behavior (view card or select for attack)
                 this.onAction?.(`view-field-card-${player}-${index}`);
@@ -657,7 +688,7 @@ export class BattleScreen {
           height: trapCardDimensions.height,
         },
         children: [
-          // Trap card back (face-down)
+          // Trap card playboard image (face-down, hidden for both players)
           Image({
             source: new Binding({ uri: 'trap-card-playboard' }),
             style: {
@@ -666,9 +697,13 @@ export class BattleScreen {
             },
           }),
 
-          // Click handler for player's traps only
+          // Click handler for player's traps to view details
           player === 'player' ? Pressable({
-            onClick: () => this.onAction?.(`view-trap-card-${player}-${index}`),
+            onClick: () => {
+              console.log('[BattleScreen] Player trap clicked, showing detail');
+              this.selectedCardDetail.set(trap);
+              this.onRenderNeeded?.();
+            },
             style: {
               position: 'absolute',
               top: 0,
@@ -716,6 +751,19 @@ export class BattleScreen {
             },
           }),
 
+          // Buff card artwork image (100x100) centered inside the playboard
+          Image({
+            source: new Binding({ uri: buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-') }),
+            style: {
+              position: 'absolute',
+              top: (buffCardDimensions.height - 100) / 2,
+              left: (buffCardDimensions.width - 100) / 2,
+              width: 100,
+              height: 100,
+              pointerEvents: 'none',
+            },
+          }),
+
           // Golden glow effect for active buffs
           View({
             style: {
@@ -733,11 +781,12 @@ export class BattleScreen {
             },
           }),
 
-          // Click handler for viewing buff details
+          // Click handler for viewing buff details (works for both player and opponent)
           Pressable({
             onClick: () => {
-              console.log(`[BattleScreen] Buff card clicked: ${player}-${index}`);
-              this.onAction?.(`view-buff-card-${player}-${index}`);
+              console.log(`[BattleScreen] Buff card clicked: ${player}-${index}, showing detail`);
+              this.selectedCardDetail.set(buff);
+              this.onRenderNeeded?.();
             },
             style: {
               position: 'absolute',
@@ -768,10 +817,26 @@ export class BattleScreen {
         height: habitatShiftCardDimensions.height,
       },
       children: [
-        // Habitat card
-        createCardComponent({
-          card: { ...habitat, type: 'Habitat' },
-          onClick: () => this.onAction?.('view-habitat-card'),
+        // Habitat card playboard template
+        Image({
+          source: new Binding({ uri: 'habitat-playboard' }),
+          style: {
+            width: habitatShiftCardDimensions.width,
+            height: habitatShiftCardDimensions.height,
+          },
+        }),
+
+        // Habitat artwork image (70x70) centered inside the playboard
+        Image({
+          source: new Binding({ uri: habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-') }),
+          style: {
+            position: 'absolute',
+            top: (habitatShiftCardDimensions.height - 70) / 2,
+            left: (habitatShiftCardDimensions.width - 70) / 2,
+            width: 70,
+            height: 70,
+            pointerEvents: 'none',
+          },
         }),
 
         // Green glow effect for active habitat
@@ -795,6 +860,23 @@ export class BattleScreen {
         habitat.counters && habitat.counters.length > 0
           ? this.createCounterBadges(habitat.counters, pos)
           : null,
+
+        // Click handler for viewing habitat details
+        Pressable({
+          onClick: () => {
+            console.log('[BattleScreen] Habitat card clicked, showing detail');
+            this.selectedCardDetail.set({ ...habitat, type: 'Habitat' });
+            this.onRenderNeeded?.();
+          },
+          style: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          },
+          children: null,
+        }),
       ].filter(Boolean),
     });
   }
@@ -1272,9 +1354,17 @@ export class BattleScreen {
                     this.targetingCard = card;
                     this.onRenderNeeded?.();
                   } else {
-                    // Play card immediately
-                    console.log('[BattleScreen] Playing card without target');
-                    this.onAction?.(`play-card-${actualIndex}`);
+                    // Show card popup for magic/buff cards, then play
+                    if (card.type === 'Magic' || card.type === 'Buff') {
+                      this.showPlayedCard(card, () => {
+                        console.log('[BattleScreen] Playing card without target after popup');
+                        this.onAction?.(`play-card-${actualIndex}`);
+                      });
+                    } else {
+                      // Play card immediately (Bloom, Trap, etc.)
+                      console.log('[BattleScreen] Playing card without target');
+                      this.onAction?.(`play-card-${actualIndex}`);
+                    }
                   }
                 },
                 style: {
@@ -1517,10 +1607,61 @@ export class BattleScreen {
   /**
    * Cleanup resources
    */
+  /**
+   * Create played card popup (shows for 2 seconds when card is played)
+   */
+  private createPlayedCardPopup(card: any): UINodeType {
+    return createCardDetailPopup({
+      cardDetail: {
+        card: card,
+        isInDeck: false,
+      },
+      onButtonClick: (buttonId: string) => {
+        // User can close early by clicking
+        if (this.playedCardTimeout) {
+          clearTimeout(this.playedCardTimeout);
+          this.playedCardTimeout = null;
+        }
+        this.playedCardDisplay = null;
+        this.onRenderNeeded?.();
+      }
+    });
+  }
+
+  /**
+   * Show a played card popup for 2 seconds, then execute callback
+   */
+  private showPlayedCard(card: any, onComplete: () => void): void {
+    console.log('[BattleScreen] Showing played card popup:', card.name);
+
+    // Clear any existing timeout
+    if (this.playedCardTimeout) {
+      clearTimeout(this.playedCardTimeout);
+    }
+
+    // Set the played card
+    this.playedCardDisplay = card;
+    this.onRenderNeeded?.();
+
+    // After 2 seconds, hide the popup and execute the action
+    this.playedCardTimeout = setTimeout(() => {
+      this.playedCardDisplay = null;
+      this.onRenderNeeded?.();
+      onComplete();
+    }, 2000);
+  }
+
   public cleanup(): void {
     this.stopTurnTimer();
     this.showHand.set(true);
     this.handScrollOffset.set(0);
     this.selectedCardDetail.set(null);
+
+    // Clear played card timeout
+    if (this.playedCardTimeout) {
+      clearTimeout(this.playedCardTimeout);
+      this.playedCardTimeout = null;
+    }
+    this.playedCardDisplay = null;
   }
 }
