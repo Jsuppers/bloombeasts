@@ -29,7 +29,8 @@
       "Read(//c/Users/joris/Desktop/**)",
       "Bash(node update-tests-to-json.cjs:*)",
       "Bash(node update-integration-tests.cjs:*)",
-      "Bash(node generate-tests-from-json.cjs)"
+      "Bash(node generate-tests-from-json.cjs)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []

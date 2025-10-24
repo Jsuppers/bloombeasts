@@ -12,8 +12,12 @@ deployments/web/
 ├── tsconfig.json       # TypeScript configuration
 ├── rollup.config.js    # Build configuration
 ├── src/
-│   ├── main.ts        # Main entry point (uses real GameManager)
-│   └── platform.ts    # Web platform implementation (PlatformCallbacks)
+│   ├── main.ts        # Main entry point (uses BloomBeastsGame)
+│   └── ui/            # UI rendering components
+│       ├── UIRenderer.ts      # Canvas renderer
+│       ├── Binding.ts         # Reactive bindings
+│       ├── AnimatedBinding.ts # Animation system
+│       └── components.ts      # UI components
 ├── dist/              # Compiled output
 │   └── bundle.js      # Bundled game code
 └── assets/            # Images, sounds, etc.
@@ -22,12 +26,12 @@ deployments/web/
 ## Features
 
 ✅ **Full TypeScript** - Built with TypeScript for type safety
-✅ **Real GameManager** - Uses the actual bloombeasts game engine
-✅ **Platform Callbacks** - Clean separation via PlatformCallbacks interface
+✅ **Unified Architecture** - Uses the BloomBeastsGame with PlatformConfig
+✅ **Asset Catalog System** - Centralized JSON-based asset management
 ✅ **LocalStorage Saves** - Persistent game saves
-✅ **Canvas-Based Rendering** - Image-based UI using HTML5 Canvas
-✅ **Position System** - Cards positioned using shared/constants/positions
-✅ **Image Assets** - Loads Menu.png, Background.png, and Playboard.png backgrounds
+✅ **Canvas-Based Rendering** - Image-based UI using HTML5 Canvas UIRenderer
+✅ **Reactive Bindings** - Clean reactive data flow with Binding system
+✅ **Animation System** - Built-in animation support with AnimatedBinding
 
 ## Setup
 
@@ -43,7 +47,7 @@ npm install
 ```bash
 npm run build          # Build once
 npm run build:watch    # Build and watch for changes
-npm run dev           # Build + watch + serve
+npm run dev            # Build + watch + serve (recommended)
 ```
 
 ## Running the Game
@@ -86,38 +90,35 @@ Then open http://localhost:8000 in your browser.
 1. **bloombeasts/** - Platform-agnostic game engine
    - Game logic, state management, card definitions
    - Mission system, combat system, leveling
-   - Exports GameManager class
+   - Exports BloomBeastsGame class with unified architecture
 
 2. **deployments/web/** - Web-specific presentation layer
-   - WebPlatform class implements PlatformCallbacks
-   - Canvas-based rendering, click region tracking, localStorage
+   - WebGameApp creates BloomBeastsGame with PlatformConfig
+   - UIRenderer handles canvas-based rendering
+   - Reactive Binding system for data flow
    - Minimal HTML with full-screen canvas for visual presentation
 
-3. **PlatformCallbacks Interface** - Clean boundary
-   - GameManager emits state changes via callbacks
-   - WebPlatform renders UI based on game state
-   - User input flows back through callbacks
+3. **PlatformConfig Interface** - Clean boundary
+   - Provides platform-specific implementations for storage, assets, rendering
+   - BloomBeastsGame uses reactive bindings for UI updates
+   - UIRenderer renders UI component trees to canvas
 
 ### Data Flow
 
 ```
-User Click → Canvas click region → GameManager callback →
-GameManager processes → GameManager calls platform.render*() →
-WebPlatform draws to canvas → User sees result
+User Interaction → UIRenderer click regions → Game state updates →
+Binding system triggers re-render → UIRenderer draws to canvas → User sees result
 ```
 
 ### Integration Points
 
-The `WebPlatform` class in `src/platform.ts` implements all required callbacks:
+The `WebGameApp` class in `src/main.ts` provides platform configuration:
 
-- **UI Rendering**: `renderStartMenu()`, `renderMissionSelect()`, `renderInventory()`, `renderBattle()`
-  - Renders background images from `shared/images/`
-  - Draws buttons and cards on canvas
-  - Uses position data from `shared/constants/positions`
-- **User Input**: Click region tracking for interactive elements
-- **Storage**: `saveData()`, `loadData()` using localStorage
-- **Assets**: Image loading for backgrounds and card images
-- **Dialogs**: `showDialog()`, `showRewards()` using modal overlays
+- **Asset Management**: Loads JSON asset catalogs and maps to web paths
+- **UI Rendering**: UIRenderer draws component trees to canvas with click regions
+- **Storage**: `setPlayerData()`, `getPlayerData()` using localStorage
+- **Audio**: HTML5 Audio for music and sound effects
+- **UI Components**: Provides View, Text, Image, Pressable, Binding implementations
 
 ## Development
 
@@ -130,17 +131,20 @@ npm run build:watch   # Watch mode for development
 
 ### File Structure
 
-- `src/main.ts` - Entry point, creates WebPlatform and GameManager
-- `src/platform.ts` - WebPlatform class implementing PlatformCallbacks with canvas rendering
+- `src/main.ts` - Entry point, creates WebGameApp and BloomBeastsGame
+- `src/ui/UIRenderer.ts` - Canvas renderer for UI component trees
+- `src/ui/Binding.ts` - Reactive binding system
+- `src/ui/AnimatedBinding.ts` - Animation system with easing
+- `src/ui/components.ts` - UI component definitions (View, Text, Image, Pressable)
 - `index.html` - Minimal HTML with canvas element and modal overlay
 - `rollup.config.js` - Bundles TypeScript from web + bloombeasts + shared folders
 - `tsconfig.json` - TypeScript configuration for web deployment
 
 ### Adding Features
 
-1. **New UI Screen**: Add render method to `WebPlatform`, draw on canvas using background images
-2. **New Background Images**: Place in `shared/images/` folder, load via WebPlatform.loadImage()
-3. **New Card Positions**: Update `shared/constants/positions.ts` with new coordinate data
+1. **New UI Screen**: Create screen in `bloombeasts/ui/screens/`, use UI components with reactive bindings
+2. **New Assets**: Add to asset catalogs in `assets/catalogs/`, update `AssetCatalogManager`
+3. **New UI Components**: Extend component system in `src/ui/components.ts`
 4. **Game Logic**: Modify files in `bloombeasts/` folder, rebuild
 
 ## Game Features
@@ -177,33 +181,27 @@ npm run build:watch   # Watch mode for development
 
 ## Customization
 
-### Background Images
+### Asset Catalogs
 
-Replace images in `shared/images/`:
-- `Menu.png` - Full-screen menu background (1280x720)
-- `Background.png` - Background for inventory/missions screens
-- `Playboard.png` - Battle screen background
+Update JSON catalogs in `assets/catalogs/`:
+- `images.json` - Image asset paths and IDs
+- `sounds.json` - Sound effect and music paths
+- Add new categories as needed
 
-### Card Images
+### UI Customization
 
-Add card art in `shared/images/cards/`:
-- Organized by affinity: `Forest/`, `Fire/`, `Water/`, `Sky/`, `Shared/`
-- Named by card ID (e.g., `Mosslet.png`)
+Modify UI components in `bloombeasts/ui/screens/`:
+- Screen layouts using View, Text, Image, Pressable components
+- Reactive bindings for dynamic data
+- Animations using AnimatedBinding
 
-### Card Positions
+### Renderer Behavior
 
-Modify `shared/constants/positions.ts` to adjust:
-- Beast card positions for each player
-- Magic and trap card positions
-- Card text positions (cost, level, name, attack, health)
-
-### Platform Behavior
-
-Modify `src/platform.ts` to change:
+Modify `src/ui/UIRenderer.ts` to change:
 - Canvas rendering logic
-- Click region definitions
-- Drawing methods for cards and UI elements
-- Storage implementation
+- Click region handling
+- Drawing methods for UI components
+- Layout calculations
 
 ## Troubleshooting
 
