@@ -4,7 +4,7 @@
  */
 
 import { BloomBeastsGame, PlatformConfig, type PlayerData } from '../../../bloombeasts/BloomBeastsGame';
-import { AssetCatalogManager } from '../../../bloombeasts/AssetCatalogManager';
+import { assetCatalogManager, AssetCatalogManager } from '../../../bloombeasts/AssetCatalogManager';
 import { UIRenderer } from './ui/UIRenderer';
 import { View, Text, Image, Pressable, Binding } from './ui';
 import { AnimatedBinding, Animation, Easing } from './ui/AnimatedBinding';
@@ -13,31 +13,21 @@ type ImageAssetMap = Record<string, string>;
 type SoundAssetMap = Record<string, string>;
 
 /**
- * Global asset catalog manager instance
+ * Initialize and load all asset catalogs using the singleton instance
  */
-let catalogManager: AssetCatalogManager | null = null;
-
-/**
- * Initialize and load all asset catalogs
- */
-async function initializeAssetCatalogs(): Promise<AssetCatalogManager> {
-    if (catalogManager) {
-        return catalogManager;
-    }
-
+async function initializeAssetCatalogs() {
     console.log('📦 Initializing Asset Catalogs...');
-    catalogManager = new AssetCatalogManager();
 
     try {
-        await catalogManager.loadAllCatalogs('/assets/catalogs');
+        await assetCatalogManager.loadAllCatalogs('/assets/catalogs');
         console.log('✅ Asset catalogs loaded successfully');
-        console.log('   Categories:', catalogManager.getLoadedCategories());
+        console.log('   Categories:', assetCatalogManager.getLoadedCategories());
     } catch (error) {
         console.error('❌ Failed to load asset catalogs:', error);
         throw error;
     }
 
-    return catalogManager;
+    return assetCatalogManager;
 }
 
 /**

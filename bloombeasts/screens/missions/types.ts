@@ -50,8 +50,8 @@ export interface Mission {
   beastId: string;              // Beast card ID for mission image (e.g., 'Rootling')
 
   // Battle configuration
-  playerDeck?: DeckList;        // Optional fixed deck for player
-  opponentDeck: DeckList;       // AI opponent's deck
+  playerDeck?: DeckList | (() => DeckList);        // Optional fixed deck for player (or factory function)
+  opponentDeck: DeckList | (() => DeckList);       // AI opponent's deck (or factory function)
   opponentAI?: AIProfile;        // AI behavior profile (optional)
 
   // Mission specifics (all optional now)
@@ -123,4 +123,14 @@ export interface MissionProgress {
   totalCardsEarned: number;
   averageCompletion: number;   // Average turns to complete
   currentStreak: number;        // Consecutive completions
+}
+
+/**
+ * Helper to resolve a deck (handles both direct DeckList and factory functions)
+ */
+export function resolveDeck(deckOrFactory: DeckList | (() => DeckList)): DeckList {
+  if (typeof deckOrFactory === 'function') {
+    return deckOrFactory();
+  }
+  return deckOrFactory;
 }

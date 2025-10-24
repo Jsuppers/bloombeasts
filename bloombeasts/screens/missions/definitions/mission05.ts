@@ -15,7 +15,7 @@ export const mission05: Mission = {
   affinity: 'Water',
   beastId: 'Bubblefin',
 
-  opponentDeck: buildWaterDeck(),
+  opponentDeck: () => buildWaterDeck(),
 
   rewards: {
     guaranteedXP: 90,

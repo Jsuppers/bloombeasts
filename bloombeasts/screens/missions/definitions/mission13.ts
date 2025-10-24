@@ -15,7 +15,7 @@ export const mission13: Mission = {
   affinity: 'Sky',
   beastId: 'Cirrus Floof',
 
-  opponentDeck: buildSkyDeck(),
+  opponentDeck: () => buildSkyDeck(),
 
   rewards: {
     guaranteedXP: 170,

@@ -3,14 +3,16 @@
  */
 
 import { AnyCard } from '../types/core';
-import { getSharedCoreCards } from '../cards/shared';
-import { ForestDeck } from '../cards/forest';
-import { FireDeck } from '../cards/fire';
-import { WaterDeck } from '../cards/water';
-import { SkyDeck } from '../cards/sky';
-import { BATTLE_FURY, NATURES_BLESSING, MYSTIC_SHIELD, SWIFT_WIND } from '../cards/buff';
+import {
+  getSharedCoreCards,
+  getDeckConfig,
+  getCard,
+  getAllBuffCards,
+  type AffinityType,
+  type DeckCardEntry
+} from '../cards';
 
-export type DeckType = 'Forest' | 'Fire' | 'Water' | 'Sky';
+export type DeckType = AffinityType;
 
 export interface DeckList {
   name: string;
@@ -22,7 +24,7 @@ export interface DeckList {
 /**
  * Expand cards based on quantity
  */
-function expandCards<T extends AnyCard>(cardQuantities: Array<{ card: T; quantity: number }>): T[] {
+function expandCards<T extends AnyCard>(cardQuantities: DeckCardEntry<T>[]): T[] {
   const result: T[] = [];
 
   for (const { card, quantity } of cardQuantities) {
@@ -39,31 +41,20 @@ function expandCards<T extends AnyCard>(cardQuantities: Array<{ card: T; quantit
 }
 
 /**
- * Deck configurations using new class-based approach
- */
-const DECK_INSTANCES = {
-  Forest: new ForestDeck(),
-  Fire: new FireDeck(),
-  Water: new WaterDeck(),
-  Sky: new SkyDeck(),
-};
-
-/**
  * Build a complete deck with shared cards and affinity-specific cards
  */
 function buildDeck(type: DeckType): DeckList {
-  // Use new class-based approach for all decks
-  const deck = DECK_INSTANCES[type];
-  const affinityCards = deck.getDeckCards();
+  // Get deck configuration from centralized config
+  const deckConfig = getDeckConfig(type);
 
   const sharedCards = expandCards(getSharedCoreCards());
-  const beasts = expandCards(affinityCards.beasts);
-  const habitats = expandCards(affinityCards.habitats);
+  const beasts = expandCards(deckConfig.beasts);
+  const habitats = expandCards(deckConfig.habitats);
 
   const allCards = [...sharedCards, ...beasts, ...habitats];
 
   return {
-    name: deck.deckName,
+    name: deckConfig.name,
     affinity: type,
     cards: allCards,
     totalCards: allCards.length,
@@ -121,7 +112,7 @@ export function getStarterDeck(type: DeckType): DeckList {
  * This includes 1 of every card in the game across all affinities
  */
 export function getTestingDeck(type: DeckType): DeckList {
-  const deck = DECK_INSTANCES[type];
+  const deckConfig = getDeckConfig(type);
 
   // Get 1 of each card from all affinities
   const allCards: AnyCard[] = [];
@@ -136,7 +127,7 @@ export function getTestingDeck(type: DeckType): DeckList {
   });
 
   // Add buff cards - 1 of each
-  const buffCards = [BATTLE_FURY, NATURES_BLESSING, MYSTIC_SHIELD, SWIFT_WIND];
+  const buffCards = getAllBuffCards();
   buffCards.forEach(card => {
     allCards.push({
       ...card,
@@ -146,11 +137,10 @@ export function getTestingDeck(type: DeckType): DeckList {
 
   // Add all beasts from all affinities - 1 of each
   (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).forEach(affinity => {
-    const affinityDeck = DECK_INSTANCES[affinity];
-    const cards = affinityDeck.getDeckCards();
+    const affinityConfig = getDeckConfig(affinity);
 
     // Add beasts
-    cards.beasts.forEach(({ card }) => {
+    affinityConfig.beasts.forEach(({ card }) => {
       allCards.push({
         ...card,
         instanceId: `${card.id}-1`,
@@ -158,7 +148,7 @@ export function getTestingDeck(type: DeckType): DeckList {
     });
 
     // Add habitats
-    cards.habitats.forEach(({ card }) => {
+    affinityConfig.habitats.forEach(({ card }) => {
       allCards.push({
         ...card,
         instanceId: `${card.id}-1`,
@@ -167,7 +157,7 @@ export function getTestingDeck(type: DeckType): DeckList {
   });
 
   return {
-    name: `${deck.deckName} (Testing)`,
+    name: `${deckConfig.name} (Testing)`,
     affinity: type,
     cards: allCards,
     totalCards: allCards.length,

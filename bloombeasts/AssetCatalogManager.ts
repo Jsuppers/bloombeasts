@@ -287,6 +287,43 @@ export class AssetCatalogManager {
   }
 
   /**
+   * Get all card data from loaded catalogs
+   * Returns the actual card definitions (data property) from all card entries
+   */
+  getAllCardData(): any[] {
+    const cards: any[] = [];
+
+    this.assetIndex.forEach(entry => {
+      // Only include card entries (beast, magic, trap, buff, habitat)
+      if (entry.type === 'beast' || entry.type === 'magic' ||
+          entry.type === 'trap' || entry.type === 'buff' || entry.type === 'habitat') {
+        const cardEntry = entry as CardAssetEntry;
+        // Add rarity for reward system (same logic as old getAllCards)
+        const cardData: any = { ...cardEntry.data };
+
+        if (cardEntry.type === 'beast') {
+          // Assign rarity based on nectar cost
+          const cost = cardData.cost || 0;
+          if (cost >= 5) {
+            cardData.rarity = 'rare';
+          } else if (cost >= 3) {
+            cardData.rarity = 'uncommon';
+          } else {
+            cardData.rarity = 'common';
+          }
+        } else {
+          // Non-beast cards are common by default
+          cardData.rarity = 'common';
+        }
+
+        cards.push(cardData);
+      }
+    });
+
+    return cards;
+  }
+
+  /**
    * Clear all loaded catalogs
    */
   clear(): void {

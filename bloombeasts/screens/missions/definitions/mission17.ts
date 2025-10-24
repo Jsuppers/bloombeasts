@@ -36,7 +36,7 @@ export const mission17: Mission = {
   affinity: 'Boss',
   beastId: 'The Bloom Master',
 
-  opponentDeck: getMasterDeck(),
+  opponentDeck: () => getMasterDeck(),
 
   rewards: {
     guaranteedXP: 500,

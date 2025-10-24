@@ -1,118 +1,75 @@
 /**
  * Central card registry
+ * Now loads cards from JSON catalogs with centralized utilities
  */
 
-import { FireDeck } from './fire';
-import { WaterDeck } from './water';
-import { ForestDeck } from './forest';
-import { SkyDeck } from './sky';
-import { MagicCards } from './magic';
-import { TrapCards } from './trap';
-import { BATTLE_FURY, NATURES_BLESSING, MYSTIC_SHIELD, SWIFT_WIND } from './buff';
-import { BloomBeastCard, HabitatCard, TrapCard, MagicCard, BuffCard, AnyCard } from '../types/core';
-import { SimpleMap, arrayFrom } from '../../utils/polyfills';
+import { AnyCard } from '../types/core';
+import { assetCatalogManager } from '../../AssetCatalogManager';
+import { createDeck, Deck } from './cardUtils';
 
-// Export deck classes
-export { FireDeck } from './fire';
-export { WaterDeck } from './water';
-export { ForestDeck } from './forest';
-export { SkyDeck } from './sky';
+// Re-export everything from card utilities and config
+export * from './cardUtils';
+export * from './deckConfig';
 
-// Export magic, trap, and buff cards
-export * from './magic';
-export * from './trap';
-export * from './buff';
+// Export the unified Deck class and createDeck function
+export { Deck, createDeck } from './cardUtils';
+
+// Convenience functions for creating affinity-specific decks
+export function createForestDeck(): Deck {
+  return createDeck('Forest');
+}
+
+export function createFireDeck(): Deck {
+  return createDeck('Fire');
+}
+
+export function createWaterDeck(): Deck {
+  return createDeck('Water');
+}
+
+export function createSkyDeck(): Deck {
+  return createDeck('Sky');
+}
+
+// Backward compatibility: Class aliases
+export class ForestDeck extends Deck {
+  constructor() {
+    super('Forest');
+  }
+}
+
+export class FireDeck extends Deck {
+  constructor() {
+    super('Fire');
+  }
+}
+
+export class WaterDeck extends Deck {
+  constructor() {
+    super('Water');
+  }
+}
+
+export class SkyDeck extends Deck {
+  constructor() {
+    super('Sky');
+  }
+}
 
 /**
- * Get all cards from all decks
+ * Get all cards from JSON catalogs
+ * Requires asset catalogs to be loaded first via assetCatalogManager.loadAllCatalogs()
  * Also adds rarity property for reward generation
  */
 export function getAllCards(): AnyCard[] {
-  const allCards: AnyCard[] = [];
+  // Get all card data from loaded JSON catalogs
+  const cards = assetCatalogManager.getAllCardData();
 
-  // Create instances of each deck
-  const decks = [
-    new FireDeck(),
-    new WaterDeck(),
-    new ForestDeck(),
-    new SkyDeck(),
-  ];
+  // If no cards are loaded, return empty array
+  // This can happen if catalogs haven't been loaded yet
+  if (cards.length === 0) {
+    console.warn('getAllCards(): No cards loaded from catalogs. Make sure to call assetCatalogManager.loadAllCatalogs() during initialization.');
+  }
 
-  // Collect all unique cards
-  const cardMap = new SimpleMap<string, AnyCard>();
-
-  // Add cards from decks (Bloom beasts and Habitats)
-  decks.forEach(deck => {
-    const deckCards = deck.getAllCards();
-    deckCards.forEach(card => {
-      if (!cardMap.has(card.id)) {
-        // Add rarity based on card stats for reward system
-        if (card.type === 'Bloom') {
-          const beast = card as BloomBeastCard;
-          // Assign rarity based on nectar cost and stats
-          if (beast.cost >= 5) {
-            (beast as any).rarity = 'rare';
-          } else if (beast.cost >= 3) {
-            (beast as any).rarity = 'uncommon';
-          } else {
-            (beast as any).rarity = 'common';
-          }
-        } else {
-          // Non-beast cards are common by default
-          (card as any).rarity = 'common';
-        }
-        cardMap.set(card.id, card);
-      }
-    });
-  });
-
-  // Add Magic cards
-  MagicCards.forEach(card => {
-    if (!cardMap.has(card.id)) {
-      (card as any).rarity = 'common';
-      cardMap.set(card.id, card);
-    }
-  });
-
-  // Add Trap cards
-  TrapCards.forEach(card => {
-    if (!cardMap.has(card.id)) {
-      (card as any).rarity = 'common';
-      cardMap.set(card.id, card);
-    }
-  });
-
-  // Add Buff cards
-  [BATTLE_FURY, NATURES_BLESSING, MYSTIC_SHIELD, SWIFT_WIND].forEach(card => {
-    if (!cardMap.has(card.id)) {
-      (card as any).rarity = 'common';
-      cardMap.set(card.id, card as BuffCard);
-    }
-  });
-
-  return cardMap.values();
-}
-
-/**
- * Get cards by affinity
- */
-export function getCardsByAffinity(
-  affinity: 'Fire' | 'Water' | 'Forest' | 'Sky'
-): (BloomBeastCard | HabitatCard)[] {
-  return getAllCards().filter(card =>
-    'affinity' in card && card.affinity === affinity
-  ) as (BloomBeastCard | HabitatCard)[];
-}
-
-/**
- * Get cards by type
- */
-export function getCardsByType<T extends 'Beast' | 'Habitat' | 'Trap' | 'Magic'>(
-  type: T
-): T extends 'Beast' ? BloomBeastCard[] :
-   T extends 'Habitat' ? HabitatCard[] :
-   T extends 'Trap' ? TrapCard[] :
-   T extends 'Magic' ? MagicCard[] :
-   never {
-  return getAllCards().filter(card => card.type === type) as any;
+  return cards as AnyCard[];
 }

@@ -15,7 +15,7 @@ export const mission15: Mission = {
   affinity: 'Sky',
   beastId: 'Star Bloom',
 
-  opponentDeck: buildSkyDeck(),
+  opponentDeck: () => buildSkyDeck(),
 
   rewards: {
     guaranteedXP: 190,

@@ -2,7 +2,7 @@
  * Mission Battle UI - Handles the mission battle screen and integration with game engine
  */
 
-import { Mission } from './types';
+import { Mission, resolveDeck } from './types';
 import { MissionManager, MissionRunProgress, RewardResult } from './MissionManager';
 import { GameEngine } from '../../engine/systems/GameEngine';
 import { GameState, Player, BattleState } from '../../engine/types/game';
@@ -92,11 +92,14 @@ export class MissionBattleUI {
     };
 
     console.log('playerDeckCards', playerDeckCards);
-    console.log('mission.opponentDeck.cards', mission.opponentDeck.cards);
+
+    // Resolve the opponent deck (handles both DeckList and factory functions)
+    const opponentDeck = resolveDeck(mission.opponentDeck);
+    console.log('opponentDeck.cards', opponentDeck.cards);
 
     // Create AI opponent with mission-specific configuration
     // IMPORTANT: Create a copy of the deck cards to avoid mutation
-    const opponentDeckCopy = [...mission.opponentDeck.cards];
+    const opponentDeckCopy = [...opponentDeck.cards];
     console.log('opponentDeckCopy', opponentDeckCopy);
 
     const opponent: Player = {

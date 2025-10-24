@@ -15,7 +15,7 @@ export const mission02: Mission = {
   affinity: 'Forest',
   beastId: 'Mushroomancer',
 
-  opponentDeck: buildForestDeck(),
+  opponentDeck: () => buildForestDeck(),
 
   rewards: {
     guaranteedXP: 60,

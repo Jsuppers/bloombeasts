@@ -30,7 +30,12 @@
       "Bash(node update-tests-to-json.cjs:*)",
       "Bash(node update-integration-tests.cjs:*)",
       "Bash(node generate-tests-from-json.cjs)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(find:*)",
+      "Bash(do)",
+      "Bash(if [ -f \"$file\" ])",
+      "Bash(then)",
+      "Bash(fi)"
     ],
     "deny": [],
     "ask": []

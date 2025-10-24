@@ -15,7 +15,7 @@ export const mission12: Mission = {
   affinity: 'Fire',
   beastId: 'Blazefinch',
 
-  opponentDeck: buildFireDeck(),
+  opponentDeck: () => buildFireDeck(),
 
   rewards: {
     guaranteedXP: 160,

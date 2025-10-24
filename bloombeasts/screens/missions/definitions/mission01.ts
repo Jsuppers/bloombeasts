@@ -4,13 +4,7 @@
  */
 
 import { Mission } from '../types';
-import { buildForestDeck } from '../../../engine/utils/deckBuilder';
-
-// test deck just has Rootling
-const testDeck = buildForestDeck();
-testDeck.cards = testDeck.cards.filter((card) => card.id === 'rootling');
-testDeck.totalCards = testDeck.cards.length;
-console.log('testDeck', testDeck);
+import { buildForestDeck, DeckList } from '../../../engine/utils/deckBuilder';
 
 export const mission01: Mission = {
   id: 'mission-01',
@@ -21,7 +15,14 @@ export const mission01: Mission = {
   affinity: 'Forest',
   beastId: 'Rootling',
 
-  opponentDeck: testDeck, //buildForestDeck(),
+  // Use a function to build the deck on demand (after catalogs are loaded)
+  opponentDeck: () => {
+    const testDeck = buildForestDeck();
+    testDeck.cards = testDeck.cards.filter((card) => card.id === 'rootling');
+    testDeck.totalCards = testDeck.cards.length;
+    console.log('testDeck', testDeck);
+    return testDeck;
+  },
 
   rewards: {
     guaranteedXP: 50,

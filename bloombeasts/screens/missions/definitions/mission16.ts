@@ -15,7 +15,7 @@ export const mission16: Mission = {
   affinity: 'Sky',
   beastId: 'Aero Moth',
 
-  opponentDeck: buildSkyDeck(),
+  opponentDeck: () => buildSkyDeck(),
 
   rewards: {
     guaranteedXP: 200,
