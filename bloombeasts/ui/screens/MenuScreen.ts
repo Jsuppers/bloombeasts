@@ -16,6 +16,7 @@ export interface MenuScreenProps {
   stats: any;
   onButtonClick?: (buttonId: string) => void;
   onNavigate?: (screen: string) => void;
+  onRenderNeeded?: () => void;
 }
 
 /**

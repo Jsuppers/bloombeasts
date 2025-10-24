@@ -198,7 +198,7 @@ export class MissionScreen {
       },
       children: Binding.derive(
         [this.missions, this.scrollOffset],
-        (missions, offset) => {
+        (missions: MissionDisplay[], offset: number) => {
           const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
           const startIndex = offset * missionsPerPage;
           const endIndex = Math.min(startIndex + missionsPerPage, missions.length);
@@ -406,7 +406,7 @@ export class MissionScreen {
   private createSideMenu(): UINodeType {
     const completionText = Binding.derive(
       [this.missions],
-      (missions) => {
+      (missions: MissionDisplay[]) => {
         const completedCount = missions.filter((m: MissionDisplay) => m.isCompleted).length;
         return `${missionEmoji} ${completedCount}/${missions.length}`;
       }
@@ -452,7 +452,7 @@ export class MissionScreen {
           },
           disabled: Binding.derive(
             [this.missions, this.scrollOffset],
-            (missions, offset) => {
+            (missions: MissionDisplay[], offset: number) => {
               const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
               const totalPages = Math.ceil(missions.length / missionsPerPage);
               return offset >= totalPages - 1;

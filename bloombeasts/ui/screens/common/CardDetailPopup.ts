@@ -42,7 +42,6 @@ export function createCardDetailPopup(props: CardDetailPopupProps): UINodeType {
       height: '100%',
       top: 0,
       left: 0,
-      pointerEvents: 'auto', // Re-enable pointer events for popup
     },
     children: [
       // Black backdrop - clicking closes the popup

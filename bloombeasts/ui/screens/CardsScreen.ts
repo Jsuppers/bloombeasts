@@ -258,7 +258,6 @@ export class CardsScreen {
             height: '100%',
             top: 0,
             left: 0,
-            pointerEvents: 'none', // Allow clicks through when empty
           },
           children: this.selectedCardDetail.derive((cardDetail) => {
             if (!cardDetail) {

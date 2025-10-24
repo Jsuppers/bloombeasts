@@ -15,7 +15,8 @@ import {
   EffectType,
   AbilityTarget,
   ResourceType,
-  AbilityTrigger
+  AbilityTrigger,
+  StatType
 } from '../types/abilities';
 import { Logger } from '../utils/Logger';
 import { STARTING_HEALTH, MAX_NECTAR, FIELD_SIZE } from '../constants/gameRules';

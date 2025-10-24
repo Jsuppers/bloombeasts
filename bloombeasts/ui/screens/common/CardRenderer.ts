@@ -272,7 +272,6 @@ export function createCardComponent(props: CardRendererProps): UINodeType {
             borderWidth: 4,
             borderColor: COLORS.success,
             borderRadius: 8,
-            pointerEvents: 'none',
           },
         })
       ] : []),

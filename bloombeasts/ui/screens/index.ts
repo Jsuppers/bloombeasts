@@ -16,6 +16,3 @@ export type { BattleScreenProps } from './BattleScreen';
 
 export { SettingsScreen } from './SettingsScreen';
 export type { SettingsScreenProps } from './SettingsScreen';
-
-export { BloomBeastsGame } from './BloomBeastsGame';
-export type { BloomBeastsGameProps, PlayerData } from './BloomBeastsGame';

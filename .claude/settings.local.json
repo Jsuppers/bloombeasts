@@ -4,7 +4,11 @@
       "Bash(chmod:*)",
       "Bash(bash:*)",
       "Bash(node update-image-catalogs.cjs:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(test:*)",
+      "Bash(npm run build:web:prod:*)",
+      "Bash(npm run:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

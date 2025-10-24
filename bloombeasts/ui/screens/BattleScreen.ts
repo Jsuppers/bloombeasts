@@ -382,8 +382,7 @@ export class BattleScreen {
                 fontSize: DIMENSIONS.fontSize.xl,
                 fontWeight: 'bold',
                 color: COLORS.warning,
-                marginBottom: 10,
-                textTransform: 'uppercase'
+                marginBottom: 10
               }
             }),
             Text({
@@ -401,7 +400,6 @@ export class BattleScreen {
         View({
           style: {
             flexDirection: 'row',
-            gap: 20,
             marginBottom: 30
           },
           children: [
@@ -411,7 +409,8 @@ export class BattleScreen {
                 backgroundColor: COLORS.error,
                 borderRadius: 8,
                 padding: 15,
-                minWidth: 120
+                minWidth: 120,
+                marginRight: 20
               },
               children: Text({
                 text: '⚔️ Attack',
@@ -601,7 +600,6 @@ export class BattleScreen {
       const isTargetable = player === 'opponent' && this.targetingCardIndex !== null;
 
       return View({
-        key: `${player}-beast-${index}`,
         style: {
           position: 'absolute',
           left: pos.x,
@@ -661,7 +659,6 @@ export class BattleScreen {
               borderWidth: 3,
               borderColor: '#00ff00',
               borderRadius: 8,
-              pointerEvents: 'none',
             },
           }) : null,
 
@@ -676,7 +673,6 @@ export class BattleScreen {
               borderWidth: 5,
               borderColor: '#FFD700',
               borderRadius: 12,
-              pointerEvents: 'none',
             },
           }) : null,
 
@@ -690,7 +686,6 @@ export class BattleScreen {
               bottom: 0,
               backgroundColor: isAttacking ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)',
               borderRadius: 12,
-              pointerEvents: 'none',
             },
           }) : null,
 
@@ -738,7 +733,6 @@ export class BattleScreen {
       const pos = trapSlots[index];
 
       return View({
-        key: `${player}-trap-${index}`,
         style: {
           position: 'absolute',
           left: pos.x,
@@ -792,7 +786,6 @@ export class BattleScreen {
       const pos = buffSlots[index];
 
       return View({
-        key: `${player}-buff-${index}`,
         style: {
           position: 'absolute',
           left: pos.x,
@@ -819,7 +812,6 @@ export class BattleScreen {
               left: (buffCardDimensions.width - 100) / 2,
               width: 100,
               height: 100,
-              pointerEvents: 'none',
             },
           }),
 
@@ -835,8 +827,7 @@ export class BattleScreen {
               borderColor: '#FFD700',
               borderRadius: 8,
               shadowColor: '#FFD700',
-              shadowBlur: 8,
-              pointerEvents: 'none',
+              shadowRadius: 8,
             },
           }),
 
@@ -894,7 +885,6 @@ export class BattleScreen {
             left: (habitatShiftCardDimensions.width - 70) / 2,
             width: 70,
             height: 70,
-            pointerEvents: 'none',
           },
         }),
 
@@ -910,8 +900,7 @@ export class BattleScreen {
             borderColor: '#4caf50',
             borderRadius: 8,
             shadowColor: '#4caf50',
-            shadowBlur: 10,
-            pointerEvents: 'none',
+            shadowRadius: 10,
           },
         }),
 
@@ -963,7 +952,6 @@ export class BattleScreen {
       const offsetX = habitatShiftCardDimensions.width - 10 - (index * badgeSpacing);
 
       return View({
-        key: `counter-${type}`,
         style: {
           position: 'absolute',
           right: 10 + (index * badgeSpacing),
@@ -996,7 +984,6 @@ export class BattleScreen {
         left: 0,
         right: 0,
         bottom: 0,
-        pointerEvents: 'none',
       },
       children: badges,
     });
@@ -1025,7 +1012,6 @@ export class BattleScreen {
         position: 'absolute',
         width: '100%',
         height: '100%',
-        pointerEvents: 'none',
       },
       children: [
         // Opponent health
@@ -1063,7 +1049,6 @@ export class BattleScreen {
                 left: 0,
                 right: 0,
                 bottom: 0,
-                pointerEvents: 'auto',
               },
               children: null,
             }) : null,
@@ -1227,7 +1212,6 @@ export class BattleScreen {
                 height: sideMenuButtonDimensions.height,
                 justifyContent: 'center',
                 alignItems: 'center',
-                pointerEvents: 'none',
               },
               children: Text({
                 text: 'Forfeit',
@@ -1318,7 +1302,6 @@ export class BattleScreen {
                 height: sideMenuButtonDimensions.height,
                 justifyContent: 'center',
                 alignItems: 'center',
-                pointerEvents: 'none',
               },
               children: (() => {
                 const buttonText = this.endTurnButtonText.get();
@@ -1390,7 +1373,6 @@ export class BattleScreen {
           const canAfford = card.cost <= state.playerNectar;
 
           return View({
-            key: `hand-card-${actualIndex}`,
             style: {
               position: 'absolute',
               left: x - 40, // Relative to overlay left edge
@@ -1444,7 +1426,6 @@ export class BattleScreen {
                   right: 0,
                   bottom: 0,
                   backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                  pointerEvents: 'none',
                 },
               }) : null,
             ].filter(Boolean),
@@ -1568,8 +1549,12 @@ export class BattleScreen {
       children: [
         // Card detail popup
         createCardDetailPopup({
-          card: popup.card,
-          onClose: popup.showCloseButton ? () => this.onAction?.('btn-card-close') : undefined,
+          cardDetail: {
+            card: popup.card,
+            isInDeck: false,
+            buttons: popup.showCloseButton ? ['Close'] : []
+          },
+          onButtonClick: () => this.onAction?.('btn-card-close'),
         }),
       ],
     });
@@ -1674,6 +1659,7 @@ export class BattleScreen {
       cardDetail: {
         card: card,
         isInDeck: false,
+        buttons: []
       },
       onButtonClick: (buttonId: string) => {
         // User can close early by clicking

@@ -447,9 +447,9 @@ export class BloomBeastsGame {
     });
     this.battleStateBinding = new BindingClass('initializing');
     this.battleMessageBinding = new BindingClass('Preparing for battle...');
-    this.battleDisplayBinding = new BindingClass<BattleDisplay | null>(null);
-    this.missionCompletePopupBinding = new BindingClass<any>(null);
-    this.forfeitPopupBinding = new BindingClass<any>(null);
+    this.battleDisplayBinding = new BindingClass(null);
+    this.missionCompletePopupBinding = new BindingClass(null);
+    this.forfeitPopupBinding = new BindingClass(null);
 
     // No need to subscribe to playerData - we manage state via updateBindingsFromGameState()
 

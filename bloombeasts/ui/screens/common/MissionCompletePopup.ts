@@ -56,7 +56,6 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
       height: '100%',
       top: 0,
       left: 0,
-      pointerEvents: 'auto',
       zIndex: 2000, // Ensure popup is on top of everything
     },
     children: [
@@ -177,7 +176,6 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
               top: missionCompleteCardPositions.claimRewardButton.y,
               width: longButtonDimensions.width,
               height: longButtonDimensions.height,
-              pointerEvents: 'auto', // Ensure button is clickable
               zIndex: 10, // Ensure button is on top
             },
             children: [
@@ -198,7 +196,6 @@ export function createMissionCompletePopup(props: MissionCompletePopupProps): UI
                   height: longButtonDimensions.height,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  pointerEvents: 'none',
                 },
                 children: Text({
                   text: isFailed ? 'CONTINUE' : chestOpened ? 'CONTINUE' : 'CLAIM REWARDS',
@@ -232,7 +229,6 @@ function createFailedInfo(): UINodeType {
     },
     children: [
       Text({
-        key: 'fail-message',
         text: 'Better luck next time!\n\nKeep training your beasts\nand try again.',
         style: {
           fontSize: 14,
@@ -261,7 +257,6 @@ function createBasicInfo(rewards: any): UINodeType {
     },
     children: lines.map((line, index) =>
       Text({
-        key: `basic-${index}`,
         text: line,
         style: {
           fontSize: missionCompleteCardPositions.infoText.size,
@@ -284,7 +279,6 @@ function createDetailedRewards(rewards: any): UINodeType {
   if (rewards.cardsReceived && rewards.cardsReceived.length > 0) {
     elements.push(
       Text({
-        key: 'cards-title',
         text: 'Cards Received:',
         style: {
           fontSize: missionCompleteCardPositions.infoText.size,
@@ -298,7 +292,6 @@ function createDetailedRewards(rewards: any): UINodeType {
     rewards.cardsReceived.forEach((card: any, index: number) => {
       elements.push(
         Text({
-          key: `card-${index}`,
           text: `  • ${card.name}`,
           style: {
             fontSize: missionCompleteCardPositions.infoText.size,
@@ -313,7 +306,6 @@ function createDetailedRewards(rewards: any): UINodeType {
     // Extra spacing
     elements.push(
       View({
-        key: 'cards-spacer',
         style: { height: 10 },
       })
     );
@@ -323,7 +315,6 @@ function createDetailedRewards(rewards: any): UINodeType {
   if (rewards.itemsReceived && rewards.itemsReceived.length > 0) {
     elements.push(
       Text({
-        key: 'items-title',
         text: 'Items Received:',
         style: {
           fontSize: missionCompleteCardPositions.infoText.size,
@@ -339,7 +330,6 @@ function createDetailedRewards(rewards: any): UINodeType {
       const itemName = itemReward.name || itemReward.itemId;
       elements.push(
         Text({
-          key: `item-${index}`,
           text: `  ${emoji} ${itemName} x${itemReward.quantity}`,
           style: {
             fontSize: missionCompleteCardPositions.infoText.size,
@@ -354,7 +344,6 @@ function createDetailedRewards(rewards: any): UINodeType {
     // Extra spacing
     elements.push(
       View({
-        key: 'items-spacer',
         style: { height: 10 },
       })
     );

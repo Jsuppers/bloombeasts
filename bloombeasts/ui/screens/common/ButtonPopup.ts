@@ -74,11 +74,9 @@ export function createButtonPopup(props: ButtonPopupProps): any {
             style: {
               flexDirection: 'row',
               justifyContent: 'center',
-              gap: 12,
             },
             children: props.buttons.map((button, index) =>
               P({
-                key: `button-${index}`,
                 onClick: button.onClick,
                 style: {
                   backgroundColor: button.color || COLORS.primary,
@@ -87,6 +85,7 @@ export function createButtonPopup(props: ButtonPopupProps): any {
                   paddingRight: 24,
                   borderRadius: 8,
                   minWidth: 100,
+                  marginRight: index < props.buttons.length - 1 ? 12 : 0,
                 },
                 children: T({
                   text: button.text,
