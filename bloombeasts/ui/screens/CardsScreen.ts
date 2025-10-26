@@ -65,6 +65,134 @@ export class CardsScreen {
     });
   }
 
+  /**
+   * Create card grid with reactive bindings
+   * The PlatformBinding.derive wrapper handles unwrapping automatically
+   */
+  private createCardGrid(): UINodeType {
+    const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+
+    return this.ui.View({
+      style: {
+        position: 'absolute',
+        left: 70,
+        top: 70,
+        width: 920,
+        height: 580,
+      },
+      children: [
+        // Empty state
+        ...(this.ui.UINode ? [this.ui.UINode.if(
+          this.ui.Binding.derive(
+            [this.cards],
+            (cards: CardDisplay[]) => {
+              console.log('[CardsScreen] Empty state check - cards.length:', cards.length);
+              return cards.length === 0;
+            }
+          ),
+          this.ui.View({
+            style: {
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+            },
+            children: this.ui.Text({
+              text: new this.ui.Binding('No cards in your collection yet.'),
+              style: {
+                fontSize: DIMENSIONS.fontSize.xl,
+                color: COLORS.textPrimary,
+              },
+            }),
+          })
+        )] : []),
+
+        // Card grid - pre-create 8 slots
+        this.ui.View({
+          style: {
+            flexDirection: 'column',
+          },
+          children: Array.from({ length: this.rowsPerPage }, (_, rowIndex) =>
+            this.ui.View({
+              style: {
+                flexDirection: 'row',
+                marginBottom: rowIndex < this.rowsPerPage - 1 ? GAPS.cards : 0,
+              },
+              children: Array.from({ length: this.cardsPerRow }, (_, colIndex) => {
+                const slotIndex = rowIndex * this.cardsPerRow + colIndex;
+
+                // Create reactive bindings for card at this slot
+                const cardOpacity = this.ui.Binding.derive(
+                  [this.cards, this.scrollOffset],
+                  (cards: CardDisplay[], offset: number) => {
+                    const pageStart = offset * cardsPerPage;
+                    const cardIndex = pageStart + slotIndex;
+                    const exists = cardIndex < cards.length;
+                    console.log(`[CardsScreen] Slot ${slotIndex} hasCard:`, exists, 'cards.length:', cards.length, 'cardIndex:', cardIndex);
+                    return exists ? 1 : 0;  // Convert boolean to number for opacity
+                  }
+                );
+
+                // Create image binding
+                // For Horizon: Use helper to create ImageSource binding directly (avoids chaining)
+                // For Web: Use traditional imageId approach
+                const useHelper = !!(this.ui as any).createCardImageBinding;
+                const cardImageSource = useHelper
+                  ? (this.ui as any).createCardImageBinding(this.cards, this.scrollOffset, slotIndex, cardsPerPage)
+                  : null;
+
+                const cardImageId = !useHelper ? this.ui.Binding.derive(
+                  [this.cards, this.scrollOffset],
+                  (cards: CardDisplay[], offset: number) => {
+                    const pageStart = offset * cardsPerPage;
+                    const cardIndex = pageStart + slotIndex;
+                    if (cardIndex < cards.length) {
+                      const card = cards[cardIndex];
+                      const baseId = card.id.replace(/-\d+-\d+$/, '');
+                      return baseId;
+                    }
+                    return '';
+                  }
+                ) : null;
+
+                // Always render card slot, but make it invisible when empty
+                return this.ui.View({
+                  style: {
+                    width: CARD_DIMENSIONS.width,
+                    height: CARD_DIMENSIONS.height,
+                    marginRight: colIndex < this.cardsPerRow - 1 ? GAPS.cards : 0,
+                    opacity: cardOpacity,  // 1 when card exists, 0 when empty - makes it invisible but preserves layout
+                  },
+                  onClick: () => {
+                    const cards = this.cards.get();
+                    const offset = this.scrollOffset.get();
+                    const pageStart = offset * cardsPerPage;
+                    const cardIndex = pageStart + slotIndex;
+                    if (cardIndex < cards.length) {
+                      this.handleCardClick(cards[cardIndex].id);
+                    }
+                  },
+                  children: this.ui.Image(useHelper ? {
+                    source: cardImageSource,  // Horizon: ImageSource binding
+                    style: {
+                      width: CARD_DIMENSIONS.width,
+                      height: CARD_DIMENSIONS.height,
+                    },
+                  } : {
+                    imageId: cardImageId,  // Web: string imageId
+                    style: {
+                      width: CARD_DIMENSIONS.width,
+                      height: CARD_DIMENSIONS.height,
+                    },
+                  }),
+                });
+              }),
+            })
+          ),
+        }),
+      ],
+    });
+  }
+
   createUI(): UINodeType {
     // Create scroll buttons for the side menu
     const scrollButtons = [
@@ -136,7 +264,7 @@ export class CardsScreen {
       children: [
         // Background
         this.ui.Image({
-          source: new this.ui.Binding({ uri: 'background' }),
+          imageId: 'background',
           style: {
             position: 'absolute',
             width: '100%',
@@ -147,7 +275,7 @@ export class CardsScreen {
         }),
         // Cards Container image as background
         this.ui.Image({
-          source: new this.ui.Binding({ uri: 'cards-container' }),
+          imageId: 'cards-container',
           style: {
             position: 'absolute',
             left: 40,
@@ -157,87 +285,8 @@ export class CardsScreen {
           },
         }),
         // Main content - card grid
-        this.ui.View({
-          style: {
-            position: 'absolute',
-            left: 70,
-            top: 70,
-            width: 920,
-            height: 580,
-          },
-          children: this.ui.Binding.derive(
-            [this.cards, this.scrollOffset, this.deckCardIds],
-            (cards: CardDisplay[], offset: number, deckIds: string[]) => {
-              if (cards.length === 0) {
-                return [
-                  this.ui.View({
-                    style: {
-                      flex: 1,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    },
-                    children: this.ui.Text({
-                      text: new this.ui.Binding('No cards in your collection yet.'),
-                      style: {
-                        fontSize: DIMENSIONS.fontSize.xl,
-                        color: COLORS.textPrimary,
-                      },
-                    }),
-                  }),
-                ];
-              }
-
-              // Create card grid inline for reactivity
-              const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-              const startIndex = offset * cardsPerPage;
-              const endIndex = Math.min(startIndex + cardsPerPage, cards.length);
-              const visibleCards = cards.slice(startIndex, endIndex);
-
-              const rows: UINodeType[] = [];
-              for (let row = 0; row < this.rowsPerPage; row++) {
-                const rowCards = visibleCards.slice(
-                  row * this.cardsPerRow,
-                  (row + 1) * this.cardsPerRow
-                );
-
-                if (rowCards.length > 0) {
-                  rows.push(
-                    this.ui.View({
-                      style: {
-                        flexDirection: 'row',
-                        marginBottom: row < this.rowsPerPage - 1 ? GAPS.cards : 0,
-                      },
-                      children: rowCards
-                        .filter((card: CardDisplay) => card && card.id)
-                        .map((card: CardDisplay, index: number) =>
-                          this.ui.View({
-                            style: {
-                              marginRight: index < rowCards.length - 1 ? GAPS.cards : 0,
-                            },
-                            children: createCardComponent(this.ui, {
-                              card,
-                              isInDeck: deckIds.includes(card.id),
-                              onClick: (cardId: string) => this.handleCardClick(cardId),
-                              showDeckIndicator: true,
-                            }),
-                          })
-                        ),
-                    })
-                  );
-                }
-              }
-
-              return [
-                this.ui.View({
-                  style: {
-                    flexDirection: 'column',
-                  },
-                  children: rows.filter(r => r),
-                })
-              ];
-            }
-          ) as any,
-        }),
+        // Card grid view with Horizon-compatible pattern
+        this.createCardGrid(),
         // Sidebar with common side menu
         createSideMenu(this.ui, {
           title: 'Cards',
@@ -255,26 +304,24 @@ export class CardsScreen {
           stats: this.stats,
         }),
 
-        // Card detail popup overlay container (always present)
-        this.ui.View({
-          style: {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            top: 0,
-            left: 0,
-          },
-          children: this.selectedCardDetail.derive((cardDetail: CardDetailDisplay | null) => {
-            if (!cardDetail) {
-              return []; // No popup
-            }
-
-            return [createCardDetailPopup(this.ui, {
-              cardDetail,
+        // Card detail popup overlay container (conditionally rendered)
+        // Uses UINode.if() for proper conditional rendering per Horizon docs
+        ...(this.ui.UINode && this.selectedCardDetail.get() ? [this.ui.UINode.if(
+          this.selectedCardDetail.derive((cd: CardDetailDisplay | null) => cd !== null),
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              top: 0,
+              left: 0,
+            },
+            children: [createCardDetailPopup(this.ui, {
+              cardDetail: this.selectedCardDetail.get()!,
               onButtonClick: (buttonId: string) => this.handlePopupButtonClick(buttonId),
-            })];
-          }) as any,
-        }),
+            })],
+          })
+        )] : []),
       ],
     });
   }

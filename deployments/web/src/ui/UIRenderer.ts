@@ -45,6 +45,12 @@ export class UIRenderer {
     private bindings: Set<ValueBindingBase<any>> = new Set();
     private imageCache: Map<string, HTMLImageElement> = new Map();
 
+    // Animation support
+    private animationFrameId: number | null = null;
+    private lastRenderTime: number = 0;
+    private currentRoot: UINode | null = null;
+    private hasActiveAnimations: boolean = false;
+
     constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
         this.canvas = canvas;
         this.ctx = ctx;
@@ -69,9 +75,25 @@ export class UIRenderer {
      * Render a UI tree
      */
     render(root: UINode): void {
-        console.log('[UIRenderer] render() called');
+        // Store the root for re-rendering during animation
+        this.currentRoot = root;
+
+        // Perform the actual render
+        this.performRender(root);
+
+        // Start animation loop if not already running
+        if (!this.animationFrameId) {
+            this.startAnimationLoop();
+        }
+    }
+
+    /**
+     * Perform the actual rendering
+     */
+    private performRender(root: UINode): void {
         // Clear previous state
         this.clickRegions = [];
+        this.hasActiveAnimations = false; // Reset animation detection
 
         // Clear canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -85,7 +107,6 @@ export class UIRenderer {
         };
 
         this.renderNode(root, containerBox);
-        console.log('[UIRenderer] render() completed');
     }
 
     /**
@@ -108,7 +129,6 @@ export class UIRenderer {
             case 'text':
                 return this.renderText(node as UINode<TextProps>, parentBox);
             case 'image':
-                console.log('🎨 Calling renderImage...');
                 return this.renderImage(node as UINode<ImageProps>, parentBox);
             case 'pressable':
                 return this.renderPressable(node as UINode<PressableProps>, parentBox);
@@ -208,26 +228,34 @@ export class UIRenderer {
      * Render an Image component
      */
     private renderImage(node: UINode<ImageProps>, parentBox: LayoutBox): LayoutBox {
-        console.log('📸 renderImage called!');
         const style = this.resolveStyle(node.props.style || {});
         const box = this.calculateLayout(style, parentBox);
-        console.log('📸 Image box:', box);
 
-        // Get image source
-        const source = this.resolveAndTrack<{ uri: string }>(node.props.source);
-        console.log('📸 Image source:', source);
+        let currentImageId: string | null = null;
 
-        if (source && source.uri) {
-            const img = this.imageCache.get(source.uri);
-            console.log(`📸 Looking for image "${source.uri}" in cache:`, img ? 'FOUND' : 'NOT FOUND');
+        // Priority: binding > imageId
+        if (node.props.binding) {
+            // Mark that we have active animations (needs continuous rendering)
+            this.hasActiveAnimations = true;
+
+            // Handle BaseBinding - call .get() to get current value
+            if (typeof node.props.binding.get === 'function') {
+                currentImageId = node.props.binding.get();
+            }
+        } else if (node.props.imageId) {
+            // Handle imageId (string or platform binding)
+            const imageId = this.resolveAndTrack<string | null>(node.props.imageId);
+            currentImageId = imageId;
+        }
+
+        if (currentImageId) {
+            const img = this.imageCache.get(currentImageId);
 
             if (img && img.complete) {
                 // Draw the image
-                console.log(`✅ Drawing image "${source.uri}" at`, box);
                 this.ctx.drawImage(img, box.x, box.y, box.width, box.height);
             } else {
                 // Draw placeholder if image not loaded
-                console.log(`⚠️ Image "${source.uri}" not loaded, drawing placeholder`);
                 this.ctx.fillStyle = '#333';
                 this.ctx.fillRect(box.x, box.y, box.width, box.height);
                 this.ctx.fillStyle = '#666';
@@ -237,8 +265,7 @@ export class UIRenderer {
                 this.ctx.fillText('Loading...', box.x + box.width / 2, box.y + box.height / 2);
             }
         } else {
-            // Draw placeholder if no source
-            console.log('❌ No image source provided, drawing placeholder');
+            // Draw placeholder if no image ID provided
             this.ctx.fillStyle = '#cccccc';
             this.ctx.fillRect(box.x, box.y, box.width, box.height);
         }
@@ -699,6 +726,41 @@ export class UIRenderer {
     /**
      * Setup event listeners for interactivity
      */
+    /**
+     * Start animation loop for animated images
+     */
+    private startAnimationLoop(): void {
+        const animate = (currentTime: number) => {
+            // Re-render if enough time has passed (target: ~30 FPS for smooth animation)
+            if (!this.lastRenderTime || currentTime - this.lastRenderTime >= 33) {
+                this.lastRenderTime = currentTime;
+                if (this.currentRoot) {
+                    this.performRender(this.currentRoot);
+                }
+            }
+
+            // Only continue the loop if we have active animations
+            if (this.hasActiveAnimations) {
+                this.animationFrameId = requestAnimationFrame(animate);
+            } else {
+                // Stop the loop - no animations active
+                this.animationFrameId = null;
+            }
+        };
+
+        this.animationFrameId = requestAnimationFrame(animate);
+    }
+
+    /**
+     * Stop animation loop
+     */
+    private stopAnimationLoop(): void {
+        if (this.animationFrameId !== null) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+        }
+    }
+
     private setupEventListeners(): void {
         this.canvas.addEventListener('click', (e) => this.handleClick(e));
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));

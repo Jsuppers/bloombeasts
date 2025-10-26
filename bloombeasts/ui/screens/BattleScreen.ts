@@ -153,11 +153,11 @@ export class BattleScreen {
     this.isPlayerTurn = new this.ui.Binding(false);
     this.endTurnButtonText = new this.ui.Binding('Enemy Turn');
 
-    console.log('[BattleScreen] Constructor called, props:', {
-      hasBattleDisplay: !!props.battleDisplay,
-      battleDisplayType: props.battleDisplay ? typeof props.battleDisplay : 'undefined',
-      battleDisplayGet: props.battleDisplay && typeof props.battleDisplay.get === 'function' ? props.battleDisplay.get() : 'no get method'
-    });
+    // console.log('[BattleScreen] Constructor called, props:', {
+    //   hasBattleDisplay: !!props.battleDisplay,
+    //   battleDisplayType: props.battleDisplay ? typeof props.battleDisplay : 'undefined',
+    //   battleDisplayGet: props.battleDisplay && typeof props.battleDisplay.get === 'function' ? props.battleDisplay.get() : 'no get method'
+    // });
 
     // Handle both simple and full battle modes
     this.battleState = props.battleState;
@@ -175,7 +175,7 @@ export class BattleScreen {
     this.selectedCardDetail.subscribe(() => this.safeRender());
     this.isPlayerTurn.subscribe(() => {
       // Update button text when turn changes
-      console.log('[BattleScreen] isPlayerTurn changed to:', this.isPlayerTurn.get());
+      // console.log('[BattleScreen] isPlayerTurn changed to:', this.isPlayerTurn.get());
       this.updateEndTurnButtonText();
       this.safeRender();
     });
@@ -188,67 +188,67 @@ export class BattleScreen {
 
     // Subscribe to battleDisplay changes to update isPlayerTurn
     if (this.battleDisplay) {
-      console.log('[BattleScreen] Setting up battleDisplay subscription');
-      console.log('[BattleScreen] battleDisplay binding instance:', this.battleDisplay);
-      console.log('[BattleScreen] Initial battleDisplay.get():', this.battleDisplay.get());
+      // console.log('[BattleScreen] Setting up battleDisplay subscription');
+      // console.log('[BattleScreen] battleDisplay binding instance:', this.battleDisplay);
+      // console.log('[BattleScreen] Initial battleDisplay.get():', this.battleDisplay.get());
 
       this.battleDisplay.subscribe((state: any) => {
-        console.log('[BattleScreen] ==========================================');
-        console.log('[BattleScreen] BattleDisplay subscription fired!');
-        console.log('[BattleScreen] state parameter:', state);
-        console.log('[BattleScreen] this.battleDisplay.get():', this.battleDisplay?.get());
-        console.log('[BattleScreen] state.turnPlayer:', state?.turnPlayer);
-        console.log('[BattleScreen] state object keys:', state ? Object.keys(state) : 'state is null');
-        console.log('[BattleScreen] ==========================================');
+        // console.log('[BattleScreen] ==========================================');
+        // console.log('[BattleScreen] BattleDisplay subscription fired!');
+        // console.log('[BattleScreen] state parameter:', state);
+        // console.log('[BattleScreen] this.battleDisplay.get():', this.battleDisplay?.get());
+        // console.log('[BattleScreen] state.turnPlayer:', state?.turnPlayer);
+        // console.log('[BattleScreen] state object keys:', state ? Object.keys(state) : 'state is null');
+        // console.log('[BattleScreen] ==========================================');
         const newIsPlayerTurn = state?.turnPlayer === 'player';
-        console.log('[BattleScreen] Checking turn: state?.turnPlayer === "player"?', newIsPlayerTurn);
+        // console.log('[BattleScreen] Checking turn: state?.turnPlayer === "player"?', newIsPlayerTurn);
 
         if (this.isPlayerTurn.get() !== newIsPlayerTurn) {
-          console.log('[BattleScreen] BattleDisplay changed, updating isPlayerTurn to:', newIsPlayerTurn);
+          // console.log('[BattleScreen] BattleDisplay changed, updating isPlayerTurn to:', newIsPlayerTurn);
           this.isPlayerTurn.set(newIsPlayerTurn);
 
           // Start/stop timer based on turn changes
           if (newIsPlayerTurn) {
-            console.log('[BattleScreen] Subscription detected player turn, calling startTurnTimer()');
+            // console.log('[BattleScreen] Subscription detected player turn, calling startTurnTimer()');
             this.startTurnTimer();
           } else {
-            console.log('[BattleScreen] Subscription detected opponent turn, calling stopTurnTimer()');
+            // console.log('[BattleScreen] Subscription detected opponent turn, calling stopTurnTimer()');
             this.stopTurnTimer();
           }
         } else {
-          console.log('[BattleScreen] isPlayerTurn unchanged, still:', newIsPlayerTurn);
+          // console.log('[BattleScreen] isPlayerTurn unchanged, still:', newIsPlayerTurn);
         }
       });
 
       // Initialize isPlayerTurn from current state
       const state = this.battleDisplay.get();
-      console.log('[BattleScreen] ==========================================');
-      console.log('[BattleScreen] Constructor: Checking initial battleDisplay state');
-      console.log('[BattleScreen] state exists?', !!state);
-      console.log('[BattleScreen] state:', state);
-      console.log('[BattleScreen] ==========================================');
+      // console.log('[BattleScreen] ==========================================');
+      // console.log('[BattleScreen] Constructor: Checking initial battleDisplay state');
+      // console.log('[BattleScreen] state exists?', !!state);
+      // console.log('[BattleScreen] state:', state);
+      // console.log('[BattleScreen] ==========================================');
       if (state) {
-        console.log('[BattleScreen] Initial battleDisplay state:', {
-          turnPlayer: state.turnPlayer,
-          currentTurn: state.currentTurn,
-          activePlayer: state.activePlayer,
-          keys: Object.keys(state)
-        });
+        // console.log('[BattleScreen] Initial battleDisplay state:', {
+        //   turnPlayer: state.turnPlayer,
+        //   currentTurn: state.currentTurn,
+        //   activePlayer: state.activePlayer,
+        //   keys: Object.keys(state)
+        // });
 
         this.isPlayerTurn.set(state.turnPlayer === 'player');
 
         // Start timer after a short delay to avoid render loop
         if (state.turnPlayer === 'player') {
-          console.log('[BattleScreen] Player turn detected in constructor, scheduling timer start');
+          // console.log('[BattleScreen] Player turn detected in constructor, scheduling timer start');
           this.async.setTimeout(() => {
-            console.log('[BattleScreen] Timer start timeout fired, calling startTurnTimer()');
+            // console.log('[BattleScreen] Timer start timeout fired, calling startTurnTimer()');
             this.startTurnTimer();
           }, 100);
         } else {
-          console.log('[BattleScreen] NOT player turn in constructor, turnPlayer is:', state.turnPlayer);
+          // console.log('[BattleScreen] NOT player turn in constructor, turnPlayer is:', state.turnPlayer);
         }
       } else {
-        console.log('[BattleScreen] No initial state in constructor, will wait for subscription');
+        // console.log('[BattleScreen] No initial state in constructor, will wait for subscription');
       }
     }
   }
@@ -269,26 +269,26 @@ export class BattleScreen {
    * Create the complete battle UI
    */
   createUI(): UINodeType {
-    console.log('[BattleScreen] createUI called');
+    // console.log('[BattleScreen] createUI called');
     this.isRendering = true;
     this.needsRerender = false;
     // Check if we have full battle display data
     if (this.battleDisplay) {
       const state = this.battleDisplay.get();
-      console.log('[BattleScreen] Battle display state:', state ? 'Present' : 'Null');
+      // console.log('[BattleScreen] Battle display state:', state ? 'Present' : 'Null');
       if (!state) {
-        console.log('[BattleScreen] No battle display data, showing loading state');
+        // console.log('[BattleScreen] No battle display data, showing loading state');
         return this.createLoadingState();
       }
 
-      console.log('[BattleScreen] Creating full battle UI with data:', {
-        playerHealth: state.playerHealth,
-        opponentHealth: state.opponentHealth,
-        currentTurn: state.currentTurn,
-        turnPlayer: state.turnPlayer,
-        isPlayerTurn: this.isPlayerTurn.get(),
-        timerValue: this.turnTimer.get()
-      });
+      // console.log('[BattleScreen] Creating full battle UI with data:', {
+      //   playerHealth: state.playerHealth,
+      //   opponentHealth: state.opponentHealth,
+      //   currentTurn: state.currentTurn,
+      //   turnPlayer: state.turnPlayer,
+      //   isPlayerTurn: this.isPlayerTurn.get(),
+      //   timerValue: this.turnTimer.get()
+      // });
 
       // Mark rendering as complete
       this.finishRender();
@@ -331,7 +331,7 @@ export class BattleScreen {
               buttons: ['Close']
             },
             onButtonClick: (buttonId: string) => {
-              console.log('[BattleScreen] Closing selected card detail, buttonId:', buttonId);
+              // console.log('[BattleScreen] Closing selected card detail, buttonId:', buttonId);
               this.selectedCardDetail.set(null);
               this.onRenderNeeded?.();
             }
@@ -347,7 +347,7 @@ export class BattleScreen {
     }
 
     // Simple placeholder mode (for compatibility with BloomBeastsGame)
-    console.log('[BattleScreen] No battleDisplay binding, using simple mode');
+    // console.log('[BattleScreen] No battleDisplay binding, using simple mode');
     return this.createSimpleBattleUI();
   }
 
@@ -529,7 +529,7 @@ export class BattleScreen {
    */
   private createBackground(): UINodeType {
     return this.ui.Image({
-      source: new this.ui.Binding({ uri: 'background' }),
+      imageId: 'background',
       style: {
         position: 'absolute',
         width: gameDimensions.panelWidth,
@@ -545,7 +545,7 @@ export class BattleScreen {
    */
   private createPlayboard(): UINodeType {
     return this.ui.Image({
-      source: new this.ui.Binding({ uri: 'playboard' }),
+      imageId: 'playboard',
       style: {
         position: 'absolute',
         width: 1073,
@@ -629,7 +629,7 @@ export class BattleScreen {
           // Beast card component wrapped in Pressable for click handling
           this.ui.Pressable({
             onClick: () => {
-              console.log(`[BattleScreen] Beast card clicked: ${player}-${index}`);
+              // console.log(`[BattleScreen] Beast card clicked: ${player}-${index}`);
 
               // Check if we're in targeting mode
               if (this.targetingCardIndex !== null && player === 'opponent') {
@@ -643,12 +643,12 @@ export class BattleScreen {
 
                 if (card && (card.type === 'Magic' || card.type === 'Buff')) {
                   this.showPlayedCard(card, () => {
-                    console.log(`[BattleScreen] Playing card ${cardIndex} targeting opponent beast ${index} after popup`);
+                    // console.log(`[BattleScreen] Playing card ${cardIndex} targeting opponent beast ${index} after popup`);
                     this.onAction?.(`play-card-${cardIndex}-target-${index}`);
                   });
                 } else {
                   // Play immediately for other card types
-                  console.log(`[BattleScreen] Playing card ${cardIndex} targeting opponent beast ${index}`);
+                  // console.log(`[BattleScreen] Playing card ${cardIndex} targeting opponent beast ${index}`);
                   this.onAction?.(`play-card-${cardIndex}-target-${index}`);
                 }
               } else {
@@ -728,7 +728,7 @@ export class BattleScreen {
           height: 26,
         },
         children: this.ui.Image({
-          source: new this.ui.Binding({ uri: 'icon-attack' }),
+          imageId: 'icon-attack',
           style: { width: 26, height: 26 },
         }),
       });
@@ -761,7 +761,7 @@ export class BattleScreen {
         children: [
           // Trap card playboard image (face-down, hidden for both players)
           this.ui.Image({
-            source: new this.ui.Binding({ uri: 'trap-card-playboard' }),
+            imageId: 'trap-card-playboard',
             style: {
               width: trapCardDimensions.width,
               height: trapCardDimensions.height,
@@ -814,7 +814,7 @@ export class BattleScreen {
         children: [
           // Buff card playboard template (face-up, showing the buff on the field)
           this.ui.Image({
-            source: new this.ui.Binding({ uri: 'buff-card-playboard' }),
+            imageId: 'buff-card-playboard',
             style: {
               width: buffCardDimensions.width,
               height: buffCardDimensions.height,
@@ -823,7 +823,7 @@ export class BattleScreen {
 
           // Buff card artwork image (100x100) centered inside the playboard
           this.ui.Image({
-            source: new this.ui.Binding({ uri: buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-') }),
+            imageId: buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-'),
             style: {
               position: 'absolute',
               top: (buffCardDimensions.height - 100) / 2,
@@ -887,7 +887,7 @@ export class BattleScreen {
       children: [
         // Habitat card playboard template
         this.ui.Image({
-          source: new this.ui.Binding({ uri: 'habitat-playboard' }),
+          imageId: 'habitat-playboard',
           style: {
             width: habitatShiftCardDimensions.width,
             height: habitatShiftCardDimensions.height,
@@ -896,7 +896,7 @@ export class BattleScreen {
 
         // Habitat artwork image (70x70) centered inside the playboard
         this.ui.Image({
-          source: new this.ui.Binding({ uri: habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-') }),
+          imageId: habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-'),
           style: {
             position: 'absolute',
             top: (habitatShiftCardDimensions.height - 70) / 2,
@@ -1191,7 +1191,7 @@ export class BattleScreen {
       children: [
         // Side menu background
         this.ui.Image({
-          source: new this.ui.Binding({ uri: 'side-menu' }),
+          imageId: 'side-menu',
           style: {
             position: 'absolute',
             width: 127,
@@ -1215,7 +1215,7 @@ export class BattleScreen {
           children: [
             // Button background image
             this.ui.Image({
-              source: new this.ui.Binding({ uri: 'standard-button' }),
+              imageId: 'standard-button',
               style: {
                 position: 'absolute',
                 width: sideMenuButtonDimensions.width,
@@ -1305,7 +1305,7 @@ export class BattleScreen {
           children: [
             // Button background image - green when player turn, standard when opponent turn
             this.ui.Image({
-              source: this.isPlayerTurn.derive((ipt: boolean) => ({ uri: ipt ? 'green-button' : 'standard-button' })),
+              imageId: this.isPlayerTurn.derive((ipt: boolean) => ipt ? 'green-button' : 'standard-button'),
               style: {
                 position: 'absolute',
                 width: sideMenuButtonDimensions.width,

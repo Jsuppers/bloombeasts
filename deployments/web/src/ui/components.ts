@@ -88,7 +88,8 @@ export type ImageSource = {
 };
 
 export type ImageProps = {
-    source?: Bindable<ImageSource | null>;
+    imageId?: Bindable<string | null>; // Single image asset ID
+    binding?: any; // BaseBinding<string> for animations, derived values, etc.
     style?: ImageStyle;
 };
 

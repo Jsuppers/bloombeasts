@@ -94,11 +94,9 @@ export function createCardDetailPopup(ui: UIMethodMappings, props: CardDetailPop
                 children: [
                   // Button background image
                   ui.Image({
-                    source: new ui.Binding({
-                      uri: buttonText === 'Add' ? 'green-button' :
-                           buttonText === 'Remove' ? 'red-button' :
-                           'standard-button'
-                    }),
+                    imageId: buttonText === 'Add' ? 'green-button' :
+                            buttonText === 'Remove' ? 'red-button' :
+                            'standard-button',
                     style: {
                       position: 'absolute',
                       width: buttonWidth,

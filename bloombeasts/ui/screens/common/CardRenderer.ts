@@ -101,7 +101,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // For Bloom cards: use beast image
       // For other cards (Magic/Trap/Buff/Habitat): use card artwork image
       ui.Image({
-        source: new ui.Binding({ uri: card.type === 'Bloom' ? beastImageKey : cardImageKey }),
+        imageId: card.type === 'Bloom' ? beastImageKey : cardImageKey,
         style: {
           width: beastImageWidth,
           height: beastImageHeight,
@@ -113,7 +113,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
 
       // Layer 2: Base card frame (210x280) - ALL cards use BaseCard.png
       ui.Image({
-        source: new ui.Binding({ uri: baseCardKey }),
+        imageId: baseCardKey,
         style: {
           width: cardWidth,
           height: cardHeight,
@@ -126,7 +126,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Layer 2.5: Template overlay for non-Bloom cards (Magic/Trap/Buff/Habitat)
       ...(templateKey ? [
         ui.Image({
-          source: new ui.Binding({ uri: templateKey }),
+          imageId: templateKey,
           style: {
             width: cardWidth,
             height: cardHeight,
@@ -140,7 +140,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Layer 3: Affinity icon (for Bloom cards)
       ...(card.type === 'Bloom' && card.affinity && affinityKey ? [
         ui.Image({
-          source: new ui.Binding({ uri: affinityKey }),
+          imageId: affinityKey,
           style: {
             width: 30,
             height: 30,
@@ -154,7 +154,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Layer 4: Experience bar (for Bloom cards with level)
       ...(card.type === 'Bloom' && card.level ? [
         ui.Image({
-          source: new ui.Binding({ uri: expBarKey }),
+          imageId: expBarKey,
           style: {
             width: 120,
             height: 20,

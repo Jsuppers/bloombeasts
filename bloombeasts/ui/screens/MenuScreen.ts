@@ -11,7 +11,8 @@ import type { MenuStats } from '../../../bloombeasts/gameManager';
 import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import type { AsyncMethods } from '../types/bindings';
 import { UINodeType } from './ScreenUtils';
-import { createSideMenu, createResourceRow } from './common/SideMenu';
+import { createSideMenu, createTextRow } from './common/SideMenu';
+import { IntervaledBinding } from '../bindings/IntervaledBinding';
 
 export interface MenuScreenProps {
   ui: UIMethodMappings;
@@ -31,13 +32,15 @@ export class MenuScreen {
   private async: AsyncMethods;
 
   // State bindings
-  private currentFrame: any;
   private displayedText: any;
   private stats: any;
+  private menuFrameAnimation: IntervaledBinding<string>;
 
-  // Animation state
-  private animationInterval: number | null = null;
-  private textAnimationInterval: number | null = null;
+  // Menu frame IDs
+  private menuFrameIds: string[] = [
+    'menu-frame-1', 'menu-frame-2', 'menu-frame-3', 'menu-frame-4', 'menu-frame-5',
+    'menu-frame-6', 'menu-frame-7', 'menu-frame-8', 'menu-frame-9', 'menu-frame-10',
+  ];
 
   private quotes: string[] = [
     'Welcome back, Trainer!',
@@ -55,26 +58,22 @@ export class MenuScreen {
     this.onNavigate = props.onNavigate;
 
     // Initialize bindings using injected UI implementation
-    this.currentFrame = new this.ui.Binding(1);
     this.displayedText = new this.ui.Binding('');
 
-    // Start animations
-    this.startAnimations();
-  }
-
-  private startAnimations(): void {
-    // Frame animation for character
-    if (this.animationInterval) {
-      this.async.clearInterval(this.animationInterval);
-    }
-
-    this.animationInterval = this.async.setInterval(() => {
-      const current = this.currentFrame.get();
-      this.currentFrame.set((current % 10) + 1);
-    }, 200);
-
-    // Just show the first quote statically
+    // Show the first quote statically
     this.displayedText.set(this.quotes[0]);
+
+    // Create animated binding for menu frames
+    let frameIndex = 0;
+    this.menuFrameAnimation = new IntervaledBinding<string>(
+      this.menuFrameIds[0],
+      () => {
+        frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
+        return this.menuFrameIds[frameIndex];
+      },
+      200, // 200ms per frame
+      this.async
+    );
   }
 
   /**
@@ -100,39 +99,46 @@ export class MenuScreen {
     }));
 
     // Create custom text content (quote + resources)
+    // Create text bindings that include emoji and value
+    const tokensText = this.stats.derive((statsVal: MenuStats | null) =>
+      `🪙 ${statsVal?.tokens ?? 0}`
+    );
+    const diamondsText = this.stats.derive((statsVal: MenuStats | null) =>
+      `💎 ${statsVal?.diamonds ?? 0}`
+    );
+    const serumsText = this.stats.derive((statsVal: MenuStats | null) =>
+      `🧪 ${statsVal?.serums ?? 0}`
+    );
+
     const customTextContent = [
       this.ui.View({
         style: {
           position: 'relative',
         },
-        children: this.stats.derive((statsVal: MenuStats | null) => {
-          if (!statsVal) return [];
-
-          return [
-            // Quote text (lines 0-2)
-            this.ui.View({
+        children: [
+          // Quote text (lines 0-2)
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              top: 0,
+              width: 110,
+            },
+            children: this.ui.Text({
+              text: this.displayedText,
+              numberOfLines: 3,
               style: {
-                position: 'absolute',
-                top: 0,
-                width: 110,
+                fontSize: DIMENSIONS.fontSize.lg,
+                color: COLORS.textPrimary,
+                lineHeight: lineHeight,
               },
-              children: this.ui.Text({
-                text: this.displayedText,
-                numberOfLines: 3,
-                style: {
-                  fontSize: DIMENSIONS.fontSize.lg,
-                  color: COLORS.textPrimary,
-                  lineHeight: lineHeight,
-                },
-              }),
             }),
+          }),
 
-            // Resources (lines 4-6)
-            createResourceRow(this.ui, '🪙', statsVal.tokens, lineHeight * 4),
-            createResourceRow(this.ui, '💎', statsVal.diamonds, lineHeight * 5),
-            createResourceRow(this.ui, '🧪', statsVal.serums, lineHeight * 6),
-          ];
-        }) as any,
+          // Resources (lines 4-6) - using createTextRow instead of createResourceRow
+          createTextRow(this.ui, tokensText, lineHeight * 4),
+          createTextRow(this.ui, diamondsText, lineHeight * 5),
+          createTextRow(this.ui, serumsText, lineHeight * 6),
+        ],
       }),
     ];
 
@@ -145,7 +151,7 @@ export class MenuScreen {
       children: [
         // Background image (full screen)
         this.ui.Image({
-          source: new this.ui.Binding({ uri: 'background' }),
+          imageId: 'background',
           style: {
             position: 'absolute',
             width: '100%',
@@ -173,7 +179,7 @@ export class MenuScreen {
                 top: 25,
               },
               children: this.ui.Image({
-                source: this.currentFrame.derive((f: number) => ({ uri: `menu-frame-${f}` })),
+                binding: this.menuFrameAnimation,
                 style: {
                   width: 750,
                   height: 700,
@@ -219,13 +225,6 @@ export class MenuScreen {
    * Clean up animations
    */
   dispose(): void {
-    if (this.animationInterval) {
-      this.async.clearInterval(this.animationInterval);
-      this.animationInterval = null;
-    }
-    if (this.textAnimationInterval) {
-      this.async.clearInterval(this.textAnimationInterval);
-      this.textAnimationInterval = null;
-    }
+    this.menuFrameAnimation.dispose();
   }
 }

@@ -154,7 +154,7 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
         children: [
             // Sidebar background image
             ui.Image({
-                source: new ui.Binding({ uri: 'side-menu' }),
+                imageId: 'side-menu',
                 style: {
                     position: 'absolute',
                     width: sideMenuDimensions.width,
@@ -197,7 +197,7 @@ function createSideMenuButton(
         children: [
             // Button background image
             ui.Image({
-                source: new ui.Binding({ uri: 'standard-button' }),
+                imageId: 'standard-button',
                 style: {
                     position: 'absolute',
                     width: sideMenuButtonDimensions.width,
@@ -238,93 +238,109 @@ function createPlayerInfo(
     stats: ValueBindingBase<MenuStats | null> | any,
     onXPBarClick?: (title: string, message: string) => void
 ): UINodeType {
+    // Create derived bindings for reactive values (Horizon best practice)
+    // Derive final values directly from base binding to avoid chaining
+    const xpWidthBinding = stats.derive((statsVal: MenuStats | null) => {
+        if (!statsVal) return '0%';
+        const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+        const currentLevel = statsVal.playerLevel;
+        const totalXP = statsVal.totalXP;
+        const xpForCurrentLevel = xpThresholds[currentLevel - 1];
+        const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
+        const currentXP = totalXP - xpForCurrentLevel;
+        const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+        const xpPercent = Math.min(100, (currentXP / xpNeeded) * 100);
+        return `${xpPercent}%`;
+    });
+
+    const levelTextBinding = stats.derive((statsVal: MenuStats | null) =>
+        statsVal ? `${statsVal.playerLevel}` : '1'
+    );
+
     return ui.View({
         style: {
             position: 'relative',
         },
-        children: stats.derive((statsVal: MenuStats | null) => {
-            if (!statsVal) return [];
-
-            const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
-            const currentLevel = statsVal.playerLevel;
-            const totalXP = statsVal.totalXP;
-            const xpForCurrentLevel = xpThresholds[currentLevel - 1];
-            const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
-            const currentXP = totalXP - xpForCurrentLevel;
-            const xpNeeded = xpForNextLevel - xpForCurrentLevel;
-            const xpPercent = Math.min(100, (currentXP / xpNeeded) * 100);
-
-            return [
-                // Player name
-                ui.View({
+        children: [
+            // Player name
+            ui.View({
+                style: {
+                    position: 'absolute',
+                    left: sideMenuPositions.playerName.x,
+                    top: 0,
+                },
+                children: ui.Text({
+                    text: new ui.Binding('Player'),
                     style: {
-                        position: 'absolute',
-                        left: sideMenuPositions.playerName.x,
-                        top: 0,
+                        fontSize: sideMenuPositions.playerName.size,
+                        color: COLORS.textPrimary,
+                        textAlign: sideMenuPositions.playerName.textAlign as any,
                     },
-                    children: ui.Text({
-                        text: new ui.Binding('Player'),
-                        style: {
-                            fontSize: sideMenuPositions.playerName.size,
-                            color: COLORS.textPrimary,
-                            textAlign: sideMenuPositions.playerName.textAlign as any,
-                        },
-                    }),
                 }),
+            }),
 
-                // XP Bar
-                ui.View({
-                    style: {
-                        position: 'absolute',
-                        left: sideMenuPositions.playerExperienceBar.x,
-                        top: 19, // Offset from player name
-                        width: sideMenuPositions.playerExperienceBar.maxWidth,
-                        height: 11,
-                    },
-                    children: ui.Pressable({
-                        onClick: () => {
-                            if (onXPBarClick) {
+            // XP Bar
+            ui.View({
+                style: {
+                    position: 'absolute',
+                    left: sideMenuPositions.playerExperienceBar.x,
+                    top: 19, // Offset from player name
+                    width: sideMenuPositions.playerExperienceBar.maxWidth,
+                    height: 11,
+                },
+                children: ui.Pressable({
+                    onClick: () => {
+                        if (onXPBarClick) {
+                            const statsVal = stats.get();
+                            if (statsVal) {
+                                const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+                                const currentLevel = statsVal.playerLevel;
+                                const totalXP = statsVal.totalXP;
+                                const xpForCurrentLevel = xpThresholds[currentLevel - 1];
+                                const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
+                                const currentXP = totalXP - xpForCurrentLevel;
+                                const xpNeeded = xpForNextLevel - xpForCurrentLevel;
                                 const title = `Level ${currentLevel}`;
                                 const message = `Current XP: ${currentXP} / ${xpNeeded}\n\nTotal XP: ${totalXP}`;
                                 onXPBarClick(title, message);
                             }
-                        },
-                        style: {
-                            width: '100%',
-                            height: '100%',
-                        },
-                        children: ui.Image({
-                            source: new ui.Binding({ uri: 'experience-bar' }),
-                            style: {
-                                width: `${xpPercent}%`,
-                                height: 11,
-                            },
-                        }),
-                    }),
-                }),
-
-                // Level text (centered on XP bar)
-                ui.View({
-                    style: {
-                        position: 'absolute',
-                        left: sideMenuPositions.playerLevel.x,
-                        top: 19,
-                        width: 20,
-                        height: 11,
-                        justifyContent: 'center',
-                        alignItems: 'center',
+                        }
                     },
-                    children: ui.Text({
-                        text: new ui.Binding(`${currentLevel}`),
+                    style: {
+                        width: '100%',
+                        height: '100%',
+                    },
+                    children: ui.Image({
+                        imageId: 'experience-bar',
                         style: {
-                            fontSize: sideMenuPositions.playerLevel.size,
-                            color: COLORS.textPrimary,
-                            textAlign: 'center',
+                            width: xpWidthBinding,
+                            height: 11,
                         },
                     }),
                 }),
-            ];
-        }) as any,
+            }),
+
+            // Level text (centered on XP bar)
+            ui.View({
+                style: {
+                    position: 'absolute',
+                    left: sideMenuPositions.playerLevel.x,
+                    top: 19,
+                    width: 20,
+                    height: 11,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                },
+                children: ui.Text({
+                    text: levelTextBinding,
+                    style: {
+                        fontSize: sideMenuPositions.playerLevel.size,
+                        color: COLORS.textPrimary,
+                        textAlign: 'center',
+                    },
+                }),
+            }),
+        ],
     });
 }
 

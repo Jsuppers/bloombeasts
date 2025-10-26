@@ -17,7 +17,10 @@
       "Bash(do echo \"=== $f ===\")",
       "Bash(node bundle-with-namespace.js:*)",
       "Bash(npm test:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "WebFetch(domain:developers.meta.com)",
+      "Read(//c/Users/joris/Desktop/**)",
+      "Bash(taskkill:*)"
     ],
     "deny": [],
     "ask": []

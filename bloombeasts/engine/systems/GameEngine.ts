@@ -33,18 +33,20 @@ export class GameEngine {
   private combatSystem: CombatSystem;
   private abilityProcessor: AbilityProcessor;
   private levelingSystem: LevelingSystem;
-  private cardDatabase: Map<string, AnyCard>;
+  private cardDatabase: Map<string, AnyCard> | null = null;
 
   constructor() {
     this.gameState = this.createInitialState();
     this.combatSystem = new CombatSystem();
     this.abilityProcessor = new AbilityProcessor();
     this.levelingSystem = new LevelingSystem();
-    this.cardDatabase = this.buildCardDatabase();
+    // Don't build card database yet - it will be built lazily when needed
+    // This allows GameEngine to be constructed before asset catalogs are loaded
   }
 
   /**
    * Build card database from all card definitions
+   * Called lazily on first access
    */
   private buildCardDatabase(): Map<string, AnyCard> {
     const db = new Map<string, AnyCard>();
@@ -55,6 +57,16 @@ export class GameEngine {
       }
     });
     return db;
+  }
+
+  /**
+   * Get card database, building it lazily if needed
+   */
+  private getCardDatabase(): Map<string, AnyCard> {
+    if (!this.cardDatabase) {
+      this.cardDatabase = this.buildCardDatabase();
+    }
+    return this.cardDatabase;
   }
 
   /**
@@ -1047,7 +1059,7 @@ export class GameEngine {
    * Get card definition by ID
    */
   private getCardDefinition(cardId: string): AnyCard | null {
-    return this.cardDatabase.get(cardId) || null;
+    return this.getCardDatabase().get(cardId) || null;
   }
 
   /**

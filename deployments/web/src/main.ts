@@ -6,7 +6,7 @@
 import { BloomBeastsGame, PlatformConfig, type PlayerData } from '../../../bloombeasts/BloomBeastsGame';
 import { assetCatalogManager, AssetCatalogManager } from '../../../bloombeasts/AssetCatalogManager';
 import { UIRenderer } from './ui/UIRenderer';
-import { View, Text, Image, Pressable, Binding } from './ui';
+import { View, Text, Image, Pressable, Binding, DerivedBinding, ValueBindingBase, UINode } from './ui';
 import { AnimatedBinding, Animation, Easing } from './ui';
 
 /**
@@ -146,17 +146,21 @@ class WebGameApp {
                 return path.startsWith('/') ? path : `/${path}`;
             },
 
-            // UI methods: web implementations
-            getUIMethodMappings: () => ({
-                View,
-                Text,
-                Image,
-                Pressable,
-                Binding,
-                AnimatedBinding,
-                Animation,
-                Easing
-            }),
+            // UI methods: web implementations with asset transformation
+            getUIMethodMappings: () => {
+                // No need for wrapper anymore - Image component now uses imageId/imageIds directly
+                return {
+                    View,
+                    Text,
+                    Image,
+                    Pressable,
+                    UINode,
+                    Binding,
+                    AnimatedBinding,
+                    Animation,
+                    Easing
+                };
+            },
 
             // Async methods: standard browser APIs
             async: {

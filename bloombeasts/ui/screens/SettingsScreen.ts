@@ -54,7 +54,7 @@ export class SettingsScreen {
       children: [
         // Background
         this.ui.Image({
-          source: new this.ui.Binding({ uri: 'background' }),
+          imageId: 'background',
           style: {
             position: 'absolute',
             width: '100%',
@@ -65,7 +65,7 @@ export class SettingsScreen {
         }),
         // Cards Container image as background
         this.ui.Image({
-          source: new this.ui.Binding({ uri: 'cards-container' }),
+          imageId: 'cards-container',
           style: {
             position: 'absolute',
             left: 40,
@@ -75,6 +75,7 @@ export class SettingsScreen {
           },
         }),
         // Main content - settings panel
+        // Note: UI re-renders when settings binding changes via subscription
         this.ui.View({
           style: {
             position: 'absolute',
@@ -84,15 +85,18 @@ export class SettingsScreen {
             height: 580,
             padding: 40,
           },
-          children: this.settings.derive((settings: SoundSettings) => [
-            // Music settings
-            this.createVolumeControl('Music Volume', 'musicVolume', 'music-volume', settings),
-            this.createToggleControl('Music', 'musicEnabled', 'music-enabled', settings),
+          children: (() => {
+            const settings = this.settings.get();
+            return [
+              // Music settings
+              this.createVolumeControl('Music Volume', 'musicVolume', 'music-volume', settings),
+              this.createToggleControl('Music', 'musicEnabled', 'music-enabled', settings),
 
-            // SFX settings
-            this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfx-volume', settings),
-            this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfx-enabled', settings),
-          ]) as any,
+              // SFX settings
+              this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfx-volume', settings),
+              this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfx-enabled', settings),
+            ];
+          })(),
         }),
         // Sidebar with common side menu
         createSideMenu(this.ui, {
@@ -253,7 +257,7 @@ export class SettingsScreen {
           children: [
             // Button background image (standard or green based on state)
             this.ui.Image({
-              source: new this.ui.Binding({ uri: settings[settingKey] ? 'green-button' : 'standard-button' }),
+              imageId: settings[settingKey] ? 'green-button' : 'standard-button',
               style: {
                 position: 'absolute',
                 width: 120,

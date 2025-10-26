@@ -111,7 +111,7 @@ export class MissionScreen {
    */
   private createBackground(): UINodeType {
     return this.ui.Image({
-      source: new this.ui.Binding({ uri: 'background' }),
+      imageId: 'background',
       style: {
         position: 'absolute',
         width: '100%',
@@ -137,7 +137,7 @@ export class MissionScreen {
       children: [
         // Cards container background image
         this.ui.Image({
-          source: new this.ui.Binding({ uri: 'cards-container' }),
+          imageId: 'cards-container',
           style: {
             position: 'absolute',
             width: cardsUIContainerDimensions.width,
@@ -147,6 +147,8 @@ export class MissionScreen {
           },
         }),
         // Content on top of container image
+        // Mission grid container
+        // Note: UI re-renders when missions binding changes via subscription
         this.ui.View({
           style: {
             position: 'relative',
@@ -155,29 +157,39 @@ export class MissionScreen {
             width: cardsUIContainerDimensions.width,
             height: cardsUIContainerDimensions.height,
           },
-          children: this.missions.derive((missions: MissionDisplay[]) => {
-            if (missions.length === 0) {
-              return [
-                this.ui.View({
+          children: [
+            // Empty state - show when no missions
+            ...(this.ui.UINode ? [this.ui.UINode.if(
+              this.ui.Binding.derive(
+                [this.missions],
+                (missions: MissionDisplay[]) => missions.length === 0
+              ),
+              this.ui.View({
+                style: {
+                  width: '100%',
+                  height: '100%',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                },
+                children: this.ui.Text({
+                  text: new this.ui.Binding('No missions available yet.'),
                   style: {
-                    width: '100%',
-                    height: '100%',
-                    justifyContent: 'center',
-                    alignItems: 'center',
+                    fontSize: DIMENSIONS.fontSize.xl,
+                    color: COLORS.textSecondary,
                   },
-                  children: this.ui.Text({
-                    text: new this.ui.Binding('No missions available yet.'),
-                    style: {
-                      fontSize: DIMENSIONS.fontSize.xl,
-                      color: COLORS.textSecondary,
-                    },
-                  }),
                 }),
-              ];
-            }
+              })
+            )] : []),
 
-            return [this.createMissionGrid()];
-          }) as any,
+            // Mission grid - show when missions exist
+            ...(this.ui.UINode ? [this.ui.UINode.if(
+              this.ui.Binding.derive(
+                [this.missions],
+                (missions: MissionDisplay[]) => missions.length > 0
+              ),
+              this.createMissionGrid()
+            )] : [this.createMissionGrid()]),
+          ],
         }),
       ],
     });
@@ -196,44 +208,42 @@ export class MissionScreen {
     const spacingX = cardWidth + gapX; // Total horizontal space per card
     const spacingY = cardHeight + gapY; // Total vertical space per card
 
+    // Note: UI re-renders when missions/scrollOffset bindings change via subscription
+    const missions = this.missions.get();
+    const offset = this.scrollOffset.get();
+    const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+    const startIndex = offset * missionsPerPage;
+    const endIndex = Math.min(startIndex + missionsPerPage, missions.length);
+    const visibleMissions = missions.slice(startIndex, endIndex);
+
+    // Create absolutely positioned cards
+    const cards: UINodeType[] = [];
+    for (let i = 0; i < visibleMissions.length; i++) {
+      const mission = visibleMissions[i];
+      const row = Math.floor(i / this.missionsPerRow);
+      const col = i % this.missionsPerRow;
+      const x = startX + col * spacingX;
+      const y = startY + row * spacingY;
+
+      cards.push(
+        this.ui.View({
+          style: {
+            position: 'absolute',
+            left: x,
+            top: y,
+          },
+          children: this.createMissionItem(mission),
+        })
+      );
+    }
+
     return this.ui.View({
       style: {
         position: 'relative',
         width: '100%',
         height: '100%',
       },
-      children: this.ui.Binding.derive(
-        [this.missions, this.scrollOffset],
-        (missions: MissionDisplay[], offset: number) => {
-          const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-          const startIndex = offset * missionsPerPage;
-          const endIndex = Math.min(startIndex + missionsPerPage, missions.length);
-          const visibleMissions = missions.slice(startIndex, endIndex);
-
-          // Create absolutely positioned cards
-          const cards: UINodeType[] = [];
-          for (let i = 0; i < visibleMissions.length; i++) {
-            const mission = visibleMissions[i];
-            const row = Math.floor(i / this.missionsPerRow);
-            const col = i % this.missionsPerRow;
-            const x = startX + col * spacingX;
-            const y = startY + row * spacingY;
-
-            cards.push(
-              this.ui.View({
-                style: {
-                  position: 'absolute',
-                  left: x,
-                  top: y,
-                },
-                children: this.createMissionItem(mission),
-              })
-            );
-          }
-
-          return cards;
-        }
-      ) as any,
+      children: cards,
     });
   }
 
@@ -267,7 +277,7 @@ export class MissionScreen {
       children: [
         // Mission-specific background image (ForestMission, WaterMission, etc.)
         this.ui.Image({
-          source: new this.ui.Binding({ uri: missionImageName }),
+          imageId: missionImageName,
           style: {
             position: 'absolute',
             width: cardWidth,
@@ -280,7 +290,7 @@ export class MissionScreen {
         // Beast image (if available)
         mission.beastId
           ? this.ui.Image({
-              source: new this.ui.Binding({ uri: mission.beastId.toLowerCase().replace(/\s+/g, '-') }),
+              imageId: mission.beastId.toLowerCase().replace(/\s+/g, '-'),
               style: {
                 position: 'absolute',
                 width: beastSize,
