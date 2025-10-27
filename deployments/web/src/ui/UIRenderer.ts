@@ -233,29 +233,27 @@ export class UIRenderer {
 
         let currentImageId: string | null = null;
 
-        // Priority: binding > imageId
-        if (node.props.binding) {
-            // Mark that we have active animations (needs continuous rendering)
-            this.hasActiveAnimations = true;
-
-            // Handle BaseBinding - call .get() to get current value
-            if (typeof node.props.binding.get === 'function') {
-                currentImageId = node.props.binding.get();
-            }
+        // Priority: source > imageId (for backwards compatibility)
+        if (node.props.source) {
+            // Handle source (string or binding)
+            const source = this.resolveAndTrack<string | null>(node.props.source);
+            currentImageId = source;
         } else if (node.props.imageId) {
-            // Handle imageId (string or platform binding)
+            // Legacy: Handle imageId (string or platform binding)
             const imageId = this.resolveAndTrack<string | null>(node.props.imageId);
             currentImageId = imageId;
         }
 
         if (currentImageId) {
             const img = this.imageCache.get(currentImageId);
+            console.log('[UIRenderer] Looking for image:', currentImageId, 'Found:', !!img, 'Complete:', img?.complete);
 
             if (img && img.complete) {
                 // Draw the image
                 this.ctx.drawImage(img, box.x, box.y, box.width, box.height);
             } else {
                 // Draw placeholder if image not loaded
+                console.log('[UIRenderer] Drawing placeholder for:', currentImageId);
                 this.ctx.fillStyle = '#333';
                 this.ctx.fillRect(box.x, box.y, box.width, box.height);
                 this.ctx.fillStyle = '#666';

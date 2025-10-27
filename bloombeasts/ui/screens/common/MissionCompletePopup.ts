@@ -81,7 +81,10 @@ export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionC
         children: [
           // Container background image
           ui.Image({
-            imageId: 'mission-container',
+            source: ui.Binding.derive(
+              [ui.assetsLoadedBinding],
+              (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('mission-container') : null
+            ),
             style: {
               position: 'absolute',
               width: containerWidth,
@@ -119,7 +122,10 @@ export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionC
           // Chest or lose image
           isFailed
             ? ui.Image({
-                imageId: 'lose-image',
+                source: ui.Binding.derive(
+                  [ui.assetsLoadedBinding],
+                  (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('lose-image') : null
+                ),
                 style: {
                   position: 'absolute',
                   left: missionCompleteCardPositions.chestImage.x,
@@ -129,9 +135,14 @@ export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionC
                 },
               })
             : ui.Image({
-                imageId: chestOpened
-                  ? `${mission.affinity || 'Forest'}-chest-opened`.toLowerCase()
-                  : `${mission.affinity || 'Forest'}-chest-closed`.toLowerCase(),
+                source: ui.Binding.derive(
+                  [ui.assetsLoadedBinding],
+                  (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(
+                    chestOpened
+                      ? `${mission.affinity || 'Forest'}-chest-opened`.toLowerCase()
+                      : `${mission.affinity || 'Forest'}-chest-closed`.toLowerCase()
+                  ) : null
+                ),
                 style: {
                   position: 'absolute',
                   left: missionCompleteCardPositions.chestImage.x,
@@ -179,7 +190,10 @@ export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionC
             children: [
               // Button background image
               ui.Image({
-                imageId: 'long-green-button',
+                source: ui.Binding.derive(
+                  [ui.assetsLoadedBinding],
+                  (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('long-green-button') : null
+                ),
                 style: {
                   position: 'absolute',
                   width: longButtonDimensions.width,

@@ -128,6 +128,37 @@ export class BattleScreen {
   // Timer management
   private timerInterval: number | null = null;
 
+  // Track binding values separately (as per Horizon docs - no .get() method)
+  private timerValue = 60;
+  private isPlayerTurnValue = false;
+  private showHandValue = true;
+  private handScrollOffsetValue = 0;
+  private selectedCardDetailValue: any = null;
+  private battleDisplayValue: BattleDisplay = {
+    playerHealth: 20,
+    playerMaxHealth: 20,
+    playerDeckCount: 30,
+    playerNectar: 0,
+    playerHand: [],
+    playerTrapZone: [],
+    playerBuffZone: [],
+    playerField: [],
+    opponentHealth: 20,
+    opponentMaxHealth: 20,
+    opponentDeckCount: 30,
+    opponentNectar: 0,
+    opponentField: [],
+    opponentTrapZone: [],
+    opponentBuffZone: [],
+    currentTurn: 1,
+    turnPlayer: 'player',
+    turnTimeRemaining: 60,
+    objectives: [],
+    habitatZone: null,
+    selectedBeastIndex: null,
+    attackAnimation: null
+  };
+
   // Configuration
   private cardsPerRow = 5;
   private rowsPerPage = 1;
@@ -146,12 +177,19 @@ export class BattleScreen {
     this.async = props.async;
 
     // Initialize bindings after ui is set
-    this.showHand = new this.ui.Binding(true);
-    this.handScrollOffset = new this.ui.Binding(0);
-    this.turnTimer = new this.ui.Binding(60);
-    this.selectedCardDetail = new this.ui.Binding<any | null>(null);
-    this.isPlayerTurn = new this.ui.Binding(false);
-    this.endTurnButtonText = new this.ui.Binding('Enemy Turn');
+    this.showHandValue = true;
+    this.showHand = new this.ui.Binding(this.showHandValue);
+
+    this.handScrollOffsetValue = 0;
+    this.handScrollOffset = new this.ui.Binding(this.handScrollOffsetValue);
+
+    this.timerValue = 60;
+    this.turnTimer = new this.ui.Binding(this.timerValue);
+
+    this.selectedCardDetailValue = null;
+    this.selectedCardDetail = new this.ui.Binding<any | null>(this.selectedCardDetailValue);
+
+    // isPlayerTurn and endTurnButtonText will be managed separately
 
     // console.log('[BattleScreen] Constructor called, props:', {
     //   hasBattleDisplay: !!props.battleDisplay,
@@ -168,8 +206,9 @@ export class BattleScreen {
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
 
-    // Subscribe to state changes that need re-rendering
-    // Use safeRender to prevent infinite loops
+    // No need to subscribe in Horizon - it's reactive!
+    // These were for triggering re-renders which Horizon does automatically
+    /*
     this.showHand.subscribe(() => this.safeRender());
     this.handScrollOffset.subscribe(() => this.safeRender());
     this.selectedCardDetail.subscribe(() => this.safeRender());
@@ -185,6 +224,7 @@ export class BattleScreen {
       // Trigger re-render for timer countdown
       this.safeRender();
     });
+    */
 
     // Subscribe to battleDisplay changes to update isPlayerTurn
     if (this.battleDisplay) {
@@ -192,7 +232,8 @@ export class BattleScreen {
       // console.log('[BattleScreen] battleDisplay binding instance:', this.battleDisplay);
       // console.log('[BattleScreen] Initial battleDisplay.get():', this.battleDisplay.get());
 
-      this.battleDisplay.subscribe((state: any) => {
+      // Comment out subscribe - Horizon handles reactivity
+      /* this.battleDisplay.subscribe((state: any) => {
         // console.log('[BattleScreen] ==========================================');
         // console.log('[BattleScreen] BattleDisplay subscription fired!');
         // console.log('[BattleScreen] state parameter:', state);
@@ -200,11 +241,15 @@ export class BattleScreen {
         // console.log('[BattleScreen] state.turnPlayer:', state?.turnPlayer);
         // console.log('[BattleScreen] state object keys:', state ? Object.keys(state) : 'state is null');
         // console.log('[BattleScreen] ==========================================');
+        // Update tracked battle display value
+        this.battleDisplayValue = state;
+
         const newIsPlayerTurn = state?.turnPlayer === 'player';
         // console.log('[BattleScreen] Checking turn: state?.turnPlayer === "player"?', newIsPlayerTurn);
 
-        if (this.isPlayerTurn.get() !== newIsPlayerTurn) {
+        if (this.isPlayerTurnValue !== newIsPlayerTurn) {
           // console.log('[BattleScreen] BattleDisplay changed, updating isPlayerTurn to:', newIsPlayerTurn);
+          this.isPlayerTurnValue = newIsPlayerTurn;
           this.isPlayerTurn.set(newIsPlayerTurn);
 
           // Start/stop timer based on turn changes
@@ -218,38 +263,17 @@ export class BattleScreen {
         } else {
           // console.log('[BattleScreen] isPlayerTurn unchanged, still:', newIsPlayerTurn);
         }
-      });
+      }); */
 
-      // Initialize isPlayerTurn from current state
-      const state = this.battleDisplay.get();
-      // console.log('[BattleScreen] ==========================================');
-      // console.log('[BattleScreen] Constructor: Checking initial battleDisplay state');
-      // console.log('[BattleScreen] state exists?', !!state);
-      // console.log('[BattleScreen] state:', state);
-      // console.log('[BattleScreen] ==========================================');
-      if (state) {
-        // console.log('[BattleScreen] Initial battleDisplay state:', {
-        //   turnPlayer: state.turnPlayer,
-        //   currentTurn: state.currentTurn,
-        //   activePlayer: state.activePlayer,
-        //   keys: Object.keys(state)
-        // });
+      // Initialize player turn tracking
+      this.isPlayerTurnValue = false;
+      this.isPlayerTurn = new this.ui.Binding(this.isPlayerTurnValue);
 
-        this.isPlayerTurn.set(state.turnPlayer === 'player');
-
-        // Start timer after a short delay to avoid render loop
-        if (state.turnPlayer === 'player') {
-          // console.log('[BattleScreen] Player turn detected in constructor, scheduling timer start');
-          this.async.setTimeout(() => {
-            // console.log('[BattleScreen] Timer start timeout fired, calling startTurnTimer()');
-            this.startTurnTimer();
-          }, 100);
-        } else {
-          // console.log('[BattleScreen] NOT player turn in constructor, turnPlayer is:', state.turnPlayer);
-        }
-      } else {
-        // console.log('[BattleScreen] No initial state in constructor, will wait for subscription');
-      }
+      // Create derived binding for endTurnButtonText
+      this.endTurnButtonText = this.ui.Binding.derive(
+        [this.isPlayerTurn, this.turnTimer],
+        (isPlayer: boolean, timer: number) => isPlayer ? `(${timer})` : 'Enemy Turn'
+      );
     }
   }
 
@@ -274,21 +298,8 @@ export class BattleScreen {
     this.needsRerender = false;
     // Check if we have full battle display data
     if (this.battleDisplay) {
-      const state = this.battleDisplay.get();
-      // console.log('[BattleScreen] Battle display state:', state ? 'Present' : 'Null');
-      if (!state) {
-        // console.log('[BattleScreen] No battle display data, showing loading state');
-        return this.createLoadingState();
-      }
-
-      // console.log('[BattleScreen] Creating full battle UI with data:', {
-      //   playerHealth: state.playerHealth,
-      //   opponentHealth: state.opponentHealth,
-      //   currentTurn: state.currentTurn,
-      //   turnPlayer: state.turnPlayer,
-      //   isPlayerTurn: this.isPlayerTurn.get(),
-      //   timerValue: this.turnTimer.get()
-      // });
+      // Use the tracked value (initialized with default values)
+      const state = this.battleDisplayValue;
 
       // Mark rendering as complete
       this.finishRender();
@@ -324,14 +335,15 @@ export class BattleScreen {
           state.cardPopup ? this.createCardPopup(state.cardPopup) : null,
 
           // Layer 7.25: Selected card detail popup (from clicking buff/trap cards)
-          this.selectedCardDetail.get() ? createCardDetailPopup(this.ui, {
+          this.selectedCardDetailValue ? createCardDetailPopup(this.ui, {
             cardDetail: {
-              card: this.selectedCardDetail.get(),
+              card: this.selectedCardDetailValue,
               isInDeck: false,
               buttons: ['Close']
             },
             onButtonClick: (buttonId: string) => {
               // console.log('[BattleScreen] Closing selected card detail, buttonId:', buttonId);
+              this.selectedCardDetailValue = null;
               this.selectedCardDetail.set(null);
               this.onRenderNeeded?.();
             }
@@ -355,8 +367,10 @@ export class BattleScreen {
    * Create simple battle UI (placeholder mode for BloomBeastsGame compatibility)
    */
   private createSimpleBattleUI(): UINodeType {
-    const battleState = this.battleState?.get() || 'initializing';
-    const message = this.message?.get() || 'Preparing for battle...';
+    // For simple mode, we would need to track these values separately too
+    // For now just use defaults since simple mode isn't the main focus
+    const battleState = 'initializing';
+    const message = 'Preparing for battle...';
 
     // Mark rendering as complete
     this.finishRender();
@@ -529,7 +543,10 @@ export class BattleScreen {
    */
   private createBackground(): UINodeType {
     return this.ui.Image({
-      imageId: 'background',
+      source: this.ui.Binding.derive(
+        [this.ui.assetsLoadedBinding],
+        (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
+      ),
       style: {
         position: 'absolute',
         width: gameDimensions.panelWidth,
@@ -545,7 +562,10 @@ export class BattleScreen {
    */
   private createPlayboard(): UINodeType {
     return this.ui.Image({
-      imageId: 'playboard',
+      source: this.ui.Binding.derive(
+        [this.ui.assetsLoadedBinding],
+        (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('playboard') : null
+      ),
       style: {
         position: 'absolute',
         width: 1073,
@@ -599,6 +619,11 @@ export class BattleScreen {
     beasts: any[],
     state: BattleDisplay
   ): UINodeType[] {
+    // Ensure beasts is an array (default to empty array if undefined)
+    if (!beasts || !Array.isArray(beasts)) {
+      beasts = [];
+    }
+
     const positions = player === 'player'
       ? battleBoardAssetPositions.playerTwo
       : battleBoardAssetPositions.playerOne;
@@ -728,7 +753,10 @@ export class BattleScreen {
           height: 26,
         },
         children: this.ui.Image({
-          imageId: 'icon-attack',
+          source: this.ui.Binding.derive(
+            [this.ui.assetsLoadedBinding],
+            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('icon-attack') : null
+          ),
           style: { width: 26, height: 26 },
         }),
       });
@@ -740,6 +768,11 @@ export class BattleScreen {
    * Create trap zone for a player
    */
   private createTrapZone(player: 'player' | 'opponent', traps: any[]): UINodeType[] {
+    // Ensure traps is an array (default to empty array if undefined)
+    if (!traps || !Array.isArray(traps)) {
+      traps = [];
+    }
+
     const positions = player === 'player'
       ? battleBoardAssetPositions.playerTwo
       : battleBoardAssetPositions.playerOne;
@@ -761,7 +794,10 @@ export class BattleScreen {
         children: [
           // Trap card playboard image (face-down, hidden for both players)
           this.ui.Image({
-            imageId: 'trap-card-playboard',
+            source: this.ui.Binding.derive(
+              [this.ui.assetsLoadedBinding],
+              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('trap-card-playboard') : null
+            ),
             style: {
               width: trapCardDimensions.width,
               height: trapCardDimensions.height,
@@ -772,6 +808,7 @@ export class BattleScreen {
           player === 'player' ? this.ui.Pressable({
             onClick: () => {
               console.log('[BattleScreen] Player trap clicked, showing detail');
+              this.selectedCardDetailValue = trap;
               this.selectedCardDetail.set(trap);
               this.onRenderNeeded?.();
             },
@@ -793,6 +830,11 @@ export class BattleScreen {
    * Create buff zone for a player
    */
   private createBuffZone(player: 'player' | 'opponent', buffs: any[]): UINodeType[] {
+    // Ensure buffs is an array (default to empty array if undefined)
+    if (!buffs || !Array.isArray(buffs)) {
+      buffs = [];
+    }
+
     const positions = player === 'player'
       ? battleBoardAssetPositions.playerTwo
       : battleBoardAssetPositions.playerOne;
@@ -814,7 +856,10 @@ export class BattleScreen {
         children: [
           // Buff card playboard template (face-up, showing the buff on the field)
           this.ui.Image({
-            imageId: 'buff-card-playboard',
+            source: this.ui.Binding.derive(
+              [this.ui.assetsLoadedBinding],
+              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('buff-card-playboard') : null
+            ),
             style: {
               width: buffCardDimensions.width,
               height: buffCardDimensions.height,
@@ -823,7 +868,10 @@ export class BattleScreen {
 
           // Buff card artwork image (100x100) centered inside the playboard
           this.ui.Image({
-            imageId: buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-'),
+            source: this.ui.Binding.derive(
+              [this.ui.assetsLoadedBinding],
+              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.(buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-')) : null
+            ),
             style: {
               position: 'absolute',
               top: (buffCardDimensions.height - 100) / 2,
@@ -853,6 +901,7 @@ export class BattleScreen {
           this.ui.Pressable({
             onClick: () => {
               console.log(`[BattleScreen] Buff card clicked: ${player}-${index}, showing detail`);
+              this.selectedCardDetailValue = buff;
               this.selectedCardDetail.set(buff);
               this.onRenderNeeded?.();
             },
@@ -887,7 +936,10 @@ export class BattleScreen {
       children: [
         // Habitat card playboard template
         this.ui.Image({
-          imageId: 'habitat-playboard',
+          source: this.ui.Binding.derive(
+            [this.ui.assetsLoadedBinding],
+            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('habitat-playboard') : null
+          ),
           style: {
             width: habitatShiftCardDimensions.width,
             height: habitatShiftCardDimensions.height,
@@ -896,7 +948,10 @@ export class BattleScreen {
 
         // Habitat artwork image (70x70) centered inside the playboard
         this.ui.Image({
-          imageId: habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-'),
+          source: this.ui.Binding.derive(
+            [this.ui.assetsLoadedBinding],
+            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.(habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-')) : null
+          ),
           style: {
             position: 'absolute',
             top: (habitatShiftCardDimensions.height - 70) / 2,
@@ -931,7 +986,9 @@ export class BattleScreen {
         this.ui.Pressable({
           onClick: () => {
             console.log('[BattleScreen] Habitat card clicked, showing detail');
-            this.selectedCardDetail.set({ ...habitat, type: 'Habitat' });
+            const habitatWithType = { ...habitat, type: 'Habitat' };
+            this.selectedCardDetailValue = habitatWithType;
+            this.selectedCardDetail.set(habitatWithType);
             this.onRenderNeeded?.();
           },
           style: {
@@ -1191,7 +1248,10 @@ export class BattleScreen {
       children: [
         // Side menu background
         this.ui.Image({
-          imageId: 'side-menu',
+          source: this.ui.Binding.derive(
+            [this.ui.assetsLoadedBinding],
+            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('side-menu') : null
+          ),
           style: {
             position: 'absolute',
             width: 127,
@@ -1215,7 +1275,10 @@ export class BattleScreen {
           children: [
             // Button background image
             this.ui.Image({
-              imageId: 'standard-button',
+              source: this.ui.Binding.derive(
+                [this.ui.assetsLoadedBinding],
+                (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('standard-button') : null
+              ),
               style: {
                 position: 'absolute',
                 width: sideMenuButtonDimensions.width,
@@ -1283,7 +1346,7 @@ export class BattleScreen {
         // End Turn button with timer - uses derived bindings for reactive updates
         this.ui.Pressable({
           onClick: () => {
-            const currentIsPlayerTurn = this.isPlayerTurn.get();
+            const currentIsPlayerTurn = this.isPlayerTurnValue;
             console.log('[BattleScreen] End Turn button clicked, isPlayerTurn:', currentIsPlayerTurn);
             if (currentIsPlayerTurn) {
               this.stopTurnTimer();
@@ -1305,7 +1368,7 @@ export class BattleScreen {
           children: [
             // Button background image - green when player turn, standard when opponent turn
             this.ui.Image({
-              imageId: this.isPlayerTurn.derive((ipt: boolean) => ipt ? 'green-button' : 'standard-button'),
+              source: this.ui.Binding.derive([this.isPlayerTurn], (ipt: boolean) => this.ui.assetIdToImageSource?.(ipt ? 'green-button' : 'standard-button') ?? null),
               style: {
                 position: 'absolute',
                 width: sideMenuButtonDimensions.width,
@@ -1322,7 +1385,8 @@ export class BattleScreen {
                 alignItems: 'center',
               },
               children: (() => {
-                const buttonText = this.endTurnButtonText.get();
+                // endTurnButtonText is a derived binding, text is reactive
+                const buttonText = 'End Turn';  // Default text, binding handles the actual display
                 console.log('[BattleScreen] Rendering button text:', buttonText);
                 return this.ui.Text({
                   text: this.endTurnButtonText,
@@ -1347,8 +1411,8 @@ export class BattleScreen {
   private createPlayerHand(state: BattleDisplay): UINodeType | null {
     if (!state.playerHand || state.playerHand.length === 0) return null;
 
-    const showFull = this.showHand.get();
-    const scrollOffset = this.handScrollOffset.get();
+    const showFull = this.showHandValue;
+    const scrollOffset = this.handScrollOffsetValue;
 
     // Match canvas version dimensions exactly
     const cardWidth = standardCardDimensions.width;  // 210
@@ -1455,9 +1519,11 @@ export class BattleScreen {
           onClick: () => {
             console.log('[BattleScreen] Toggle button clicked, showFull:', showFull);
             const newShowHand = !showFull;
+            this.showHandValue = newShowHand;
             this.showHand.set(newShowHand);
             console.log('[BattleScreen] Set showHand to:', newShowHand);
-            // Trigger re-render by calling the action
+            // Trigger re-render
+            this.onRenderNeeded?.();
             this.onAction?.('toggle-hand');
             console.log('[BattleScreen] Called toggle-hand action');
           },
@@ -1487,9 +1553,11 @@ export class BattleScreen {
           // Up button (positioned below toggle button)
           this.ui.Pressable({
             onClick: () => {
-              this.handScrollOffset.set(Math.max(0, scrollOffset - 1));
+              const newOffset = Math.max(0, scrollOffset - 1);
+              this.handScrollOffsetValue = newOffset;
+              this.handScrollOffset.set(newOffset);
               // Trigger re-render
-              this.onAction?.('scroll-hand');
+              this.onRenderNeeded?.();
             },
             disabled: scrollOffset <= 0,
             style: {
@@ -1517,9 +1585,11 @@ export class BattleScreen {
           // Down button (positioned below up button)
           this.ui.Pressable({
             onClick: () => {
-              this.handScrollOffset.set(Math.min(totalPages - 1, scrollOffset + 1));
+              const newOffset = Math.min(totalPages - 1, scrollOffset + 1);
+              this.handScrollOffsetValue = newOffset;
+              this.handScrollOffset.set(newOffset);
               // Trigger re-render
-              this.onAction?.('scroll-hand');
+              this.onRenderNeeded?.();
             },
             disabled: scrollOffset >= totalPages - 1 || state.playerHand.length <= cardsPerPage,
             style: {
@@ -1601,12 +1671,14 @@ export class BattleScreen {
     }
 
     console.log('[BattleScreen] Starting timer from 60');
+    this.timerValue = 60;
     this.turnTimer.set(60);
     this.updateEndTurnButtonText(); // Initialize button text
+    this.onRenderNeeded?.(); // Trigger re-render
 
     console.log('[BattleScreen] Creating setInterval with 1000ms delay');
     this.timerInterval = this.async.setInterval(() => {
-      const current = this.turnTimer.get();
+      const current = this.timerValue;
       console.log('[BattleScreen] ⏰ Timer tick:', current);
 
       if (current <= 0) {
@@ -1614,10 +1686,12 @@ export class BattleScreen {
         this.stopTurnTimer();
         this.onAction?.('end-turn');
       } else {
-        this.turnTimer.set(current - 1);
-        console.log('[BattleScreen] Timer updated to:', current - 1);
-        // Timer binding update will trigger updateEndTurnButtonText via subscription
-        // which will update endTurnButtonText binding and trigger re-render via turnTimer subscription
+        this.timerValue = current - 1;
+        this.turnTimer.set(this.timerValue);
+        console.log('[BattleScreen] Timer updated to:', this.timerValue);
+        // Update button text and trigger re-render
+        this.updateEndTurnButtonText();
+        this.onRenderNeeded?.();
       }
     }, 1000);
 
@@ -1639,18 +1713,9 @@ export class BattleScreen {
    * Update the end turn button text based on turn and timer
    */
   private updateEndTurnButtonText(): void {
-    const isPlayerTurn = this.isPlayerTurn.get();
-    const timerValue = this.turnTimer.get();
-    const newText = isPlayerTurn ? `(${timerValue})` : 'Enemy Turn';
-
-    console.log('[BattleScreen] updateEndTurnButtonText:', {
-      isPlayerTurn,
-      timerValue,
-      newText,
-      currentText: this.endTurnButtonText.get()
-    });
-
-    this.endTurnButtonText.set(newText);
+    // endTurnButtonText is now a derived binding, so it updates automatically
+    // This method is kept for compatibility but doesn't need to do anything
+    console.log('[BattleScreen] updateEndTurnButtonText called (no-op, using derived binding)');
   }
 
   /**
@@ -1716,9 +1781,14 @@ export class BattleScreen {
 
   public cleanup(): void {
     this.stopTurnTimer();
+    this.showHandValue = true;
     this.showHand.set(true);
+    this.handScrollOffsetValue = 0;
     this.handScrollOffset.set(0);
+    this.selectedCardDetailValue = null;
     this.selectedCardDetail.set(null);
+    // Trigger final re-render
+    this.onRenderNeeded?.();
 
     // Clear played card timeout
     if (this.playedCardTimeout) {

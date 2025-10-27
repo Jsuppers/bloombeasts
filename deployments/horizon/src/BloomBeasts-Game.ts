@@ -35,85 +35,7 @@ type AssetCatalog = BloomBeasts.AssetCatalog;
 const BloomBeastsGame = BloomBeasts.BloomBeastsGame;
 const AssetCatalogManager = BloomBeasts.AssetCatalogManager;
 
-/**
- * Platform-Specific Binding for Horizon
- *
- * Horizon's Binding API is reactive-only and doesn't support reading values via .get().
- * This is by design - Horizon encourages fully reactive UI patterns.
- *
- * However, our game engine uses an imperative pattern where it needs to read binding
- * values synchronously. This adapter provides that capability while maintaining
- * Horizon's reactivity for the UI layer.
- *
- * Architecture:
- * - Stores state internally (source of truth for .get())
- * - Maintains a Horizon Binding (for UI reactivity)
- * - Syncs both on .set() calls
- * - Unwraps automatically when passed to Horizon UI components
- */
-class HorizonBindingAdapter<T> {
-  public horizonBinding: any; // Horizon's reactive binding for UI
-  private currentValue: T;    // Source of truth for imperative reads
-
-  constructor(BindingClass: any, initialValue: T) {
-    this.currentValue = initialValue;
-    this.horizonBinding = new BindingClass(initialValue);
-  }
-
-  /**
-   * Read current value (game engine API)
-   */
-  get(): T {
-    return this.currentValue;
-  }
-
-  /**
-   * Update value (syncs both internal state and Horizon binding)
-   */
-  set(value: T | ((prev: T) => T)): void {
-    if (typeof value === 'function') {
-      this.currentValue = (value as (prev: T) => T)(this.currentValue);
-    } else {
-      this.currentValue = value;
-    }
-    this.horizonBinding.set(this.currentValue);
-  }
-
-  /**
-   * Create derived binding (delegates to Horizon)
-   * Special handling: If the derived value looks like an image asset ID (string),
-   * we assume it's for an Image component and automatically convert to ImageSource
-   */
-  derive<U>(fn: (value: T) => U): any {
-    // Create the derived binding with the original function first
-    const derivedBinding = this.horizonBinding.derive(fn);
-
-    // Check if the derived value is a string that looks like an asset ID
-    // This is a heuristic - we assume strings returned by derive are image asset IDs
-    // when they match certain patterns
-    const testValue = fn(this.currentValue);
-    if (typeof testValue === 'string' &&
-        (testValue.includes('-') || testValue.includes('_') || testValue.length > 0)) {
-      // This looks like an image asset ID - wrap with ImageSource conversion
-      // console.log('[HorizonBindingAdapter] Detected image asset ID in derive:', testValue);
-
-      // We need to get the assetIdToImageSource function from the closure
-      // It's defined in the getUIMethodMappings function
-      // For now, return the original binding - it will be handled by HorizonImage
-      return derivedBinding;
-    }
-
-    return derivedBinding;
-  }
-
-  /**
-   * Subscribe to changes (game engine API)
-   */
-  subscribe(callback: (value: T) => void): void {
-    // Call immediately with current value
-    callback(this.currentValue);
-  }
-}
+// Simplified: No adapter needed - we just use Horizon's Binding directly!
 
 /**
  * Main Horizon UI Component
@@ -143,6 +65,11 @@ class BloomBeastsUI extends UIComponent {
   // Reactive bindings with imperative API (get/set/addListener)
   private currentPlayerBinding = this.createReactiveBinding<Player | null>(null);
   private assetsLoadedBinding = this.createReactiveBinding<boolean>(false);
+
+  // Raw Horizon Binding for UI usage (compatible with Binding.derive)
+  // In Horizon, UI is pre-rendered, so we set this to true immediately
+  // Assets will be loaded before game.initialize() is called
+  // private assetsLoadedBindingRaw: Binding<boolean> = new Binding<boolean>(true);
 
   // Game instance - created early so uiTree is available immediately
   private game!: BloomBeastsGame;
@@ -202,6 +129,7 @@ class BloomBeastsUI extends UIComponent {
     this.loadAssetCatalogs().then(() => {
       console.log('[Horizon] Assets loaded');
       this.assetsLoadedBinding.set(true);
+      // Note: assetsLoadedBindingRaw is always true in Horizon (set during initialization)
     });
 
     // Listen for current player and assets loaded then initialize game
@@ -351,32 +279,26 @@ class BloomBeastsUI extends UIComponent {
           const horizonId = catalogManager.getHorizonAssetId(assetId, 'image');
           if (!horizonId) {
             // Asset not found in catalog
-            // console.log(`[assetIdToImageSource] Asset not in catalog: ${assetId}`);
+            // console.error(`[assetIdToImageSource] Asset not in catalog: ${assetId}`);
             return null;
           }
           try {
             const imageSource = ImageSource.fromTextureAsset(new hz.Asset(BigInt(horizonId)));
-            // console.log(`[assetIdToImageSource] Created ImageSource for ${assetId} -> ${horizonId}`);
+            console.log(`[assetIdToImageSource] Created ImageSource for ${assetId} -> ${horizonId}`);
             return imageSource;
           } catch (error) {
-            // console.error(`[assetIdToImageSource] Failed to create ImageSource for ${assetId}:`, error);
+            console.error(`[assetIdToImageSource] Failed to create ImageSource for ${assetId}:`, error);
             return null;
           }
         };
 
         /**
-         * Unwraps HorizonBindingAdapter instances to native Horizon Bindings
-         * Also transforms web-style props to Horizon format
+         * Transforms web-style props to Horizon format
          */
         const unwrapValue = (value: any): any => {
           // Skip null/undefined
           if (value === null || value === undefined) {
             return value;
-          }
-
-          // Unwrap HorizonBindingAdapter to native Horizon Binding
-          if (value && typeof value === 'object' && value.horizonBinding) {
-            return value.horizonBinding;
           }
 
           // Filter out null/undefined from arrays and recursively unwrap
@@ -400,173 +322,12 @@ class BloomBeastsUI extends UIComponent {
         };
 
         /**
-         * Platform-specific Binding constructor
-         * Returns adapters that work with both our game engine and Horizon
+         * Just use Horizon's Binding directly - no adapters, no wrappers
+         * We'll fix the code that uses .get() as needed
          */
-        const PlatformBinding: any = function<T>(value: T) {
-          return new HorizonBindingAdapter<T>(Binding, value);
-        };
+        const PlatformBinding: any = Binding;
 
-        // Static derive method for multi-binding derivations
-        PlatformBinding.derive = function<T extends any[], R>(
-          bindings: any[],
-          deriveFn: (...values: T) => R
-        ): any {
-          // Extract Horizon bindings from adapters
-          const horizonBindings = bindings.map((b, i) => {
-            const unwrapped = b.horizonBinding || b;
-            console.log(`[PlatformBinding.derive] Binding ${i}:`, {
-              hasHorizonBinding: !!b.horizonBinding,
-              type: b.constructor?.name,
-              unwrappedType: unwrapped.constructor?.name,
-              hasAddDependent: typeof unwrapped.addDependent === 'function'
-            });
-            return unwrapped;
-          });
-          console.log('[PlatformBinding.derive] Calling Horizon Binding.derive with', horizonBindings.length, 'bindings');
-          return Binding.derive(horizonBindings as any, deriveFn);
-        };
-
-        /**
-         * Cache for bridging custom BaseBindings to Horizon Bindings
-         * Prevents creating duplicate listeners on re-renders
-         */
-        const bindingBridgeCache = new WeakMap<any, { horizonBinding: any; listener: () => void }>();
-
-        /**
-         * Horizon Image component wrapper
-         * Converts string asset IDs to ImageSource objects reactively
-         * Supports both static images (imageId) and BaseBinding (binding)
-         * Images appear once assets are loaded via assetsLoadedBinding
-         */
-        const HorizonImage = (props: any) => {
-          try {
-            console.log('[HorizonImage] Called with props:', {
-              hasImageId: !!props.imageId,
-              hasBinding: !!props.binding,
-              hasSource: !!props.source,
-              sourceType: typeof props.source,
-              sourceConstructor: props.source?.constructor?.name
-            });
-
-            const { imageId, binding, source, ...otherProps } = props;
-
-            // If source is already provided (pre-converted ImageSource), use it directly
-            if (source) {
-              console.log('[HorizonImage] Using pre-provided source (ImageSource binding)');
-              const processedProps = unwrapValue(otherProps);
-              return Image({ ...processedProps, source });
-            }
-
-            if (!imageId && !binding) {
-              console.log('[HorizonImage] No imageId, binding, or source - returning empty View');
-              return View({});
-            }
-
-            // Process other props through unwrapValue
-            const processedProps = unwrapValue(otherProps);
-
-            let finalSource;
-
-            // Priority: binding > imageId
-            if (binding) {
-              // Handle BaseBinding - bridge it to Horizon's reactive system
-              if (typeof binding.get === 'function' && typeof binding.addListener === 'function') {
-                // Check cache first to avoid creating duplicate listeners
-                let bridge = bindingBridgeCache.get(binding);
-
-                if (!bridge) {
-                  // Create a Horizon Binding that syncs with the custom binding
-                  const horizonBinding = new Binding(binding.get());
-
-                  // Create listener function
-                  const listener = () => {
-                    horizonBinding.set(binding.get());
-                  };
-
-                  // Add listener to custom binding
-                  binding.addListener(listener);
-
-                  // Cache the bridge for reuse
-                  bridge = { horizonBinding, listener };
-                  bindingBridgeCache.set(binding, bridge);
-                }
-
-                // Create derived binding that converts asset IDs to ImageSource
-                finalSource = Binding.derive(
-                  [bridge.horizonBinding],
-                  (assetId: string) => {
-                    if (typeof assetId !== 'string') return null;
-                    return assetIdToImageSource(assetId);
-                  }
-                );
-              } else {
-                return View({});
-              }
-            }
-            // Handle static image (imageId string or binding)
-            else if (imageId) {
-              console.log('[HorizonImage] Received imageId:', {
-                type: typeof imageId,
-                isNull: imageId === null,
-                hasHorizonBinding: !!(imageId && imageId.horizonBinding),
-                hasGet: !!(imageId && typeof imageId.get === 'function'),
-                constructorName: imageId?.constructor?.name
-              });
-
-              // Check if it's a Binding (either wrapped or raw Horizon binding)
-              const isBinding = typeof imageId === 'object' && imageId !== null &&
-                                (imageId.horizonBinding || // Wrapped adapter
-                                 typeof imageId.get === 'function' || // Has get method
-                                 imageId.constructor?.name?.includes('Binding')); // Constructor name check
-
-              console.log('[HorizonImage] isBinding:', isBinding);
-
-              if (isBinding) {
-                console.log('[HorizonImage] Creating derived binding for ImageSource conversion');
-                // Unwrap if it's an adapter
-                const horizonBinding = imageId.horizonBinding || imageId;
-
-                // Create derived binding that converts strings to ImageSource
-                finalSource = Binding.derive([horizonBinding], (value: any) => {
-                  console.log('[HorizonImage] Converting binding value to ImageSource:', value);
-                  if (typeof value === 'string') {
-                    const imageSource = assetIdToImageSource(value);
-                    if (imageSource) {
-                      return imageSource;
-                    }
-                  }
-                  return null;
-                });
-              }
-              // Handle direct string - make it reactive to asset loading
-              else if (typeof imageId === 'string') {
-                // Create a derived binding that waits for assets to load
-                // This ensures images appear once loadAssetCatalogs() completes
-                finalSource = Binding.derive(
-                  [this.assetsLoadedBinding],
-                  (assetsLoaded: boolean) => {
-                    if (!assetsLoaded) {
-                      return null;
-                    }
-                    return assetIdToImageSource(imageId);
-                  }
-                );
-              }
-              // Already an ImageSource or other valid type
-              else {
-                finalSource = imageId;
-              }
-            }
-
-            // Pass to Image with processed props and converted source
-            return Image({ ...processedProps, source: finalSource });
-          } catch (error) {
-            // console.error('[HorizonImage] Fatal error in wrapper:', error);
-            // Return empty view on any error
-            return View({});
-          }
-        };
+        // No wrapper - just pass through to Image component
 
         /**
          * Horizon View component wrapper
@@ -619,14 +380,15 @@ class BloomBeastsUI extends UIComponent {
         return {
           View: HorizonView,
           Text: (props: any) => Text(unwrapValue(props)),
-          Image: HorizonImage,
+          Image: (props: any) => Image(unwrapValue(props)), // Direct passthrough
           Pressable: (props: any) => Pressable(unwrapValue(props)),
           UINode: UINode,
           Binding: PlatformBinding,
           AnimatedBinding,
           Animation,
           Easing,
-          createCardImageBinding
+          assetIdToImageSource, // Expose for explicit conversion
+          assetsLoadedBinding: this.assetsLoadedBinding, // Expose raw binding (compatible with Binding.derive)
         };
       },
 

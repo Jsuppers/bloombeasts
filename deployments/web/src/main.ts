@@ -148,7 +148,6 @@ class WebGameApp {
 
             // UI methods: web implementations with asset transformation
             getUIMethodMappings: () => {
-                // No need for wrapper anymore - Image component now uses imageId/imageIds directly
                 return {
                     View,
                     Text,
@@ -158,7 +157,11 @@ class WebGameApp {
                     Binding,
                     AnimatedBinding,
                     Animation,
-                    Easing
+                    Easing,
+                    // Web just returns the asset ID as-is (string path)
+                    assetIdToImageSource: (assetId: string) => assetId,
+                    // Web loads assets synchronously, so always ready
+                    assetsLoadedBinding: new Binding(true),
                 };
             },
 

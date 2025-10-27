@@ -8,12 +8,92 @@ import { DIMENSIONS, GAPS } from '../../styles/dimensions';
 import { sideMenuButtonDimensions } from '../../constants/dimensions';
 import type { CardDetailDisplay, MenuStats } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
-import { createCardComponent } from './CardRenderer';
+import { createCardComponent, createReactiveCardComponent } from './CardRenderer';
 import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 
 export interface CardDetailPopupProps {
   cardDetail: CardDetailDisplay;
   onButtonClick: (buttonId: string) => void;
+}
+
+export interface ReactiveCardDetailPopupProps {
+  cardIdBinding: any; // Binding<string | null>
+  cardsBinding: any; // Binding<CardDisplay[]>
+  deckCardIdsBinding: any; // Binding<string[]>
+  onClose: () => void;
+  sideContent?: (ui: UIMethodMappings, deps: {
+    cardIdBinding: any;
+    cardsBinding: any;
+    deckCardIdsBinding: any;
+  }) => UINodeType[];
+}
+
+/**
+ * Create a reactive card detail popup overlay
+ * Uses createReactiveCardComponent in ID mode to display the card
+ */
+export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: ReactiveCardDetailPopupProps): UINodeType {
+  const { cardIdBinding, cardsBinding, deckCardIdsBinding, onClose, sideContent } = props;
+
+  const cardWidth = 210;
+  const cardHeight = 280;
+  const screenWidth = 1280;
+  const screenHeight = 720;
+  const totalWidth = cardWidth + DIMENSIONS.spacing.xl + sideMenuButtonDimensions.width;
+  const contentX = (screenWidth - totalWidth) / 2;
+  const contentY = (screenHeight - cardHeight) / 2;
+
+  return ui.View({
+    style: {
+      position: 'absolute',
+      width: '100%',
+      height: '100%',
+      top: 0,
+      left: 0,
+    },
+    children: [
+      // Black backdrop
+      ui.Pressable({
+        onClick: () => onClose(),
+        style: {
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        },
+      }),
+
+      // Content container
+      ui.View({
+        style: {
+          position: 'absolute',
+          left: contentX,
+          top: contentY,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+        },
+        children: [
+          // Card display using reactive card component in ID mode
+          createReactiveCardComponent(ui, {
+            cardsBinding: cardsBinding, // Pass original binding
+            cardIdBinding: cardIdBinding, // Use ID mode to find card
+            deckCardIdsBinding: deckCardIdsBinding,
+            onClick: undefined, // No click handler in popup
+            showDeckIndicator: true, // Show deck indicator
+          }),
+
+          // Side content (buttons, etc.)
+          ui.View({
+            style: {
+              marginLeft: DIMENSIONS.spacing.xl,
+              flexDirection: 'column',
+            },
+            children: sideContent ? sideContent(ui, { cardIdBinding, cardsBinding, deckCardIdsBinding }) : [],
+          }),
+        ],
+      }),
+    ],
+  });
 }
 
 /**
@@ -94,9 +174,14 @@ export function createCardDetailPopup(ui: UIMethodMappings, props: CardDetailPop
                 children: [
                   // Button background image
                   ui.Image({
-                    imageId: buttonText === 'Add' ? 'green-button' :
-                            buttonText === 'Remove' ? 'red-button' :
-                            'standard-button',
+                    source: ui.Binding.derive(
+                      [ui.assetsLoadedBinding],
+                      (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(
+                        buttonText === 'Add' ? 'green-button' :
+                        buttonText === 'Remove' ? 'red-button' :
+                        'standard-button'
+                      ) : null
+                    ),
                     style: {
                       position: 'absolute',
                       width: buttonWidth,

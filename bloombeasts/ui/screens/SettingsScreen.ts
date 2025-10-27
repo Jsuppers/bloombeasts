@@ -30,6 +30,10 @@ export class SettingsScreen {
 
   private settings: any;
   private stats: any;
+
+  // Track binding values separately (as per Horizon docs - no .get() method)
+  private settingsValue: any = {};
+
   private onSettingChange?: (settingId: string, value: any) => void;
   private onNavigate?: (screen: string) => void;
   private onRenderNeeded?: () => void;
@@ -54,7 +58,10 @@ export class SettingsScreen {
       children: [
         // Background
         this.ui.Image({
-          imageId: 'background',
+          source: this.ui.Binding.derive(
+            [this.ui.assetsLoadedBinding],
+            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
+          ),
           style: {
             position: 'absolute',
             width: '100%',
@@ -65,7 +72,10 @@ export class SettingsScreen {
         }),
         // Cards Container image as background
         this.ui.Image({
-          imageId: 'cards-container',
+          source: this.ui.Binding.derive(
+            [this.ui.assetsLoadedBinding],
+            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('cards-container') : null
+          ),
           style: {
             position: 'absolute',
             left: 40,
@@ -85,18 +95,15 @@ export class SettingsScreen {
             height: 580,
             padding: 40,
           },
-          children: (() => {
-            const settings = this.settings.get();
-            return [
-              // Music settings
-              this.createVolumeControl('Music Volume', 'musicVolume', 'music-volume', settings),
-              this.createToggleControl('Music', 'musicEnabled', 'music-enabled', settings),
+          children: [
+            // Music settings (pass the binding directly)
+            this.createVolumeControl('Music Volume', 'musicVolume', 'music-volume', this.settings),
+            this.createToggleControl('Music', 'musicEnabled', 'music-enabled', this.settings),
 
-              // SFX settings
-              this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfx-volume', settings),
-              this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfx-enabled', settings),
-            ];
-          })(),
+            // SFX settings (pass the binding directly)
+            this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfx-volume', this.settings),
+            this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfx-enabled', this.settings),
+          ],
         }),
         // Sidebar with common side menu
         createSideMenu(this.ui, {
@@ -121,7 +128,7 @@ export class SettingsScreen {
     label: string,
     settingKey: 'musicVolume' | 'sfxVolume',
     settingId: string,
-    settings: SoundSettings
+    settingsBinding: any
   ): UINodeType {
     return this.ui.View({
       style: {
@@ -144,7 +151,14 @@ export class SettingsScreen {
               },
             }),
             this.ui.Text({
-              text: new this.ui.Binding(`${settings[settingKey]}%`),
+              text: this.ui.Binding.derive(
+                [settingsBinding],
+                (settings: SoundSettings) => {
+                  // Update tracked value whenever settings changes
+                  this.settingsValue = settings;
+                  return `${settings[settingKey]}%`;
+                }
+              ),
               style: {
                 fontSize: DIMENSIONS.fontSize.xl,
                 color: COLORS.success,
@@ -163,11 +177,13 @@ export class SettingsScreen {
               this.onSettingChange(settingId, clampedValue);
 
               // Update the binding immediately for responsive UI
-              const currentSettings = this.settings.get();
-              this.settings.set({
+              const currentSettings = this.settingsValue;
+              const newSettings = {
                 ...currentSettings,
                 [settingKey]: clampedValue,
-              });
+              };
+              this.settingsValue = newSettings;
+              this.settings.set(newSettings);
 
               // Trigger re-render after updating settings
               console.log('[SettingsScreen] Slider changed, onRenderNeeded:', this.onRenderNeeded ? 'calling' : 'undefined');
@@ -190,7 +206,10 @@ export class SettingsScreen {
                 position: 'absolute',
                 left: 0,
                 top: 0,
-                width: `${settings[settingKey]}%`,
+                width: this.ui.Binding.derive(
+                  [settingsBinding],
+                  (settings: SoundSettings) => `${settings[settingKey]}%`
+                ),
                 height: '100%',
                 backgroundColor: COLORS.success,
                 borderRadius: 5,
@@ -209,7 +228,7 @@ export class SettingsScreen {
     label: string,
     settingKey: 'musicEnabled' | 'sfxEnabled',
     settingId: string,
-    settings: SoundSettings
+    settingsBinding: any
   ): UINodeType {
     return this.ui.View({
       style: {
@@ -231,16 +250,18 @@ export class SettingsScreen {
         this.ui.Pressable({
           onClick: () => {
             if (this.onSettingChange) {
-              const currentSettings = this.settings.get();
+              const currentSettings = this.settingsValue;
               const currentValue = currentSettings[settingKey];
               const newValue = !currentValue;
               this.onSettingChange(settingId, newValue);
 
               // Update the binding immediately for responsive UI
-              this.settings.set({
+              const newSettings = {
                 ...currentSettings,
                 [settingKey]: newValue,
-              });
+              };
+              this.settingsValue = newSettings;
+              this.settings.set(newSettings);
 
               // Trigger re-render after updating settings
               console.log('[SettingsScreen] Toggle changed, onRenderNeeded:', this.onRenderNeeded ? 'calling' : 'undefined');
@@ -257,7 +278,10 @@ export class SettingsScreen {
           children: [
             // Button background image (standard or green based on state)
             this.ui.Image({
-              imageId: settings[settingKey] ? 'green-button' : 'standard-button',
+              source: this.ui.Binding.derive(
+                [settingsBinding],
+                (settings: SoundSettings) => this.ui.assetIdToImageSource?.(settings[settingKey] ? 'green-button' : 'standard-button') ?? null
+              ),
               style: {
                 position: 'absolute',
                 width: 120,
@@ -274,7 +298,10 @@ export class SettingsScreen {
                 alignItems: 'center',
               },
               children: this.ui.Text({
-                text: new this.ui.Binding(settings[settingKey] ? 'ON' : 'OFF'),
+                text: this.ui.Binding.derive(
+                  [settingsBinding],
+                  (settings: SoundSettings) => settings[settingKey] ? 'ON' : 'OFF'
+                ),
                 style: {
                   fontSize: DIMENSIONS.fontSize.md,
                   color: COLORS.textPrimary,

@@ -88,8 +88,8 @@ export type ImageSource = {
 };
 
 export type ImageProps = {
-    imageId?: Bindable<string | null>; // Single image asset ID
-    binding?: any; // BaseBinding<string> for animations, derived values, etc.
+    source?: Bindable<string | null | ImageSource>; // Image source (string path for web, ImageSource for Horizon)
+    imageId?: Bindable<string | null>; // Legacy - single image asset ID
     style?: ImageStyle;
 };
 

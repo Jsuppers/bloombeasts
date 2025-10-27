@@ -170,6 +170,10 @@ export interface UIMethodMappings {
   // Animation
   Animation?: any;
   Easing?: any;
+
+  // Platform-specific helpers
+  assetIdToImageSource?: (assetId: string) => any; // Convert asset ID to ImageSource (Horizon) or string (Web)
+  assetsLoadedBinding?: any; // Binding<boolean> - true when assets are loaded (prevents race conditions)
 }
 
 /**
@@ -388,6 +392,11 @@ export class BloomBeastsGame {
   private missionCompletePopupBinding: BindingInterface<any>;
   private forfeitPopupBinding: BindingInterface<any>;
   private cardDetailPopupBinding: BindingInterface<any>;
+
+  // Track binding values separately (as per Horizon docs - no .get() method)
+  private missionCompletePopupValue: any = null;
+  private forfeitPopupValue: any = null;
+  private cardDetailPopupValue: any = null;
 
   // Screen instances
   private menuScreen: MenuScreen;
@@ -1271,19 +1280,21 @@ export class BloomBeastsGame {
 
       // Show mission complete popup
       // console.log('[BloomBeastsGame] Setting victory popup...');
-      this.missionCompletePopupBinding.set({
+      const popupData = {
         mission: battleState.mission,
         rewards: battleState.rewards,
         chestOpened: false,
         onClaimRewards: () => {
           // console.log('[BloomBeastsGame] Claim rewards clicked');
           // Chest animation could go here
-          const current = this.missionCompletePopupBinding.get();
+          const current = this.missionCompletePopupValue;
           if (current) {
-            this.missionCompletePopupBinding.set({
+            const updatedData = {
               ...current,
               chestOpened: true
-            });
+            };
+            this.missionCompletePopupValue = updatedData;
+            this.missionCompletePopupBinding.set(updatedData);
             // console.log('[BloomBeastsGame] Chest opened, triggering render');
             this.triggerRender();
           }
@@ -1292,11 +1303,16 @@ export class BloomBeastsGame {
           // console.log('[BloomBeastsGame] Victory continue clicked');
           // Clear battle display and close popup
           this.battleDisplayBinding.set(null);
+          this.missionCompletePopupValue = null;
           this.missionCompletePopupBinding.set(null);
           this.navigate('missions');
         }
-      });
-      // console.log('[BloomBeastsGame] Victory popup set, binding value:', this.missionCompletePopupBinding.get());
+      };
+
+      // Set both tracked value and binding
+      this.missionCompletePopupValue = popupData;
+      this.missionCompletePopupBinding.set(popupData);
+      // console.log('[BloomBeastsGame] Victory popup set');
       this.triggerRender();
       // console.log('[BloomBeastsGame] Render triggered after victory popup');
     } else {
@@ -1314,13 +1330,15 @@ export class BloomBeastsGame {
         onContinue: () => {
           // Clear battle display and close popup
           this.battleDisplayBinding.set(null);
+          this.missionCompletePopupValue = null;
           this.missionCompletePopupBinding.set(null);
           this.navigate('missions');
         }
       };
       // console.log('[BloomBeastsGame] Setting mission failed popup:', failedPopupProps);
+      this.missionCompletePopupValue = failedPopupProps;
       this.missionCompletePopupBinding.set(failedPopupProps);
-      // console.log('[BloomBeastsGame] After set, binding value:', this.missionCompletePopupBinding.get());
+      // console.log('[BloomBeastsGame] After set, mission failed popup set');
       this.triggerRender();
       // console.log('[BloomBeastsGame] Render triggered after mission failed');
     }
@@ -1368,29 +1386,79 @@ export class BloomBeastsGame {
     ];
 
     // Add popups (these already use UINode.if)
-    if (this.UI.UINode && this.missionCompletePopupBinding.get()) {
+    if (this.UI.UINode) {
       children.push(
         this.UI.UINode.if(
-          this.missionCompletePopupBinding.derive((props) => props !== null),
-          createMissionCompletePopup(this.UI, this.missionCompletePopupBinding.get()!)
+          this.UI.Binding.derive(
+            [this.missionCompletePopupBinding],
+            (props) => {
+              // Update tracked value
+              this.missionCompletePopupValue = props;
+              return props !== null;
+            }
+          ),
+          createMissionCompletePopup(this.UI, this.missionCompletePopupValue || {
+            mission: {
+              id: 'fallback-mission',
+              name: 'Loading...',
+              affinity: 'Forest'
+            },
+            rewards: null,
+            chestOpened: false,
+            onContinue: () => {}
+          })
         )
       );
     }
 
-    if (this.UI.UINode && this.forfeitPopupBinding.get()) {
+    if (this.UI.UINode) {
       children.push(
         this.UI.UINode.if(
-          this.forfeitPopupBinding.derive((props) => props !== null),
-          createButtonPopup(this.UI, this.forfeitPopupBinding.get()!)
+          this.UI.Binding.derive(
+            [this.forfeitPopupBinding],
+            (props) => {
+              // Update tracked value
+              this.forfeitPopupValue = props;
+              return props !== null;
+            }
+          ),
+          createButtonPopup(this.UI, this.forfeitPopupValue || {
+            title: '',
+            message: '',
+            buttons: [],
+            onButtonClick: () => {}
+          })
         )
       );
     }
 
-    if (this.UI.UINode && this.cardDetailPopupBinding.get()) {
+    if (this.UI.UINode) {
       children.push(
         this.UI.UINode.if(
-          this.cardDetailPopupBinding.derive((props: any) => props !== null),
-          createCardDetailPopup(this.UI, this.cardDetailPopupBinding.get()!)
+          this.UI.Binding.derive(
+            [this.cardDetailPopupBinding],
+            (props: any) => {
+              // Update tracked value
+              this.cardDetailPopupValue = props;
+              return props !== null;
+            }
+          ),
+          createCardDetailPopup(this.UI, this.cardDetailPopupValue || {
+            cardDetail: {
+              card: {
+                id: 'empty-card-fallback',
+                name: 'Loading...',
+                type: 'Bloom',
+                level: 1,
+                experience: 0,
+                count: 0,
+                description: ''
+              },
+              buttons: [],
+              isInDeck: false
+            },
+            onButtonClick: () => {}
+          })
         )
       );
     }

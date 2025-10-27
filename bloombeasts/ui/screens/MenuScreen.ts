@@ -34,7 +34,7 @@ export class MenuScreen {
   // State bindings
   private displayedText: any;
   private stats: any;
-  private menuFrameAnimation: IntervaledBinding<string>;
+  // private menuFrameAnimation: IntervaledBinding<string>;
 
   // Menu frame IDs
   private menuFrameIds: string[] = [
@@ -65,15 +65,15 @@ export class MenuScreen {
 
     // Create animated binding for menu frames
     let frameIndex = 0;
-    this.menuFrameAnimation = new IntervaledBinding<string>(
-      this.menuFrameIds[0],
-      () => {
-        frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
-        return this.menuFrameIds[frameIndex];
-      },
-      200, // 200ms per frame
-      this.async
-    );
+    // this.menuFrameAnimation = new IntervaledBinding<string>(
+    //   this.menuFrameIds[0],
+    //   () => {
+    //     frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
+    //     return this.menuFrameIds[frameIndex];
+    //   },
+    //   200, // 200ms per frame
+    //   this.async
+    // );
   }
 
   /**
@@ -151,7 +151,10 @@ export class MenuScreen {
       children: [
         // Background image (full screen)
         this.ui.Image({
-          imageId: 'background',
+          source: this.ui.Binding.derive(
+            [this.ui.assetsLoadedBinding],
+            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
+          ),
           style: {
             position: 'absolute',
             width: '100%',
@@ -162,32 +165,32 @@ export class MenuScreen {
         }),
 
         // Main content area with animated character
-        this.ui.View({
-          style: {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            justifyContent: 'center',
-            alignItems: 'center',
-          },
-          children: [
-            // Animated character frame at position (143, 25)
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                left: 143,
-                top: 25,
-              },
-              children: this.ui.Image({
-                binding: this.menuFrameAnimation,
-                style: {
-                  width: 750,
-                  height: 700,
-                },
-              }),
-            }),
-          ],
-        }),
+        // this.ui.View({
+        //   style: {
+        //     position: 'absolute',
+        //     width: '100%',
+        //     height: '100%',
+        //     justifyContent: 'center',
+        //     alignItems: 'center',
+        //   },
+        //   children: [
+        //     // Animated character frame at position (143, 25)
+        //     this.ui.View({
+        //       style: {
+        //         position: 'absolute',
+        //         left: 143,
+        //         top: 25,
+        //       },
+        //       children: this.ui.Image({
+        //         binding: this.menuFrameAnimation,
+        //         style: {
+        //           width: 750,
+        //           height: 700,
+        //         },
+        //       }),
+        //     }),
+        //   ],
+        // }),
 
         // Side menu (positioned absolutely on top)
         createSideMenu(this.ui, {
@@ -225,6 +228,6 @@ export class MenuScreen {
    * Clean up animations
    */
   dispose(): void {
-    this.menuFrameAnimation.dispose();
+    // this.menuFrameAnimation.dispose();
   }
 }

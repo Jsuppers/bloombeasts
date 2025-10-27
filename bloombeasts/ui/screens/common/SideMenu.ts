@@ -154,7 +154,10 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
         children: [
             // Sidebar background image
             ui.Image({
-                imageId: 'side-menu',
+                source: ui.Binding.derive(
+                    [ui.assetsLoadedBinding],
+                    (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('side-menu') : null
+                ),
                 style: {
                     position: 'absolute',
                     width: sideMenuDimensions.width,
@@ -197,7 +200,10 @@ function createSideMenuButton(
         children: [
             // Button background image
             ui.Image({
-                imageId: 'standard-button',
+                source: ui.Binding.derive(
+                    [ui.assetsLoadedBinding],
+                    (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('standard-button') : null
+                ),
                 style: {
                     position: 'absolute',
                     width: sideMenuButtonDimensions.width,
@@ -288,14 +294,35 @@ function createPlayerInfo(
                     width: sideMenuPositions.playerExperienceBar.maxWidth,
                     height: 11,
                 },
-                children: ui.Pressable({
-                    onClick: () => {
-                        if (onXPBarClick) {
-                            const statsVal = stats.get();
-                            if (statsVal) {
+                children: (() => {
+                    // Create a variable to hold the current stats value
+                    let currentStats: MenuStats | null = null;
+
+                    // Use a derived binding to keep currentStats updated
+                    // This binding is used in the XP width calculation, so it will be evaluated
+                    const xpWidthWithTracking = ui.Binding.derive(
+                        [stats],
+                        (statsVal: MenuStats | null) => {
+                            currentStats = statsVal; // Track the current value
+                            if (!statsVal) return 0;
+                            const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+                            const currentLevel = statsVal.playerLevel;
+                            const totalXP = statsVal.totalXP;
+                            const xpForCurrentLevel = xpThresholds[currentLevel - 1];
+                            const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
+                            const currentXP = totalXP - xpForCurrentLevel;
+                            const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+                            const progress = xpNeeded > 0 ? (currentXP / xpNeeded) : 1;
+                            return Math.round(progress * sideMenuPositions.playerExperienceBar.maxWidth);
+                        }
+                    );
+
+                    return ui.Pressable({
+                        onClick: () => {
+                            if (onXPBarClick && currentStats) {
                                 const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
-                                const currentLevel = statsVal.playerLevel;
-                                const totalXP = statsVal.totalXP;
+                                const currentLevel = currentStats.playerLevel;
+                                const totalXP = currentStats.totalXP;
                                 const xpForCurrentLevel = xpThresholds[currentLevel - 1];
                                 const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
                                 const currentXP = totalXP - xpForCurrentLevel;
@@ -304,20 +331,23 @@ function createPlayerInfo(
                                 const message = `Current XP: ${currentXP} / ${xpNeeded}\n\nTotal XP: ${totalXP}`;
                                 onXPBarClick(title, message);
                             }
-                        }
-                    },
-                    style: {
-                        width: '100%',
-                        height: '100%',
-                    },
-                    children: ui.Image({
-                        imageId: 'experience-bar',
-                        style: {
-                            width: xpWidthBinding,
-                            height: 11,
                         },
-                    }),
-                }),
+                        style: {
+                            width: '100%',
+                            height: '100%',
+                        },
+                        children: ui.Image({
+                            source: ui.Binding.derive(
+                                [ui.assetsLoadedBinding],
+                                (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('experience-bar') : null
+                            ),
+                            style: {
+                                width: xpWidthWithTracking,
+                                height: 11,
+                            },
+                        }),
+                    });
+                })(),
             }),
 
             // Level text (centered on XP bar)
