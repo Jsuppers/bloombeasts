@@ -309,6 +309,10 @@ export class CardsScreen {
       }
     );
 
+    // Hover state bindings for buttons
+    const actionButtonHover = new this.ui.Binding(false);
+    const closeButtonHover = new this.ui.Binding(false);
+
     return [
       // Add/Remove button
       this.ui.Pressable({
@@ -317,6 +321,8 @@ export class CardsScreen {
             this.onCardSelect(currentCardId);
           }
         },
+        onHoverIn: () => actionButtonHover.set(true),
+        onHoverOut: () => actionButtonHover.set(false),
         style: {
           width: buttonWidth,
           height: buttonHeight,
@@ -343,6 +349,7 @@ export class CardsScreen {
               height: buttonHeight,
               top: 0,
               left: 0,
+              opacity: this.ui.Binding.derive([actionButtonHover], (hover) => hover ? 0.8 : 1.0),
             },
           }),
           // Button text
@@ -378,6 +385,8 @@ export class CardsScreen {
       // Close button
       this.ui.Pressable({
         onClick: () => this.closePopup(),
+        onHoverIn: () => closeButtonHover.set(true),
+        onHoverOut: () => closeButtonHover.set(false),
         style: {
           width: buttonWidth,
           height: buttonHeight,
@@ -396,6 +405,7 @@ export class CardsScreen {
               height: buttonHeight,
               top: 0,
               left: 0,
+              opacity: this.ui.Binding.derive([closeButtonHover], (hover) => hover ? 0.8 : 1.0),
             },
           }),
           // Button text

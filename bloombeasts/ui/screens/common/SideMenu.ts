@@ -187,9 +187,29 @@ function createSideMenuButton(
     const disabledValue = typeof disabled === 'boolean' ? disabled : false;
     const disabledBinding = typeof disabled === 'object' && 'get' in disabled ? disabled : undefined;
 
+    // Create hover state binding for opacity effect
+    const hoverBinding = new ui.Binding(false);
+
+    // Calculate opacity based on hover and disabled state
+    const opacityBinding = ui.Binding.derive(
+        [hoverBinding],
+        (isHovered: boolean) => {
+            if (disabledValue) return 0.5;
+            return isHovered ? 0.8 : 1.0;
+        }
+    );
+
     return ui.Pressable({
         onClick: onClick,
         disabled: disabledBinding || disabledValue,
+        onHoverIn: () => {
+            if (!disabledValue) {
+                hoverBinding.set(true);
+            }
+        },
+        onHoverOut: () => {
+            hoverBinding.set(false);
+        },
         style: {
             position: 'absolute',
             left: x,
@@ -208,7 +228,7 @@ function createSideMenuButton(
                     position: 'absolute',
                     width: sideMenuButtonDimensions.width,
                     height: sideMenuButtonDimensions.height,
-                    opacity: disabledValue ? 0.5 : 1,
+                    opacity: opacityBinding,
                 },
             }),
             // Button text centered

@@ -7,8 +7,7 @@
 import { COLORS } from '../styles/colors';
 import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { DIMENSIONS } from '../styles/dimensions';
-import type { SoundSettings } from '../../../bloombeasts/systems/SoundManager';
-import type { MenuStats } from '../../../bloombeasts/gameManager';
+import type { SoundSettings, MenuStats } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu } from './common/SideMenu';
 
@@ -97,12 +96,12 @@ export class SettingsScreen {
           },
           children: [
             // Music settings (pass the binding directly)
-            this.createVolumeControl('Music Volume', 'musicVolume', 'music-volume', this.settings),
-            this.createToggleControl('Music', 'musicEnabled', 'music-enabled', this.settings),
+            this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume', this.settings),
+            this.createToggleControl('Music', 'musicEnabled', 'musicEnabled', this.settings),
 
             // SFX settings (pass the binding directly)
-            this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfx-volume', this.settings),
-            this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfx-enabled', this.settings),
+            this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume', this.settings),
+            this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled', this.settings),
           ],
         }),
         // Sidebar with common side menu
@@ -122,7 +121,7 @@ export class SettingsScreen {
   }
 
   /**
-   * Create volume control slider
+   * Create volume control with +/- buttons
    */
   private createVolumeControl(
     label: string,
@@ -141,6 +140,7 @@ export class SettingsScreen {
             flexDirection: 'row',
             justifyContent: 'space-between',
             marginBottom: 10,
+            alignItems: 'center',
           },
           children: [
             this.ui.Text({
@@ -150,70 +150,89 @@ export class SettingsScreen {
                 color: COLORS.textPrimary,
               },
             }),
-            this.ui.Text({
-              text: this.ui.Binding.derive(
-                [settingsBinding],
-                (settings: SoundSettings) => {
-                  // Update tracked value whenever settings changes
-                  this.settingsValue = settings;
-                  return `${settings[settingKey]}%`;
-                }
-              ),
-              style: {
-                fontSize: DIMENSIONS.fontSize.xl,
-                color: COLORS.success,
-              },
-            }),
-          ],
-        }),
-
-        // Slider
-        this.ui.Pressable({
-          onClick: (relativeX?: number) => {
-            if (relativeX !== undefined && this.onSettingChange) {
-              // Convert relative position (0-1) to volume (0-100)
-              const newValue = Math.round(relativeX * 100);
-              const clampedValue = Math.max(0, Math.min(100, newValue));
-              this.onSettingChange(settingId, clampedValue);
-
-              // Update the binding immediately for responsive UI
-              const currentSettings = this.settingsValue;
-              const newSettings = {
-                ...currentSettings,
-                [settingKey]: clampedValue,
-              };
-              this.settingsValue = newSettings;
-              this.settings.set(newSettings);
-
-              // Trigger re-render after updating settings
-              console.log('[SettingsScreen] Slider changed, onRenderNeeded:', this.onRenderNeeded ? 'calling' : 'undefined');
-              if (this.onRenderNeeded) {
-                this.onRenderNeeded();
-              }
-            }
-          },
-          style: {
-            width: 400,
-            height: 30,
-            backgroundColor: '#333',
-            borderRadius: 5,
-            position: 'relative',
-          },
-          children: [
-            // Fill
+            // Volume control: - button, value, + button
             this.ui.View({
               style: {
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                width: this.ui.Binding.derive(
-                  [settingsBinding],
-                  (settings: SoundSettings) => `${settings[settingKey]}%`
-                ),
-                height: '100%',
-                backgroundColor: COLORS.success,
-                borderRadius: 5,
+                flexDirection: 'row',
+                alignItems: 'center',
               },
+              children: [
+                // Decrease button
+                this.ui.Pressable({
+                  onClick: () => {
+                    if (this.onSettingChange) {
+                      const currentSettings = this.settingsValue;
+                      const currentValue = currentSettings[settingKey] || 0;
+                      const newValue = Math.max(0, currentValue - 10);
+                      this.onSettingChange(settingId, newValue);
+                    }
+                  },
+                  style: {
+                    width: 40,
+                    height: 40,
+                    backgroundColor: COLORS.surface,
+                    borderRadius: 5,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: 15,
+                  },
+                  children: this.ui.Text({
+                    text: new this.ui.Binding('-'),
+                    style: {
+                      fontSize: DIMENSIONS.fontSize.xl,
+                      color: COLORS.textPrimary,
+                      textAlign: 'center',
+                      fontWeight: 'bold',
+                    },
+                  }),
+                }),
+                // Volume display
+                this.ui.Text({
+                  text: this.ui.Binding.derive(
+                    [settingsBinding],
+                    (settings: SoundSettings) => {
+                      this.settingsValue = settings;
+                      const volume = settings?.[settingKey];
+                      return `${volume !== undefined && volume !== null && typeof volume === 'number' ? Math.round(volume) : 0}%`;
+                    }
+                  ),
+                  style: {
+                    fontSize: DIMENSIONS.fontSize.xl,
+                    color: COLORS.success,
+                    width: 70,
+                    textAlign: 'center',
+                  },
+                }),
+                // Increase button
+                this.ui.Pressable({
+                  onClick: () => {
+                    if (this.onSettingChange) {
+                      const currentSettings = this.settingsValue;
+                      const currentValue = currentSettings[settingKey] || 0;
+                      const newValue = Math.min(100, currentValue + 10);
+                      this.onSettingChange(settingId, newValue);
+                    }
+                  },
+                  style: {
+                    width: 40,
+                    height: 40,
+                    backgroundColor: COLORS.surface,
+                    borderRadius: 5,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginLeft: 15,
+                  },
+                  children: this.ui.Text({
+                    text: new this.ui.Binding('+'),
+                    style: {
+                      fontSize: DIMENSIONS.fontSize.xl,
+                      color: COLORS.textPrimary,
+                      textAlign: 'center',
+                      fontWeight: 'bold',
+                    },
+                  }),
+                }),
+              ],
             }),
           ],
         }),
@@ -249,25 +268,17 @@ export class SettingsScreen {
         // Toggle button
         this.ui.Pressable({
           onClick: () => {
+            console.log(`[SettingsScreen] Toggle clicked - settingKey: ${settingKey}, settingId: ${settingId}`);
             if (this.onSettingChange) {
               const currentSettings = this.settingsValue;
+              console.log(`[SettingsScreen] Current settings:`, currentSettings);
               const currentValue = currentSettings[settingKey];
               const newValue = !currentValue;
+              console.log(`[SettingsScreen] Toggle value: ${currentValue} -> ${newValue}`);
+
+              // Just call the callback - let the parent handle updating the binding
+              // The binding update will trigger a re-render automatically
               this.onSettingChange(settingId, newValue);
-
-              // Update the binding immediately for responsive UI
-              const newSettings = {
-                ...currentSettings,
-                [settingKey]: newValue,
-              };
-              this.settingsValue = newSettings;
-              this.settings.set(newSettings);
-
-              // Trigger re-render after updating settings
-              console.log('[SettingsScreen] Toggle changed, onRenderNeeded:', this.onRenderNeeded ? 'calling' : 'undefined');
-              if (this.onRenderNeeded) {
-                this.onRenderNeeded();
-              }
             }
           },
           style: {

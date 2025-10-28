@@ -17,6 +17,16 @@ export interface MenuStats {
 }
 
 /**
+ * Sound settings for audio playback
+ */
+export interface SoundSettings {
+  musicVolume: number; // 0-100
+  sfxVolume: number; // 0-100
+  musicEnabled: boolean;
+  sfxEnabled: boolean;
+}
+
+/**
  * Mission information for display in mission selection
  */
 export interface MissionDisplay {

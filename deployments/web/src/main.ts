@@ -62,6 +62,21 @@ class WebGameApp {
     private sfxAudioPool: HTMLAudioElement[] = [];
     private currentMusicVolume: number = 0.5;
     private currentSfxVolume: number = 0.5;
+    private musicEnabled: boolean = true;
+    private sfxEnabled: boolean = true;
+
+    // Audio asset type map
+    private audioAssetTypes: Record<string, 'music' | 'sfx'> = {
+        'music-background': 'music',
+        'music-battle': 'music',
+        'sfx-menu-button-select': 'sfx',
+        'sfx-play-card': 'sfx',
+        'sfx-attack': 'sfx',
+        'sfx-trap-card-activated': 'sfx',
+        'sfx-low-health': 'sfx',
+        'sfx-win': 'sfx',
+        'sfx-lose': 'sfx',
+    };
 
     constructor() {
         console.log('🎮 WebGameApp: Constructor started');
@@ -138,14 +153,6 @@ class WebGameApp {
                 return path.startsWith('/') ? path : `/${path}`;
             },
 
-            // Sound assets: getter function that queries catalog manager
-            getSoundAsset: (assetId: string) => {
-                const path = manager.getAssetPath(assetId, 'audio');
-                if (!path) return undefined;
-                // Add leading slash for web server absolute paths
-                return path.startsWith('/') ? path : `/${path}`;
-            },
-
             // UI methods: web implementations with asset transformation
             getUIMethodMappings: () => {
                 return {
@@ -179,56 +186,86 @@ class WebGameApp {
             },
 
             // Audio: web audio implementation
-            playMusic: (src: string, loop: boolean, volume: number) => {
-                if (!this.musicAudio) return;
+            playSound: (assetId: string, loop: boolean, volume: number) => {
+                const type = this.audioAssetTypes[assetId];
+                if (!type) {
+                    console.warn(`[Web Audio] Unknown asset ID: ${assetId}`);
+                    return;
+                }
+
+                console.log(`[Web Audio] playSound called:`, { assetId, type, loop, volume, musicEnabled: this.musicEnabled, sfxEnabled: this.sfxEnabled });
+
+                // Check if this type of audio is enabled
+                if (type === 'music' && !this.musicEnabled) {
+                    console.log(`[Web Audio] Music is disabled, not playing: ${assetId}`);
+                    return;
+                }
+                if (type === 'sfx' && !this.sfxEnabled) {
+                    console.log(`[Web Audio] SFX is disabled, not playing: ${assetId}`);
+                    return;
+                }
 
                 try {
-                    // Don't restart if already playing the same music
-                    if (this.musicAudio.src.endsWith(src)) {
+                    // Convert asset ID to path using catalog manager
+                    const path = manager.getAssetPath(assetId, 'audio');
+                    if (!path) {
+                        console.warn(`[Web Audio] Asset not found: ${assetId}`);
                         return;
                     }
+                    const src = path.startsWith('/') ? path : `/${path}`;
 
-                    this.musicAudio.src = src;
-                    this.musicAudio.loop = loop;
-                    this.musicAudio.volume = volume;
-                    this.currentMusicVolume = volume;
+                    if (type === 'music') {
+                        if (!this.musicAudio) return;
 
-                    this.musicAudio.play().catch(err => {
-                        console.warn('Music autoplay blocked - will play on interaction');
-                        // Try playing on next user interaction
-                        const playOnInteraction = () => {
-                            this.musicAudio?.play().catch(() => {});
-                            document.removeEventListener('click', playOnInteraction);
-                            document.removeEventListener('keydown', playOnInteraction);
-                        };
-                        document.addEventListener('click', playOnInteraction);
-                        document.addEventListener('keydown', playOnInteraction);
-                    });
-                } catch (error) {
-                    console.error('Failed to play music:', error);
-                }
-            },
+                        // Don't restart if already playing the same music
+                        if (this.musicAudio.src.endsWith(src)) {
+                            return;
+                        }
 
-            playSfx: (src: string, volume: number) => {
-                try {
-                    // Find an available audio element from the pool
-                    const availableAudio = this.sfxAudioPool.find(audio => audio.paused);
-                    if (availableAudio) {
-                        availableAudio.src = src;
-                        availableAudio.volume = volume;
-                        this.currentSfxVolume = volume;
-                        availableAudio.play().catch(() => {});
+                        console.log(`[Web Audio] Playing music: ${assetId} -> ${src}`);
+                        this.musicAudio.src = src;
+                        this.musicAudio.loop = loop;
+                        this.musicAudio.volume = volume;
+                        this.currentMusicVolume = volume;
+
+                        this.musicAudio.play().catch(err => {
+                            console.warn('Music autoplay blocked - will play on interaction');
+                            // Try playing on next user interaction
+                            const playOnInteraction = () => {
+                                this.musicAudio?.play().catch(() => {});
+                                document.removeEventListener('click', playOnInteraction);
+                                document.removeEventListener('keydown', playOnInteraction);
+                            };
+                            document.addEventListener('click', playOnInteraction);
+                            document.addEventListener('keydown', playOnInteraction);
+                        });
+                    } else {
+                        // SFX
+                        console.log(`[Web Audio] Playing SFX: ${assetId} -> ${src}`);
+
+                        // Find an available audio element from the pool
+                        const availableAudio = this.sfxAudioPool.find(audio => audio.paused);
+                        if (availableAudio) {
+                            availableAudio.src = src;
+                            availableAudio.volume = volume;
+                            this.currentSfxVolume = volume;
+                            availableAudio.play().catch(() => {});
+                        }
                     }
                 } catch (error) {
-                    console.error('Failed to play SFX:', error);
+                    console.error(`Failed to play ${type}:`, error);
                 }
             },
 
-            stopMusic: () => {
-                if (this.musicAudio) {
-                    this.musicAudio.pause();
-                    this.musicAudio.currentTime = 0;
+            stopSound: (assetId?: string) => {
+                // If no assetId provided or it's a music asset, stop music
+                if (!assetId || this.audioAssetTypes[assetId] === 'music') {
+                    if (this.musicAudio) {
+                        this.musicAudio.pause();
+                        this.musicAudio.currentTime = 0;
+                    }
                 }
+                // Note: We don't stop individual SFX sounds as they're short-lived
             },
 
             setMusicVolume: (volume: number) => {
@@ -241,6 +278,24 @@ class WebGameApp {
             setSfxVolume: (volume: number) => {
                 this.currentSfxVolume = volume;
                 // Volume will be applied on next SFX play
+            },
+
+            setMusicEnabled: (enabled: boolean) => {
+                console.log('[Web Audio] setMusicEnabled called:', { enabled, wasMusicEnabled: this.musicEnabled });
+                this.musicEnabled = enabled;
+                console.log('[Web Audio] musicEnabled is now:', this.musicEnabled);
+
+                // If disabling music, stop currently playing music
+                if (!enabled && this.musicAudio) {
+                    console.log('[Web Audio] Stopping music audio');
+                    this.musicAudio.pause();
+                    this.musicAudio.currentTime = 0;
+                }
+            },
+
+            setSfxEnabled: (enabled: boolean) => {
+                console.log('[Web Audio] Set SFX enabled:', enabled);
+                this.sfxEnabled = enabled;
             }
         };
     }
@@ -309,6 +364,24 @@ class WebGameApp {
             // Step 2: Create game with platform config
             console.log('🎮 Step 2: Creating game instance...');
             const platformConfig = this.createPlatformConfig(this.assetManager);
+
+            // Load saved audio settings from localStorage
+            try {
+                const stored = localStorage.getItem('bloombeasts_playerData');
+                if (stored) {
+                    const playerData = JSON.parse(stored);
+                    if (playerData?.settings) {
+                        console.log('[Web] Applying saved audio settings:', playerData.settings);
+                        this.currentMusicVolume = playerData.settings.musicVolume / 100;
+                        this.currentSfxVolume = playerData.settings.sfxVolume / 100;
+                        this.musicEnabled = playerData.settings.musicEnabled;
+                        this.sfxEnabled = playerData.settings.sfxEnabled;
+                    }
+                }
+            } catch (error) {
+                console.warn('[Web] Failed to load audio settings:', error);
+            }
+
             this.game = new BloomBeastsGame(platformConfig);
 
             // Step 3: Load all images

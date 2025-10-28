@@ -20,7 +20,7 @@ import {
   Easing,
   ImageSource
 } from 'horizon/ui';
-import type { Player } from 'horizon/core';
+import { type Player, AudioGizmo, AudioOptions } from 'horizon/core';
 
 // Import from standalone bundle
 import { BloomBeasts } from './BloomBeasts-GameEngine-Standalone';
@@ -52,6 +52,19 @@ class BloomBeastsUI extends UIComponent {
     trapAssetsCatalog: { type: hz.PropTypes.Asset },
     magicAssetsCatalog: { type: hz.PropTypes.Asset },
     commonAssetsCatalog: { type: hz.PropTypes.Asset },
+
+    // Audio Entities - Music (Entities with Audio Gizmo component)
+    musicBackground: { type: hz.PropTypes.Entity },
+    musicBattle: { type: hz.PropTypes.Entity },
+
+    // Audio Entities - SFX (Entities with Audio Gizmo component)
+    sfxMenuButtonSelect: { type: hz.PropTypes.Entity },
+    sfxPlayCard: { type: hz.PropTypes.Entity },
+    sfxAttack: { type: hz.PropTypes.Entity },
+    sfxTrapCardActivated: { type: hz.PropTypes.Entity },
+    sfxLowHealth: { type: hz.PropTypes.Entity },
+    sfxWin: { type: hz.PropTypes.Entity },
+    sfxLose: { type: hz.PropTypes.Entity },
   };
 
   panelWidth = 1280;
@@ -74,9 +87,14 @@ class BloomBeastsUI extends UIComponent {
   // Game instance - created early so uiTree is available immediately
   private game!: BloomBeastsGame;
 
-  // Audio elements (if using Horizon audio)
-  private musicAudio: any = null;
-  private sfxAudio: any = null;
+  // Audio state tracking
+  private currentMusicSrc: any = null;
+  private currentMusicEntity: hz.Entity | null = null;
+  private currentMusicVolume: number = 0.5;
+  private currentSfxVolume: number = 0.5;
+  private musicEnabled: boolean = true;
+  private sfxEnabled: boolean = true;
+  private isMusicPlaying: boolean = false;
 
   /**
    * Create a reactive binding with imperative API support
@@ -122,6 +140,16 @@ class BloomBeastsUI extends UIComponent {
       async (player: Player) => {
         console.log('[Horizon] Player entered world', player);
         this.currentPlayerBinding.set(player);
+
+        // Load player data and apply audio settings
+        const playerData = this.loadPlayerData();
+        if (playerData?.settings) {
+          console.log('[Horizon] Applying saved audio settings:', playerData.settings);
+          this.currentMusicVolume = playerData.settings.musicVolume / 100;
+          this.currentSfxVolume = playerData.settings.sfxVolume / 100;
+          this.musicEnabled = playerData.settings.musicEnabled;
+          this.sfxEnabled = playerData.settings.sfxEnabled;
+        }
       }
     );
 
@@ -251,19 +279,6 @@ class BloomBeastsUI extends UIComponent {
         // Horizon doesn't use this - just return the ID
         // HorizonImage wrapper handles the conversion to ImageSource
         return assetId;
-      },
-
-      // Sound assets: getter function that queries catalog manager
-      getSoundAsset: (assetId: string) => {
-        const catalogManager = AssetCatalogManager.getInstance();
-        const horizonId = catalogManager.getHorizonAssetId(assetId, 'audio');
-        if (!horizonId) {
-          // console.warn(`[Horizon] Sound asset not found: ${assetId}`);
-          return null;  // Return null instead of undefined
-        }
-        // TODO: Convert Horizon asset ID to Audio asset
-        // For now, return the horizon ID as a string
-        return horizonId;
       },
 
       // UI methods: Horizon UI implementations from horizon/ui
@@ -409,27 +424,28 @@ class BloomBeastsUI extends UIComponent {
       },
 
       // Audio: Horizon audio implementation
-      playMusic: (src: any, loop: boolean, volume: number) => {
-        // TODO: Implement Horizon music playback
-        // console.log('[Horizon] Play music:', src, loop, volume);
+      playSound: (assetId: string, loop: boolean, volume: number) => {
+        this.playSound(assetId, loop, volume);
       },
 
-      playSfx: (src: any, volume: number) => {
-        // TODO: Implement Horizon SFX playback
-        // console.log('[Horizon] Play SFX:', src, volume);
-      },
-
-      stopMusic: () => {
-        // TODO: Implement Horizon music stop
-        // console.log('[Horizon] Stop music');
+      stopSound: (assetId?: string) => {
+        this.stopSound(assetId);
       },
 
       setMusicVolume: (volume: number) => {
-        // console.log('[Horizon] Set music volume:', volume);
+        this.setMusicVolumeImpl(volume);
       },
 
       setSfxVolume: (volume: number) => {
-        // console.log('[Horizon] Set SFX volume:', volume);
+        this.setSfxVolumeImpl(volume);
+      },
+
+      setMusicEnabled: (enabled: boolean) => {
+        this.setMusicEnabledImpl(enabled);
+      },
+
+      setSfxEnabled: (enabled: boolean) => {
+        this.setSfxEnabledImpl(enabled);
       },
     };
   }
@@ -541,11 +557,178 @@ class BloomBeastsUI extends UIComponent {
   }
 
   /**
+   * Audio entity map with type information
+   */
+  private audioEntityMap: Record<string, { propName: string; type: 'music' | 'sfx' }> = {
+    'music-background': { propName: 'musicBackground', type: 'music' },
+    'music-battle': { propName: 'musicBattle', type: 'music' },
+    'sfx-menu-button-select': { propName: 'sfxMenuButtonSelect', type: 'sfx' },
+    'sfx-play-card': { propName: 'sfxPlayCard', type: 'sfx' },
+    'sfx-attack': { propName: 'sfxAttack', type: 'sfx' },
+    'sfx-trap-card-activated': { propName: 'sfxTrapCardActivated', type: 'sfx' },
+    'sfx-low-health': { propName: 'sfxLowHealth', type: 'sfx' },
+    'sfx-win': { propName: 'sfxWin', type: 'sfx' },
+    'sfx-lose': { propName: 'sfxLose', type: 'sfx' },
+  };
+
+  /**
+   * Map asset ID to prop name and get audio entity
+   */
+  private getAudioEntity(assetId: string): { entity: hz.Entity; type: 'music' | 'sfx' } | null {
+    const entityInfo = this.audioEntityMap[assetId];
+    if (!entityInfo) {
+      console.warn(`[Horizon Audio] Unknown asset ID: ${assetId}`);
+      return null;
+    }
+
+    const entity = this.props[entityInfo.propName];
+    if (!entity) {
+      console.warn(`[Horizon Audio] Entity not assigned in props: ${entityInfo.propName}`);
+      return null;
+    }
+
+    return { entity, type: entityInfo.type };
+  }
+
+  /**
+   * Play sound implementation
+   * Handles both music and SFX with appropriate volume
+   */
+  private playSound(assetId: string, loop: boolean = false, volume: number = 1.0): void {
+    const audioInfo = this.getAudioEntity(assetId);
+    if (!audioInfo) {
+      return;
+    }
+
+    const { entity, type } = audioInfo;
+
+    // Check if this type of audio is enabled
+    if (type === 'music' && !this.musicEnabled) {
+      console.log(`[Horizon Audio] Music is disabled, not playing: ${assetId}`);
+      return;
+    }
+    if (type === 'sfx' && !this.sfxEnabled) {
+      console.log(`[Horizon Audio] SFX is disabled, not playing: ${assetId}`);
+      return;
+    }
+
+    // Use the appropriate volume based on type
+    const actualVolume = type === 'music' ? this.currentMusicVolume : this.currentSfxVolume;
+
+    console.log(`[Horizon Audio] Play ${type}: ${assetId}, loop: ${loop}, volume: ${actualVolume}`);
+
+    if (type === 'music') {
+      // Stop existing music before playing new music
+      if (this.currentMusicEntity) {
+        const currentAudioGizmo = this.currentMusicEntity.as(AudioGizmo);
+        if (currentAudioGizmo) {
+          currentAudioGizmo.stop();
+        }
+      }
+
+      this.currentMusicSrc = entity;
+      this.currentMusicEntity = entity;
+      this.isMusicPlaying = true;
+    }
+
+    const audioGizmo = entity.as(AudioGizmo);
+    if (audioGizmo) {
+      audioGizmo.volume.set(actualVolume);
+      audioGizmo.play();
+    }
+  }
+
+  /**
+   * Stop sound implementation
+   */
+  private stopSound(assetId?: string): void {
+    if (!assetId) {
+      return;
+    }
+
+    const audioInfo = this.getAudioEntity(assetId);
+    if (!audioInfo) {
+      return;
+    }
+
+    const { entity, type } = audioInfo;
+    console.log('[Horizon Audio] Stop sound');
+
+    if (!assetId || this.audioEntityMap[assetId]?.type === 'music') {
+      this.isMusicPlaying = false;
+      this.currentMusicSrc = null;
+      this.currentMusicEntity = null;
+    }
+
+    const audioGizmo = entity.as(AudioGizmo);
+    if (audioGizmo) {
+      audioGizmo.stop();
+    }
+  }
+
+  /**
+   * Set music volume implementation
+   */
+  private setMusicVolumeImpl(volume: number): void {
+    console.log('[Horizon Audio] Set music volume:', volume);
+    this.currentMusicVolume = volume;
+
+    // If music is currently playing, update its volume
+    if (this.currentMusicEntity) {
+      const audioGizmo = this.currentMusicEntity.as(AudioGizmo);
+      if (audioGizmo) {
+        audioGizmo.volume.set(volume);
+      }
+    }
+  }
+
+  /**
+   * Set SFX volume implementation
+   */
+  private setSfxVolumeImpl(volume: number): void {
+    console.log('[Horizon Audio] Set SFX volume:', volume);
+    this.currentSfxVolume = volume;
+
+    // TODO: If Horizon adds audio playback API, implement here
+  }
+
+  /**
+   * Set music enabled/disabled
+   */
+  private setMusicEnabledImpl(enabled: boolean): void {
+    console.log('[Horizon Audio] Set music enabled:', enabled);
+    this.musicEnabled = enabled;
+
+    // If disabling music, stop currently playing music
+    if (!enabled && this.currentMusicEntity) {
+      const audioGizmo = this.currentMusicEntity.as(AudioGizmo);
+      if (audioGizmo) {
+        audioGizmo.stop();
+      }
+      this.isMusicPlaying = false;
+    }
+  }
+
+  /**
+   * Set SFX enabled/disabled
+   */
+  private setSfxEnabledImpl(enabled: boolean): void {
+    console.log('[Horizon Audio] Set SFX enabled:', enabled);
+    this.sfxEnabled = enabled;
+  }
+
+  /**
    * Cleanup when component is disposed
    */
   dispose() {
     // console.log('[Horizon] BloomBeasts disposing...');
-    // Cleanup if needed
+    // Stop any playing music
+    if (this.isMusicPlaying && this.currentMusicEntity) {
+      const audioGizmo = this.currentMusicEntity.as(AudioGizmo);
+      if (audioGizmo) {
+        audioGizmo.stop();
+      }
+    }
   }
 }
 

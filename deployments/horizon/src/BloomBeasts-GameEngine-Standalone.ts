@@ -10,8 +10,8 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-27T22:47:11.080Z
- * Files: 79
+ * Generated: 2025-10-28T01:21:53.602Z
+ * Files: 78
  *
  * @version 1.0.0
  * @license MIT
@@ -3953,6 +3953,16 @@ namespace BloomBeasts {
   }
 
   /**
+   * Sound settings for audio playback
+   */
+  export interface SoundSettings {
+    musicVolume: number; // 0-100
+    sfxVolume: number; // 0-100
+    musicEnabled: boolean;
+    sfxEnabled: boolean;
+  }
+
+  /**
    * Mission information for display in mission selection
    */
   export interface MissionDisplay {
@@ -5097,152 +5107,6 @@ namespace BloomBeasts {
         const typeStr = effectType.toString().replace(/([A-Z])/g, ' $1').replace(/-/g, ' ').trim();
         return typeStr || 'Special effect';
       }
-    }
-  }
-
-  // ==================== bloombeasts\systems\SoundManager.ts ====================
-
-  /**
-   * Sound Manager - Handles background music and sound effects
-   * Platform-independent audio management
-   */
-
-  export interface SoundSettings {
-    musicVolume: number; // 0-100
-    sfxVolume: number; // 0-100
-    musicEnabled: boolean;
-    sfxEnabled: boolean;
-  }
-
-  /**
-   * Platform callbacks for audio operations
-   */
-  export interface AudioCallbacks {
-    playMusic(src: string, loop: boolean, volume: number): void;
-    stopMusic(): void;
-    playSfx(src: string, volume: number): void;
-    setMusicVolume(volume: number): void;
-    setSfxVolume(volume: number): void;
-  }
-
-  export class SoundManager {
-    private settings: SoundSettings;
-    private audioCallbacks: AudioCallbacks;
-    private currentMusic: string | null = null;
-
-    constructor(audioCallbacks: AudioCallbacks) {
-      this.audioCallbacks = audioCallbacks;
-
-      // Default settings
-      this.settings = {
-        musicVolume: 10,
-        sfxVolume: 50,
-        musicEnabled: true,
-        sfxEnabled: true,
-      };
-    }
-
-    /**
-     * Load settings from storage
-     */
-    loadSettings(savedSettings?: Partial<SoundSettings>): void {
-      if (savedSettings) {
-        this.settings = {
-          ...this.settings,
-          ...savedSettings,
-        };
-      }
-    }
-
-    /**
-     * Get current settings
-     */
-    getSettings(): SoundSettings {
-      return { ...this.settings };
-    }
-
-    /**
-     * Update music volume
-     */
-    setMusicVolume(volume: number): void {
-      this.settings.musicVolume = Math.max(0, Math.min(100, volume));
-      if (this.settings.musicEnabled) {
-        this.audioCallbacks.setMusicVolume(this.settings.musicVolume / 100);
-      }
-    }
-
-    /**
-     * Update SFX volume
-     */
-    setSfxVolume(volume: number): void {
-      this.settings.sfxVolume = Math.max(0, Math.min(100, volume));
-      if (this.settings.sfxEnabled) {
-        this.audioCallbacks.setSfxVolume(this.settings.sfxVolume / 100);
-      }
-    }
-
-    /**
-     * Toggle music on/off
-     */
-    toggleMusic(enabled: boolean): void {
-      this.settings.musicEnabled = enabled;
-
-      if (enabled && this.currentMusic) {
-        // Resume music
-        this.playMusic(this.currentMusic, true);
-      } else if (!enabled) {
-        // Stop music
-        this.audioCallbacks.stopMusic();
-      }
-    }
-
-    /**
-     * Toggle SFX on/off
-     */
-    toggleSfx(enabled: boolean): void {
-      this.settings.sfxEnabled = enabled;
-    }
-
-    /**
-     * Play background music
-     */
-    playMusic(musicId: string, loop: boolean = true): void {
-      // Don't restart music if it's already playing
-      if (this.currentMusic === musicId) {
-        return;
-      }
-
-      this.currentMusic = musicId;
-
-      if (this.settings.musicEnabled) {
-        const volume = this.settings.musicVolume / 100;
-        this.audioCallbacks.playMusic(musicId, loop, volume);
-      }
-    }
-
-    /**
-     * Stop background music
-     */
-    stopMusic(): void {
-      this.currentMusic = null;
-      this.audioCallbacks.stopMusic();
-    }
-
-    /**
-     * Play sound effect
-     */
-    playSfx(sfxId: string): void {
-      if (this.settings.sfxEnabled) {
-        const volume = this.settings.sfxVolume / 100;
-        this.audioCallbacks.playSfx(sfxId, volume);
-      }
-    }
-
-    /**
-     * Get current music playing
-     */
-    getCurrentMusic(): string | null {
-      return this.currentMusic;
     }
   }
 
@@ -11767,9 +11631,29 @@ namespace BloomBeasts {
       const disabledValue = typeof disabled === 'boolean' ? disabled : false;
       const disabledBinding = typeof disabled === 'object' && 'get' in disabled ? disabled : undefined;
 
+      // Create hover state binding for opacity effect
+      const hoverBinding = new ui.Binding(false);
+
+      // Calculate opacity based on hover and disabled state
+      const opacityBinding = ui.Binding.derive(
+          [hoverBinding],
+          (isHovered: boolean) => {
+              if (disabledValue) return 0.5;
+              return isHovered ? 0.8 : 1.0;
+          }
+      );
+
       return ui.Pressable({
           onClick: onClick,
           disabled: disabledBinding || disabledValue,
+          onHoverIn: () => {
+              if (!disabledValue) {
+                  hoverBinding.set(true);
+              }
+          },
+          onHoverOut: () => {
+              hoverBinding.set(false);
+          },
           style: {
               position: 'absolute',
               left: x,
@@ -11788,7 +11672,7 @@ namespace BloomBeasts {
                       position: 'absolute',
                       width: sideMenuButtonDimensions.width,
                       height: sideMenuButtonDimensions.height,
-                      opacity: disabledValue ? 0.5 : 1,
+                      opacity: opacityBinding,
                   },
               }),
               // Button text centered
@@ -14005,6 +13889,10 @@ namespace BloomBeasts {
         }
       );
 
+      // Hover state bindings for buttons
+      const actionButtonHover = new this.ui.Binding(false);
+      const closeButtonHover = new this.ui.Binding(false);
+
       return [
         // Add/Remove button
         this.ui.Pressable({
@@ -14013,6 +13901,8 @@ namespace BloomBeasts {
               this.onCardSelect(currentCardId);
             }
           },
+          onHoverIn: () => actionButtonHover.set(true),
+          onHoverOut: () => actionButtonHover.set(false),
           style: {
             width: buttonWidth,
             height: buttonHeight,
@@ -14039,6 +13929,7 @@ namespace BloomBeasts {
                 height: buttonHeight,
                 top: 0,
                 left: 0,
+                opacity: this.ui.Binding.derive([actionButtonHover], (hover) => hover ? 0.8 : 1.0),
               },
             }),
             // Button text
@@ -14074,6 +13965,8 @@ namespace BloomBeasts {
         // Close button
         this.ui.Pressable({
           onClick: () => this.closePopup(),
+          onHoverIn: () => closeButtonHover.set(true),
+          onHoverOut: () => closeButtonHover.set(false),
           style: {
             width: buttonWidth,
             height: buttonHeight,
@@ -14092,6 +13985,7 @@ namespace BloomBeasts {
                 height: buttonHeight,
                 top: 0,
                 left: 0,
+                opacity: this.ui.Binding.derive([closeButtonHover], (hover) => hover ? 0.8 : 1.0),
               },
             }),
             // Button text
@@ -16626,12 +16520,12 @@ namespace BloomBeasts {
             },
             children: [
               // Music settings (pass the binding directly)
-              this.createVolumeControl('Music Volume', 'musicVolume', 'music-volume', this.settings),
-              this.createToggleControl('Music', 'musicEnabled', 'music-enabled', this.settings),
+              this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume', this.settings),
+              this.createToggleControl('Music', 'musicEnabled', 'musicEnabled', this.settings),
 
               // SFX settings (pass the binding directly)
-              this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfx-volume', this.settings),
-              this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfx-enabled', this.settings),
+              this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume', this.settings),
+              this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled', this.settings),
             ],
           }),
           // Sidebar with common side menu
@@ -16651,7 +16545,7 @@ namespace BloomBeasts {
     }
 
     /**
-     * Create volume control slider
+     * Create volume control with +/- buttons
      */
     private createVolumeControl(
       label: string,
@@ -16670,6 +16564,7 @@ namespace BloomBeasts {
               flexDirection: 'row',
               justifyContent: 'space-between',
               marginBottom: 10,
+              alignItems: 'center',
             },
             children: [
               this.ui.Text({
@@ -16679,70 +16574,89 @@ namespace BloomBeasts {
                   color: COLORS.textPrimary,
                 },
               }),
-              this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [settingsBinding],
-                  (settings: SoundSettings) => {
-                    // Update tracked value whenever settings changes
-                    this.settingsValue = settings;
-                    return `${settings[settingKey]}%`;
-                  }
-                ),
-                style: {
-                  fontSize: DIMENSIONS.fontSize.xl,
-                  color: COLORS.success,
-                },
-              }),
-            ],
-          }),
-
-          // Slider
-          this.ui.Pressable({
-            onClick: (relativeX?: number) => {
-              if (relativeX !== undefined && this.onSettingChange) {
-                // Convert relative position (0-1) to volume (0-100)
-                const newValue = Math.round(relativeX * 100);
-                const clampedValue = Math.max(0, Math.min(100, newValue));
-                this.onSettingChange(settingId, clampedValue);
-
-                // Update the binding immediately for responsive UI
-                const currentSettings = this.settingsValue;
-                const newSettings = {
-                  ...currentSettings,
-                  [settingKey]: clampedValue,
-                };
-                this.settingsValue = newSettings;
-                this.settings.set(newSettings);
-
-                // Trigger re-render after updating settings
-                console.log('[SettingsScreen] Slider changed, onRenderNeeded:', this.onRenderNeeded ? 'calling' : 'undefined');
-                if (this.onRenderNeeded) {
-                  this.onRenderNeeded();
-                }
-              }
-            },
-            style: {
-              width: 400,
-              height: 30,
-              backgroundColor: '#333',
-              borderRadius: 5,
-              position: 'relative',
-            },
-            children: [
-              // Fill
+              // Volume control: - button, value, + button
               this.ui.View({
                 style: {
-                  position: 'absolute',
-                  left: 0,
-                  top: 0,
-                  width: this.ui.Binding.derive(
-                    [settingsBinding],
-                    (settings: SoundSettings) => `${settings[settingKey]}%`
-                  ),
-                  height: '100%',
-                  backgroundColor: COLORS.success,
-                  borderRadius: 5,
+                  flexDirection: 'row',
+                  alignItems: 'center',
                 },
+                children: [
+                  // Decrease button
+                  this.ui.Pressable({
+                    onClick: () => {
+                      if (this.onSettingChange) {
+                        const currentSettings = this.settingsValue;
+                        const currentValue = currentSettings[settingKey] || 0;
+                        const newValue = Math.max(0, currentValue - 10);
+                        this.onSettingChange(settingId, newValue);
+                      }
+                    },
+                    style: {
+                      width: 40,
+                      height: 40,
+                      backgroundColor: COLORS.surface,
+                      borderRadius: 5,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 15,
+                    },
+                    children: this.ui.Text({
+                      text: new this.ui.Binding('-'),
+                      style: {
+                        fontSize: DIMENSIONS.fontSize.xl,
+                        color: COLORS.textPrimary,
+                        textAlign: 'center',
+                        fontWeight: 'bold',
+                      },
+                    }),
+                  }),
+                  // Volume display
+                  this.ui.Text({
+                    text: this.ui.Binding.derive(
+                      [settingsBinding],
+                      (settings: SoundSettings) => {
+                        this.settingsValue = settings;
+                        const volume = settings?.[settingKey];
+                        return `${volume !== undefined && volume !== null && typeof volume === 'number' ? Math.round(volume) : 0}%`;
+                      }
+                    ),
+                    style: {
+                      fontSize: DIMENSIONS.fontSize.xl,
+                      color: COLORS.success,
+                      width: 70,
+                      textAlign: 'center',
+                    },
+                  }),
+                  // Increase button
+                  this.ui.Pressable({
+                    onClick: () => {
+                      if (this.onSettingChange) {
+                        const currentSettings = this.settingsValue;
+                        const currentValue = currentSettings[settingKey] || 0;
+                        const newValue = Math.min(100, currentValue + 10);
+                        this.onSettingChange(settingId, newValue);
+                      }
+                    },
+                    style: {
+                      width: 40,
+                      height: 40,
+                      backgroundColor: COLORS.surface,
+                      borderRadius: 5,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginLeft: 15,
+                    },
+                    children: this.ui.Text({
+                      text: new this.ui.Binding('+'),
+                      style: {
+                        fontSize: DIMENSIONS.fontSize.xl,
+                        color: COLORS.textPrimary,
+                        textAlign: 'center',
+                        fontWeight: 'bold',
+                      },
+                    }),
+                  }),
+                ],
               }),
             ],
           }),
@@ -16778,25 +16692,17 @@ namespace BloomBeasts {
           // Toggle button
           this.ui.Pressable({
             onClick: () => {
+              console.log(`[SettingsScreen] Toggle clicked - settingKey: ${settingKey}, settingId: ${settingId}`);
               if (this.onSettingChange) {
                 const currentSettings = this.settingsValue;
+                console.log(`[SettingsScreen] Current settings:`, currentSettings);
                 const currentValue = currentSettings[settingKey];
                 const newValue = !currentValue;
+                console.log(`[SettingsScreen] Toggle value: ${currentValue} -> ${newValue}`);
+
+                // Just call the callback - let the parent handle updating the binding
+                // The binding update will trigger a re-render automatically
                 this.onSettingChange(settingId, newValue);
-
-                // Update the binding immediately for responsive UI
-                const newSettings = {
-                  ...currentSettings,
-                  [settingKey]: newValue,
-                };
-                this.settingsValue = newSettings;
-                this.settings.set(newSettings);
-
-                // Trigger re-render after updating settings
-                console.log('[SettingsScreen] Toggle changed, onRenderNeeded:', this.onRenderNeeded ? 'calling' : 'undefined');
-                if (this.onRenderNeeded) {
-                  this.onRenderNeeded();
-                }
               }
             },
             style: {
@@ -17578,15 +17484,6 @@ namespace BloomBeasts {
     getImageAsset: (assetId: string) => any;
 
     /**
-     * Get a sound asset by ID
-     * Platform queries AssetCatalogManager and returns the asset in platform format
-     *
-     * For web: Returns string path from catalog (e.g., '/assets/sounds/music.mp3')
-     * For horizon: Converts catalog horizonAssetId to hz.Asset object
-     */
-    getSoundAsset: (assetId: string) => any;
-
-    /**
      * Get platform-specific UI method implementations
      *
      * For web: Returns web-specific View, Text, Image, Pressable, Binding
@@ -17615,11 +17512,12 @@ namespace BloomBeasts {
      * Audio callbacks (optional)
      * Implement if your platform supports audio
      */
-    playMusic?: (src: any, loop: boolean, volume: number) => void;
-    playSfx?: (src: any, volume: number) => void;
-    stopMusic?: () => void;
+    playSound?: (assetId: string, loop: boolean, volume: number) => void;
+    stopSound?: (assetId?: string) => void;
     setMusicVolume?: (volume: number) => void;
     setSfxVolume?: (volume: number) => void;
+    setMusicEnabled?: (enabled: boolean) => void;
+    setSfxEnabled?: (enabled: boolean) => void;
   }
 
   /**
@@ -17637,16 +17535,23 @@ namespace BloomBeasts {
 
     // Platform-provided asset getters
     private platformGetImageAsset: (assetId: string) => any;
-    private platformGetSoundAsset: (assetId: string) => any;
 
     // Core game systems
     private gameEngine: GameEngine;
-    private soundManager: SoundManager;
     private missionManager: MissionManager;
     private missionUI: MissionSelectionUI;
     private battleUI: MissionBattleUI;
     private cardCollection: CardCollection;
     private cardCollectionManager: CardCollectionManager;
+
+    // Sound settings and state
+    private soundSettings: SoundSettings = {
+      musicVolume: 80,
+      sfxVolume: 80,
+      musicEnabled: true,
+      sfxEnabled: true,
+    };
+    private currentMusic: string | null = null;
     private battleDisplayManager: BattleDisplayManager;
 
     // Player data state - single source of truth
@@ -17723,7 +17628,6 @@ namespace BloomBeasts {
 
       // Store platform-provided asset getters
       this.platformGetImageAsset = config.getImageAsset;
-      this.platformGetSoundAsset = config.getSoundAsset;
 
       // Initialize core systems
       this.gameEngine = new GameEngine();
@@ -17751,25 +17655,6 @@ namespace BloomBeasts {
       this.cardCollection = new CardCollection();
       this.cardCollectionManager = new CardCollectionManager();
       this.battleDisplayManager = new BattleDisplayManager();
-
-      // Initialize sound manager
-      this.soundManager = new SoundManager({
-        playMusic: (src, loop, volume) => {
-          const resolvedAsset = this.getSoundAsset(src);
-          if (resolvedAsset) {
-            this.platform.playMusic?.(resolvedAsset, loop, volume);
-          }
-        },
-        stopMusic: () => this.platform.stopMusic?.(),
-        playSfx: (src, volume) => {
-          const resolvedAsset = this.getSoundAsset(src);
-          if (resolvedAsset) {
-            this.platform.playSfx?.(resolvedAsset, volume);
-          }
-        },
-        setMusicVolume: (volume) => this.platform.setMusicVolume?.(volume),
-        setSfxVolume: (volume) => this.platform.setSfxVolume?.(volume),
-      });
 
       // Initialize bindings using platform's Binding class
       const BindingClass = this.UI.Binding as any;
@@ -17866,23 +17751,6 @@ namespace BloomBeasts {
     }
 
     /**
-     * Get a sound asset by ID
-     * Supports both new catalog IDs and legacy string IDs
-     * Delegates to platform-specific implementation
-     */
-    getSoundAsset(assetId: string): any {
-      // Normalize legacy IDs to new catalog IDs
-      const normalizedId = normalizeSoundId(assetId);
-      const asset = this.platformGetSoundAsset(normalizedId);
-
-      if (!asset) {
-        // console.warn(`⚠️  Sound asset not found for ID: "${assetId}"`);
-      }
-
-      return asset;
-    }
-
-    /**
      * Get platform async methods (setTimeout, setInterval, etc.)
      * Screens can use this to access platform-specific async operations
      */
@@ -17921,7 +17789,7 @@ namespace BloomBeasts {
 
       // Start menu music
       console.log('[BloomBeastsGame] Starting menu music...');
-      this.soundManager.playMusic('BackgroundMusic.mp3', true);
+      this.playMusic('music-background', true);
       console.log('[BloomBeastsGame] Navigating to menu...');
       this.navigate('menu');
       console.log('[BloomBeastsGame] Initialize complete!');
@@ -17950,8 +17818,8 @@ namespace BloomBeasts {
               completedMissions: savedData.missions?.completedMissions || {}
             },
             settings: savedData.settings || {
-              musicVolume: 0.7,
-              sfxVolume: 0.7,
+              musicVolume: 80,
+              sfxVolume: 80,
               musicEnabled: true,
               sfxEnabled: true
             }
@@ -17964,6 +17832,17 @@ namespace BloomBeasts {
               this.cardCollection.addCard(cardInstance);
             });
             console.log(`[BloomBeastsGame] Card collection now has ${this.cardCollection.getAllCards().length} cards`);
+          }
+
+          // Load sound settings
+          if (this.playerData.settings) {
+            this.soundSettings = { ...this.playerData.settings };
+
+            // Apply settings to platform
+            this.platform.setMusicVolume?.(this.soundSettings.musicVolume / 100);
+            this.platform.setSfxVolume?.(this.soundSettings.sfxVolume / 100);
+            this.platform.setMusicEnabled?.(this.soundSettings.musicEnabled);
+            this.platform.setSfxEnabled?.(this.soundSettings.sfxEnabled);
           }
 
           // Update player level based on XP
@@ -17993,10 +17872,93 @@ namespace BloomBeasts {
       // Update playerData with latest values from subsystems
       this.playerData.cards.collected = this.cardCollection.getAllCards();
       this.playerData.cards.deck = this.playerDeck;
-      this.playerData.settings = this.soundManager.getSettings();
+      this.playerData.settings = { ...this.soundSettings };
 
       this.platform.setPlayerData?.(this.playerData);
       Logger.debug('[BloomBeastsGame] Player data saved');
+    }
+
+    /**
+     * Play background music
+     */
+    private playMusic(musicId: string, loop: boolean = true): void {
+      // Don't restart music if it's already playing
+      if (this.currentMusic === musicId) {
+        return;
+      }
+
+      this.currentMusic = musicId;
+
+      if (this.soundSettings.musicEnabled) {
+        const volume = this.soundSettings.musicVolume / 100;
+        this.platform.playSound?.(musicId, loop, volume);
+      }
+    }
+
+    /**
+     * Stop background music
+     */
+    private stopMusic(): void {
+      this.currentMusic = null;
+      this.platform.stopSound?.();
+    }
+
+    /**
+     * Play sound effect
+     */
+    private playSfx(sfxId: string): void {
+      if (this.soundSettings.sfxEnabled) {
+        const volume = this.soundSettings.sfxVolume / 100;
+        this.platform.playSound?.(sfxId, false, volume);
+      }
+    }
+
+    /**
+     * Set music volume (0-100)
+     */
+    private setMusicVolume(volume: number): void {
+      this.soundSettings.musicVolume = Math.max(0, Math.min(100, volume));
+      if (this.soundSettings.musicEnabled) {
+        this.platform.setMusicVolume?.(this.soundSettings.musicVolume / 100);
+      }
+    }
+
+    /**
+     * Set SFX volume (0-100)
+     */
+    private setSfxVolume(volume: number): void {
+      this.soundSettings.sfxVolume = Math.max(0, Math.min(100, volume));
+      if (this.soundSettings.sfxEnabled) {
+        this.platform.setSfxVolume?.(this.soundSettings.sfxVolume / 100);
+      }
+    }
+
+    /**
+     * Toggle music on/off
+     */
+    private toggleMusic(enabled: boolean): void {
+      this.soundSettings.musicEnabled = enabled;
+
+      // Notify platform
+      this.platform.setMusicEnabled?.(enabled);
+
+      if (enabled && this.currentMusic) {
+        // Resume music
+        this.playMusic(this.currentMusic, true);
+      } else if (!enabled) {
+        // Stop music
+        this.stopMusic();
+      }
+    }
+
+    /**
+     * Toggle SFX on/off
+     */
+    private toggleSfx(enabled: boolean): void {
+      this.soundSettings.sfxEnabled = enabled;
+
+      // Notify platform
+      this.platform.setSfxEnabled?.(enabled);
     }
 
     /**
@@ -18108,7 +18070,7 @@ namespace BloomBeasts {
       this.deckSizeBinding.set(this.playerDeck.length);
       this.missionsBinding.set(displayMissions);
       this.statsBinding.set(stats);
-      this.settingsBinding.set(this.soundManager.getSettings());
+      this.settingsBinding.set({ ...this.soundSettings });
     }
 
     /**
@@ -18150,7 +18112,7 @@ namespace BloomBeasts {
       // console.log('[BloomBeastsGame] Button clicked:', buttonId);
 
       // Play button sound
-      this.soundManager.playSfx('menuButtonSelect');
+      this.playSfx('sfx-menu-button-select');
 
       // Handle navigation buttons
       switch (buttonId) {
@@ -18218,7 +18180,7 @@ namespace BloomBeasts {
       this.forfeitPopupBinding.set(null);
 
       // Play lose sound
-      this.soundManager.playSfx('sfx/lose.wav');
+      this.playSfx('sfx-lose');
 
       // End battle as a loss
       const currentBattle = this.battleUI.getCurrentBattle();
@@ -18240,7 +18202,7 @@ namespace BloomBeasts {
       // console.log('[BloomBeastsGame] Card selected:', cardId);
 
       // Play menu button sound
-      this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+      this.playSfx('sfx-menu-button-select');
 
       const cardEntry = this.cardCollection.getCard(cardId);
 
@@ -18297,7 +18259,7 @@ namespace BloomBeasts {
       this.selectedBeastIndex = null;
 
       // Play menu button sound
-      this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+      this.playSfx('sfx-menu-button-select');
 
       // Check if player has cards in deck
       if (this.playerDeck.length === 0) {
@@ -18356,7 +18318,7 @@ namespace BloomBeasts {
           this.triggerRender();
 
           // Play battle music
-          this.soundManager.playMusic('BattleMusic.mp3', true);
+          this.playMusic('music-battle', true);
 
           Logger.info('Battle initialized successfully');
         } else {
@@ -18371,34 +18333,42 @@ namespace BloomBeasts {
      * Handle settings changes
      */
     private handleSettingsChange(settingId: string, value: any): void {
-      // console.log('[BloomBeastsGame] Settings changed:', settingId, value);
+      console.log('[BloomBeastsGame] Settings changed:', settingId, value);
+      console.log('[BloomBeastsGame] Current soundSettings before change:', this.soundSettings);
 
       // Play button sound for toggles (not sliders)
       if (settingId === 'musicEnabled' || settingId === 'sfxEnabled') {
-        this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+        this.playSfx('sfx-menu-button-select');
       }
 
       // Apply settings via sound manager
       switch (settingId) {
         case 'musicVolume':
-          this.soundManager.setMusicVolume(value);
+          console.log('[BloomBeastsGame] Matched case: musicVolume');
+          this.setMusicVolume(value);
           break;
         case 'sfxVolume':
-          this.soundManager.setSfxVolume(value);
+          console.log('[BloomBeastsGame] Matched case: sfxVolume');
+          this.setSfxVolume(value);
           break;
         case 'musicEnabled':
-          this.soundManager.toggleMusic(value);
+          console.log('[BloomBeastsGame] Matched case: musicEnabled');
+          this.toggleMusic(value);
           break;
         case 'sfxEnabled':
-          this.soundManager.toggleSfx(value);
+          console.log('[BloomBeastsGame] Matched case: sfxEnabled');
+          this.toggleSfx(value);
           break;
       }
+
+      console.log('[BloomBeastsGame] Current soundSettings after change:', this.soundSettings);
 
       // Save settings
       this.saveGameData();
 
       // Update binding
-      this.settingsBinding.set(this.soundManager.getSettings());
+      this.settingsBinding.set({ ...this.soundSettings });
+      console.log('[BloomBeastsGame] Binding updated with:', { ...this.soundSettings });
     }
 
     /**
@@ -18474,21 +18444,21 @@ namespace BloomBeasts {
 
       // Play sound effects and show animations based on action type
       if (action.startsWith('attack-beast-')) {
-        this.soundManager.playSfx('sfx/attack.wav');
+        this.playSfx('sfx-attack');
         // Animation already shown above
         this.selectedBeastIndex = null; // Clear selection after attacking
       } else if (action.startsWith('attack-player-')) {
-        this.soundManager.playSfx('sfx/attack.wav');
+        this.playSfx('sfx-attack');
         // Extract attacker index and show animation for direct health attack
         const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
         await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
         this.selectedBeastIndex = null; // Clear selection after attacking
       } else if (action.startsWith('play-card-')) {
-        this.soundManager.playSfx('sfx/playCard.wav');
+        this.playSfx('sfx-play-card');
       } else if (action.startsWith('activate-trap-')) {
-        this.soundManager.playSfx('sfx/trapCardActivated.wav');
+        this.playSfx('sfx-trap-card-activated');
       } else if (action === 'end-turn') {
-        this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+        this.playSfx('sfx-menu-button-select');
       }
 
       // Process action
@@ -18576,7 +18546,7 @@ namespace BloomBeasts {
         }
 
         // Play win sound
-        this.soundManager.playSfx('sfx/win.wav');
+        this.playSfx('sfx-win');
 
         // Save game data
         await this.saveGameData();
@@ -18623,7 +18593,7 @@ namespace BloomBeasts {
         // console.log('[BloomBeastsGame] Mission failed!');
 
         // Play lose sound
-        this.soundManager.playSfx('sfx/lose.wav');
+        this.playSfx('sfx-lose');
 
         // Show mission failed popup
         const failedPopupProps = {
@@ -18647,7 +18617,7 @@ namespace BloomBeasts {
       }
 
       // Resume background music
-      this.soundManager.playMusic('BackgroundMusic.mp3', true);
+      this.playMusic('music-background', true);
 
       // Note: Navigation happens when user clicks Continue in the popup
     }

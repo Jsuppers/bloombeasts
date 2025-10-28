@@ -17,7 +17,6 @@ import { createMissionCompletePopup } from './ui/screens/common/MissionCompleteP
 import { createButtonPopup } from './ui/screens/common/ButtonPopup';
 import { createCardDetailPopup } from './ui/screens/common/CardDetailPopup';
 import { GameEngine } from './engine/systems/GameEngine';
-import { SoundManager, SoundSettings } from './systems/SoundManager';
 import { CardCollectionManager } from './systems/CardCollectionManager';
 import { BattleDisplayManager } from './systems/BattleDisplayManager';
 import { MissionManager } from './screens/missions/MissionManager';
@@ -30,7 +29,7 @@ import { DECK_SIZE } from './engine/constants/gameRules';
 import { Logger } from './engine/utils/Logger';
 import type { AsyncMethods } from './ui/types/bindings';
 import { normalizeSoundId } from './AssetCatalog';
-import type { MenuStats, CardDisplay, MissionDisplay, BattleDisplay, ObjectiveDisplay, CardDetailDisplay } from './gameManager';
+import type { MenuStats, CardDisplay, MissionDisplay, BattleDisplay, ObjectiveDisplay, CardDetailDisplay, SoundSettings } from './gameManager';
 
 /**
  * XP thresholds for player leveling (cumulative)
@@ -275,15 +274,6 @@ export interface PlatformConfig {
   getImageAsset: (assetId: string) => any;
 
   /**
-   * Get a sound asset by ID
-   * Platform queries AssetCatalogManager and returns the asset in platform format
-   *
-   * For web: Returns string path from catalog (e.g., '/assets/sounds/music.mp3')
-   * For horizon: Converts catalog horizonAssetId to hz.Asset object
-   */
-  getSoundAsset: (assetId: string) => any;
-
-  /**
    * Get platform-specific UI method implementations
    *
    * For web: Returns web-specific View, Text, Image, Pressable, Binding
@@ -312,11 +302,12 @@ export interface PlatformConfig {
    * Audio callbacks (optional)
    * Implement if your platform supports audio
    */
-  playMusic?: (src: any, loop: boolean, volume: number) => void;
-  playSfx?: (src: any, volume: number) => void;
-  stopMusic?: () => void;
+  playSound?: (assetId: string, loop: boolean, volume: number) => void;
+  stopSound?: (assetId?: string) => void;
   setMusicVolume?: (volume: number) => void;
   setSfxVolume?: (volume: number) => void;
+  setMusicEnabled?: (enabled: boolean) => void;
+  setSfxEnabled?: (enabled: boolean) => void;
 }
 
 /**
@@ -334,16 +325,23 @@ export class BloomBeastsGame {
 
   // Platform-provided asset getters
   private platformGetImageAsset: (assetId: string) => any;
-  private platformGetSoundAsset: (assetId: string) => any;
 
   // Core game systems
   private gameEngine: GameEngine;
-  private soundManager: SoundManager;
   private missionManager: MissionManager;
   private missionUI: MissionSelectionUI;
   private battleUI: MissionBattleUI;
   private cardCollection: CardCollection;
   private cardCollectionManager: CardCollectionManager;
+
+  // Sound settings and state
+  private soundSettings: SoundSettings = {
+    musicVolume: 80,
+    sfxVolume: 80,
+    musicEnabled: true,
+    sfxEnabled: true,
+  };
+  private currentMusic: string | null = null;
   private battleDisplayManager: BattleDisplayManager;
 
   // Player data state - single source of truth
@@ -420,7 +418,6 @@ export class BloomBeastsGame {
 
     // Store platform-provided asset getters
     this.platformGetImageAsset = config.getImageAsset;
-    this.platformGetSoundAsset = config.getSoundAsset;
 
     // Initialize core systems
     this.gameEngine = new GameEngine();
@@ -448,25 +445,6 @@ export class BloomBeastsGame {
     this.cardCollection = new CardCollection();
     this.cardCollectionManager = new CardCollectionManager();
     this.battleDisplayManager = new BattleDisplayManager();
-
-    // Initialize sound manager
-    this.soundManager = new SoundManager({
-      playMusic: (src, loop, volume) => {
-        const resolvedAsset = this.getSoundAsset(src);
-        if (resolvedAsset) {
-          this.platform.playMusic?.(resolvedAsset, loop, volume);
-        }
-      },
-      stopMusic: () => this.platform.stopMusic?.(),
-      playSfx: (src, volume) => {
-        const resolvedAsset = this.getSoundAsset(src);
-        if (resolvedAsset) {
-          this.platform.playSfx?.(resolvedAsset, volume);
-        }
-      },
-      setMusicVolume: (volume) => this.platform.setMusicVolume?.(volume),
-      setSfxVolume: (volume) => this.platform.setSfxVolume?.(volume),
-    });
 
     // Initialize bindings using platform's Binding class
     const BindingClass = this.UI.Binding as any;
@@ -563,23 +541,6 @@ export class BloomBeastsGame {
   }
 
   /**
-   * Get a sound asset by ID
-   * Supports both new catalog IDs and legacy string IDs
-   * Delegates to platform-specific implementation
-   */
-  getSoundAsset(assetId: string): any {
-    // Normalize legacy IDs to new catalog IDs
-    const normalizedId = normalizeSoundId(assetId);
-    const asset = this.platformGetSoundAsset(normalizedId);
-
-    if (!asset) {
-      // console.warn(`⚠️  Sound asset not found for ID: "${assetId}"`);
-    }
-
-    return asset;
-  }
-
-  /**
    * Get platform async methods (setTimeout, setInterval, etc.)
    * Screens can use this to access platform-specific async operations
    */
@@ -618,7 +579,7 @@ export class BloomBeastsGame {
 
     // Start menu music
     console.log('[BloomBeastsGame] Starting menu music...');
-    this.soundManager.playMusic('BackgroundMusic.mp3', true);
+    this.playMusic('music-background', true);
     console.log('[BloomBeastsGame] Navigating to menu...');
     this.navigate('menu');
     console.log('[BloomBeastsGame] Initialize complete!');
@@ -647,8 +608,8 @@ export class BloomBeastsGame {
             completedMissions: savedData.missions?.completedMissions || {}
           },
           settings: savedData.settings || {
-            musicVolume: 0.7,
-            sfxVolume: 0.7,
+            musicVolume: 80,
+            sfxVolume: 80,
             musicEnabled: true,
             sfxEnabled: true
           }
@@ -661,6 +622,17 @@ export class BloomBeastsGame {
             this.cardCollection.addCard(cardInstance);
           });
           console.log(`[BloomBeastsGame] Card collection now has ${this.cardCollection.getAllCards().length} cards`);
+        }
+
+        // Load sound settings
+        if (this.playerData.settings) {
+          this.soundSettings = { ...this.playerData.settings };
+
+          // Apply settings to platform
+          this.platform.setMusicVolume?.(this.soundSettings.musicVolume / 100);
+          this.platform.setSfxVolume?.(this.soundSettings.sfxVolume / 100);
+          this.platform.setMusicEnabled?.(this.soundSettings.musicEnabled);
+          this.platform.setSfxEnabled?.(this.soundSettings.sfxEnabled);
         }
 
         // Update player level based on XP
@@ -690,10 +662,101 @@ export class BloomBeastsGame {
     // Update playerData with latest values from subsystems
     this.playerData.cards.collected = this.cardCollection.getAllCards();
     this.playerData.cards.deck = this.playerDeck;
-    this.playerData.settings = this.soundManager.getSettings();
+    this.playerData.settings = { ...this.soundSettings };
 
     this.platform.setPlayerData?.(this.playerData);
     Logger.debug('[BloomBeastsGame] Player data saved');
+  }
+
+  /**
+   * Play background music
+   */
+  private playMusic(musicId: string, loop: boolean = true): void {
+    // Don't restart music if it's already playing
+    if (this.currentMusic === musicId) {
+      return;
+    }
+
+    this.currentMusic = musicId;
+
+    if (this.soundSettings.musicEnabled) {
+      const volume = this.soundSettings.musicVolume / 100;
+      this.platform.playSound?.(musicId, loop, volume);
+    }
+  }
+
+  /**
+   * Stop background music
+   */
+  private stopMusic(): void {
+    this.currentMusic = null;
+    this.platform.stopSound?.();
+  }
+
+  /**
+   * Play sound effect
+   */
+  private playSfx(sfxId: string): void {
+    if (this.soundSettings.sfxEnabled) {
+      const volume = this.soundSettings.sfxVolume / 100;
+      this.platform.playSound?.(sfxId, false, volume);
+    }
+  }
+
+  /**
+   * Set music volume (0-100)
+   */
+  private setMusicVolume(volume: number): void {
+    this.soundSettings.musicVolume = Math.max(0, Math.min(100, volume));
+    if (this.soundSettings.musicEnabled) {
+      this.platform.setMusicVolume?.(this.soundSettings.musicVolume / 100);
+    }
+  }
+
+  /**
+   * Set SFX volume (0-100)
+   */
+  private setSfxVolume(volume: number): void {
+    this.soundSettings.sfxVolume = Math.max(0, Math.min(100, volume));
+    if (this.soundSettings.sfxEnabled) {
+      this.platform.setSfxVolume?.(this.soundSettings.sfxVolume / 100);
+    }
+  }
+
+  /**
+   * Toggle music on/off
+   */
+  private toggleMusic(enabled: boolean): void {
+    console.log('[BloomBeastsGame] toggleMusic called:', { enabled, currentMusic: this.currentMusic });
+    this.soundSettings.musicEnabled = enabled;
+
+    // Notify platform
+    this.platform.setMusicEnabled?.(enabled);
+
+    if (enabled && this.currentMusic) {
+      // Resume music - force replay even if it's the same track
+      const musicToResume = this.currentMusic;
+      const volume = this.soundSettings.musicVolume / 100;
+      console.log('[BloomBeastsGame] Resuming music:', { musicToResume, volume, platformHasPlaySound: !!this.platform.playSound });
+      this.platform.playSound?.(musicToResume, true, volume);
+    } else if (!enabled) {
+      // Stop music playback but keep track of current music for resume
+      // Don't call stopMusic() as it clears this.currentMusic
+      console.log('[BloomBeastsGame] Stopping music, keeping currentMusic:', this.currentMusic);
+      this.platform.stopSound?.();
+    } else {
+      console.log('[BloomBeastsGame] Music enabled but no currentMusic set');
+    }
+  }
+
+  /**
+   * Toggle SFX on/off
+   */
+  private toggleSfx(enabled: boolean): void {
+    this.soundSettings.sfxEnabled = enabled;
+
+    // Notify platform
+    this.platform.setSfxEnabled?.(enabled);
   }
 
   /**
@@ -805,7 +868,7 @@ export class BloomBeastsGame {
     this.deckSizeBinding.set(this.playerDeck.length);
     this.missionsBinding.set(displayMissions);
     this.statsBinding.set(stats);
-    this.settingsBinding.set(this.soundManager.getSettings());
+    this.settingsBinding.set({ ...this.soundSettings });
   }
 
   /**
@@ -847,7 +910,7 @@ export class BloomBeastsGame {
     // console.log('[BloomBeastsGame] Button clicked:', buttonId);
 
     // Play button sound
-    this.soundManager.playSfx('menuButtonSelect');
+    this.playSfx('sfx-menu-button-select');
 
     // Handle navigation buttons
     switch (buttonId) {
@@ -915,7 +978,7 @@ export class BloomBeastsGame {
     this.forfeitPopupBinding.set(null);
 
     // Play lose sound
-    this.soundManager.playSfx('sfx/lose.wav');
+    this.playSfx('sfx-lose');
 
     // End battle as a loss
     const currentBattle = this.battleUI.getCurrentBattle();
@@ -937,7 +1000,7 @@ export class BloomBeastsGame {
     // console.log('[BloomBeastsGame] Card selected:', cardId);
 
     // Play menu button sound
-    this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+    this.playSfx('sfx-menu-button-select');
 
     const cardEntry = this.cardCollection.getCard(cardId);
 
@@ -994,7 +1057,7 @@ export class BloomBeastsGame {
     this.selectedBeastIndex = null;
 
     // Play menu button sound
-    this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+    this.playSfx('sfx-menu-button-select');
 
     // Check if player has cards in deck
     if (this.playerDeck.length === 0) {
@@ -1053,7 +1116,7 @@ export class BloomBeastsGame {
         this.triggerRender();
 
         // Play battle music
-        this.soundManager.playMusic('BattleMusic.mp3', true);
+        this.playMusic('music-battle', true);
 
         Logger.info('Battle initialized successfully');
       } else {
@@ -1068,34 +1131,45 @@ export class BloomBeastsGame {
    * Handle settings changes
    */
   private handleSettingsChange(settingId: string, value: any): void {
-    // console.log('[BloomBeastsGame] Settings changed:', settingId, value);
+    console.log('[BloomBeastsGame] Settings changed:', settingId, value);
+    console.log('[BloomBeastsGame] Current soundSettings before change:', this.soundSettings);
 
     // Play button sound for toggles (not sliders)
     if (settingId === 'musicEnabled' || settingId === 'sfxEnabled') {
-      this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+      this.playSfx('sfx-menu-button-select');
     }
 
     // Apply settings via sound manager
     switch (settingId) {
       case 'musicVolume':
-        this.soundManager.setMusicVolume(value);
+        console.log('[BloomBeastsGame] Matched case: musicVolume');
+        this.setMusicVolume(value);
         break;
       case 'sfxVolume':
-        this.soundManager.setSfxVolume(value);
+        console.log('[BloomBeastsGame] Matched case: sfxVolume');
+        this.setSfxVolume(value);
         break;
       case 'musicEnabled':
-        this.soundManager.toggleMusic(value);
+        console.log('[BloomBeastsGame] Matched case: musicEnabled');
+        this.toggleMusic(value);
         break;
       case 'sfxEnabled':
-        this.soundManager.toggleSfx(value);
+        console.log('[BloomBeastsGame] Matched case: sfxEnabled');
+        this.toggleSfx(value);
         break;
     }
+
+    console.log('[BloomBeastsGame] Current soundSettings after change:', this.soundSettings);
 
     // Save settings
     this.saveGameData();
 
     // Update binding
-    this.settingsBinding.set(this.soundManager.getSettings());
+    this.settingsBinding.set({ ...this.soundSettings });
+    console.log('[BloomBeastsGame] Binding updated with:', { ...this.soundSettings });
+
+    // Trigger re-render to update UI
+    this.triggerRender();
   }
 
   /**
@@ -1171,21 +1245,21 @@ export class BloomBeastsGame {
 
     // Play sound effects and show animations based on action type
     if (action.startsWith('attack-beast-')) {
-      this.soundManager.playSfx('sfx/attack.wav');
+      this.playSfx('sfx-attack');
       // Animation already shown above
       this.selectedBeastIndex = null; // Clear selection after attacking
     } else if (action.startsWith('attack-player-')) {
-      this.soundManager.playSfx('sfx/attack.wav');
+      this.playSfx('sfx-attack');
       // Extract attacker index and show animation for direct health attack
       const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
       await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
       this.selectedBeastIndex = null; // Clear selection after attacking
     } else if (action.startsWith('play-card-')) {
-      this.soundManager.playSfx('sfx/playCard.wav');
+      this.playSfx('sfx-play-card');
     } else if (action.startsWith('activate-trap-')) {
-      this.soundManager.playSfx('sfx/trapCardActivated.wav');
+      this.playSfx('sfx-trap-card-activated');
     } else if (action === 'end-turn') {
-      this.soundManager.playSfx('sfx/menuButtonSelect.wav');
+      this.playSfx('sfx-menu-button-select');
     }
 
     // Process action
@@ -1273,7 +1347,7 @@ export class BloomBeastsGame {
       }
 
       // Play win sound
-      this.soundManager.playSfx('sfx/win.wav');
+      this.playSfx('sfx-win');
 
       // Save game data
       await this.saveGameData();
@@ -1320,7 +1394,7 @@ export class BloomBeastsGame {
       // console.log('[BloomBeastsGame] Mission failed!');
 
       // Play lose sound
-      this.soundManager.playSfx('sfx/lose.wav');
+      this.playSfx('sfx-lose');
 
       // Show mission failed popup
       const failedPopupProps = {
@@ -1344,7 +1418,7 @@ export class BloomBeastsGame {
     }
 
     // Resume background music
-    this.soundManager.playMusic('BackgroundMusic.mp3', true);
+    this.playMusic('music-background', true);
 
     // Note: Navigation happens when user clicks Continue in the popup
   }
