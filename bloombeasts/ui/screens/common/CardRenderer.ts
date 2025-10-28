@@ -326,9 +326,8 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
  * 2. ID-based: Use cardIdBinding (for popups/single cards)
  */
 export interface ReactiveCardRendererProps {
-  // Source bindings (not derived)
-  cardsBinding: any; // Binding<CardDisplay[]>
-  deckCardIdsBinding?: any; // Binding<string[]>
+  // Source playerData binding
+  playerDataBinding: any;
 
   // Slot-based selection (for grids)
   scrollOffsetBinding?: any; // Binding<number>
@@ -350,9 +349,8 @@ export interface ReactiveCardRendererProps {
  */
 export function createReactiveCardComponent(ui: UIMethodMappings, props: ReactiveCardRendererProps): UINodeType {
   const {
-    cardsBinding,
+    playerDataBinding,
     scrollOffsetBinding,
-    deckCardIdsBinding,
     slotIndex,
     cardsPerPage,
     cardIdBinding,
@@ -395,23 +393,20 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   let trackedCard: CardDisplay | null = null;
 
   // Create dependencies array based on mode
+  // Use playerDataBinding directly in dependencies to avoid nesting
   let dependencies: any[];
   if (isIdMode && cardIdBinding) {
-    dependencies = deckCardIdsBinding
-      ? [cardsBinding, cardIdBinding, deckCardIdsBinding]
-      : [cardsBinding, cardIdBinding];
+    dependencies = [playerDataBinding, cardIdBinding];
   } else if (isSlotMode && scrollOffsetBinding) {
-    dependencies = deckCardIdsBinding
-      ? [cardsBinding, scrollOffsetBinding, deckCardIdsBinding]
-      : [cardsBinding, scrollOffsetBinding];
+    dependencies = [playerDataBinding, scrollOffsetBinding];
   } else {
-    // Fallback - should never happen if props are correct
-    dependencies = [cardsBinding];
+    dependencies = [playerDataBinding];
   }
 
   // Helper to get card based on mode
   const getCard = (args: any[]): CardDisplay | null => {
-    const cards: CardDisplay[] = args[0];
+    // Extract cards from PlayerData
+    const cards: CardDisplay[] = args[0]?.cards?.collected || [];
 
     if (isIdMode && cardIdBinding) {
       // ID-based mode: find card by ID
@@ -427,6 +422,14 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     }
 
     return null;
+  };
+
+  // Helper to check if card is in deck
+  const isCardInDeck = (args: any[], cardId: string | undefined): boolean => {
+    if (!showDeckIndicator || !cardId) return false;
+
+    const deckCardIds: string[] = args[0]?.cards?.deck || [];
+    return deckCardIds.includes(cardId);
   };
 
   // Create reactive text bindings directly from source bindings
@@ -659,9 +662,7 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     ...(showDeckIndicator ? [ui.View({
       style: ui.Binding.derive(dependencies, (...args: any[]) => {
         const card = getCard(args);
-        // Get deckCardIds from args - position depends on mode
-        const deckCardIds: string[] = (isIdMode ? args[2] : args[2]) || [];
-        const isInDeck = card && deckCardIds.includes(card.id);
+        const isInDeck = isCardInDeck(args, card?.id);
 
         return {
           position: 'absolute',

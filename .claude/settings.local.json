@@ -20,7 +20,8 @@
       "mcp__ide__getDiagnostics",
       "WebFetch(domain:developers.meta.com)",
       "Read(//c/Users/joris/Desktop/**)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Read(//c/Users/joris/programs/**)"
     ],
     "deny": [],
     "ask": []

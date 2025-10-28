@@ -206,73 +206,37 @@ export class BattleScreen {
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
 
-    // No need to subscribe in Horizon - it's reactive!
-    // These were for triggering re-renders which Horizon does automatically
-    /*
-    this.showHand.subscribe(() => this.safeRender());
-    this.handScrollOffset.subscribe(() => this.safeRender());
-    this.selectedCardDetail.subscribe(() => this.safeRender());
-    this.isPlayerTurn.subscribe(() => {
-      // Update button text when turn changes
-      // console.log('[BattleScreen] isPlayerTurn changed to:', this.isPlayerTurn.get());
-      this.updateEndTurnButtonText();
-      this.safeRender();
-    });
-    this.turnTimer.subscribe(() => {
-      // Update button text when timer changes
-      this.updateEndTurnButtonText();
-      // Trigger re-render for timer countdown
-      this.safeRender();
-    });
-    */
-
-    // Subscribe to battleDisplay changes to update isPlayerTurn
+    // Initialize player turn tracking with derived bindings
     if (this.battleDisplay) {
-      // console.log('[BattleScreen] Setting up battleDisplay subscription');
-      // console.log('[BattleScreen] battleDisplay binding instance:', this.battleDisplay);
-      // console.log('[BattleScreen] Initial battleDisplay.get():', this.battleDisplay.get());
-
-      // Comment out subscribe - Horizon handles reactivity
-      /* this.battleDisplay.subscribe((state: any) => {
-        // console.log('[BattleScreen] ==========================================');
-        // console.log('[BattleScreen] BattleDisplay subscription fired!');
-        // console.log('[BattleScreen] state parameter:', state);
-        // console.log('[BattleScreen] this.battleDisplay.get():', this.battleDisplay?.get());
-        // console.log('[BattleScreen] state.turnPlayer:', state?.turnPlayer);
-        // console.log('[BattleScreen] state object keys:', state ? Object.keys(state) : 'state is null');
-        // console.log('[BattleScreen] ==========================================');
-        // Update tracked battle display value
-        this.battleDisplayValue = state;
-
-        const newIsPlayerTurn = state?.turnPlayer === 'player';
-        // console.log('[BattleScreen] Checking turn: state?.turnPlayer === "player"?', newIsPlayerTurn);
-
-        if (this.isPlayerTurnValue !== newIsPlayerTurn) {
-          // console.log('[BattleScreen] BattleDisplay changed, updating isPlayerTurn to:', newIsPlayerTurn);
-          this.isPlayerTurnValue = newIsPlayerTurn;
-          this.isPlayerTurn.set(newIsPlayerTurn);
+      // Create derived binding for isPlayerTurn
+      this.isPlayerTurn = this.ui.Binding.derive(
+        [this.battleDisplay],
+        (state: BattleDisplay) => {
+          // Only update if state is not null - preserve defaults during initialization
+          if (state) {
+            this.battleDisplayValue = state;
+          }
+          const newIsPlayerTurn = state?.turnPlayer === 'player';
 
           // Start/stop timer based on turn changes
-          if (newIsPlayerTurn) {
-            // console.log('[BattleScreen] Subscription detected player turn, calling startTurnTimer()');
-            this.startTurnTimer();
-          } else {
-            // console.log('[BattleScreen] Subscription detected opponent turn, calling stopTurnTimer()');
-            this.stopTurnTimer();
+          if (this.isPlayerTurnValue !== newIsPlayerTurn) {
+            this.isPlayerTurnValue = newIsPlayerTurn;
+            if (newIsPlayerTurn) {
+              this.startTurnTimer();
+            } else {
+              this.stopTurnTimer();
+            }
           }
-        } else {
-          // console.log('[BattleScreen] isPlayerTurn unchanged, still:', newIsPlayerTurn);
-        }
-      }); */
 
-      // Initialize player turn tracking
-      this.isPlayerTurnValue = false;
-      this.isPlayerTurn = new this.ui.Binding(this.isPlayerTurnValue);
+          return newIsPlayerTurn;
+        }
+      );
 
       // Create derived binding for endTurnButtonText
+      // Note: Can't derive from isPlayerTurn (already derived), so derive from battleDisplay directly
       this.endTurnButtonText = this.ui.Binding.derive(
-        [this.isPlayerTurn, this.turnTimer],
-        (isPlayer: boolean, timer: number) => isPlayer ? `(${timer})` : 'Enemy Turn'
+        [this.battleDisplay, this.turnTimer],
+        (state: BattleDisplay, timer: number) => state?.turnPlayer === 'player' ? `(${timer})` : 'Enemy Turn'
       );
     }
   }
@@ -367,11 +331,6 @@ export class BattleScreen {
    * Create simple battle UI (placeholder mode for BloomBeastsGame compatibility)
    */
   private createSimpleBattleUI(): UINodeType {
-    // For simple mode, we would need to track these values separately too
-    // For now just use defaults since simple mode isn't the main focus
-    const battleState = 'initializing';
-    const message = 'Preparing for battle...';
-
     // Mark rendering as complete
     this.finishRender();
 
@@ -388,7 +347,7 @@ export class BattleScreen {
       children: [
         // Battle title
         this.ui.Text({
-          text: '⚔️ Battle Arena ⚔️',
+          text: new this.ui.Binding('⚔️ Battle Arena ⚔️'),
           style: {
             fontSize: DIMENSIONS.fontSize.hero,
             fontWeight: 'bold',
@@ -409,7 +368,7 @@ export class BattleScreen {
           },
           children: [
             this.ui.Text({
-              text: battleState,
+              text: this.battleState || new this.ui.Binding('initializing'),
               style: {
                 fontSize: DIMENSIONS.fontSize.xl,
                 fontWeight: 'bold',
@@ -418,7 +377,7 @@ export class BattleScreen {
               }
             }),
             this.ui.Text({
-              text: message,
+              text: this.message || new this.ui.Binding('Preparing for battle...'),
               style: {
                 fontSize: DIMENSIONS.fontSize.lg,
                 color: COLORS.textSecondary,
@@ -579,7 +538,15 @@ export class BattleScreen {
   /**
    * Create all battle zones (beasts, traps, buffs, habitat)
    */
-  private createBattleZones(state: BattleDisplay): UINodeType {
+  private createBattleZones(state: BattleDisplay | null): UINodeType {
+    // Defensive: return empty view if state is null
+    if (!state) {
+      return this.ui.View({
+        style: { position: 'absolute', width: '100%', height: '100%' },
+        children: [],
+      });
+    }
+
     return this.ui.View({
       style: {
         position: 'absolute',
@@ -1067,20 +1034,19 @@ export class BattleScreen {
   /**
    * Create player and opponent info displays
    */
-  private createInfoDisplays(state: BattleDisplay): UINodeType {
-    console.log('[BattleScreen] createInfoDisplays called with health:', {
-      playerHealth: state.playerHealth,
-      opponentHealth: state.opponentHealth
-    });
+  private createInfoDisplays(state: BattleDisplay | null): UINodeType {
+    // Defensive: return empty view if state is null
+    if (!state) {
+      return this.ui.View({
+        style: { position: 'absolute', width: '100%', height: '100%' },
+        children: [],
+      });
+    }
+
     const opponentHealthPos = battleBoardAssetPositions.playerOne.health;
     const playerHealthPos = battleBoardAssetPositions.playerTwo.health;
     const opponentInfoPos = battleBoardAssetPositions.playOneInfoPosition;
     const playerInfoPos = battleBoardAssetPositions.playerTwoInfoPosition;
-
-    const isOpponentHealthTarget = state.attackAnimation?.targetPlayer === 'health' &&
-                                   state.attackAnimation?.attackerPlayer === 'player';
-    const isPlayerHealthTarget = state.attackAnimation?.targetPlayer === 'health' &&
-                                state.attackAnimation?.attackerPlayer === 'opponent';
 
     return this.ui.View({
       style: {
@@ -1099,12 +1065,23 @@ export class BattleScreen {
             height: 30,
             justifyContent: 'center',
             alignItems: 'center',
-            backgroundColor: isOpponentHealthTarget ? 'rgba(255, 0, 0, 0.4)' : 'transparent',
+            backgroundColor: this.ui.Binding.derive(
+              [this.battleDisplay],
+              (state: BattleDisplay) => {
+                if (!state) return 'transparent';
+                const isTarget = state.attackAnimation?.targetPlayer === 'health' &&
+                                state.attackAnimation?.attackerPlayer === 'player';
+                return isTarget ? 'rgba(255, 0, 0, 0.4)' : 'transparent';
+              }
+            ),
             borderRadius: 4,
           },
           children: [
             this.ui.Text({
-              text: `${state.opponentHealth}/${state.opponentMaxHealth}`,
+              text: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => state ? `${state.opponentHealth}/${state.opponentMaxHealth}` : '20/20'
+              ),
               style: {
                 fontSize: 20,
                 fontWeight: 'bold',
@@ -1113,10 +1090,10 @@ export class BattleScreen {
               },
             }),
             // Make clickable if a beast is selected for direct attack
-            state.selectedBeastIndex !== null ? this.ui.Pressable({
+            this.battleDisplayValue.selectedBeastIndex !== null ? this.ui.Pressable({
               onClick: () => {
-                console.log(`[BattleScreen] Opponent health clicked, attacking with beast ${state.selectedBeastIndex}`);
-                this.onAction?.(`attack-player-${state.selectedBeastIndex}`);
+                console.log(`[BattleScreen] Opponent health clicked, attacking with beast ${this.battleDisplayValue.selectedBeastIndex}`);
+                this.onAction?.(`attack-player-${this.battleDisplayValue.selectedBeastIndex}`);
               },
               style: {
                 position: 'absolute',
@@ -1140,11 +1117,22 @@ export class BattleScreen {
             height: 30,
             justifyContent: 'center',
             alignItems: 'center',
-            backgroundColor: isPlayerHealthTarget ? 'rgba(255, 0, 0, 0.4)' : 'transparent',
+            backgroundColor: this.ui.Binding.derive(
+              [this.battleDisplay],
+              (state: BattleDisplay) => {
+                if (!state) return 'transparent';
+                const isTarget = state.attackAnimation?.targetPlayer === 'health' &&
+                                state.attackAnimation?.attackerPlayer === 'opponent';
+                return isTarget ? 'rgba(255, 0, 0, 0.4)' : 'transparent';
+              }
+            ),
             borderRadius: 4,
           },
           children: this.ui.Text({
-            text: `${state.playerHealth}/${state.playerMaxHealth}`,
+            text: this.ui.Binding.derive(
+              [this.battleDisplay],
+              (state: BattleDisplay) => state ? `${state.playerHealth}/${state.playerMaxHealth}` : '20/20'
+            ),
             style: {
               fontSize: 20,
               fontWeight: 'bold',
@@ -1163,7 +1151,7 @@ export class BattleScreen {
           },
           children: [
             this.ui.Text({
-              text: 'Opponent',
+              text: new this.ui.Binding('Opponent'),
               style: {
                 fontSize: 20,
                 fontWeight: 'bold',
@@ -1172,7 +1160,10 @@ export class BattleScreen {
               },
             }),
             this.ui.Text({
-              text: `${nectarEmoji} ${state.opponentNectar}/10`,
+              text: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => state ? `${nectarEmoji} ${state.opponentNectar}/10` : `${nectarEmoji} 0/10`
+              ),
               style: {
                 fontSize: 18,
                 color: '#fff',
@@ -1180,7 +1171,10 @@ export class BattleScreen {
               },
             }),
             this.ui.Text({
-              text: `${deckEmoji} ${state.opponentDeckCount}/30`,
+              text: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => state ? `${deckEmoji} ${state.opponentDeckCount}/30` : `${deckEmoji} 30/30`
+              ),
               style: {
                 fontSize: 18,
                 color: '#fff',
@@ -1198,7 +1192,7 @@ export class BattleScreen {
           },
           children: [
             this.ui.Text({
-              text: 'Player',
+              text: new this.ui.Binding('Player'),
               style: {
                 fontSize: 20,
                 fontWeight: 'bold',
@@ -1207,7 +1201,10 @@ export class BattleScreen {
               },
             }),
             this.ui.Text({
-              text: `${nectarEmoji} ${state.playerNectar}/10`,
+              text: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => state ? `${nectarEmoji} ${state.playerNectar}/10` : `${nectarEmoji} 0/10`
+              ),
               style: {
                 fontSize: 18,
                 color: '#fff',
@@ -1215,7 +1212,10 @@ export class BattleScreen {
               },
             }),
             this.ui.Text({
-              text: `${deckEmoji} ${state.playerDeckCount}/30`,
+              text: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => state ? `${deckEmoji} ${state.playerDeckCount}/30` : `${deckEmoji} 30/30`
+              ),
               style: {
                 fontSize: 18,
                 color: '#fff',
@@ -1231,11 +1231,8 @@ export class BattleScreen {
    * Create battle-specific side menu
    */
   private createBattleSideMenu(state: BattleDisplay): UINodeType {
-    // Timer is now managed via battleDisplay subscriptions, not during render
+    // Timer is now managed via battleDisplay derived bindings, not during render
     // This prevents infinite render loops
-
-    const showDeathmatch = state.currentTurn >= 30;
-    const deathmatchDamage = Math.floor((state.currentTurn - 30) / 5) + 1;
 
     return this.ui.View({
       style: {
@@ -1316,7 +1313,7 @@ export class BattleScreen {
           },
           children: [
             this.ui.Text({
-              text: 'Battle',
+              text: new this.ui.Binding('Battle'),
               style: {
                 fontSize: 20,
                 fontWeight: 'bold',
@@ -1325,15 +1322,26 @@ export class BattleScreen {
               },
             }),
             this.ui.Text({
-              text: `Turn ${state.currentTurn}`,
+              text: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => state ? `Turn ${state.currentTurn}` : 'Turn 1'
+              ),
               style: {
                 fontSize: 18,
                 color: '#fff',
                 marginBottom: 5,
               },
             }),
-            showDeathmatch ? this.ui.Text({
-              text: `Deathmatch! -${deathmatchDamage} HP`,
+            // Deathmatch warning (conditionally rendered based on turn)
+            this.battleDisplayValue.currentTurn >= 30 ? this.ui.Text({
+              text: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => {
+                  if (!state) return 'Deathmatch! -1 HP';
+                  const deathmatchDamage = Math.floor((state.currentTurn - 30) / 5) + 1;
+                  return `Deathmatch! -${deathmatchDamage} HP`;
+                }
+              ),
               style: {
                 fontSize: 16,
                 color: '#ff6b6b',
@@ -1356,19 +1364,19 @@ export class BattleScreen {
               console.log('[BattleScreen] End Turn clicked but not player turn');
             }
           },
-          disabled: this.isPlayerTurn.derive((ipt: boolean) => !ipt),
+          disabled: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => state?.turnPlayer !== 'player'),
           style: {
             position: 'absolute',
             left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
             top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y,
             width: sideMenuButtonDimensions.width,
             height: sideMenuButtonDimensions.height,
-            opacity: this.isPlayerTurn.derive((ipt: boolean) => ipt ? 1 : 0.5),
+            opacity: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => state?.turnPlayer === 'player' ? 1 : 0.5),
           },
           children: [
             // Button background image - green when player turn, standard when opponent turn
             this.ui.Image({
-              source: this.ui.Binding.derive([this.isPlayerTurn], (ipt: boolean) => this.ui.assetIdToImageSource?.(ipt ? 'green-button' : 'standard-button') ?? null),
+              source: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => this.ui.assetIdToImageSource?.(state?.turnPlayer === 'player' ? 'green-button' : 'standard-button') ?? null),
               style: {
                 position: 'absolute',
                 width: sideMenuButtonDimensions.width,
@@ -1411,9 +1419,6 @@ export class BattleScreen {
   private createPlayerHand(state: BattleDisplay): UINodeType | null {
     if (!state.playerHand || state.playerHand.length === 0) return null;
 
-    const showFull = this.showHandValue;
-    const scrollOffset = this.handScrollOffsetValue;
-
     // Match canvas version dimensions exactly
     const cardWidth = standardCardDimensions.width;  // 210
     const cardHeight = standardCardDimensions.height; // 280
@@ -1422,13 +1427,13 @@ export class BattleScreen {
     const spacing = 10;
     const startX = 50;
     const overlayWidth = 1210;
-    const overlayHeight = showFull ? 300 : 60;
+    const overlayHeight = this.showHandValue ? 300 : 60;
     const overlayY = gameDimensions.panelHeight - overlayHeight; // 720 - overlayHeight
     const startY = overlayY + 10;
 
     // Calculate visible cards
     const cardsPerPage = cardsPerRow * rowsPerPage;
-    const startIndex = scrollOffset * cardsPerPage;
+    const startIndex = this.handScrollOffsetValue * cardsPerPage;
     const endIndex = Math.min(startIndex + cardsPerPage, state.playerHand.length);
     const visibleCards = state.playerHand.slice(startIndex, endIndex);
     const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
@@ -1517,15 +1522,12 @@ export class BattleScreen {
         // Toggle button - matches canvas version exactly (60x50, at overlayWidth - 50, overlayY + 10)
         this.ui.Pressable({
           onClick: () => {
-            console.log('[BattleScreen] Toggle button clicked, showFull:', showFull);
-            const newShowHand = !showFull;
+            const newShowHand = !this.showHandValue;
             this.showHandValue = newShowHand;
             this.showHand.set(newShowHand);
-            console.log('[BattleScreen] Set showHand to:', newShowHand);
             // Trigger re-render
             this.onRenderNeeded?.();
             this.onAction?.('toggle-hand');
-            console.log('[BattleScreen] Called toggle-hand action');
           },
           style: {
             position: 'absolute',
@@ -1539,7 +1541,10 @@ export class BattleScreen {
             alignItems: 'center',
           },
           children: this.ui.Text({
-            text: showFull ? 'X' : '↑',
+            text: this.ui.Binding.derive(
+              [this.showHand],
+              (showFull: boolean) => showFull ? 'X' : '↑'
+            ),
             style: {
               fontSize: 24,
               fontWeight: 'bold',
@@ -1549,31 +1554,37 @@ export class BattleScreen {
         }),
 
         // Scroll buttons (only when showing full hand)
-        ...(showFull ? [
+        ...(this.showHandValue ? [
           // Up button (positioned below toggle button)
           this.ui.Pressable({
             onClick: () => {
-              const newOffset = Math.max(0, scrollOffset - 1);
+              const newOffset = Math.max(0, this.handScrollOffsetValue - 1);
               this.handScrollOffsetValue = newOffset;
               this.handScrollOffset.set(newOffset);
               // Trigger re-render
               this.onRenderNeeded?.();
             },
-            disabled: scrollOffset <= 0,
+            disabled: this.handScrollOffset.derive((offset: number) => offset <= 0),
             style: {
               position: 'absolute',
               left: overlayWidth - 50,
               top: 10 + 50 + 10, // Below toggle button
               width: 60,
               height: 50,
-              backgroundColor: scrollOffset > 0 ? '#4a8ec2' : '#666',
+              backgroundColor: this.ui.Binding.derive(
+                [this.handScrollOffset],
+                (offset: number) => offset > 0 ? '#4a8ec2' : '#666'
+              ),
               borderRadius: 8,
               justifyContent: 'center',
               alignItems: 'center',
-              opacity: scrollOffset > 0 ? 1 : 0.5,
+              opacity: this.ui.Binding.derive(
+                [this.handScrollOffset],
+                (offset: number) => offset > 0 ? 1 : 0.5
+              ),
             },
             children: this.ui.Text({
-              text: '⬆',
+              text: new this.ui.Binding('⬆'),
               style: {
                 fontSize: 24,
                 fontWeight: 'bold',
@@ -1585,27 +1596,36 @@ export class BattleScreen {
           // Down button (positioned below up button)
           this.ui.Pressable({
             onClick: () => {
-              const newOffset = Math.min(totalPages - 1, scrollOffset + 1);
+              const newOffset = Math.min(totalPages - 1, this.handScrollOffsetValue + 1);
               this.handScrollOffsetValue = newOffset;
               this.handScrollOffset.set(newOffset);
               // Trigger re-render
               this.onRenderNeeded?.();
             },
-            disabled: scrollOffset >= totalPages - 1 || state.playerHand.length <= cardsPerPage,
+            disabled: this.ui.Binding.derive(
+              [this.handScrollOffset, this.battleDisplay],
+              (offset: number, state: BattleDisplay) => offset >= totalPages - 1 || state.playerHand.length <= cardsPerPage
+            ),
             style: {
               position: 'absolute',
               left: overlayWidth - 50,
               top: 10 + 50 + 10 + 50 + 10, // Below up button
               width: 60,
               height: 50,
-              backgroundColor: (scrollOffset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? '#4a8ec2' : '#666',
+              backgroundColor: this.ui.Binding.derive(
+                [this.handScrollOffset, this.battleDisplay],
+                (offset: number, state: BattleDisplay) => (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? '#4a8ec2' : '#666'
+              ),
               borderRadius: 8,
               justifyContent: 'center',
               alignItems: 'center',
-              opacity: (scrollOffset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? 1 : 0.5,
+              opacity: this.ui.Binding.derive(
+                [this.handScrollOffset, this.battleDisplay],
+                (offset: number, state: BattleDisplay) => (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? 1 : 0.5
+              ),
             },
             children: this.ui.Text({
-              text: '↓',
+              text: new this.ui.Binding('↓'),
               style: {
                 fontSize: 24,
                 fontWeight: 'bold',

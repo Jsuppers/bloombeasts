@@ -3,7 +3,6 @@
  * Handles card display conversion, leveling, abilities, deck building, and XP awards
  */
 
-import { CardCollection } from '../screens/cards/CardCollection';
 import { CardInstance } from '../screens/cards/types';
 import { LevelingSystem } from '../engine/systems/LevelingSystem';
 import { BloomBeastCard, AnyCard } from '../engine/types/core';
@@ -208,13 +207,13 @@ export class CardCollectionManager {
   /**
    * Get player's deck cards for battle
    */
-  getPlayerDeckCards(playerDeck: string[], cardCollection: CardCollection): AnyCard[] {
+  getPlayerDeckCards(playerDeck: string[], cardInstances: CardInstance[]): AnyCard[] {
     const deckCards: AnyCard[] = [];
     const allCardDefs = getAllCards();
 
     // Convert all cards from player's deck
     for (const cardId of playerDeck) {
-      const cardInstance = cardCollection.getCard(cardId);
+      const cardInstance = cardInstances.find(c => c.id === cardId);
 
       if (cardInstance) {
         if (cardInstance.type === 'Bloom') {
@@ -279,7 +278,7 @@ export class CardCollectionManager {
    * Award experience to all cards in the player's deck after battle victory
    * Card XP is distributed evenly across all cards in the deck
    */
-  awardDeckExperience(totalCardXP: number, playerDeck: string[], cardCollection: CardCollection): void {
+  awardDeckExperience(totalCardXP: number, playerDeck: string[], cardInstances: CardInstance[]): void {
     const allCardDefs = getAllCards();
 
     // Distribute XP evenly across all cards in deck
@@ -287,7 +286,7 @@ export class CardCollectionManager {
 
     // Award XP to each card in the deck
     for (const cardId of playerDeck) {
-      const cardInstance = cardCollection.getCard(cardId);
+      const cardInstance = cardInstances.find(c => c.id === cardId);
 
       if (!cardInstance) continue;
 
@@ -376,11 +375,12 @@ export class CardCollectionManager {
   /**
    * Initialize starting collection
    */
-  async initializeStartingCollection(cardCollection: CardCollection, playerDeck: string[]): Promise<string[]> {
-    // Give player one starter deck worth of cards - default to Forest
-    const starterDeck = getStarterDeck('Forest');
+  async initializeStartingCollection(cardInstances: CardInstance[], playerDeck: string[]): Promise<string[]> {
+    // Give player the first 30 cards from the card catalog as the default deck
+    const allCards = getAllCards();
+    const starterCards = allCards.slice(0, 30);
 
-    starterDeck.cards.forEach((card, index) => {
+    starterCards.forEach((card, index) => {
       const baseId = `${card.id}-${Date.now()}-${index}`;
 
       if (card.type === 'Bloom') {
@@ -404,7 +404,7 @@ export class CardCollectionManager {
             description: (beastCard.abilities[0] as any).description || ''
           } : undefined,
         };
-        cardCollection.addCard(cardInstance);
+        cardInstances.push(cardInstance);
         // Add to player's deck (up to DECK_SIZE cards)
         if (playerDeck.length < DECK_SIZE) {
           playerDeck.push(cardInstance.id);
@@ -424,7 +424,7 @@ export class CardCollectionManager {
           effects: this.getEffectDescriptions(card),
           ability: undefined, // Non-Bloom cards use effects instead
         };
-        cardCollection.addCard(cardInstance);
+        cardInstances.push(cardInstance);
         // Add to player's deck (up to DECK_SIZE cards)
         if (playerDeck.length < DECK_SIZE) {
           playerDeck.push(cardInstance.id);
@@ -438,7 +438,7 @@ export class CardCollectionManager {
   /**
    * Add card reward to collection
    */
-  addCardReward(card: any, cardCollection: CardCollection, index: number): void {
+  addCardReward(card: any, cardInstances: CardInstance[], index: number): void {
     const baseId = `${card.id}-reward-${Date.now()}-${index}`;
 
     if (card.type === 'Bloom') {
@@ -462,7 +462,7 @@ export class CardCollectionManager {
           description: (beastCard.abilities[0] as any).description || ''
         } : undefined,
       };
-      cardCollection.addCard(cardInstance);
+      cardInstances.push(cardInstance);
     } else {
       // Convert Magic, Trap, and Habitat card rewards to CardInstance
       const cardInstance: CardInstance = {
@@ -477,7 +477,7 @@ export class CardCollectionManager {
         effects: this.getEffectDescriptions(card),
         ability: undefined,
       };
-      cardCollection.addCard(cardInstance);
+      cardInstances.push(cardInstance);
     }
   }
 

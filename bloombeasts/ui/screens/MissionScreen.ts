@@ -26,8 +26,8 @@ const cardsUIContainerPosition: SimplePosition = {
 
 export interface MissionScreenProps {
   ui: UIMethodMappings;
-  missions: any;
-  stats: any;
+  missions: any; // Missions binding - still separate
+  playerDataBinding: any; // PlayerData binding
   onMissionSelect?: (missionId: string) => void;
   onNavigate?: (screen: string) => void;
   onRenderNeeded?: () => void;
@@ -42,7 +42,7 @@ export class MissionScreen {
 
   // State bindings
   private missions: any;
-  private stats: any;
+  private playerDataBinding: any;
   private scrollOffset: any;
 
   // Track scroll offset value for button handlers (can't use .get() in Horizon)
@@ -61,7 +61,7 @@ export class MissionScreen {
     this.ui = props.ui;
     this.scrollOffset = new this.ui.Binding(0);
     this.missions = props.missions;
-    this.stats = props.stats;
+    this.playerDataBinding = props.playerDataBinding;
     this.onMissionSelect = props.onMissionSelect;
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
@@ -295,7 +295,7 @@ export class MissionScreen {
         },
         disabled: false,
       },
-      stats: this.stats,
+      playerDataBinding: this.playerDataBinding,
     });
   }
 

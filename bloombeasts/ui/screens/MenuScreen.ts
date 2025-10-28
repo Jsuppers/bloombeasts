@@ -17,7 +17,7 @@ import { IntervaledBinding } from '../bindings/IntervaledBinding';
 export interface MenuScreenProps {
   ui: UIMethodMappings;
   async: AsyncMethods;
-  stats: any;
+  playerDataBinding: any; // PlayerData binding
   onButtonClick?: (buttonId: string) => void;
   onNavigate?: (screen: string) => void;
   onRenderNeeded?: () => void;
@@ -33,7 +33,7 @@ export class MenuScreen {
 
   // State bindings
   private displayedText: any;
-  private stats: any;
+  private playerDataBinding: any;
   // private menuFrameAnimation: IntervaledBinding<string>;
 
   // Menu frame IDs
@@ -53,7 +53,7 @@ export class MenuScreen {
   constructor(props: MenuScreenProps) {
     this.ui = props.ui;
     this.async = props.async;
-    this.stats = props.stats;
+    this.playerDataBinding = props.playerDataBinding;
     this.onButtonClick = props.onButtonClick;
     this.onNavigate = props.onNavigate;
 
@@ -99,15 +99,20 @@ export class MenuScreen {
     }));
 
     // Create custom text content (quote + resources)
-    // Create text bindings that include emoji and value
-    const tokensText = this.stats.derive((statsVal: MenuStats | null) =>
-      `🪙 ${statsVal?.tokens ?? 0}`
+    // Derive item quantities from playerData
+    const getItemQuantity = (items: any[], itemId: string) => {
+      const item = items?.find((i: any) => i.itemId === itemId);
+      return item ? item.quantity : 0;
+    };
+
+    const tokensText = this.playerDataBinding.derive((pd: any) =>
+      `🪙 ${pd ? getItemQuantity(pd.items, 'token') : 0}`
     );
-    const diamondsText = this.stats.derive((statsVal: MenuStats | null) =>
-      `💎 ${statsVal?.diamonds ?? 0}`
+    const diamondsText = this.playerDataBinding.derive((pd: any) =>
+      `💎 ${pd ? getItemQuantity(pd.items, 'diamond') : 0}`
     );
-    const serumsText = this.stats.derive((statsVal: MenuStats | null) =>
-      `🧪 ${statsVal?.serums ?? 0}`
+    const serumsText = this.playerDataBinding.derive((pd: any) =>
+      `🧪 ${pd ? getItemQuantity(pd.items, 'serum') : 0}`
     );
 
     const customTextContent = [
@@ -201,7 +206,7 @@ export class MenuScreen {
             onClick: () => {}, // Disabled button
             disabled: true,
           },
-          stats: this.stats,
+          playerDataBinding: this.playerDataBinding,
           onXPBarClick: (title: string, message: string) => {
             if (this.onButtonClick) {
               this.onButtonClick(`show-counter-info:${title}:${message}`);

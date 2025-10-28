@@ -34,8 +34,10 @@ export interface SideMenuConfig {
     buttons?: SideMenuButton[];
     /** Bottom button at headerStartPosition */
     bottomButton?: SideMenuButton;
-    /** Stats binding for player info */
-    stats: ValueBindingBase<MenuStats | null> | any;
+    /** PlayerData binding for deriving player info */
+    playerDataBinding?: any;
+    /** Stats binding for player info (deprecated - use playerDataBinding) */
+    stats?: ValueBindingBase<MenuStats | null> | any;
     /** Callback for XP bar click */
     onXPBarClick?: (title: string, message: string) => void;
 }
@@ -124,7 +126,7 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
                 width: sideMenuDimensions.width,
                 height: 50,
             },
-            children: createPlayerInfo(ui, config.stats, config.onXPBarClick),
+            children: createPlayerInfo(ui, config.playerDataBinding, config.stats, config.onXPBarClick),
         })
     );
 
@@ -261,12 +263,36 @@ function createSideMenuButton(
  */
 function createPlayerInfo(
     ui: UIMethodMappings,
-    stats: ValueBindingBase<MenuStats | null> | any,
+    playerDataBinding: any | undefined,
+    stats: ValueBindingBase<MenuStats | null> | any | undefined,
     onXPBarClick?: (title: string, message: string) => void
 ): UINodeType {
+    // Helper to get item quantity
+    const getItemQuantity = (items: any[], itemId: string) => {
+        const item = items?.find((i: any) => i.itemId === itemId);
+        return item ? item.quantity : 0;
+    };
+
+    // Helper to extract MenuStats from PlayerData
+    const extractStats = (pd: any): MenuStats | null => {
+        if (!pd) return null;
+        return {
+            playerLevel: pd.playerLevel || 1,
+            totalXP: pd.totalXP || 0,
+            tokens: getItemQuantity(pd.items || [], 'token'),
+            diamonds: getItemQuantity(pd.items || [], 'diamond'),
+            serums: getItemQuantity(pd.items || [], 'serum'),
+        };
+    };
+
+    // Use playerDataBinding if provided, otherwise use stats
+    // Derive directly from the source binding to avoid nesting
+    const sourceBinding = playerDataBinding || stats;
+
     // Create derived bindings for reactive values (Horizon best practice)
     // Derive final values directly from base binding to avoid chaining
-    const xpWidthBinding = stats.derive((statsVal: MenuStats | null) => {
+    const xpWidthBinding = sourceBinding.derive((data: any) => {
+        const statsVal = playerDataBinding ? extractStats(data) : data;
         if (!statsVal) return '0%';
         const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
         const currentLevel = statsVal.playerLevel;
@@ -279,9 +305,10 @@ function createPlayerInfo(
         return `${xpPercent}%`;
     });
 
-    const levelTextBinding = stats.derive((statsVal: MenuStats | null) =>
-        statsVal ? `${statsVal.playerLevel}` : '1'
-    );
+    const levelTextBinding = sourceBinding.derive((data: any) => {
+        const statsVal = playerDataBinding ? extractStats(data) : data;
+        return statsVal ? `${statsVal.playerLevel}` : '1';
+    });
 
     return ui.View({
         style: {
@@ -321,8 +348,9 @@ function createPlayerInfo(
                     // Use a derived binding to keep currentStats updated
                     // This binding is used in the XP width calculation, so it will be evaluated
                     const xpWidthWithTracking = ui.Binding.derive(
-                        [stats],
-                        (statsVal: MenuStats | null) => {
+                        [sourceBinding],
+                        (data: any) => {
+                            const statsVal = playerDataBinding ? extractStats(data) : data;
                             currentStats = statsVal; // Track the current value
                             if (!statsVal) return 0;
                             const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];

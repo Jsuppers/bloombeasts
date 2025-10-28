@@ -17,10 +17,7 @@ import { createReactiveCardDetailPopup } from './common/CardDetailPopup';
 
 export interface CardsScreenProps {
   ui: UIMethodMappings;
-  cards: any;
-  deckSize: any;
-  deckCardIds: any;
-  stats: any;
+  playerDataBinding: any; // PlayerData binding - screens derive what they need
   onCardSelect?: (cardId: string) => void;
   onNavigate?: (screen: string) => void;
   onRenderNeeded?: () => void;
@@ -33,10 +30,7 @@ export class CardsScreen {
   // UI methods (injected)
   private ui: UIMethodMappings;
 
-  private cards: any;
-  private deckSize: any;
-  private deckCardIds: any;
-  private stats: any;
+  private playerDataBinding: any;
   private scrollOffset: any;
   private selectedCardId: any; // Binding<string | null>
 
@@ -52,10 +46,7 @@ export class CardsScreen {
   constructor(props: CardsScreenProps) {
     this.ui = props.ui;
     this.selectedCardId = new this.ui.Binding<string | null>(null);
-    this.cards = props.cards;
-    this.deckSize = props.deckSize;
-    this.deckCardIds = props.deckCardIds;
-    this.stats = props.stats;
+    this.playerDataBinding = props.playerDataBinding;
     this.onCardSelect = props.onCardSelect;
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
@@ -64,16 +55,20 @@ export class CardsScreen {
 
   /**
    * Create a single card slot using reactive card component
+   * Passes playerDataBinding to avoid binding nesting
    */
-  private createCardSlot(slotIndex: number, cardsPerPage: number, hasMarginRight: boolean): UINodeType {
+  private createCardSlot(
+    slotIndex: number,
+    cardsPerPage: number,
+    hasMarginRight: boolean
+  ): UINodeType {
     return this.ui.View({
       style: {
         marginRight: hasMarginRight ? GAPS.cards : 0,
       },
       children: createReactiveCardComponent(this.ui, {
-        cardsBinding: this.cards,
+        playerDataBinding: this.playerDataBinding,
         scrollOffsetBinding: this.scrollOffset,
-        deckCardIdsBinding: this.deckCardIds,
         slotIndex,
         cardsPerPage,
         onClick: (cardId: string) => this.handleCardClick(cardId),
@@ -84,7 +79,7 @@ export class CardsScreen {
 
   /**
    * Create card grid with reactive bindings
-   * The PlatformBinding.derive wrapper handles unwrapping automatically
+   * Card slots derive directly from playerDataBinding to avoid nesting
    */
   private createCardGrid(): UINodeType {
     const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
@@ -98,15 +93,13 @@ export class CardsScreen {
         height: 580,
       },
       children: [
-        // Empty state
+        // Empty state - derive directly from playerDataBinding
         ...(this.ui.UINode ? [this.ui.UINode.if(
-          this.ui.Binding.derive(
-            [this.cards],
-            (cards: CardDisplay[]) => {
-              console.log('[CardsScreen] Empty state check - cards.length:', cards.length);
-              return cards.length === 0 ? true : false;
-            }
-          ),
+          this.playerDataBinding.derive((pd: any) => {
+            const cards = pd?.cards?.collected || [];
+            console.log('[CardsScreen] Empty state check - cards.length:', cards.length);
+            return cards.length === 0 ? true : false;
+          }),
           this.ui.View({
             style: {
               flex: 1,
@@ -137,9 +130,7 @@ export class CardsScreen {
               children: Array.from({ length: this.cardsPerRow }, (_, colIndex) => {
                 const slotIndex = rowIndex * this.cardsPerRow + colIndex;
 
-                // Create card slot - simple approach to avoid binding nesting issues
-                // Note: this.cards and this.deckCardIds are already DerivedBindings from GameManager
-                // so we can't use them in another Binding.derive() without hitting the nesting limit
+                // Create card slot - passes playerDataBinding
                 return this.createCardSlot(slotIndex, cardsPerPage, colIndex < this.cardsPerRow - 1);
               }),
             })
@@ -150,7 +141,9 @@ export class CardsScreen {
   }
 
   createUI(): UINodeType {
+
     // Create scroll buttons for the side menu
+    // Note: Derive directly from playerDataBinding to avoid nesting (cards is already a derived binding)
     const scrollButtons = [
       {
         label: '↑',
@@ -160,8 +153,8 @@ export class CardsScreen {
           this.scrollOffset.set(this.scrollOffsetValue);
         },
         disabled: this.ui.Binding.derive(
-          [this.cards, this.scrollOffset],
-          (cards: any[], offset: number) => offset <= 0 ? true : false
+          [this.playerDataBinding, this.scrollOffset],
+          (pd: any, offset: number) => offset <= 0 ? true : false
         ) as any,
         yOffset: 0,
       },
@@ -173,8 +166,9 @@ export class CardsScreen {
           this.scrollOffset.set(this.scrollOffsetValue);
         },
         disabled: this.ui.Binding.derive(
-          [this.cards, this.scrollOffset],
-          (cards: any[], offset: number) => {
+          [this.playerDataBinding, this.scrollOffset],
+          (pd: any, offset: number) => {
+            const cards = pd?.cards?.collected || [];
             const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
             const totalPages = Math.ceil(cards.length / cardsPerPage);
             return offset >= totalPages - 1 ? true : false;
@@ -184,8 +178,8 @@ export class CardsScreen {
       },
     ];
 
-    // Deck info text
-    const deckInfoText = this.deckSize.derive((size: number) => `${deckEmoji} ${size}/30`);
+    // Deck info text - derive directly from playerDataBinding to avoid nesting
+    const deckInfoText = this.playerDataBinding.derive((pd: any) => `${deckEmoji} ${pd?.cards?.deck?.length || 0}/30`);
 
     return this.ui.View({
       style: {
@@ -223,7 +217,7 @@ export class CardsScreen {
           },
         }),
         // Main content - card grid
-        // Card grid view with Horizon-compatible pattern
+        // Card grid view with Horizon-compatible pattern (derives bindings internally)
         this.createCardGrid(),
         // Sidebar with common side menu
         createSideMenu(this.ui, {
@@ -239,7 +233,7 @@ export class CardsScreen {
             },
             disabled: false,
           },
-          stats: this.stats,
+          playerDataBinding: this.playerDataBinding,
         }),
 
         // Card detail popup overlay container (conditionally rendered)
@@ -259,8 +253,7 @@ export class CardsScreen {
             },
             children: createReactiveCardDetailPopup(this.ui, {
               cardIdBinding: this.selectedCardId,
-              cardsBinding: this.cards,
-              deckCardIdsBinding: this.deckCardIds,
+              playerDataBinding: this.playerDataBinding,
               onClose: () => this.closePopup(),
               sideContent: (ui, deps) => this.createPopupButtons(deps),
             }),
@@ -291,10 +284,9 @@ export class CardsScreen {
    */
   private createPopupButtons(deps: {
     cardIdBinding: any;
-    cardsBinding: any;
-    deckCardIdsBinding: any;
+    playerDataBinding: any;
   }): UINodeType[] {
-    const { cardIdBinding, deckCardIdsBinding } = deps;
+    const { cardIdBinding, playerDataBinding } = deps;
     const buttonWidth = sideMenuButtonDimensions.width;
     const buttonHeight = sideMenuButtonDimensions.height;
     const buttonSpacing = GAPS.buttons;
@@ -333,12 +325,13 @@ export class CardsScreen {
           // Button background
           this.ui.Image({
             source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding, deckCardIdsBinding, cardIdBinding],
+              [this.ui.assetsLoadedBinding, playerDataBinding, cardIdBinding],
               (...args: any[]) => {
                 const assetsLoaded: boolean = args[0];
-                const deckCardIds: string[] = args[1];
+                const pd: any = args[1];
                 const cardId: string | null = args[2];
                 if (!assetsLoaded || !cardId) return null;
+                const deckCardIds: string[] = pd?.cards?.deck || [];
                 const isInDeck = deckCardIds.includes(cardId);
                 return this.ui.assetIdToImageSource?.(isInDeck ? 'red-button' : 'green-button');
               }
@@ -363,11 +356,12 @@ export class CardsScreen {
             },
             children: this.ui.Text({
               text: this.ui.Binding.derive(
-                [deckCardIdsBinding, cardIdBinding],
+                [playerDataBinding, cardIdBinding],
                 (...args: any[]) => {
-                  const deckCardIds: string[] = args[0];
+                  const pd: any = args[0];
                   const cardId: string | null = args[1];
                   if (!cardId) return '';
+                  const deckCardIds: string[] = pd?.cards?.deck || [];
                   const isInDeck = deckCardIds.includes(cardId);
                   return isInDeck ? 'Remove' : 'Add';
                 }

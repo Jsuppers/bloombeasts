@@ -10,7 +10,7 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-28T01:21:53.602Z
+ * Generated: 2025-10-28T20:06:08.489Z
  * Files: 78
  *
  * @version 1.0.0
@@ -4174,327 +4174,6 @@ namespace BloomBeasts {
     achievements?: string[];
   }
 
-  // ==================== bloombeasts\screens\cards\InventoryFilters.ts ====================
-
-  /**
-   * Inventory Filters - Manage filtering options for the card collection
-   */
-
-
-  export type FilterType = 'affinity' | 'minLevel' | 'maxLevel' | 'hasAbility' | 'search';
-
-  export interface Filter {
-    type: FilterType;
-    value: any;
-    active: boolean;
-  }
-
-  export class InventoryFilters {
-    private filters: SimpleMap<FilterType, Filter> = new SimpleMap();
-
-    constructor() {
-      this.initializeFilters();
-    }
-
-    /**
-     * Initialize default filters
-     */
-    private initializeFilters(): void {
-      this.filters.set('affinity', {
-        type: 'affinity',
-        value: 'all',
-        active: false,
-      });
-
-      this.filters.set('minLevel', {
-        type: 'minLevel',
-        value: 1,
-        active: false,
-      });
-
-      this.filters.set('maxLevel', {
-        type: 'maxLevel',
-        value: 9,
-        active: false,
-      });
-
-      this.filters.set('hasAbility', {
-        type: 'hasAbility',
-        value: '',
-        active: false,
-      });
-
-      this.filters.set('search', {
-        type: 'search',
-        value: '',
-        active: false,
-      });
-    }
-
-    /**
-     * Update a filter value
-     */
-    public updateFilter(type: FilterType, value: any): void {
-      const filter = this.filters.get(type);
-      if (filter) {
-        filter.value = value;
-        filter.active = value !== null && value !== '' && value !== 'all';
-      }
-    }
-
-    /**
-     * Get a specific filter value
-     */
-    public getFilter(type: FilterType): any {
-      const filter = this.filters.get(type);
-      return filter?.active ? filter.value : null;
-    }
-
-    /**
-     * Get all active filters
-     */
-    public getActiveFilters(): Filter[] {
-      return Array.from(this.filters.values()).filter(f => f.active);
-    }
-
-    /**
-     * Clear all filters
-     */
-    public clearAll(): void {
-      this.initializeFilters();
-    }
-
-    /**
-     * Clear a specific filter
-     */
-    public clearFilter(type: FilterType): void {
-      const filter = this.filters.get(type);
-      if (filter) {
-        switch (type) {
-          case 'affinity':
-            filter.value = 'all';
-            break;
-          case 'minLevel':
-            filter.value = 1;
-            break;
-          case 'maxLevel':
-            filter.value = 9;
-            break;
-          default:
-            filter.value = '';
-        }
-        filter.active = false;
-      }
-    }
-
-    /**
-     * Get filter presets
-     */
-    public static getPresets(): Record<string, Partial<Record<FilterType, any>>> {
-      return {
-        'high-level': {
-          minLevel: 7,
-        },
-        'fire-cards': {
-          affinity: 'Fire',
-        },
-        'forest-cards': {
-          affinity: 'Forest',
-        },
-        'water-cards': {
-          affinity: 'Water',
-        },
-        'sky-cards': {
-          affinity: 'Sky',
-        },
-        'low-level': {
-          maxLevel: 3,
-        },
-      };
-    }
-
-    /**
-     * Apply a preset
-     */
-    public applyPreset(presetName: string): void {
-      const presets = InventoryFilters.getPresets();
-      const preset = presets[presetName];
-
-      if (preset) {
-        this.clearAll();
-        for (const [type, value] of Object.entries(preset)) {
-          this.updateFilter(type as FilterType, value);
-        }
-      }
-    }
-  }
-
-  // ==================== bloombeasts\screens\cards\CardCollection.ts ====================
-
-  /**
-   * Card Collection - Manages the player's collection of cards
-   */
-
-
-  export type SortOption = 'name' | 'level' | 'affinity' | 'attack' | 'health' | 'xp' | 'recent';
-
-  export class CardCollection {
-    private cards: CardInstance[] = [];
-    private sortBy: SortOption = 'name';
-    private sortAscending: boolean = true;
-
-    constructor() {
-      // Initialize with empty collection
-    }
-
-    /**
-     * Set the player's card collection (called by platform layer)
-     */
-    public setCards(cards: CardInstance[]): void {
-      this.cards = cards;
-    }
-
-    /**
-     * Get all cards in collection
-     */
-    public getAllCards(): CardInstance[] {
-      return this.cards;
-    }
-
-    /**
-     * Get a specific card by ID
-     */
-    public getCard(id: string): CardInstance | undefined {
-      return this.cards.find(card => card.id === id);
-    }
-
-    /**
-     * Get cards filtered by criteria
-     */
-    public getFilteredCards(filters: InventoryFilters): CardInstance[] {
-      let filtered = [...this.cards];
-
-      // Apply affinity filter
-      const affinityFilter = filters.getFilter('affinity');
-      if (affinityFilter && affinityFilter !== 'all') {
-        filtered = filtered.filter(card => card.affinity === affinityFilter);
-      }
-
-      // Apply level filter
-      const levelFilter = filters.getFilter('minLevel');
-      if (levelFilter) {
-        filtered = filtered.filter(card => card.level >= levelFilter);
-      }
-
-      // Apply search filter
-      const searchFilter = filters.getFilter('search');
-      if (searchFilter) {
-        const search = searchFilter.toLowerCase();
-        filtered = filtered.filter(card =>
-          card.name.toLowerCase().includes(search) ||
-          (card.affinity && card.affinity.toLowerCase().includes(search))
-        );
-      }
-
-      // Apply sorting
-      this.applySorting(filtered);
-
-      return filtered;
-    }
-
-    /**
-     * Sort cards by specified criteria
-     */
-    public sortCards(sortBy: SortOption, ascending: boolean = true): void {
-      this.sortBy = sortBy;
-      this.sortAscending = ascending;
-      this.applySorting(this.cards);
-    }
-
-    /**
-     * Apply sorting to a card array
-     */
-    private applySorting(cards: CardInstance[]): void {
-      cards.sort((a, b) => {
-        let comparison = 0;
-
-        switch (this.sortBy) {
-          case 'name':
-            comparison = a.name.localeCompare(b.name);
-            break;
-          case 'level':
-            comparison = a.level - b.level;
-            break;
-          case 'affinity':
-            comparison = (a.affinity || '').localeCompare(b.affinity || '');
-            break;
-          case 'attack':
-            comparison = (a.currentAttack || 0) - (b.currentAttack || 0);
-            break;
-          case 'health':
-            comparison = (a.currentHealth || 0) - (b.currentHealth || 0);
-            break;
-          case 'xp':
-            comparison = a.currentXP - b.currentXP;
-            break;
-        }
-
-        return this.sortAscending ? comparison : -comparison;
-      });
-    }
-
-    /**
-     * Get collection statistics
-     */
-    public getStats(): CollectionStats {
-      const stats: CollectionStats = {
-        totalCards: this.cards.length,
-        uniqueCards: new Set(this.cards.map(c => c.cardId)).size,
-        cardsByAffinity: {
-          Forest: 0,
-          Fire: 0,
-          Water: 0,
-          Sky: 0,
-          Generic: 0,
-        },
-        averageLevel: 0,
-        totalXP: 0,
-      };
-
-      let totalLevel = 0;
-      for (const card of this.cards) {
-        if (card.affinity) {
-          stats.cardsByAffinity[card.affinity]++;
-        }
-        totalLevel += card.level;
-        stats.totalXP += card.currentXP;
-      }
-
-      stats.averageLevel = this.cards.length > 0 ? totalLevel / this.cards.length : 0;
-
-      return stats;
-    }
-
-    /**
-     * Add a new card to collection
-     */
-    public addCard(card: CardInstance): void {
-      this.cards.push(card);
-    }
-
-    /**
-     * Remove a card from collection
-     */
-    public removeCard(id: string): boolean {
-      const index = this.cards.findIndex(card => card.id === id);
-      if (index !== -1) {
-        this.cards.splice(index, 1);
-        return true;
-      }
-      return false;
-    }
-  }
-
   // ==================== bloombeasts\systems\CardCollectionManager.ts ====================
 
   /**
@@ -4698,13 +4377,13 @@ namespace BloomBeasts {
     /**
      * Get player's deck cards for battle
      */
-    getPlayerDeckCards(playerDeck: string[], cardCollection: CardCollection): AnyCard[] {
+    getPlayerDeckCards(playerDeck: string[], cardInstances: CardInstance[]): AnyCard[] {
       const deckCards: AnyCard[] = [];
       const allCardDefs = getAllCards();
 
       // Convert all cards from player's deck
       for (const cardId of playerDeck) {
-        const cardInstance = cardCollection.getCard(cardId);
+        const cardInstance = cardInstances.find(c => c.id === cardId);
 
         if (cardInstance) {
           if (cardInstance.type === 'Bloom') {
@@ -4769,7 +4448,7 @@ namespace BloomBeasts {
      * Award experience to all cards in the player's deck after battle victory
      * Card XP is distributed evenly across all cards in the deck
      */
-    awardDeckExperience(totalCardXP: number, playerDeck: string[], cardCollection: CardCollection): void {
+    awardDeckExperience(totalCardXP: number, playerDeck: string[], cardInstances: CardInstance[]): void {
       const allCardDefs = getAllCards();
 
       // Distribute XP evenly across all cards in deck
@@ -4777,7 +4456,7 @@ namespace BloomBeasts {
 
       // Award XP to each card in the deck
       for (const cardId of playerDeck) {
-        const cardInstance = cardCollection.getCard(cardId);
+        const cardInstance = cardInstances.find(c => c.id === cardId);
 
         if (!cardInstance) continue;
 
@@ -4866,11 +4545,12 @@ namespace BloomBeasts {
     /**
      * Initialize starting collection
      */
-    async initializeStartingCollection(cardCollection: CardCollection, playerDeck: string[]): Promise<string[]> {
-      // Give player one starter deck worth of cards - default to Forest
-      const starterDeck = getStarterDeck('Forest');
+    async initializeStartingCollection(cardInstances: CardInstance[], playerDeck: string[]): Promise<string[]> {
+      // Give player the first 30 cards from the card catalog as the default deck
+      const allCards = getAllCards();
+      const starterCards = allCards.slice(0, 30);
 
-      starterDeck.cards.forEach((card, index) => {
+      starterCards.forEach((card, index) => {
         const baseId = `${card.id}-${Date.now()}-${index}`;
 
         if (card.type === 'Bloom') {
@@ -4894,7 +4574,7 @@ namespace BloomBeasts {
               description: (beastCard.abilities[0] as any).description || ''
             } : undefined,
           };
-          cardCollection.addCard(cardInstance);
+          cardInstances.push(cardInstance);
           // Add to player's deck (up to DECK_SIZE cards)
           if (playerDeck.length < DECK_SIZE) {
             playerDeck.push(cardInstance.id);
@@ -4914,7 +4594,7 @@ namespace BloomBeasts {
             effects: this.getEffectDescriptions(card),
             ability: undefined, // Non-Bloom cards use effects instead
           };
-          cardCollection.addCard(cardInstance);
+          cardInstances.push(cardInstance);
           // Add to player's deck (up to DECK_SIZE cards)
           if (playerDeck.length < DECK_SIZE) {
             playerDeck.push(cardInstance.id);
@@ -4928,7 +4608,7 @@ namespace BloomBeasts {
     /**
      * Add card reward to collection
      */
-    addCardReward(card: any, cardCollection: CardCollection, index: number): void {
+    addCardReward(card: any, cardInstances: CardInstance[], index: number): void {
       const baseId = `${card.id}-reward-${Date.now()}-${index}`;
 
       if (card.type === 'Bloom') {
@@ -4952,7 +4632,7 @@ namespace BloomBeasts {
             description: (beastCard.abilities[0] as any).description || ''
           } : undefined,
         };
-        cardCollection.addCard(cardInstance);
+        cardInstances.push(cardInstance);
       } else {
         // Convert Magic, Trap, and Habitat card rewards to CardInstance
         const cardInstance: CardInstance = {
@@ -4967,7 +4647,7 @@ namespace BloomBeasts {
           effects: this.getEffectDescriptions(card),
           ability: undefined,
         };
-        cardCollection.addCard(cardInstance);
+        cardInstances.push(cardInstance);
       }
     }
 
@@ -8594,19 +8274,36 @@ namespace BloomBeasts {
   }
 
   export class GameEngine {
-    private gameState: GameState;
+    private gameState: GameState | null = null;
     private combatSystem: CombatSystem;
     private abilityProcessor: AbilityProcessor;
     private levelingSystem: LevelingSystem;
     private cardDatabase: Map<string, AnyCard> | null = null;
 
     constructor() {
-      this.gameState = this.createInitialState();
+      // Don't create game state yet - it will be created when startMatch() is called
+      // This allows GameEngine to be constructed before asset catalogs are loaded
       this.combatSystem = new CombatSystem();
       this.abilityProcessor = new AbilityProcessor();
       this.levelingSystem = new LevelingSystem();
-      // Don't build card database yet - it will be built lazily when needed
-      // This allows GameEngine to be constructed before asset catalogs are loaded
+    }
+
+    /**
+     * Ensure game state exists - throws error if called before startMatch()
+     */
+    private ensureGameState(): GameState {
+      if (!this.gameState) {
+        throw new Error('GameEngine: Game state not initialized. Call startMatch() first.');
+      }
+      return this.gameState;
+    }
+
+    /**
+     * Get game state (with non-null assertion for internal use)
+     * Only use this after you're certain startMatch() has been called
+     */
+    private get state(): GameState {
+      return this.gameState!;
     }
 
     /**
@@ -8656,11 +8353,13 @@ namespace BloomBeasts {
      * Create a new player
      */
     private createPlayer(name: string): Player {
+      // Create player with empty deck - real deck is set when startMatch() is called
+      // This allows GameEngine to be constructed before asset catalogs are loaded
       return {
         name,
         health: STARTING_HEALTH,
         currentNectar: 0,
-        deck: [],
+        deck: [],  // Empty deck initially - populated by startMatch()
         hand: [],
         field: Array(FIELD_SIZE).fill(null),
         trapZone: Array(FIELD_SIZE).fill(null),
@@ -8681,29 +8380,34 @@ namespace BloomBeasts {
     ): Promise<void> {
       Logger.debug('Starting new match...');
 
+      // Create initial game state now that catalogs are loaded
+      if (!this.gameState) {
+        this.gameState = this.createInitialState();
+      }
+
       // Set player names
       if (options.player1Name) {
-        this.gameState.players[0].name = options.player1Name;
+        this.state.players[0].name = options.player1Name;
       }
       if (options.player2Name) {
-        this.gameState.players[1].name = options.player2Name;
+        this.state.players[1].name = options.player2Name;
       }
 
       // Load decks
-      this.gameState.players[0].deck = [...player1Deck.cards];
-      this.gameState.players[1].deck = [...player2Deck.cards];
+      this.state.players[0].deck = [...player1Deck.cards];
+      this.state.players[1].deck = [...player2Deck.cards];
 
       // Shuffle decks
-      this.shuffleDeck(this.gameState.players[0]);
-      this.shuffleDeck(this.gameState.players[1]);
+      this.shuffleDeck(this.state.players[0]);
+      this.shuffleDeck(this.state.players[1]);
 
       // Draw initial hands
-      this.drawCards(this.gameState.players[0], 5);
-      this.drawCards(this.gameState.players[1], 5);
+      this.drawCards(this.state.players[0], 5);
+      this.drawCards(this.state.players[1], 5);
 
       // Transition to first player's turn
-      this.gameState.phase = 'Main';
-      this.gameState.battleState = BattleState.Player1StartOfTurn;
+      this.state.phase = 'Main';
+      this.state.battleState = BattleState.Player1StartOfTurn;
       await this.transitionState();
     }
 
@@ -8713,17 +8417,17 @@ namespace BloomBeasts {
     private async transitionState(): Promise<void> {
       // Check for win condition before any state processing
       if (this.checkForBattleEnd()) {
-        this.gameState.battleState = BattleState.Finished;
+        this.state.battleState = BattleState.Finished;
         return;
       }
 
-      const currentState = this.gameState.battleState;
+      const currentState = this.state.battleState;
       Logger.debug(`Transitioning from state: ${currentState}`);
 
       switch (currentState) {
         case BattleState.Player1StartOfTurn:
           await this.processPlayerStartOfTurn(0);
-          this.gameState.battleState = BattleState.Player1Playing;
+          this.state.battleState = BattleState.Player1Playing;
           break;
 
         case BattleState.Player1Playing:
@@ -8732,13 +8436,13 @@ namespace BloomBeasts {
 
         case BattleState.Player1EndOfTurn:
           await this.processPlayerEndOfTurn(0);
-          this.gameState.battleState = BattleState.Player2StartOfTurn;
+          this.state.battleState = BattleState.Player2StartOfTurn;
           await this.transitionState();
           break;
 
         case BattleState.Player2StartOfTurn:
           await this.processPlayerStartOfTurn(1);
-          this.gameState.battleState = BattleState.Player2Playing;
+          this.state.battleState = BattleState.Player2Playing;
           break;
 
         case BattleState.Player2Playing:
@@ -8748,14 +8452,14 @@ namespace BloomBeasts {
         case BattleState.Player2EndOfTurn:
           await this.processPlayerEndOfTurn(1);
           // Increment turn counter after both players have played
-          this.gameState.turn++;
-          this.gameState.battleState = BattleState.Player1StartOfTurn;
+          this.state.turn++;
+          this.state.battleState = BattleState.Player1StartOfTurn;
           await this.transitionState();
           break;
 
         case BattleState.Finished:
           // Battle has ended
-          const result = this.combatSystem.checkWinCondition(this.gameState);
+          const result = this.combatSystem.checkWinCondition(this.state);
           this.endMatch(result);
           break;
       }
@@ -8765,22 +8469,22 @@ namespace BloomBeasts {
      * Process player start of turn
      */
     private async processPlayerStartOfTurn(playerIndex: 0 | 1): Promise<void> {
-      this.gameState.activePlayer = playerIndex;
-      const activePlayer = this.gameState.players[playerIndex];
-      const opposingPlayer = this.gameState.players[playerIndex === 0 ? 1 : 0];
+      this.state.activePlayer = playerIndex;
+      const activePlayer = this.state.players[playerIndex];
+      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
 
-      Logger.debug(`Turn ${this.gameState.turn}: ${activePlayer.name}'s turn begins`);
+      Logger.debug(`Turn ${this.state.turn}: ${activePlayer.name}'s turn begins`);
 
       // Reset turn counters
       activePlayer.summonsThisTurn = 0;
 
       // Draw card (except first turn for player 1)
-      if (!(this.gameState.turn === 1 && playerIndex === 0)) {
+      if (!(this.state.turn === 1 && playerIndex === 0)) {
         this.drawCards(activePlayer, 1);
       }
 
       // Gain nectar
-      activePlayer.currentNectar = Math.min(MAX_NECTAR, this.gameState.turn);
+      activePlayer.currentNectar = Math.min(MAX_NECTAR, this.state.turn);
 
       // Remove summoning sickness from all beasts
       for (const beast of activePlayer.field) {
@@ -8794,7 +8498,7 @@ namespace BloomBeasts {
 
       // Check for death after counter effects
       if (this.checkForBattleEnd()) {
-        this.gameState.battleState = BattleState.Finished;
+        this.state.battleState = BattleState.Finished;
         return;
       }
 
@@ -8802,15 +8506,15 @@ namespace BloomBeasts {
       await this.triggerStateBasedAbilities(playerIndex, 'start');
 
       // Set phase to main
-      this.gameState.phase = 'Main';
+      this.state.phase = 'Main';
     }
 
     /**
      * Process player end of turn
      */
     private async processPlayerEndOfTurn(playerIndex: 0 | 1): Promise<void> {
-      const activePlayer = this.gameState.players[playerIndex];
-      const opposingPlayer = this.gameState.players[playerIndex === 0 ? 1 : 0];
+      const activePlayer = this.state.players[playerIndex];
+      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
 
       // Trigger end of turn abilities based on state
       await this.triggerStateBasedAbilities(playerIndex, 'end');
@@ -8824,7 +8528,7 @@ namespace BloomBeasts {
 
       // Check for death after end of turn effects
       if (this.checkForBattleEnd()) {
-        this.gameState.battleState = BattleState.Finished;
+        this.state.battleState = BattleState.Finished;
         return;
       }
     }
@@ -8833,8 +8537,8 @@ namespace BloomBeasts {
      * Check if battle should end (player health <= 0)
      */
     private checkForBattleEnd(): boolean {
-      const player1 = this.gameState.players[0];
-      const player2 = this.gameState.players[1];
+      const player1 = this.state.players[0];
+      const player2 = this.state.players[1];
 
       return player1.health <= 0 || player2.health <= 0;
     }
@@ -8843,13 +8547,15 @@ namespace BloomBeasts {
      * End current turn
      */
     public async endTurn(): Promise<void> {
+      const state = this.ensureGameState();
+
       // Determine which end of turn state to transition to
-      if (this.gameState.battleState === BattleState.Player1Playing) {
-        this.gameState.battleState = BattleState.Player1EndOfTurn;
-      } else if (this.gameState.battleState === BattleState.Player2Playing) {
-        this.gameState.battleState = BattleState.Player2EndOfTurn;
+      if (state.battleState === BattleState.Player1Playing) {
+        state.battleState = BattleState.Player1EndOfTurn;
+      } else if (state.battleState === BattleState.Player2Playing) {
+        state.battleState = BattleState.Player2EndOfTurn;
       } else {
-        Logger.error(`Unexpected state during endTurn: ${this.gameState.battleState}`);
+        Logger.error(`Unexpected state during endTurn: ${state.battleState}`);
         return;
       }
 
@@ -8964,10 +8670,10 @@ namespace BloomBeasts {
           // Only apply habitat if not countered
           if (!trapData.countered) {
             // Replace current habitat
-            if (this.gameState.habitatZone) {
-              player.graveyard.push(this.gameState.habitatZone);
+            if (this.state.habitatZone) {
+              player.graveyard.push(this.state.habitatZone);
             }
-            this.gameState.habitatZone = card;
+            this.state.habitatZone = card;
             Logger.debug(`Played habitat: ${card.name}`);
             // Apply habitat effects
             this.applyHabitatEffects();
@@ -9020,7 +8726,7 @@ namespace BloomBeasts {
      * Process magic card effects using structured effects
      */
     private processMagicCard(card: MagicCard, player: Player, target?: any): void {
-      const opponent = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+      const opponent = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
       // Process each ability in the magic card (usually just one with OnSummon trigger)
       for (const ability of card.abilities) {
@@ -9082,11 +8788,11 @@ namespace BloomBeasts {
      * Apply habitat zone effects
      */
     private applyHabitatEffects(): void {
-      if (!this.gameState.habitatZone) return;
+      if (!this.state.habitatZone) return;
 
-      const habitat = this.gameState.habitatZone as HabitatCard;
-      const activePlayer = this.gameState.players[this.gameState.activePlayer];
-      const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+      const habitat = this.state.habitatZone as HabitatCard;
+      const activePlayer = this.state.players[this.state.activePlayer];
+      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
       // Process each ability in the habitat card
       for (const ability of habitat.abilities) {
@@ -9150,7 +8856,7 @@ namespace BloomBeasts {
      * Apply buff card effects when played
      */
     private applyBuffCardEffects(buffCard: any, player: Player): void {
-      const opponent = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+      const opponent = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
       // Process each ability in the buff card
       for (const ability of buffCard.abilities) {
@@ -9300,8 +9006,8 @@ namespace BloomBeasts {
      * Trigger state-based abilities
      */
     private async triggerStateBasedAbilities(playerIndex: 0 | 1, phase: 'start' | 'end'): Promise<void> {
-      const activePlayer = this.gameState.players[playerIndex];
-      const opposingPlayer = this.gameState.players[playerIndex === 0 ? 1 : 0];
+      const activePlayer = this.state.players[playerIndex];
+      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
 
       // Determine which triggers to use based on player and phase
       const stateTriggers = [];
@@ -9405,7 +9111,7 @@ namespace BloomBeasts {
           source: beast,
           sourceCard: beastCard,
           trigger,
-          gameState: this.gameState,
+          gameState: this.state,
           controllingPlayer,
           opposingPlayer,
         });
@@ -9415,7 +9121,7 @@ namespace BloomBeasts {
 
         // Check for battle end after ability effects
         if (this.checkForBattleEnd()) {
-          this.gameState.battleState = BattleState.Finished;
+          this.state.battleState = BattleState.Finished;
         }
       }
     }
@@ -9447,8 +9153,8 @@ namespace BloomBeasts {
      * Trigger summon abilities
      */
     private triggerSummonAbilities(beast: BloomBeastInstance): void {
-      const activePlayer = this.gameState.players[this.gameState.activePlayer];
-      const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+      const activePlayer = this.state.players[this.state.activePlayer];
+      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
       // Get the card definition to access abilities
       const cardDef = this.getCardDefinition(beast.cardId);
@@ -9463,7 +9169,7 @@ namespace BloomBeasts {
           source: beast,
           sourceCard: beastCard,
           trigger: 'OnSummon',
-          gameState: this.gameState,
+          gameState: this.state,
           controllingPlayer: activePlayer,
           opposingPlayer: opposingPlayer,
         });
@@ -9477,7 +9183,7 @@ namespace BloomBeasts {
      * Trigger OnAllySummon abilities on other beasts when a new ally is summoned
      */
     private triggerAllySummonAbilities(summonedBeast: BloomBeastInstance, controllingPlayer: Player): void {
-      const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
       // Get the summoned beast's card definition for checking affinity condition
       const summonedCardDef = this.getCardDefinition(summonedBeast.cardId);
@@ -9499,7 +9205,7 @@ namespace BloomBeasts {
             sourceCard: beastCard,
             trigger: 'OnAllySummon',
             target: summonedBeast,  // Pass the summoned beast as target for condition checking
-            gameState: this.gameState,
+            gameState: this.state,
             controllingPlayer,
             opposingPlayer,
           });
@@ -9533,7 +9239,7 @@ namespace BloomBeasts {
             source: beast,
             sourceCard: beastCard,
             trigger,
-            gameState: this.gameState,
+            gameState: this.state,
             controllingPlayer,
             opposingPlayer,
           });
@@ -9715,7 +9421,7 @@ namespace BloomBeasts {
         return false;
       }
 
-      const defendingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+      const defendingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
       // Check for traps on attack
       const attackData = { attackNegated: false };
@@ -9767,7 +9473,7 @@ namespace BloomBeasts {
 
             // Check for battle end immediately
             if (this.checkForBattleEnd()) {
-              this.gameState.battleState = BattleState.Finished;
+              this.state.battleState = BattleState.Finished;
               await this.transitionState();
             }
             return true; // Combat ends, defender died before counter-attacking
@@ -9793,7 +9499,7 @@ namespace BloomBeasts {
 
               // Check for battle end
               if (this.checkForBattleEnd()) {
-                this.gameState.battleState = BattleState.Finished;
+                this.state.battleState = BattleState.Finished;
                 await this.transitionState();
               }
             }
@@ -9843,7 +9549,7 @@ namespace BloomBeasts {
 
           // Check for battle end after any death
           if (this.checkForBattleEnd()) {
-            this.gameState.battleState = BattleState.Finished;
+            this.state.battleState = BattleState.Finished;
             await this.transitionState();
           }
         }
@@ -9856,14 +9562,14 @@ namespace BloomBeasts {
         // Check if player was defeated
         if (defendingPlayer.health <= 0) {
           Logger.debug(`${defendingPlayer.name} was defeated!`);
-          this.gameState.battleState = BattleState.Finished;
+          this.state.battleState = BattleState.Finished;
           await this.transitionState();
         }
       }
 
       // Always check for battle end after any damage
       if (this.checkForBattleEnd()) {
-        this.gameState.battleState = BattleState.Finished;
+        this.state.battleState = BattleState.Finished;
         await this.transitionState();
       }
 
@@ -9895,7 +9601,7 @@ namespace BloomBeasts {
           trigger,
           target,
           attacker,
-          gameState: this.gameState,
+          gameState: this.state,
           controllingPlayer,
           opposingPlayer,
         });
@@ -9914,9 +9620,9 @@ namespace BloomBeasts {
       triggeringPlayer: Player,
       data?: any
     ): Promise<void> {
-      const opposingPlayer = triggeringPlayer === this.gameState.players[0]
-        ? this.gameState.players[1]
-        : this.gameState.players[0];
+      const opposingPlayer = triggeringPlayer === this.state.players[0]
+        ? this.state.players[1]
+        : this.state.players[0];
 
       // Check opponent's traps - only activate FIRST matching trap
       for (let i = 0; i < opposingPlayer.trapZone.length; i++) {
@@ -10035,7 +9741,7 @@ namespace BloomBeasts {
         if (result.modifiedUnits && result.modifiedUnits.length > 0) {
           for (const modifiedUnit of result.modifiedUnits) {
             // Find and update the unit in both players' fields
-            for (const player of this.gameState.players) {
+            for (const player of this.state.players) {
               const index = player.field.findIndex(
                 u => u && u.instanceId === modifiedUnit.instanceId
               );
@@ -10050,14 +9756,14 @@ namespace BloomBeasts {
         // Apply modified state
         if (result.modifiedState) {
           if (result.modifiedState.players) {
-            this.gameState.players = result.modifiedState.players;
+            this.state.players = result.modifiedState.players;
           }
           if (result.modifiedState.habitatCounters) {
-            this.gameState.habitatCounters = result.modifiedState.habitatCounters;
+            this.state.habitatCounters = result.modifiedState.habitatCounters;
           }
           if (result.modifiedState.drawCardsQueued !== undefined) {
-            const playerIndex = result.modifiedState.drawForPlayerIndex ?? this.gameState.activePlayer;
-            const player = this.gameState.players[playerIndex];
+            const playerIndex = result.modifiedState.drawForPlayerIndex ?? this.state.activePlayer;
+            const player = this.state.players[playerIndex];
             this.drawCards(player, result.modifiedState.drawCardsQueued);
           }
         }
@@ -10070,7 +9776,7 @@ namespace BloomBeasts {
 
       // Always check for battle end after applying ability results
       if (this.checkForBattleEnd()) {
-        this.gameState.battleState = BattleState.Finished;
+        this.state.battleState = BattleState.Finished;
         // Don't transition immediately here as we might be in the middle of processing
         // The next game loop iteration will handle the transition
       }
@@ -10079,7 +9785,7 @@ namespace BloomBeasts {
     /**
      * Get current game state
      */
-    public getState(): GameState {
+    public getState(): GameState | null {
       return this.gameState;
     }
 
@@ -10087,7 +9793,8 @@ namespace BloomBeasts {
      * Reset for new game
      */
     public reset(): void {
-      this.gameState = this.createInitialState();
+      // Reset to null - will be recreated on next startMatch()
+      this.gameState = null;
       this.combatSystem.reset();
     }
   }
@@ -10835,6 +10542,327 @@ namespace BloomBeasts {
     }
   }
 
+  // ==================== bloombeasts\screens\cards\InventoryFilters.ts ====================
+
+  /**
+   * Inventory Filters - Manage filtering options for the card collection
+   */
+
+
+  export type FilterType = 'affinity' | 'minLevel' | 'maxLevel' | 'hasAbility' | 'search';
+
+  export interface Filter {
+    type: FilterType;
+    value: any;
+    active: boolean;
+  }
+
+  export class InventoryFilters {
+    private filters: SimpleMap<FilterType, Filter> = new SimpleMap();
+
+    constructor() {
+      this.initializeFilters();
+    }
+
+    /**
+     * Initialize default filters
+     */
+    private initializeFilters(): void {
+      this.filters.set('affinity', {
+        type: 'affinity',
+        value: 'all',
+        active: false,
+      });
+
+      this.filters.set('minLevel', {
+        type: 'minLevel',
+        value: 1,
+        active: false,
+      });
+
+      this.filters.set('maxLevel', {
+        type: 'maxLevel',
+        value: 9,
+        active: false,
+      });
+
+      this.filters.set('hasAbility', {
+        type: 'hasAbility',
+        value: '',
+        active: false,
+      });
+
+      this.filters.set('search', {
+        type: 'search',
+        value: '',
+        active: false,
+      });
+    }
+
+    /**
+     * Update a filter value
+     */
+    public updateFilter(type: FilterType, value: any): void {
+      const filter = this.filters.get(type);
+      if (filter) {
+        filter.value = value;
+        filter.active = value !== null && value !== '' && value !== 'all';
+      }
+    }
+
+    /**
+     * Get a specific filter value
+     */
+    public getFilter(type: FilterType): any {
+      const filter = this.filters.get(type);
+      return filter?.active ? filter.value : null;
+    }
+
+    /**
+     * Get all active filters
+     */
+    public getActiveFilters(): Filter[] {
+      return Array.from(this.filters.values()).filter(f => f.active);
+    }
+
+    /**
+     * Clear all filters
+     */
+    public clearAll(): void {
+      this.initializeFilters();
+    }
+
+    /**
+     * Clear a specific filter
+     */
+    public clearFilter(type: FilterType): void {
+      const filter = this.filters.get(type);
+      if (filter) {
+        switch (type) {
+          case 'affinity':
+            filter.value = 'all';
+            break;
+          case 'minLevel':
+            filter.value = 1;
+            break;
+          case 'maxLevel':
+            filter.value = 9;
+            break;
+          default:
+            filter.value = '';
+        }
+        filter.active = false;
+      }
+    }
+
+    /**
+     * Get filter presets
+     */
+    public static getPresets(): Record<string, Partial<Record<FilterType, any>>> {
+      return {
+        'high-level': {
+          minLevel: 7,
+        },
+        'fire-cards': {
+          affinity: 'Fire',
+        },
+        'forest-cards': {
+          affinity: 'Forest',
+        },
+        'water-cards': {
+          affinity: 'Water',
+        },
+        'sky-cards': {
+          affinity: 'Sky',
+        },
+        'low-level': {
+          maxLevel: 3,
+        },
+      };
+    }
+
+    /**
+     * Apply a preset
+     */
+    public applyPreset(presetName: string): void {
+      const presets = InventoryFilters.getPresets();
+      const preset = presets[presetName];
+
+      if (preset) {
+        this.clearAll();
+        for (const [type, value] of Object.entries(preset)) {
+          this.updateFilter(type as FilterType, value);
+        }
+      }
+    }
+  }
+
+  // ==================== bloombeasts\screens\cards\CardCollection.ts ====================
+
+  /**
+   * Card Collection - Manages the player's collection of cards
+   */
+
+
+  export type SortOption = 'name' | 'level' | 'affinity' | 'attack' | 'health' | 'xp' | 'recent';
+
+  export class CardCollection {
+    private cards: CardInstance[] = [];
+    private sortBy: SortOption = 'name';
+    private sortAscending: boolean = true;
+
+    constructor() {
+      // Initialize with empty collection
+    }
+
+    /**
+     * Set the player's card collection (called by platform layer)
+     */
+    public setCards(cards: CardInstance[]): void {
+      this.cards = cards;
+    }
+
+    /**
+     * Get all cards in collection
+     */
+    public getAllCards(): CardInstance[] {
+      return this.cards;
+    }
+
+    /**
+     * Get a specific card by ID
+     */
+    public getCard(id: string): CardInstance | undefined {
+      return this.cards.find(card => card.id === id);
+    }
+
+    /**
+     * Get cards filtered by criteria
+     */
+    public getFilteredCards(filters: InventoryFilters): CardInstance[] {
+      let filtered = [...this.cards];
+
+      // Apply affinity filter
+      const affinityFilter = filters.getFilter('affinity');
+      if (affinityFilter && affinityFilter !== 'all') {
+        filtered = filtered.filter(card => card.affinity === affinityFilter);
+      }
+
+      // Apply level filter
+      const levelFilter = filters.getFilter('minLevel');
+      if (levelFilter) {
+        filtered = filtered.filter(card => card.level >= levelFilter);
+      }
+
+      // Apply search filter
+      const searchFilter = filters.getFilter('search');
+      if (searchFilter) {
+        const search = searchFilter.toLowerCase();
+        filtered = filtered.filter(card =>
+          card.name.toLowerCase().includes(search) ||
+          (card.affinity && card.affinity.toLowerCase().includes(search))
+        );
+      }
+
+      // Apply sorting
+      this.applySorting(filtered);
+
+      return filtered;
+    }
+
+    /**
+     * Sort cards by specified criteria
+     */
+    public sortCards(sortBy: SortOption, ascending: boolean = true): void {
+      this.sortBy = sortBy;
+      this.sortAscending = ascending;
+      this.applySorting(this.cards);
+    }
+
+    /**
+     * Apply sorting to a card array
+     */
+    private applySorting(cards: CardInstance[]): void {
+      cards.sort((a, b) => {
+        let comparison = 0;
+
+        switch (this.sortBy) {
+          case 'name':
+            comparison = a.name.localeCompare(b.name);
+            break;
+          case 'level':
+            comparison = a.level - b.level;
+            break;
+          case 'affinity':
+            comparison = (a.affinity || '').localeCompare(b.affinity || '');
+            break;
+          case 'attack':
+            comparison = (a.currentAttack || 0) - (b.currentAttack || 0);
+            break;
+          case 'health':
+            comparison = (a.currentHealth || 0) - (b.currentHealth || 0);
+            break;
+          case 'xp':
+            comparison = a.currentXP - b.currentXP;
+            break;
+        }
+
+        return this.sortAscending ? comparison : -comparison;
+      });
+    }
+
+    /**
+     * Get collection statistics
+     */
+    public getStats(): CollectionStats {
+      const stats: CollectionStats = {
+        totalCards: this.cards.length,
+        uniqueCards: new Set(this.cards.map(c => c.cardId)).size,
+        cardsByAffinity: {
+          Forest: 0,
+          Fire: 0,
+          Water: 0,
+          Sky: 0,
+          Generic: 0,
+        },
+        averageLevel: 0,
+        totalXP: 0,
+      };
+
+      let totalLevel = 0;
+      for (const card of this.cards) {
+        if (card.affinity) {
+          stats.cardsByAffinity[card.affinity]++;
+        }
+        totalLevel += card.level;
+        stats.totalXP += card.currentXP;
+      }
+
+      stats.averageLevel = this.cards.length > 0 ? totalLevel / this.cards.length : 0;
+
+      return stats;
+    }
+
+    /**
+     * Add a new card to collection
+     */
+    public addCard(card: CardInstance): void {
+      this.cards.push(card);
+    }
+
+    /**
+     * Remove a card from collection
+     */
+    public removeCard(id: string): boolean {
+      const index = this.cards.findIndex(card => card.id === id);
+      if (index !== -1) {
+        this.cards.splice(index, 1);
+        return true;
+      }
+      return false;
+    }
+  }
+
   // ==================== bloombeasts\AssetCatalog.ts ====================
 
   /**
@@ -11478,8 +11506,10 @@ namespace BloomBeasts {
       buttons?: SideMenuButton[];
       /** Bottom button at headerStartPosition */
       bottomButton?: SideMenuButton;
-      /** Stats binding for player info */
-      stats: ValueBindingBase<MenuStats | null> | any;
+      /** PlayerData binding for deriving player info */
+      playerDataBinding?: any;
+      /** Stats binding for player info (deprecated - use playerDataBinding) */
+      stats?: ValueBindingBase<MenuStats | null> | any;
       /** Callback for XP bar click */
       onXPBarClick?: (title: string, message: string) => void;
   }
@@ -11568,7 +11598,7 @@ namespace BloomBeasts {
                   width: sideMenuDimensions.width,
                   height: 50,
               },
-              children: createPlayerInfo(ui, config.stats, config.onXPBarClick),
+              children: createPlayerInfo(ui, config.playerDataBinding, config.stats, config.onXPBarClick),
           })
       );
 
@@ -11705,12 +11735,36 @@ namespace BloomBeasts {
    */
   function createPlayerInfo(
       ui: UIMethodMappings,
-      stats: ValueBindingBase<MenuStats | null> | any,
+      playerDataBinding: any | undefined,
+      stats: ValueBindingBase<MenuStats | null> | any | undefined,
       onXPBarClick?: (title: string, message: string) => void
   ): UINodeType {
+      // Helper to get item quantity
+      const getItemQuantity = (items: any[], itemId: string) => {
+          const item = items?.find((i: any) => i.itemId === itemId);
+          return item ? item.quantity : 0;
+      };
+
+      // Helper to extract MenuStats from PlayerData
+      const extractStats = (pd: any): MenuStats | null => {
+          if (!pd) return null;
+          return {
+              playerLevel: pd.playerLevel || 1,
+              totalXP: pd.totalXP || 0,
+              tokens: getItemQuantity(pd.items || [], 'token'),
+              diamonds: getItemQuantity(pd.items || [], 'diamond'),
+              serums: getItemQuantity(pd.items || [], 'serum'),
+          };
+      };
+
+      // Use playerDataBinding if provided, otherwise use stats
+      // Derive directly from the source binding to avoid nesting
+      const sourceBinding = playerDataBinding || stats;
+
       // Create derived bindings for reactive values (Horizon best practice)
       // Derive final values directly from base binding to avoid chaining
-      const xpWidthBinding = stats.derive((statsVal: MenuStats | null) => {
+      const xpWidthBinding = sourceBinding.derive((data: any) => {
+          const statsVal = playerDataBinding ? extractStats(data) : data;
           if (!statsVal) return '0%';
           const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
           const currentLevel = statsVal.playerLevel;
@@ -11723,9 +11777,10 @@ namespace BloomBeasts {
           return `${xpPercent}%`;
       });
 
-      const levelTextBinding = stats.derive((statsVal: MenuStats | null) =>
-          statsVal ? `${statsVal.playerLevel}` : '1'
-      );
+      const levelTextBinding = sourceBinding.derive((data: any) => {
+          const statsVal = playerDataBinding ? extractStats(data) : data;
+          return statsVal ? `${statsVal.playerLevel}` : '1';
+      });
 
       return ui.View({
           style: {
@@ -11765,8 +11820,9 @@ namespace BloomBeasts {
                       // Use a derived binding to keep currentStats updated
                       // This binding is used in the XP width calculation, so it will be evaluated
                       const xpWidthWithTracking = ui.Binding.derive(
-                          [stats],
-                          (statsVal: MenuStats | null) => {
+                          [sourceBinding],
+                          (data: any) => {
+                              const statsVal = playerDataBinding ? extractStats(data) : data;
                               currentStats = statsVal; // Track the current value
                               if (!statsVal) return 0;
                               const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
@@ -12029,7 +12085,7 @@ namespace BloomBeasts {
   export interface MenuScreenProps {
     ui: UIMethodMappings;
     async: AsyncMethods;
-    stats: any;
+    playerDataBinding: any; // PlayerData binding
     onButtonClick?: (buttonId: string) => void;
     onNavigate?: (screen: string) => void;
     onRenderNeeded?: () => void;
@@ -12045,7 +12101,7 @@ namespace BloomBeasts {
 
     // State bindings
     private displayedText: any;
-    private stats: any;
+    private playerDataBinding: any;
     // private menuFrameAnimation: IntervaledBinding<string>;
 
     // Menu frame IDs
@@ -12065,7 +12121,7 @@ namespace BloomBeasts {
     constructor(props: MenuScreenProps) {
       this.ui = props.ui;
       this.async = props.async;
-      this.stats = props.stats;
+      this.playerDataBinding = props.playerDataBinding;
       this.onButtonClick = props.onButtonClick;
       this.onNavigate = props.onNavigate;
 
@@ -12111,15 +12167,20 @@ namespace BloomBeasts {
       }));
 
       // Create custom text content (quote + resources)
-      // Create text bindings that include emoji and value
-      const tokensText = this.stats.derive((statsVal: MenuStats | null) =>
-        `🪙 ${statsVal?.tokens ?? 0}`
+      // Derive item quantities from playerData
+      const getItemQuantity = (items: any[], itemId: string) => {
+        const item = items?.find((i: any) => i.itemId === itemId);
+        return item ? item.quantity : 0;
+      };
+
+      const tokensText = this.playerDataBinding.derive((pd: any) =>
+        `🪙 ${pd ? getItemQuantity(pd.items, 'token') : 0}`
       );
-      const diamondsText = this.stats.derive((statsVal: MenuStats | null) =>
-        `💎 ${statsVal?.diamonds ?? 0}`
+      const diamondsText = this.playerDataBinding.derive((pd: any) =>
+        `💎 ${pd ? getItemQuantity(pd.items, 'diamond') : 0}`
       );
-      const serumsText = this.stats.derive((statsVal: MenuStats | null) =>
-        `🧪 ${statsVal?.serums ?? 0}`
+      const serumsText = this.playerDataBinding.derive((pd: any) =>
+        `🧪 ${pd ? getItemQuantity(pd.items, 'serum') : 0}`
       );
 
       const customTextContent = [
@@ -12213,7 +12274,7 @@ namespace BloomBeasts {
               onClick: () => {}, // Disabled button
               disabled: true,
             },
-            stats: this.stats,
+            playerDataBinding: this.playerDataBinding,
             onXPBarClick: (title: string, message: string) => {
               if (this.onButtonClick) {
                 this.onButtonClick(`show-counter-info:${title}:${message}`);
@@ -12977,9 +13038,8 @@ namespace BloomBeasts {
    * 2. ID-based: Use cardIdBinding (for popups/single cards)
    */
   export interface ReactiveCardRendererProps {
-    // Source bindings (not derived)
-    cardsBinding: any; // Binding<CardDisplay[]>
-    deckCardIdsBinding?: any; // Binding<string[]>
+    // Source playerData binding
+    playerDataBinding: any;
 
     // Slot-based selection (for grids)
     scrollOffsetBinding?: any; // Binding<number>
@@ -13001,9 +13061,8 @@ namespace BloomBeasts {
    */
   export function createReactiveCardComponent(ui: UIMethodMappings, props: ReactiveCardRendererProps): UINodeType {
     const {
-      cardsBinding,
+      playerDataBinding,
       scrollOffsetBinding,
-      deckCardIdsBinding,
       slotIndex,
       cardsPerPage,
       cardIdBinding,
@@ -13046,23 +13105,20 @@ namespace BloomBeasts {
     let trackedCard: CardDisplay | null = null;
 
     // Create dependencies array based on mode
+    // Use playerDataBinding directly in dependencies to avoid nesting
     let dependencies: any[];
     if (isIdMode && cardIdBinding) {
-      dependencies = deckCardIdsBinding
-        ? [cardsBinding, cardIdBinding, deckCardIdsBinding]
-        : [cardsBinding, cardIdBinding];
+      dependencies = [playerDataBinding, cardIdBinding];
     } else if (isSlotMode && scrollOffsetBinding) {
-      dependencies = deckCardIdsBinding
-        ? [cardsBinding, scrollOffsetBinding, deckCardIdsBinding]
-        : [cardsBinding, scrollOffsetBinding];
+      dependencies = [playerDataBinding, scrollOffsetBinding];
     } else {
-      // Fallback - should never happen if props are correct
-      dependencies = [cardsBinding];
+      dependencies = [playerDataBinding];
     }
 
     // Helper to get card based on mode
     const getCard = (args: any[]): CardDisplay | null => {
-      const cards: CardDisplay[] = args[0];
+      // Extract cards from PlayerData
+      const cards: CardDisplay[] = args[0]?.cards?.collected || [];
 
       if (isIdMode && cardIdBinding) {
         // ID-based mode: find card by ID
@@ -13078,6 +13134,14 @@ namespace BloomBeasts {
       }
 
       return null;
+    };
+
+    // Helper to check if card is in deck
+    const isCardInDeck = (args: any[], cardId: string | undefined): boolean => {
+      if (!showDeckIndicator || !cardId) return false;
+
+      const deckCardIds: string[] = args[0]?.cards?.deck || [];
+      return deckCardIds.includes(cardId);
     };
 
     // Create reactive text bindings directly from source bindings
@@ -13310,9 +13374,7 @@ namespace BloomBeasts {
       ...(showDeckIndicator ? [ui.View({
         style: ui.Binding.derive(dependencies, (...args: any[]) => {
           const card = getCard(args);
-          // Get deckCardIds from args - position depends on mode
-          const deckCardIds: string[] = (isIdMode ? args[2] : args[2]) || [];
-          const isInDeck = card && deckCardIds.includes(card.id);
+          const isInDeck = isCardInDeck(args, card?.id);
 
           return {
             position: 'absolute',
@@ -13386,13 +13448,11 @@ namespace BloomBeasts {
 
   export interface ReactiveCardDetailPopupProps {
     cardIdBinding: any; // Binding<string | null>
-    cardsBinding: any; // Binding<CardDisplay[]>
-    deckCardIdsBinding: any; // Binding<string[]>
+    playerDataBinding: any; // PlayerData binding
     onClose: () => void;
     sideContent?: (ui: UIMethodMappings, deps: {
       cardIdBinding: any;
-      cardsBinding: any;
-      deckCardIdsBinding: any;
+      playerDataBinding: any;
     }) => UINodeType[];
   }
 
@@ -13401,7 +13461,7 @@ namespace BloomBeasts {
    * Uses createReactiveCardComponent in ID mode to display the card
    */
   export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: ReactiveCardDetailPopupProps): UINodeType {
-    const { cardIdBinding, cardsBinding, deckCardIdsBinding, onClose, sideContent } = props;
+    const { cardIdBinding, playerDataBinding, onClose, sideContent } = props;
 
     const cardWidth = 210;
     const cardHeight = 280;
@@ -13443,9 +13503,8 @@ namespace BloomBeasts {
           children: [
             // Card display using reactive card component in ID mode
             createReactiveCardComponent(ui, {
-              cardsBinding: cardsBinding, // Pass original binding
-              cardIdBinding: cardIdBinding, // Use ID mode to find card
-              deckCardIdsBinding: deckCardIdsBinding,
+              playerDataBinding: playerDataBinding,
+              cardIdBinding: cardIdBinding,
               onClick: undefined, // No click handler in popup
               showDeckIndicator: true, // Show deck indicator
             }),
@@ -13456,7 +13515,7 @@ namespace BloomBeasts {
                 marginLeft: DIMENSIONS.spacing.xl,
                 flexDirection: 'column',
               },
-              children: sideContent ? sideContent(ui, { cardIdBinding, cardsBinding, deckCardIdsBinding }) : [],
+              children: sideContent ? sideContent(ui, { cardIdBinding, playerDataBinding }) : [],
             }),
           ],
         }),
@@ -13597,10 +13656,7 @@ namespace BloomBeasts {
 
   export interface CardsScreenProps {
     ui: UIMethodMappings;
-    cards: any;
-    deckSize: any;
-    deckCardIds: any;
-    stats: any;
+    playerDataBinding: any; // PlayerData binding - screens derive what they need
     onCardSelect?: (cardId: string) => void;
     onNavigate?: (screen: string) => void;
     onRenderNeeded?: () => void;
@@ -13613,10 +13669,7 @@ namespace BloomBeasts {
     // UI methods (injected)
     private ui: UIMethodMappings;
 
-    private cards: any;
-    private deckSize: any;
-    private deckCardIds: any;
-    private stats: any;
+    private playerDataBinding: any;
     private scrollOffset: any;
     private selectedCardId: any; // Binding<string | null>
 
@@ -13632,10 +13685,7 @@ namespace BloomBeasts {
     constructor(props: CardsScreenProps) {
       this.ui = props.ui;
       this.selectedCardId = new this.ui.Binding<string | null>(null);
-      this.cards = props.cards;
-      this.deckSize = props.deckSize;
-      this.deckCardIds = props.deckCardIds;
-      this.stats = props.stats;
+      this.playerDataBinding = props.playerDataBinding;
       this.onCardSelect = props.onCardSelect;
       this.onNavigate = props.onNavigate;
       this.onRenderNeeded = props.onRenderNeeded;
@@ -13644,16 +13694,20 @@ namespace BloomBeasts {
 
     /**
      * Create a single card slot using reactive card component
+     * Passes playerDataBinding to avoid binding nesting
      */
-    private createCardSlot(slotIndex: number, cardsPerPage: number, hasMarginRight: boolean): UINodeType {
+    private createCardSlot(
+      slotIndex: number,
+      cardsPerPage: number,
+      hasMarginRight: boolean
+    ): UINodeType {
       return this.ui.View({
         style: {
           marginRight: hasMarginRight ? GAPS.cards : 0,
         },
         children: createReactiveCardComponent(this.ui, {
-          cardsBinding: this.cards,
+          playerDataBinding: this.playerDataBinding,
           scrollOffsetBinding: this.scrollOffset,
-          deckCardIdsBinding: this.deckCardIds,
           slotIndex,
           cardsPerPage,
           onClick: (cardId: string) => this.handleCardClick(cardId),
@@ -13664,7 +13718,7 @@ namespace BloomBeasts {
 
     /**
      * Create card grid with reactive bindings
-     * The PlatformBinding.derive wrapper handles unwrapping automatically
+     * Card slots derive directly from playerDataBinding to avoid nesting
      */
     private createCardGrid(): UINodeType {
       const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
@@ -13678,15 +13732,13 @@ namespace BloomBeasts {
           height: 580,
         },
         children: [
-          // Empty state
+          // Empty state - derive directly from playerDataBinding
           ...(this.ui.UINode ? [this.ui.UINode.if(
-            this.ui.Binding.derive(
-              [this.cards],
-              (cards: CardDisplay[]) => {
-                console.log('[CardsScreen] Empty state check - cards.length:', cards.length);
-                return cards.length === 0 ? true : false;
-              }
-            ),
+            this.playerDataBinding.derive((pd: any) => {
+              const cards = pd?.cards?.collected || [];
+              console.log('[CardsScreen] Empty state check - cards.length:', cards.length);
+              return cards.length === 0 ? true : false;
+            }),
             this.ui.View({
               style: {
                 flex: 1,
@@ -13717,9 +13769,7 @@ namespace BloomBeasts {
                 children: Array.from({ length: this.cardsPerRow }, (_, colIndex) => {
                   const slotIndex = rowIndex * this.cardsPerRow + colIndex;
 
-                  // Create card slot - simple approach to avoid binding nesting issues
-                  // Note: this.cards and this.deckCardIds are already DerivedBindings from GameManager
-                  // so we can't use them in another Binding.derive() without hitting the nesting limit
+                  // Create card slot - passes playerDataBinding
                   return this.createCardSlot(slotIndex, cardsPerPage, colIndex < this.cardsPerRow - 1);
                 }),
               })
@@ -13730,7 +13780,9 @@ namespace BloomBeasts {
     }
 
     createUI(): UINodeType {
+
       // Create scroll buttons for the side menu
+      // Note: Derive directly from playerDataBinding to avoid nesting (cards is already a derived binding)
       const scrollButtons = [
         {
           label: '↑',
@@ -13740,8 +13792,8 @@ namespace BloomBeasts {
             this.scrollOffset.set(this.scrollOffsetValue);
           },
           disabled: this.ui.Binding.derive(
-            [this.cards, this.scrollOffset],
-            (cards: any[], offset: number) => offset <= 0 ? true : false
+            [this.playerDataBinding, this.scrollOffset],
+            (pd: any, offset: number) => offset <= 0 ? true : false
           ) as any,
           yOffset: 0,
         },
@@ -13753,8 +13805,9 @@ namespace BloomBeasts {
             this.scrollOffset.set(this.scrollOffsetValue);
           },
           disabled: this.ui.Binding.derive(
-            [this.cards, this.scrollOffset],
-            (cards: any[], offset: number) => {
+            [this.playerDataBinding, this.scrollOffset],
+            (pd: any, offset: number) => {
+              const cards = pd?.cards?.collected || [];
               const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
               const totalPages = Math.ceil(cards.length / cardsPerPage);
               return offset >= totalPages - 1 ? true : false;
@@ -13764,8 +13817,8 @@ namespace BloomBeasts {
         },
       ];
 
-      // Deck info text
-      const deckInfoText = this.deckSize.derive((size: number) => `${deckEmoji} ${size}/30`);
+      // Deck info text - derive directly from playerDataBinding to avoid nesting
+      const deckInfoText = this.playerDataBinding.derive((pd: any) => `${deckEmoji} ${pd?.cards?.deck?.length || 0}/30`);
 
       return this.ui.View({
         style: {
@@ -13803,7 +13856,7 @@ namespace BloomBeasts {
             },
           }),
           // Main content - card grid
-          // Card grid view with Horizon-compatible pattern
+          // Card grid view with Horizon-compatible pattern (derives bindings internally)
           this.createCardGrid(),
           // Sidebar with common side menu
           createSideMenu(this.ui, {
@@ -13819,7 +13872,7 @@ namespace BloomBeasts {
               },
               disabled: false,
             },
-            stats: this.stats,
+            playerDataBinding: this.playerDataBinding,
           }),
 
           // Card detail popup overlay container (conditionally rendered)
@@ -13839,8 +13892,7 @@ namespace BloomBeasts {
               },
               children: createReactiveCardDetailPopup(this.ui, {
                 cardIdBinding: this.selectedCardId,
-                cardsBinding: this.cards,
-                deckCardIdsBinding: this.deckCardIds,
+                playerDataBinding: this.playerDataBinding,
                 onClose: () => this.closePopup(),
                 sideContent: (ui, deps) => this.createPopupButtons(deps),
               }),
@@ -13871,10 +13923,9 @@ namespace BloomBeasts {
      */
     private createPopupButtons(deps: {
       cardIdBinding: any;
-      cardsBinding: any;
-      deckCardIdsBinding: any;
+      playerDataBinding: any;
     }): UINodeType[] {
-      const { cardIdBinding, deckCardIdsBinding } = deps;
+      const { cardIdBinding, playerDataBinding } = deps;
       const buttonWidth = sideMenuButtonDimensions.width;
       const buttonHeight = sideMenuButtonDimensions.height;
       const buttonSpacing = GAPS.buttons;
@@ -13913,12 +13964,13 @@ namespace BloomBeasts {
             // Button background
             this.ui.Image({
               source: this.ui.Binding.derive(
-                [this.ui.assetsLoadedBinding, deckCardIdsBinding, cardIdBinding],
+                [this.ui.assetsLoadedBinding, playerDataBinding, cardIdBinding],
                 (...args: any[]) => {
                   const assetsLoaded: boolean = args[0];
-                  const deckCardIds: string[] = args[1];
+                  const pd: any = args[1];
                   const cardId: string | null = args[2];
                   if (!assetsLoaded || !cardId) return null;
+                  const deckCardIds: string[] = pd?.cards?.deck || [];
                   const isInDeck = deckCardIds.includes(cardId);
                   return this.ui.assetIdToImageSource?.(isInDeck ? 'red-button' : 'green-button');
                 }
@@ -13943,11 +13995,12 @@ namespace BloomBeasts {
               },
               children: this.ui.Text({
                 text: this.ui.Binding.derive(
-                  [deckCardIdsBinding, cardIdBinding],
+                  [playerDataBinding, cardIdBinding],
                   (...args: any[]) => {
-                    const deckCardIds: string[] = args[0];
+                    const pd: any = args[0];
                     const cardId: string | null = args[1];
                     if (!cardId) return '';
+                    const deckCardIds: string[] = pd?.cards?.deck || [];
                     const isInDeck = deckCardIds.includes(cardId);
                     return isInDeck ? 'Remove' : 'Add';
                   }
@@ -14355,8 +14408,8 @@ namespace BloomBeasts {
 
   export interface MissionScreenProps {
     ui: UIMethodMappings;
-    missions: any;
-    stats: any;
+    missions: any; // Missions binding - still separate
+    playerDataBinding: any; // PlayerData binding
     onMissionSelect?: (missionId: string) => void;
     onNavigate?: (screen: string) => void;
     onRenderNeeded?: () => void;
@@ -14371,7 +14424,7 @@ namespace BloomBeasts {
 
     // State bindings
     private missions: any;
-    private stats: any;
+    private playerDataBinding: any;
     private scrollOffset: any;
 
     // Track scroll offset value for button handlers (can't use .get() in Horizon)
@@ -14390,7 +14443,7 @@ namespace BloomBeasts {
       this.ui = props.ui;
       this.scrollOffset = new this.ui.Binding(0);
       this.missions = props.missions;
-      this.stats = props.stats;
+      this.playerDataBinding = props.playerDataBinding;
       this.onMissionSelect = props.onMissionSelect;
       this.onNavigate = props.onNavigate;
       this.onRenderNeeded = props.onRenderNeeded;
@@ -14624,7 +14677,7 @@ namespace BloomBeasts {
           },
           disabled: false,
         },
-        stats: this.stats,
+        playerDataBinding: this.playerDataBinding,
       });
     }
 
@@ -14833,73 +14886,37 @@ namespace BloomBeasts {
       this.onNavigate = props.onNavigate;
       this.onRenderNeeded = props.onRenderNeeded;
 
-      // No need to subscribe in Horizon - it's reactive!
-      // These were for triggering re-renders which Horizon does automatically
-      /*
-      this.showHand.subscribe(() => this.safeRender());
-      this.handScrollOffset.subscribe(() => this.safeRender());
-      this.selectedCardDetail.subscribe(() => this.safeRender());
-      this.isPlayerTurn.subscribe(() => {
-        // Update button text when turn changes
-        // console.log('[BattleScreen] isPlayerTurn changed to:', this.isPlayerTurn.get());
-        this.updateEndTurnButtonText();
-        this.safeRender();
-      });
-      this.turnTimer.subscribe(() => {
-        // Update button text when timer changes
-        this.updateEndTurnButtonText();
-        // Trigger re-render for timer countdown
-        this.safeRender();
-      });
-      */
-
-      // Subscribe to battleDisplay changes to update isPlayerTurn
+      // Initialize player turn tracking with derived bindings
       if (this.battleDisplay) {
-        // console.log('[BattleScreen] Setting up battleDisplay subscription');
-        // console.log('[BattleScreen] battleDisplay binding instance:', this.battleDisplay);
-        // console.log('[BattleScreen] Initial battleDisplay.get():', this.battleDisplay.get());
-
-        // Comment out subscribe - Horizon handles reactivity
-        /* this.battleDisplay.subscribe((state: any) => {
-          // console.log('[BattleScreen] ==========================================');
-          // console.log('[BattleScreen] BattleDisplay subscription fired!');
-          // console.log('[BattleScreen] state parameter:', state);
-          // console.log('[BattleScreen] this.battleDisplay.get():', this.battleDisplay?.get());
-          // console.log('[BattleScreen] state.turnPlayer:', state?.turnPlayer);
-          // console.log('[BattleScreen] state object keys:', state ? Object.keys(state) : 'state is null');
-          // console.log('[BattleScreen] ==========================================');
-          // Update tracked battle display value
-          this.battleDisplayValue = state;
-
-          const newIsPlayerTurn = state?.turnPlayer === 'player';
-          // console.log('[BattleScreen] Checking turn: state?.turnPlayer === "player"?', newIsPlayerTurn);
-
-          if (this.isPlayerTurnValue !== newIsPlayerTurn) {
-            // console.log('[BattleScreen] BattleDisplay changed, updating isPlayerTurn to:', newIsPlayerTurn);
-            this.isPlayerTurnValue = newIsPlayerTurn;
-            this.isPlayerTurn.set(newIsPlayerTurn);
+        // Create derived binding for isPlayerTurn
+        this.isPlayerTurn = this.ui.Binding.derive(
+          [this.battleDisplay],
+          (state: BattleDisplay) => {
+            // Only update if state is not null - preserve defaults during initialization
+            if (state) {
+              this.battleDisplayValue = state;
+            }
+            const newIsPlayerTurn = state?.turnPlayer === 'player';
 
             // Start/stop timer based on turn changes
-            if (newIsPlayerTurn) {
-              // console.log('[BattleScreen] Subscription detected player turn, calling startTurnTimer()');
-              this.startTurnTimer();
-            } else {
-              // console.log('[BattleScreen] Subscription detected opponent turn, calling stopTurnTimer()');
-              this.stopTurnTimer();
+            if (this.isPlayerTurnValue !== newIsPlayerTurn) {
+              this.isPlayerTurnValue = newIsPlayerTurn;
+              if (newIsPlayerTurn) {
+                this.startTurnTimer();
+              } else {
+                this.stopTurnTimer();
+              }
             }
-          } else {
-            // console.log('[BattleScreen] isPlayerTurn unchanged, still:', newIsPlayerTurn);
-          }
-        }); */
 
-        // Initialize player turn tracking
-        this.isPlayerTurnValue = false;
-        this.isPlayerTurn = new this.ui.Binding(this.isPlayerTurnValue);
+            return newIsPlayerTurn;
+          }
+        );
 
         // Create derived binding for endTurnButtonText
+        // Note: Can't derive from isPlayerTurn (already derived), so derive from battleDisplay directly
         this.endTurnButtonText = this.ui.Binding.derive(
-          [this.isPlayerTurn, this.turnTimer],
-          (isPlayer: boolean, timer: number) => isPlayer ? `(${timer})` : 'Enemy Turn'
+          [this.battleDisplay, this.turnTimer],
+          (state: BattleDisplay, timer: number) => state?.turnPlayer === 'player' ? `(${timer})` : 'Enemy Turn'
         );
       }
     }
@@ -14994,11 +15011,6 @@ namespace BloomBeasts {
      * Create simple battle UI (placeholder mode for BloomBeastsGame compatibility)
      */
     private createSimpleBattleUI(): UINodeType {
-      // For simple mode, we would need to track these values separately too
-      // For now just use defaults since simple mode isn't the main focus
-      const battleState = 'initializing';
-      const message = 'Preparing for battle...';
-
       // Mark rendering as complete
       this.finishRender();
 
@@ -15015,7 +15027,7 @@ namespace BloomBeasts {
         children: [
           // Battle title
           this.ui.Text({
-            text: '⚔️ Battle Arena ⚔️',
+            text: new this.ui.Binding('⚔️ Battle Arena ⚔️'),
             style: {
               fontSize: DIMENSIONS.fontSize.hero,
               fontWeight: 'bold',
@@ -15036,7 +15048,7 @@ namespace BloomBeasts {
             },
             children: [
               this.ui.Text({
-                text: battleState,
+                text: this.battleState || new this.ui.Binding('initializing'),
                 style: {
                   fontSize: DIMENSIONS.fontSize.xl,
                   fontWeight: 'bold',
@@ -15045,7 +15057,7 @@ namespace BloomBeasts {
                 }
               }),
               this.ui.Text({
-                text: message,
+                text: this.message || new this.ui.Binding('Preparing for battle...'),
                 style: {
                   fontSize: DIMENSIONS.fontSize.lg,
                   color: COLORS.textSecondary,
@@ -15206,7 +15218,15 @@ namespace BloomBeasts {
     /**
      * Create all battle zones (beasts, traps, buffs, habitat)
      */
-    private createBattleZones(state: BattleDisplay): UINodeType {
+    private createBattleZones(state: BattleDisplay | null): UINodeType {
+      // Defensive: return empty view if state is null
+      if (!state) {
+        return this.ui.View({
+          style: { position: 'absolute', width: '100%', height: '100%' },
+          children: [],
+        });
+      }
+
       return this.ui.View({
         style: {
           position: 'absolute',
@@ -15694,20 +15714,19 @@ namespace BloomBeasts {
     /**
      * Create player and opponent info displays
      */
-    private createInfoDisplays(state: BattleDisplay): UINodeType {
-      console.log('[BattleScreen] createInfoDisplays called with health:', {
-        playerHealth: state.playerHealth,
-        opponentHealth: state.opponentHealth
-      });
+    private createInfoDisplays(state: BattleDisplay | null): UINodeType {
+      // Defensive: return empty view if state is null
+      if (!state) {
+        return this.ui.View({
+          style: { position: 'absolute', width: '100%', height: '100%' },
+          children: [],
+        });
+      }
+
       const opponentHealthPos = battleBoardAssetPositions.playerOne.health;
       const playerHealthPos = battleBoardAssetPositions.playerTwo.health;
       const opponentInfoPos = battleBoardAssetPositions.playOneInfoPosition;
       const playerInfoPos = battleBoardAssetPositions.playerTwoInfoPosition;
-
-      const isOpponentHealthTarget = state.attackAnimation?.targetPlayer === 'health' &&
-                                     state.attackAnimation?.attackerPlayer === 'player';
-      const isPlayerHealthTarget = state.attackAnimation?.targetPlayer === 'health' &&
-                                  state.attackAnimation?.attackerPlayer === 'opponent';
 
       return this.ui.View({
         style: {
@@ -15726,12 +15745,23 @@ namespace BloomBeasts {
               height: 30,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: isOpponentHealthTarget ? 'rgba(255, 0, 0, 0.4)' : 'transparent',
+              backgroundColor: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => {
+                  if (!state) return 'transparent';
+                  const isTarget = state.attackAnimation?.targetPlayer === 'health' &&
+                                  state.attackAnimation?.attackerPlayer === 'player';
+                  return isTarget ? 'rgba(255, 0, 0, 0.4)' : 'transparent';
+                }
+              ),
               borderRadius: 4,
             },
             children: [
               this.ui.Text({
-                text: `${state.opponentHealth}/${state.opponentMaxHealth}`,
+                text: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay) => state ? `${state.opponentHealth}/${state.opponentMaxHealth}` : '20/20'
+                ),
                 style: {
                   fontSize: 20,
                   fontWeight: 'bold',
@@ -15740,10 +15770,10 @@ namespace BloomBeasts {
                 },
               }),
               // Make clickable if a beast is selected for direct attack
-              state.selectedBeastIndex !== null ? this.ui.Pressable({
+              this.battleDisplayValue.selectedBeastIndex !== null ? this.ui.Pressable({
                 onClick: () => {
-                  console.log(`[BattleScreen] Opponent health clicked, attacking with beast ${state.selectedBeastIndex}`);
-                  this.onAction?.(`attack-player-${state.selectedBeastIndex}`);
+                  console.log(`[BattleScreen] Opponent health clicked, attacking with beast ${this.battleDisplayValue.selectedBeastIndex}`);
+                  this.onAction?.(`attack-player-${this.battleDisplayValue.selectedBeastIndex}`);
                 },
                 style: {
                   position: 'absolute',
@@ -15767,11 +15797,22 @@ namespace BloomBeasts {
               height: 30,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: isPlayerHealthTarget ? 'rgba(255, 0, 0, 0.4)' : 'transparent',
+              backgroundColor: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => {
+                  if (!state) return 'transparent';
+                  const isTarget = state.attackAnimation?.targetPlayer === 'health' &&
+                                  state.attackAnimation?.attackerPlayer === 'opponent';
+                  return isTarget ? 'rgba(255, 0, 0, 0.4)' : 'transparent';
+                }
+              ),
               borderRadius: 4,
             },
             children: this.ui.Text({
-              text: `${state.playerHealth}/${state.playerMaxHealth}`,
+              text: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => state ? `${state.playerHealth}/${state.playerMaxHealth}` : '20/20'
+              ),
               style: {
                 fontSize: 20,
                 fontWeight: 'bold',
@@ -15790,7 +15831,7 @@ namespace BloomBeasts {
             },
             children: [
               this.ui.Text({
-                text: 'Opponent',
+                text: new this.ui.Binding('Opponent'),
                 style: {
                   fontSize: 20,
                   fontWeight: 'bold',
@@ -15799,7 +15840,10 @@ namespace BloomBeasts {
                 },
               }),
               this.ui.Text({
-                text: `${nectarEmoji} ${state.opponentNectar}/10`,
+                text: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay) => state ? `${nectarEmoji} ${state.opponentNectar}/10` : `${nectarEmoji} 0/10`
+                ),
                 style: {
                   fontSize: 18,
                   color: '#fff',
@@ -15807,7 +15851,10 @@ namespace BloomBeasts {
                 },
               }),
               this.ui.Text({
-                text: `${deckEmoji} ${state.opponentDeckCount}/30`,
+                text: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay) => state ? `${deckEmoji} ${state.opponentDeckCount}/30` : `${deckEmoji} 30/30`
+                ),
                 style: {
                   fontSize: 18,
                   color: '#fff',
@@ -15825,7 +15872,7 @@ namespace BloomBeasts {
             },
             children: [
               this.ui.Text({
-                text: 'Player',
+                text: new this.ui.Binding('Player'),
                 style: {
                   fontSize: 20,
                   fontWeight: 'bold',
@@ -15834,7 +15881,10 @@ namespace BloomBeasts {
                 },
               }),
               this.ui.Text({
-                text: `${nectarEmoji} ${state.playerNectar}/10`,
+                text: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay) => state ? `${nectarEmoji} ${state.playerNectar}/10` : `${nectarEmoji} 0/10`
+                ),
                 style: {
                   fontSize: 18,
                   color: '#fff',
@@ -15842,7 +15892,10 @@ namespace BloomBeasts {
                 },
               }),
               this.ui.Text({
-                text: `${deckEmoji} ${state.playerDeckCount}/30`,
+                text: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay) => state ? `${deckEmoji} ${state.playerDeckCount}/30` : `${deckEmoji} 30/30`
+                ),
                 style: {
                   fontSize: 18,
                   color: '#fff',
@@ -15858,11 +15911,8 @@ namespace BloomBeasts {
      * Create battle-specific side menu
      */
     private createBattleSideMenu(state: BattleDisplay): UINodeType {
-      // Timer is now managed via battleDisplay subscriptions, not during render
+      // Timer is now managed via battleDisplay derived bindings, not during render
       // This prevents infinite render loops
-
-      const showDeathmatch = state.currentTurn >= 30;
-      const deathmatchDamage = Math.floor((state.currentTurn - 30) / 5) + 1;
 
       return this.ui.View({
         style: {
@@ -15943,7 +15993,7 @@ namespace BloomBeasts {
             },
             children: [
               this.ui.Text({
-                text: 'Battle',
+                text: new this.ui.Binding('Battle'),
                 style: {
                   fontSize: 20,
                   fontWeight: 'bold',
@@ -15952,15 +16002,26 @@ namespace BloomBeasts {
                 },
               }),
               this.ui.Text({
-                text: `Turn ${state.currentTurn}`,
+                text: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay) => state ? `Turn ${state.currentTurn}` : 'Turn 1'
+                ),
                 style: {
                   fontSize: 18,
                   color: '#fff',
                   marginBottom: 5,
                 },
               }),
-              showDeathmatch ? this.ui.Text({
-                text: `Deathmatch! -${deathmatchDamage} HP`,
+              // Deathmatch warning (conditionally rendered based on turn)
+              this.battleDisplayValue.currentTurn >= 30 ? this.ui.Text({
+                text: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay) => {
+                    if (!state) return 'Deathmatch! -1 HP';
+                    const deathmatchDamage = Math.floor((state.currentTurn - 30) / 5) + 1;
+                    return `Deathmatch! -${deathmatchDamage} HP`;
+                  }
+                ),
                 style: {
                   fontSize: 16,
                   color: '#ff6b6b',
@@ -15983,19 +16044,19 @@ namespace BloomBeasts {
                 console.log('[BattleScreen] End Turn clicked but not player turn');
               }
             },
-            disabled: this.isPlayerTurn.derive((ipt: boolean) => !ipt),
+            disabled: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => state?.turnPlayer !== 'player'),
             style: {
               position: 'absolute',
               left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
               top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y,
               width: sideMenuButtonDimensions.width,
               height: sideMenuButtonDimensions.height,
-              opacity: this.isPlayerTurn.derive((ipt: boolean) => ipt ? 1 : 0.5),
+              opacity: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => state?.turnPlayer === 'player' ? 1 : 0.5),
             },
             children: [
               // Button background image - green when player turn, standard when opponent turn
               this.ui.Image({
-                source: this.ui.Binding.derive([this.isPlayerTurn], (ipt: boolean) => this.ui.assetIdToImageSource?.(ipt ? 'green-button' : 'standard-button') ?? null),
+                source: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => this.ui.assetIdToImageSource?.(state?.turnPlayer === 'player' ? 'green-button' : 'standard-button') ?? null),
                 style: {
                   position: 'absolute',
                   width: sideMenuButtonDimensions.width,
@@ -16038,9 +16099,6 @@ namespace BloomBeasts {
     private createPlayerHand(state: BattleDisplay): UINodeType | null {
       if (!state.playerHand || state.playerHand.length === 0) return null;
 
-      const showFull = this.showHandValue;
-      const scrollOffset = this.handScrollOffsetValue;
-
       // Match canvas version dimensions exactly
       const cardWidth = standardCardDimensions.width;  // 210
       const cardHeight = standardCardDimensions.height; // 280
@@ -16049,13 +16107,13 @@ namespace BloomBeasts {
       const spacing = 10;
       const startX = 50;
       const overlayWidth = 1210;
-      const overlayHeight = showFull ? 300 : 60;
+      const overlayHeight = this.showHandValue ? 300 : 60;
       const overlayY = gameDimensions.panelHeight - overlayHeight; // 720 - overlayHeight
       const startY = overlayY + 10;
 
       // Calculate visible cards
       const cardsPerPage = cardsPerRow * rowsPerPage;
-      const startIndex = scrollOffset * cardsPerPage;
+      const startIndex = this.handScrollOffsetValue * cardsPerPage;
       const endIndex = Math.min(startIndex + cardsPerPage, state.playerHand.length);
       const visibleCards = state.playerHand.slice(startIndex, endIndex);
       const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
@@ -16144,15 +16202,12 @@ namespace BloomBeasts {
           // Toggle button - matches canvas version exactly (60x50, at overlayWidth - 50, overlayY + 10)
           this.ui.Pressable({
             onClick: () => {
-              console.log('[BattleScreen] Toggle button clicked, showFull:', showFull);
-              const newShowHand = !showFull;
+              const newShowHand = !this.showHandValue;
               this.showHandValue = newShowHand;
               this.showHand.set(newShowHand);
-              console.log('[BattleScreen] Set showHand to:', newShowHand);
               // Trigger re-render
               this.onRenderNeeded?.();
               this.onAction?.('toggle-hand');
-              console.log('[BattleScreen] Called toggle-hand action');
             },
             style: {
               position: 'absolute',
@@ -16166,7 +16221,10 @@ namespace BloomBeasts {
               alignItems: 'center',
             },
             children: this.ui.Text({
-              text: showFull ? 'X' : '↑',
+              text: this.ui.Binding.derive(
+                [this.showHand],
+                (showFull: boolean) => showFull ? 'X' : '↑'
+              ),
               style: {
                 fontSize: 24,
                 fontWeight: 'bold',
@@ -16176,31 +16234,37 @@ namespace BloomBeasts {
           }),
 
           // Scroll buttons (only when showing full hand)
-          ...(showFull ? [
+          ...(this.showHandValue ? [
             // Up button (positioned below toggle button)
             this.ui.Pressable({
               onClick: () => {
-                const newOffset = Math.max(0, scrollOffset - 1);
+                const newOffset = Math.max(0, this.handScrollOffsetValue - 1);
                 this.handScrollOffsetValue = newOffset;
                 this.handScrollOffset.set(newOffset);
                 // Trigger re-render
                 this.onRenderNeeded?.();
               },
-              disabled: scrollOffset <= 0,
+              disabled: this.handScrollOffset.derive((offset: number) => offset <= 0),
               style: {
                 position: 'absolute',
                 left: overlayWidth - 50,
                 top: 10 + 50 + 10, // Below toggle button
                 width: 60,
                 height: 50,
-                backgroundColor: scrollOffset > 0 ? '#4a8ec2' : '#666',
+                backgroundColor: this.ui.Binding.derive(
+                  [this.handScrollOffset],
+                  (offset: number) => offset > 0 ? '#4a8ec2' : '#666'
+                ),
                 borderRadius: 8,
                 justifyContent: 'center',
                 alignItems: 'center',
-                opacity: scrollOffset > 0 ? 1 : 0.5,
+                opacity: this.ui.Binding.derive(
+                  [this.handScrollOffset],
+                  (offset: number) => offset > 0 ? 1 : 0.5
+                ),
               },
               children: this.ui.Text({
-                text: '⬆',
+                text: new this.ui.Binding('⬆'),
                 style: {
                   fontSize: 24,
                   fontWeight: 'bold',
@@ -16212,27 +16276,36 @@ namespace BloomBeasts {
             // Down button (positioned below up button)
             this.ui.Pressable({
               onClick: () => {
-                const newOffset = Math.min(totalPages - 1, scrollOffset + 1);
+                const newOffset = Math.min(totalPages - 1, this.handScrollOffsetValue + 1);
                 this.handScrollOffsetValue = newOffset;
                 this.handScrollOffset.set(newOffset);
                 // Trigger re-render
                 this.onRenderNeeded?.();
               },
-              disabled: scrollOffset >= totalPages - 1 || state.playerHand.length <= cardsPerPage,
+              disabled: this.ui.Binding.derive(
+                [this.handScrollOffset, this.battleDisplay],
+                (offset: number, state: BattleDisplay) => offset >= totalPages - 1 || state.playerHand.length <= cardsPerPage
+              ),
               style: {
                 position: 'absolute',
                 left: overlayWidth - 50,
                 top: 10 + 50 + 10 + 50 + 10, // Below up button
                 width: 60,
                 height: 50,
-                backgroundColor: (scrollOffset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? '#4a8ec2' : '#666',
+                backgroundColor: this.ui.Binding.derive(
+                  [this.handScrollOffset, this.battleDisplay],
+                  (offset: number, state: BattleDisplay) => (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? '#4a8ec2' : '#666'
+                ),
                 borderRadius: 8,
                 justifyContent: 'center',
                 alignItems: 'center',
-                opacity: (scrollOffset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? 1 : 0.5,
+                opacity: this.ui.Binding.derive(
+                  [this.handScrollOffset, this.battleDisplay],
+                  (offset: number, state: BattleDisplay) => (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? 1 : 0.5
+                ),
               },
               children: this.ui.Text({
-                text: '↓',
+                text: new this.ui.Binding('↓'),
                 style: {
                   fontSize: 24,
                   fontWeight: 'bold',
@@ -16437,8 +16510,7 @@ namespace BloomBeasts {
 
   export interface SettingsScreenProps {
     ui: UIMethodMappings;
-    settings: any;
-    stats: any;
+    playerDataBinding: any; // PlayerData binding - screen derives settings
     onSettingChange?: (settingId: string, value: any) => void;
     onNavigate?: (screen: string) => void;
     onRenderNeeded?: () => void;
@@ -16451,8 +16523,7 @@ namespace BloomBeasts {
     // UI methods (injected)
     private ui: UIMethodMappings;
 
-    private settings: any;
-    private stats: any;
+    private playerDataBinding: any;
 
     // Track binding values separately (as per Horizon docs - no .get() method)
     private settingsValue: any = {};
@@ -16463,8 +16534,7 @@ namespace BloomBeasts {
 
     constructor(props: SettingsScreenProps) {
       this.ui = props.ui;
-      this.settings = props.settings;
-      this.stats = props.stats;
+      this.playerDataBinding = props.playerDataBinding;
       this.onSettingChange = props.onSettingChange;
       this.onNavigate = props.onNavigate;
       this.onRenderNeeded = props.onRenderNeeded;
@@ -16508,7 +16578,7 @@ namespace BloomBeasts {
             },
           }),
           // Main content - settings panel
-          // Note: UI re-renders when settings binding changes via subscription
+          // Pass playerDataBinding directly to controls to avoid nesting
           this.ui.View({
             style: {
               position: 'absolute',
@@ -16519,13 +16589,13 @@ namespace BloomBeasts {
               padding: 40,
             },
             children: [
-              // Music settings (pass the binding directly)
-              this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume', this.settings),
-              this.createToggleControl('Music', 'musicEnabled', 'musicEnabled', this.settings),
+              // Music settings (pass playerDataBinding directly)
+              this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume'),
+              this.createToggleControl('Music', 'musicEnabled', 'musicEnabled'),
 
-              // SFX settings (pass the binding directly)
-              this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume', this.settings),
-              this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled', this.settings),
+              // SFX settings (pass playerDataBinding directly)
+              this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume'),
+              this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled'),
             ],
           }),
           // Sidebar with common side menu
@@ -16538,7 +16608,7 @@ namespace BloomBeasts {
               },
               disabled: false,
             },
-            stats: this.stats,
+            playerDataBinding: this.playerDataBinding,
           }),
         ],
       });
@@ -16550,8 +16620,7 @@ namespace BloomBeasts {
     private createVolumeControl(
       label: string,
       settingKey: 'musicVolume' | 'sfxVolume',
-      settingId: string,
-      settingsBinding: any
+      settingId: string
     ): UINodeType {
       return this.ui.View({
         style: {
@@ -16613,8 +16682,9 @@ namespace BloomBeasts {
                   // Volume display
                   this.ui.Text({
                     text: this.ui.Binding.derive(
-                      [settingsBinding],
-                      (settings: SoundSettings) => {
+                      [this.playerDataBinding],
+                      (pd: any) => {
+                        const settings = pd?.settings;
                         this.settingsValue = settings;
                         const volume = settings?.[settingKey];
                         return `${volume !== undefined && volume !== null && typeof volume === 'number' ? Math.round(volume) : 0}%`;
@@ -16670,8 +16740,7 @@ namespace BloomBeasts {
     private createToggleControl(
       label: string,
       settingKey: 'musicEnabled' | 'sfxEnabled',
-      settingId: string,
-      settingsBinding: any
+      settingId: string
     ): UINodeType {
       return this.ui.View({
         style: {
@@ -16714,8 +16783,11 @@ namespace BloomBeasts {
               // Button background image (standard or green based on state)
               this.ui.Image({
                 source: this.ui.Binding.derive(
-                  [settingsBinding],
-                  (settings: SoundSettings) => this.ui.assetIdToImageSource?.(settings[settingKey] ? 'green-button' : 'standard-button') ?? null
+                  [this.playerDataBinding],
+                  (pd: any) => {
+                    const settings = pd?.settings;
+                    return this.ui.assetIdToImageSource?.(settings?.[settingKey] ? 'green-button' : 'standard-button') ?? null;
+                  }
                 ),
                 style: {
                   position: 'absolute',
@@ -16734,8 +16806,11 @@ namespace BloomBeasts {
                 },
                 children: this.ui.Text({
                   text: this.ui.Binding.derive(
-                    [settingsBinding],
-                    (settings: SoundSettings) => settings[settingKey] ? 'ON' : 'OFF'
+                    [this.playerDataBinding],
+                    (pd: any) => {
+                      const settings = pd?.settings;
+                      return settings?.[settingKey] ? 'ON' : 'OFF';
+                    }
                   ),
                   style: {
                     fontSize: DIMENSIONS.fontSize.md,
@@ -17257,6 +17332,18 @@ namespace BloomBeasts {
     25500,  // Level 9: 25500 XP total
   ];
 
+  /**
+   * Calculate player level from total XP (derived data)
+   */
+  function getPlayerLevel(totalXP: number): number {
+    for (let level = 9; level >= 1; level--) {
+      if (totalXP >= XP_THRESHOLDS[level - 1]) {
+        return level;
+      }
+    }
+    return 1;
+  }
+
   // UINode type - represents a UI node returned by UI components
   export type UINode = any;
 
@@ -17396,17 +17483,18 @@ namespace BloomBeasts {
   /**
    * Player data structure - persisted to platform storage
    * This is the canonical save data format
+   *
+   * Note: Player level is derived from totalXP and not stored directly
    */
   export interface PlayerData {
     // Identity and progression
     name: string;
-    level: number;
-    totalXP: number;
+    totalXP: number; // Level is derived from this via getPlayerLevel()
 
-    // Card collection and deck
+    // Card collection and deck (SINGLE SOURCE OF TRUTH)
     cards: {
-      collected: any[]; // Raw card instances (CardInstance from CardCollection)
-      deck: string[]; // Card IDs in player's deck
+      collected: CardInstance[]; // All owned card instances
+      deck: string[]; // Card instance IDs in player's deck
     };
 
     // Mission tracking
@@ -17541,62 +17629,33 @@ namespace BloomBeasts {
     private missionManager: MissionManager;
     private missionUI: MissionSelectionUI;
     private battleUI: MissionBattleUI;
-    private cardCollection: CardCollection;
     private cardCollectionManager: CardCollectionManager;
 
-    // Sound settings and state
-    private soundSettings: SoundSettings = {
-      musicVolume: 80,
-      sfxVolume: 80,
-      musicEnabled: true,
-      sfxEnabled: true,
-    };
+    // Sound and display state
     private currentMusic: string | null = null;
     private battleDisplayManager: BattleDisplayManager;
 
-    // Player data state - single source of truth
-    private playerData: PlayerData = {
-      name: 'Player',
-      level: 1,
-      totalXP: 0,
-      items: [],
-      cards: {
-        collected: [],
-        deck: []
-      },
-      missions: {
-        completedMissions: {}
-      },
-      settings: {
-        musicVolume: 0.7,
-        sfxVolume: 0.7,
-        musicEnabled: true,
-        sfxEnabled: true
-      }
-    };
+    // Player data state - SINGLE SOURCE OF TRUTH (no duplicates!)
+    // Starts as null to indicate data hasn't loaded yet (prevents race conditions)
+    private playerData: PlayerData | null = null;
 
     // Game state
     private isInitializing: boolean = true;  // Prevent renders during initialization
-    private currentScreen: string = 'loading';  // Start with loading screen
-    private playerDeck: string[] = []; // Array of card IDs in player's deck
+    private currentScreen: string = 'loading';  // Current active screen
     private currentBattleId: string | null = null;
     private selectedBeastIndex: number | null = null;
-    private currentCardDetailId: string | null = null;
-    private currentCardPopup: { card: any; player: 'player' | 'opponent'; showCloseButton?: boolean } | null = null;
-    private showForfeitPopup: boolean = false;
 
     // UI State bindings
     private playerDataBinding: BindingInterface<PlayerData | null>;
     private currentScreenBinding: BindingInterface<string>;
-    private cardsBinding: BindingInterface<CardDisplay[]>;
-    private deckSizeBinding: BindingInterface<number>;
-    private deckCardIdsBinding: BindingInterface<string[]>;
     private missionsBinding: BindingInterface<MissionDisplay[]>;
-    private statsBinding: BindingInterface<MenuStats>;
-    private settingsBinding: BindingInterface<SoundSettings>;
+
+    // Battle-specific UI bindings (UI-only state)
     private battleStateBinding: BindingInterface<string>;
     private battleMessageBinding: BindingInterface<string>;
     private battleDisplayBinding: BindingInterface<BattleDisplay | null>;
+
+    // Popup bindings (UI-only state)
     private missionCompletePopupBinding: BindingInterface<any>;
     private forfeitPopupBinding: BindingInterface<any>;
     private cardDetailPopupBinding: BindingInterface<any>;
@@ -17652,45 +17711,30 @@ namespace BloomBeasts {
         }
       };
 
-      this.cardCollection = new CardCollection();
       this.cardCollectionManager = new CardCollectionManager();
       this.battleDisplayManager = new BattleDisplayManager();
 
       // Initialize bindings using platform's Binding class
       const BindingClass = this.UI.Binding as any;
-      this.playerDataBinding = new BindingClass(null);
+      this.playerDataBinding = new BindingClass(null);  // Start null - data loads in initialize()
       this.currentScreenBinding = new BindingClass('loading');  // Start with loading
-      this.cardsBinding = new BindingClass([]);
-      this.deckSizeBinding = new BindingClass(0);
-      this.deckCardIdsBinding = new BindingClass([]);
       this.missionsBinding = new BindingClass([]);
-      this.statsBinding = new BindingClass({
-        playerLevel: 1,
-        totalXP: 0,
-        tokens: 100,
-        diamonds: 10,
-        serums: 5
-      });
-      this.settingsBinding = new BindingClass({
-        musicEnabled: true,
-        musicVolume: 80,
-        sfxEnabled: true,
-        sfxVolume: 80
-      });
+
+      // Battle UI bindings
       this.battleStateBinding = new BindingClass('initializing');
       this.battleMessageBinding = new BindingClass('Preparing for battle...');
       this.battleDisplayBinding = new BindingClass(null);
+
+      // Popup bindings
       this.missionCompletePopupBinding = new BindingClass(null);
       this.forfeitPopupBinding = new BindingClass(null);
       this.cardDetailPopupBinding = new BindingClass(null);
 
-      // No need to subscribe to playerData - we manage state via updateBindingsFromGameState()
-
-      // Create screen instances (pass UI methods and async to each screen)
+      // Create screen instances (pass UI methods and playerData binding)
       this.menuScreen = new MenuScreen({
         ui: this.UI,
         async: this.asyncMethods,
-        stats: this.statsBinding,
+        playerDataBinding: this.playerDataBinding,
         onButtonClick: this.handleButtonClick.bind(this),
         onNavigate: this.navigate.bind(this),
         onRenderNeeded: this.triggerRender.bind(this)
@@ -17698,10 +17742,7 @@ namespace BloomBeasts {
 
       this.cardsScreen = new CardsScreen({
         ui: this.UI,
-        cards: this.cardsBinding,
-        deckSize: this.deckSizeBinding,
-        deckCardIds: this.deckCardIdsBinding,
-        stats: this.statsBinding,
+        playerDataBinding: this.playerDataBinding,
         onCardSelect: this.handleCardSelect.bind(this),
         onNavigate: this.navigate.bind(this),
         onRenderNeeded: this.triggerRender.bind(this)
@@ -17710,7 +17751,7 @@ namespace BloomBeasts {
       this.missionScreen = new MissionScreen({
         ui: this.UI,
         missions: this.missionsBinding,
-        stats: this.statsBinding,
+        playerDataBinding: this.playerDataBinding,
         onMissionSelect: this.handleMissionSelect.bind(this),
         onNavigate: this.navigate.bind(this),
         onRenderNeeded: this.triggerRender.bind(this)
@@ -17728,8 +17769,7 @@ namespace BloomBeasts {
 
       this.settingsScreen = new SettingsScreen({
         ui: this.UI,
-        settings: this.settingsBinding,
-        stats: this.statsBinding,
+        playerDataBinding: this.playerDataBinding,
         onSettingChange: this.handleSettingsChange.bind(this),
         onNavigate: this.navigate.bind(this),
         onRenderNeeded: this.triggerRender.bind(this)
@@ -17765,18 +17805,8 @@ namespace BloomBeasts {
     async initialize(): Promise<void> {
       console.log('[BloomBeastsGame] Initializing...');
 
-      // Load saved game data
+      // Load saved game data (initializes starting cards if needed)
       await this.loadGameData();
-
-      // Initialize starting cards if first time
-      const collectionSize = this.cardCollection.getAllCards().length;
-      console.log(`[BloomBeastsGame] After loadGameData, collection has ${collectionSize} cards`);
-
-      if (collectionSize === 0) {
-        console.log('[BloomBeastsGame] Collection empty, initializing starting cards...');
-        await this.initializeStartingCollection();
-        console.log(`[BloomBeastsGame] After initialization, collection has ${this.cardCollection.getAllCards().length} cards`);
-      }
 
       // Update bindings from loaded data
       console.log('[BloomBeastsGame] About to call updateBindingsFromGameState...');
@@ -17796,72 +17826,80 @@ namespace BloomBeasts {
     }
 
     /**
+     * Get current player level (derived from totalXP)
+     */
+    private get playerLevel(): number {
+      return getPlayerLevel(this.playerData?.totalXP ?? 0);
+    }
+
+    /**
+     * Create default player data structure
+     */
+    private createDefaultPlayerData(): PlayerData {
+      return {
+        name: 'Player',
+        totalXP: 0,
+        items: [],
+        cards: {
+          collected: [],
+          deck: []
+        },
+        missions: {
+          completedMissions: {}
+        },
+        settings: {
+          musicVolume: 80,
+          sfxVolume: 80,
+          musicEnabled: true,
+          sfxEnabled: true
+        }
+      };
+    }
+
+    /**
      * Load game data from platform storage
-     * Always creates default data if none exists
+     * Creates default data if none exists
      */
     private async loadGameData(): Promise<void> {
       try {
         const savedData = this.platform.getPlayerData?.();
 
         if (savedData && Object.keys(savedData).length > 0) {
-          // Load all player data at once
-          this.playerData = {
-            name: savedData.name || 'Player',
-            level: savedData.level || 1,
-            totalXP: savedData.totalXP || 0,
-            items: savedData.items || [],
-            cards: {
-              collected: savedData.cards?.collected || [],
-              deck: savedData.cards?.deck || []
-            },
-            missions: {
-              completedMissions: savedData.missions?.completedMissions || {}
-            },
-            settings: savedData.settings || {
-              musicVolume: 80,
-              sfxVolume: 80,
-              musicEnabled: true,
-              sfxEnabled: true
-            }
-          };
-
-          // Load cards into collection
-          if (this.playerData.cards.collected && Array.isArray(this.playerData.cards.collected)) {
-            console.log(`[BloomBeastsGame] Loading ${this.playerData.cards.collected.length} cards from saved data`);
-            this.playerData.cards.collected.forEach((cardInstance: CardInstance) => {
-              this.cardCollection.addCard(cardInstance);
-            });
-            console.log(`[BloomBeastsGame] Card collection now has ${this.cardCollection.getAllCards().length} cards`);
-          }
-
-          // Load sound settings
-          if (this.playerData.settings) {
-            this.soundSettings = { ...this.playerData.settings };
-
-            // Apply settings to platform
-            this.platform.setMusicVolume?.(this.soundSettings.musicVolume / 100);
-            this.platform.setSfxVolume?.(this.soundSettings.sfxVolume / 100);
-            this.platform.setMusicEnabled?.(this.soundSettings.musicEnabled);
-            this.platform.setSfxEnabled?.(this.soundSettings.sfxEnabled);
-          }
-
-          // Update player level based on XP
-          this.updatePlayerLevel();
-
-          // Load completed missions into MissionManager
-          this.missionManager.loadCompletedMissions(this.playerData.missions.completedMissions);
-
-          Logger.info('[BloomBeastsGame] Player data loaded successfully');
+          // Use saved data directly
+          this.playerData = savedData;
+          Logger.info(`[BloomBeastsGame] Loaded player data with ${savedData.cards.collected.length} cards`);
         } else {
-          Logger.info('[BloomBeastsGame] No saved data found, using defaults');
+          // Create default player data
+          this.playerData = this.createDefaultPlayerData();
+          Logger.info('[BloomBeastsGame] Created default player data');
         }
       } catch (error) {
         Logger.error('[BloomBeastsGame] Error loading player data:', error);
-        Logger.info('[BloomBeastsGame] Starting with defaults');
+        // Create default player data on error
+        this.playerData = this.createDefaultPlayerData();
+        Logger.info('[BloomBeastsGame] Using default player data');
       }
 
-      // Always save after loading to ensure data persists
-      // This creates the initial save if none existed
+      Logger.info(`[BloomBeastsGame] Restored deck with ${this.playerData.cards.deck.length} cards`);
+
+      // Apply sound settings to platform
+      if (this.playerData.settings) {
+        this.platform.setMusicVolume?.(this.playerData.settings!.musicVolume / 100);
+        this.platform.setSfxVolume?.(this.playerData.settings!.sfxVolume / 100);
+        this.platform.setMusicEnabled?.(this.playerData.settings!.musicEnabled);
+        this.platform.setSfxEnabled?.(this.playerData.settings!.sfxEnabled);
+      }
+
+      // Load completed missions into MissionManager
+      this.missionManager.loadCompletedMissions(this.playerData.missions.completedMissions);
+
+      // Initialize starting cards if collection is empty
+      if (this.playerData.cards.collected.length === 0) {
+        Logger.info('[BloomBeastsGame] Initializing starting card collection');
+        await this.initializeStartingCollection();
+      }
+
+      // Save to ensure data persists
       await this.saveGameData();
     }
 
@@ -17869,13 +17907,37 @@ namespace BloomBeasts {
      * Save game data to platform storage
      */
     private async saveGameData(): Promise<void> {
-      // Update playerData with latest values from subsystems
-      this.playerData.cards.collected = this.cardCollection.getAllCards();
-      this.playerData.cards.deck = this.playerDeck;
-      this.playerData.settings = { ...this.soundSettings };
-
+      if (!this.playerData) {
+        Logger.warn('[BloomBeastsGame] Cannot save null player data');
+        return;
+      }
       this.platform.setPlayerData?.(this.playerData);
       Logger.debug('[BloomBeastsGame] Player data saved');
+    }
+
+    /**
+     * Update player data (single update method)
+     * This is the ONLY way to update playerData - ensures binding stays in sync
+     */
+    private async updatePlayerData(updates: Partial<PlayerData> | ((current: PlayerData) => PlayerData)): Promise<void> {
+      // Data must be loaded before updates
+      if (!this.playerData) {
+        Logger.error('[BloomBeastsGame] Cannot update player data before it is loaded');
+        return;
+      }
+
+      // Support both object updates and function updates
+      if (typeof updates === 'function') {
+        this.playerData = updates(this.playerData);
+      } else {
+        this.playerData = { ...this.playerData, ...updates };
+      }
+
+      // Update binding
+      this.playerDataBinding.set(this.playerData);
+
+      // Auto-save
+      await this.saveGameData();
     }
 
     /**
@@ -17889,8 +17951,8 @@ namespace BloomBeasts {
 
       this.currentMusic = musicId;
 
-      if (this.soundSettings.musicEnabled) {
-        const volume = this.soundSettings.musicVolume / 100;
+      if (this.playerData?.settings?.musicEnabled) {
+        const volume = this.playerData.settings.musicVolume / 100;
         this.platform.playSound?.(musicId, loop, volume);
       }
     }
@@ -17907,8 +17969,8 @@ namespace BloomBeasts {
      * Play sound effect
      */
     private playSfx(sfxId: string): void {
-      if (this.soundSettings.sfxEnabled) {
-        const volume = this.soundSettings.sfxVolume / 100;
+      if (this.playerData?.settings?.sfxEnabled) {
+        const volume = this.playerData.settings.sfxVolume / 100;
         this.platform.playSound?.(sfxId, false, volume);
       }
     }
@@ -17917,9 +17979,10 @@ namespace BloomBeasts {
      * Set music volume (0-100)
      */
     private setMusicVolume(volume: number): void {
-      this.soundSettings.musicVolume = Math.max(0, Math.min(100, volume));
-      if (this.soundSettings.musicEnabled) {
-        this.platform.setMusicVolume?.(this.soundSettings.musicVolume / 100);
+      if (!this.playerData?.settings) return;
+      this.playerData.settings.musicVolume = Math.max(0, Math.min(100, volume));
+      if (this.playerData.settings.musicEnabled) {
+        this.platform.setMusicVolume?.(this.playerData.settings.musicVolume / 100);
       }
     }
 
@@ -17927,9 +17990,10 @@ namespace BloomBeasts {
      * Set SFX volume (0-100)
      */
     private setSfxVolume(volume: number): void {
-      this.soundSettings.sfxVolume = Math.max(0, Math.min(100, volume));
-      if (this.soundSettings.sfxEnabled) {
-        this.platform.setSfxVolume?.(this.soundSettings.sfxVolume / 100);
+      if (!this.playerData?.settings) return;
+      this.playerData.settings.sfxVolume = Math.max(0, Math.min(100, volume));
+      if (this.playerData.settings.sfxEnabled) {
+        this.platform.setSfxVolume?.(this.playerData.settings.sfxVolume / 100);
       }
     }
 
@@ -17937,17 +18001,26 @@ namespace BloomBeasts {
      * Toggle music on/off
      */
     private toggleMusic(enabled: boolean): void {
-      this.soundSettings.musicEnabled = enabled;
+      console.log('[BloomBeastsGame] toggleMusic called:', { enabled, currentMusic: this.currentMusic });
+      if (!this.playerData?.settings) return;
+      this.playerData.settings.musicEnabled = enabled;
 
       // Notify platform
       this.platform.setMusicEnabled?.(enabled);
 
       if (enabled && this.currentMusic) {
-        // Resume music
-        this.playMusic(this.currentMusic, true);
+        // Resume music - force replay even if it's the same track
+        const musicToResume = this.currentMusic;
+        const volume = this.playerData.settings.musicVolume / 100;
+        console.log('[BloomBeastsGame] Resuming music:', { musicToResume, volume, platformHasPlaySound: !!this.platform.playSound });
+        this.platform.playSound?.(musicToResume, true, volume);
       } else if (!enabled) {
-        // Stop music
-        this.stopMusic();
+        // Stop music playback but keep track of current music for resume
+        // Don't call stopMusic() as it clears this.currentMusic
+        console.log('[BloomBeastsGame] Stopping music, keeping currentMusic:', this.currentMusic);
+        this.platform.stopSound?.();
+      } else {
+        console.log('[BloomBeastsGame] Music enabled but no currentMusic set');
       }
     }
 
@@ -17955,38 +18028,27 @@ namespace BloomBeasts {
      * Toggle SFX on/off
      */
     private toggleSfx(enabled: boolean): void {
-      this.soundSettings.sfxEnabled = enabled;
+      if (!this.playerData?.settings) return;
+      this.playerData.settings.sfxEnabled = enabled;
 
       // Notify platform
       this.platform.setSfxEnabled?.(enabled);
     }
 
     /**
-     * Update player level based on XP
-     * Player leveling uses steep exponential scaling
-     */
-    private updatePlayerLevel(): void {
-      for (let level = 9; level >= 1; level--) {
-        if (this.playerData.totalXP >= XP_THRESHOLDS[level - 1]) {
-          this.playerData.level = level;
-          break;
-        }
-      }
-    }
-
-    /**
-     * Add XP to player and update level
+     * Add XP to player (level is automatically derived)
      */
     private addXP(amount: number): void {
+      if (!this.playerData) return;
       this.playerData.totalXP += amount;
-      this.updatePlayerLevel();
-      Logger.debug(`[BloomBeastsGame] Added ${amount} XP (total: ${this.playerData.totalXP}, level: ${this.playerData.level})`);
+      Logger.debug(`[BloomBeastsGame] Added ${amount} XP (total: ${this.playerData.totalXP}, level: ${this.playerLevel})`);
     }
 
     /**
      * Get the quantity of a specific item from player's items array
      */
     private getItemQuantity(itemId: string): number {
+      if (!this.playerData) return 0;
       const item = this.playerData.items.find(i => i.itemId === itemId);
       return item ? item.quantity : 0;
     }
@@ -17995,6 +18057,7 @@ namespace BloomBeasts {
      * Track mission completion
      */
     private trackMissionCompletion(missionId: string): void {
+      if (!this.playerData) return;
       const currentCount = this.playerData.missions.completedMissions[missionId] || 0;
       this.playerData.missions.completedMissions[missionId] = currentCount + 1;
       Logger.debug(`[BloomBeastsGame] Mission ${missionId} completed ${currentCount + 1} times`);
@@ -18004,6 +18067,7 @@ namespace BloomBeasts {
      * Add items to player's inventory
      */
     private addItems(itemId: string, quantity: number): void {
+      if (!this.playerData) return;
       const existingItem = this.playerData.items.find(i => i.itemId === itemId);
 
       if (existingItem) {
@@ -18021,9 +18085,10 @@ namespace BloomBeasts {
      * Initialize a new game with starter cards
      */
     private async initializeStartingCollection(): Promise<void> {
-      this.playerDeck = await this.cardCollectionManager.initializeStartingCollection(
-        this.cardCollection,
-        this.playerDeck
+      if (!this.playerData) return;
+      this.playerData.cards.deck = await this.cardCollectionManager.initializeStartingCollection(
+        this.playerData.cards.collected,
+        this.playerData.cards.deck
       );
       await this.saveGameData();
     }
@@ -18033,14 +18098,11 @@ namespace BloomBeasts {
      * This syncs the UI bindings with the actual game state
      */
     private async updateBindingsFromGameState(): Promise<void> {
-      // Get all cards and convert to display format
-      const cards = this.cardCollection.getAllCards();
-      console.log(`[BloomBeastsGame] updateBindingsFromGameState - collection has ${cards.length} cards`);
-      const displayCards = cards.map(card => this.cardInstanceToDisplay(card));
-      console.log(`[BloomBeastsGame] updateBindingsFromGameState - created ${displayCards.length} display cards`);
+      // Update player data binding (screens derive what they need from this)
+      this.playerDataBinding.set(this.playerData);
 
-      // Get available missions
-      this.missionUI.setPlayerLevel(this.playerData.level);
+      // Update missions binding (still separate as it includes availability logic)
+      this.missionUI.setPlayerLevel(this.playerLevel);
       const missionList = this.missionUI.getMissionList();
       const displayMissions: MissionDisplay[] = missionList.map(m => ({
         id: m.mission.id,
@@ -18053,24 +18115,7 @@ namespace BloomBeasts {
         affinity: m.mission.affinity,
         beastId: m.mission.beastId,
       }));
-
-      // Get stats
-      const stats: MenuStats = {
-        playerLevel: this.playerData.level,
-        totalXP: this.playerData.totalXP,
-        tokens: this.getItemQuantity('token'),
-        diamonds: this.getItemQuantity('diamond'),
-        serums: this.getItemQuantity('serum'),
-      };
-
-      // Update all bindings
-      this.cardsBinding.set(displayCards);
-      console.log(`[BloomBeastsGame] updateBindingsFromGameState - set cardsBinding with ${displayCards.length} cards`);
-      this.deckCardIdsBinding.set(this.playerDeck);
-      this.deckSizeBinding.set(this.playerDeck.length);
       this.missionsBinding.set(displayMissions);
-      this.statsBinding.set(stats);
-      this.settingsBinding.set({ ...this.soundSettings });
     }
 
     /**
@@ -18200,18 +18245,19 @@ namespace BloomBeasts {
      */
     private async handleCardSelect(cardId: string): Promise<void> {
       // console.log('[BloomBeastsGame] Card selected:', cardId);
+      if (!this.playerData) return;
 
       // Play menu button sound
       this.playSfx('sfx-menu-button-select');
 
-      const cardEntry = this.cardCollection.getCard(cardId);
+      const cardEntry = this.playerData.cards.collected.find(c => c.id === cardId);
 
       if (!cardEntry) {
         return;
       }
 
       // Check if card is in deck
-      const isInDeck = this.playerDeck.includes(cardId);
+      const isInDeck = this.playerData.cards.deck.includes(cardId);
 
       // Toggle card in/out of deck
       if (isInDeck) {
@@ -18225,13 +18271,14 @@ namespace BloomBeasts {
      * Add card to player's deck
      */
     private async addCardToDeck(cardId: string): Promise<void> {
-      if (this.playerDeck.length >= DECK_SIZE) {
+      if (!this.playerData) return;
+      if (this.playerData.cards.deck.length >= DECK_SIZE) {
         Logger.warn(`Deck is full (${DECK_SIZE} cards)`);
         return;
       }
 
-      if (!this.playerDeck.includes(cardId)) {
-        this.playerDeck.push(cardId);
+      if (!this.playerData.cards.deck.includes(cardId)) {
+        this.playerData.cards.deck.push(cardId);
         await this.saveGameData();
         await this.updateBindingsFromGameState();
       }
@@ -18241,9 +18288,10 @@ namespace BloomBeasts {
      * Remove card from player's deck
      */
     private async removeCardFromDeck(cardId: string): Promise<void> {
-      const index = this.playerDeck.indexOf(cardId);
+      if (!this.playerData) return;
+      const index = this.playerData.cards.deck.indexOf(cardId);
       if (index > -1) {
-        this.playerDeck.splice(index, 1);
+        this.playerData.cards.deck.splice(index, 1);
         await this.saveGameData();
         await this.updateBindingsFromGameState();
       }
@@ -18254,6 +18302,7 @@ namespace BloomBeasts {
      */
     private async handleMissionSelect(missionId: string): Promise<void> {
       Logger.info(`Mission selected: ${missionId}`);
+      if (!this.playerData) return;
 
       // Reset battle state
       this.selectedBeastIndex = null;
@@ -18262,7 +18311,7 @@ namespace BloomBeasts {
       this.playSfx('sfx-menu-button-select');
 
       // Check if player has cards in deck
-      if (this.playerDeck.length === 0) {
+      if (this.playerData.cards.deck.length === 0) {
         Logger.warn('No cards in deck');
         // TODO: Show dialog or message to user
         return;
@@ -18270,8 +18319,8 @@ namespace BloomBeasts {
 
       // Get player's deck cards
       const playerDeckCards = this.cardCollectionManager.getPlayerDeckCards(
-        this.playerDeck,
-        this.cardCollection
+        this.playerData.cards.deck,
+        this.playerData.cards.collected
       );
 
       if (playerDeckCards.length === 0) {
@@ -18334,7 +18383,8 @@ namespace BloomBeasts {
      */
     private handleSettingsChange(settingId: string, value: any): void {
       console.log('[BloomBeastsGame] Settings changed:', settingId, value);
-      console.log('[BloomBeastsGame] Current soundSettings before change:', this.soundSettings);
+      if (!this.playerData) return;
+      console.log('[BloomBeastsGame] Current soundSettings before change:', this.playerData.settings);
 
       // Play button sound for toggles (not sliders)
       if (settingId === 'musicEnabled' || settingId === 'sfxEnabled') {
@@ -18361,14 +18411,14 @@ namespace BloomBeasts {
           break;
       }
 
-      console.log('[BloomBeastsGame] Current soundSettings after change:', this.soundSettings);
+      console.log('[BloomBeastsGame] Current soundSettings after change:', this.playerData.settings);
 
-      // Save settings
+      // Save settings and update binding
+      this.playerDataBinding.set(this.playerData);
       this.saveGameData();
 
-      // Update binding
-      this.settingsBinding.set({ ...this.soundSettings });
-      console.log('[BloomBeastsGame] Binding updated with:', { ...this.soundSettings });
+      // Trigger re-render to update UI
+      this.triggerRender();
     }
 
     /**
@@ -18497,6 +18547,10 @@ namespace BloomBeasts {
      */
     private async handleBattleComplete(battleState: any): Promise<void> {
       // console.log('[BloomBeastsGame] Handling battle completion...');
+      if (!this.playerData) return;
+
+      // Capture playerData in local const for TypeScript null safety in callbacks
+      const playerData = this.playerData;
 
       // Stop all timers immediately
       if (this.battleScreen) {
@@ -18524,13 +18578,13 @@ namespace BloomBeasts {
         const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
         this.cardCollectionManager.awardDeckExperience(
           cardXP,
-          this.playerDeck,
-          this.cardCollection
+          playerData.cards.deck,
+          playerData.cards.collected
         );
 
         // Add cards to collection
         battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
-          this.cardCollectionManager.addCardReward(card, this.cardCollection, index);
+          this.cardCollectionManager.addCardReward(card, playerData.cards.collected, index);
         });
 
         // Add items to inventory

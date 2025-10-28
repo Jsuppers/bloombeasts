@@ -18,13 +18,11 @@ export interface CardDetailPopupProps {
 
 export interface ReactiveCardDetailPopupProps {
   cardIdBinding: any; // Binding<string | null>
-  cardsBinding: any; // Binding<CardDisplay[]>
-  deckCardIdsBinding: any; // Binding<string[]>
+  playerDataBinding: any; // PlayerData binding
   onClose: () => void;
   sideContent?: (ui: UIMethodMappings, deps: {
     cardIdBinding: any;
-    cardsBinding: any;
-    deckCardIdsBinding: any;
+    playerDataBinding: any;
   }) => UINodeType[];
 }
 
@@ -33,7 +31,7 @@ export interface ReactiveCardDetailPopupProps {
  * Uses createReactiveCardComponent in ID mode to display the card
  */
 export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: ReactiveCardDetailPopupProps): UINodeType {
-  const { cardIdBinding, cardsBinding, deckCardIdsBinding, onClose, sideContent } = props;
+  const { cardIdBinding, playerDataBinding, onClose, sideContent } = props;
 
   const cardWidth = 210;
   const cardHeight = 280;
@@ -75,9 +73,8 @@ export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: React
         children: [
           // Card display using reactive card component in ID mode
           createReactiveCardComponent(ui, {
-            cardsBinding: cardsBinding, // Pass original binding
-            cardIdBinding: cardIdBinding, // Use ID mode to find card
-            deckCardIdsBinding: deckCardIdsBinding,
+            playerDataBinding: playerDataBinding,
+            cardIdBinding: cardIdBinding,
             onClick: undefined, // No click handler in popup
             showDeckIndicator: true, // Show deck indicator
           }),
@@ -88,7 +85,7 @@ export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: React
               marginLeft: DIMENSIONS.spacing.xl,
               flexDirection: 'column',
             },
-            children: sideContent ? sideContent(ui, { cardIdBinding, cardsBinding, deckCardIdsBinding }) : [],
+            children: sideContent ? sideContent(ui, { cardIdBinding, playerDataBinding }) : [],
           }),
         ],
       }),

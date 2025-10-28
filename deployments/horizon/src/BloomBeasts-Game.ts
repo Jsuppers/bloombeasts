@@ -286,11 +286,20 @@ class BloomBeastsUI extends UIComponent {
         // Get asset catalog manager for looking up Horizon asset IDs
         const catalogManager = AssetCatalogManager.getInstance();
 
+        // Cache for ImageSource objects (prevents duplicate creation)
+        const imageSourceCache = new Map<string, any>();
+
         /**
          * Convert semantic asset ID to Horizon ImageSource
          * Returns null if asset not found (used for direct/non-binding image sources)
+         * Cached to avoid recreating the same ImageSource repeatedly
          */
         const assetIdToImageSource = (assetId: string): any => {
+          // Check cache first
+          if (imageSourceCache.has(assetId)) {
+            return imageSourceCache.get(assetId);
+          }
+
           const horizonId = catalogManager.getHorizonAssetId(assetId, 'image');
           if (!horizonId) {
             // Asset not found in catalog
@@ -300,6 +309,8 @@ class BloomBeastsUI extends UIComponent {
           try {
             const imageSource = ImageSource.fromTextureAsset(new hz.Asset(BigInt(horizonId)));
             console.log(`[assetIdToImageSource] Created ImageSource for ${assetId} -> ${horizonId}`);
+            // Cache the result
+            imageSourceCache.set(assetId, imageSource);
             return imageSource;
           } catch (error) {
             console.error(`[assetIdToImageSource] Failed to create ImageSource for ${assetId}:`, error);

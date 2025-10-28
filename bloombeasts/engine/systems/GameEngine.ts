@@ -29,19 +29,36 @@ export interface MatchOptions {
 }
 
 export class GameEngine {
-  private gameState: GameState;
+  private gameState: GameState | null = null;
   private combatSystem: CombatSystem;
   private abilityProcessor: AbilityProcessor;
   private levelingSystem: LevelingSystem;
   private cardDatabase: Map<string, AnyCard> | null = null;
 
   constructor() {
-    this.gameState = this.createInitialState();
+    // Don't create game state yet - it will be created when startMatch() is called
+    // This allows GameEngine to be constructed before asset catalogs are loaded
     this.combatSystem = new CombatSystem();
     this.abilityProcessor = new AbilityProcessor();
     this.levelingSystem = new LevelingSystem();
-    // Don't build card database yet - it will be built lazily when needed
-    // This allows GameEngine to be constructed before asset catalogs are loaded
+  }
+
+  /**
+   * Ensure game state exists - throws error if called before startMatch()
+   */
+  private ensureGameState(): GameState {
+    if (!this.gameState) {
+      throw new Error('GameEngine: Game state not initialized. Call startMatch() first.');
+    }
+    return this.gameState;
+  }
+
+  /**
+   * Get game state (with non-null assertion for internal use)
+   * Only use this after you're certain startMatch() has been called
+   */
+  private get state(): GameState {
+    return this.gameState!;
   }
 
   /**
@@ -91,11 +108,13 @@ export class GameEngine {
    * Create a new player
    */
   private createPlayer(name: string): Player {
+    // Create player with empty deck - real deck is set when startMatch() is called
+    // This allows GameEngine to be constructed before asset catalogs are loaded
     return {
       name,
       health: STARTING_HEALTH,
       currentNectar: 0,
-      deck: [],
+      deck: [],  // Empty deck initially - populated by startMatch()
       hand: [],
       field: Array(FIELD_SIZE).fill(null),
       trapZone: Array(FIELD_SIZE).fill(null),
@@ -116,29 +135,34 @@ export class GameEngine {
   ): Promise<void> {
     Logger.debug('Starting new match...');
 
+    // Create initial game state now that catalogs are loaded
+    if (!this.gameState) {
+      this.gameState = this.createInitialState();
+    }
+
     // Set player names
     if (options.player1Name) {
-      this.gameState.players[0].name = options.player1Name;
+      this.state.players[0].name = options.player1Name;
     }
     if (options.player2Name) {
-      this.gameState.players[1].name = options.player2Name;
+      this.state.players[1].name = options.player2Name;
     }
 
     // Load decks
-    this.gameState.players[0].deck = [...player1Deck.cards];
-    this.gameState.players[1].deck = [...player2Deck.cards];
+    this.state.players[0].deck = [...player1Deck.cards];
+    this.state.players[1].deck = [...player2Deck.cards];
 
     // Shuffle decks
-    this.shuffleDeck(this.gameState.players[0]);
-    this.shuffleDeck(this.gameState.players[1]);
+    this.shuffleDeck(this.state.players[0]);
+    this.shuffleDeck(this.state.players[1]);
 
     // Draw initial hands
-    this.drawCards(this.gameState.players[0], 5);
-    this.drawCards(this.gameState.players[1], 5);
+    this.drawCards(this.state.players[0], 5);
+    this.drawCards(this.state.players[1], 5);
 
     // Transition to first player's turn
-    this.gameState.phase = 'Main';
-    this.gameState.battleState = BattleState.Player1StartOfTurn;
+    this.state.phase = 'Main';
+    this.state.battleState = BattleState.Player1StartOfTurn;
     await this.transitionState();
   }
 
@@ -148,17 +172,17 @@ export class GameEngine {
   private async transitionState(): Promise<void> {
     // Check for win condition before any state processing
     if (this.checkForBattleEnd()) {
-      this.gameState.battleState = BattleState.Finished;
+      this.state.battleState = BattleState.Finished;
       return;
     }
 
-    const currentState = this.gameState.battleState;
+    const currentState = this.state.battleState;
     Logger.debug(`Transitioning from state: ${currentState}`);
 
     switch (currentState) {
       case BattleState.Player1StartOfTurn:
         await this.processPlayerStartOfTurn(0);
-        this.gameState.battleState = BattleState.Player1Playing;
+        this.state.battleState = BattleState.Player1Playing;
         break;
 
       case BattleState.Player1Playing:
@@ -167,13 +191,13 @@ export class GameEngine {
 
       case BattleState.Player1EndOfTurn:
         await this.processPlayerEndOfTurn(0);
-        this.gameState.battleState = BattleState.Player2StartOfTurn;
+        this.state.battleState = BattleState.Player2StartOfTurn;
         await this.transitionState();
         break;
 
       case BattleState.Player2StartOfTurn:
         await this.processPlayerStartOfTurn(1);
-        this.gameState.battleState = BattleState.Player2Playing;
+        this.state.battleState = BattleState.Player2Playing;
         break;
 
       case BattleState.Player2Playing:
@@ -183,14 +207,14 @@ export class GameEngine {
       case BattleState.Player2EndOfTurn:
         await this.processPlayerEndOfTurn(1);
         // Increment turn counter after both players have played
-        this.gameState.turn++;
-        this.gameState.battleState = BattleState.Player1StartOfTurn;
+        this.state.turn++;
+        this.state.battleState = BattleState.Player1StartOfTurn;
         await this.transitionState();
         break;
 
       case BattleState.Finished:
         // Battle has ended
-        const result = this.combatSystem.checkWinCondition(this.gameState);
+        const result = this.combatSystem.checkWinCondition(this.state);
         this.endMatch(result);
         break;
     }
@@ -200,22 +224,22 @@ export class GameEngine {
    * Process player start of turn
    */
   private async processPlayerStartOfTurn(playerIndex: 0 | 1): Promise<void> {
-    this.gameState.activePlayer = playerIndex;
-    const activePlayer = this.gameState.players[playerIndex];
-    const opposingPlayer = this.gameState.players[playerIndex === 0 ? 1 : 0];
+    this.state.activePlayer = playerIndex;
+    const activePlayer = this.state.players[playerIndex];
+    const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
 
-    Logger.debug(`Turn ${this.gameState.turn}: ${activePlayer.name}'s turn begins`);
+    Logger.debug(`Turn ${this.state.turn}: ${activePlayer.name}'s turn begins`);
 
     // Reset turn counters
     activePlayer.summonsThisTurn = 0;
 
     // Draw card (except first turn for player 1)
-    if (!(this.gameState.turn === 1 && playerIndex === 0)) {
+    if (!(this.state.turn === 1 && playerIndex === 0)) {
       this.drawCards(activePlayer, 1);
     }
 
     // Gain nectar
-    activePlayer.currentNectar = Math.min(MAX_NECTAR, this.gameState.turn);
+    activePlayer.currentNectar = Math.min(MAX_NECTAR, this.state.turn);
 
     // Remove summoning sickness from all beasts
     for (const beast of activePlayer.field) {
@@ -229,7 +253,7 @@ export class GameEngine {
 
     // Check for death after counter effects
     if (this.checkForBattleEnd()) {
-      this.gameState.battleState = BattleState.Finished;
+      this.state.battleState = BattleState.Finished;
       return;
     }
 
@@ -237,15 +261,15 @@ export class GameEngine {
     await this.triggerStateBasedAbilities(playerIndex, 'start');
 
     // Set phase to main
-    this.gameState.phase = 'Main';
+    this.state.phase = 'Main';
   }
 
   /**
    * Process player end of turn
    */
   private async processPlayerEndOfTurn(playerIndex: 0 | 1): Promise<void> {
-    const activePlayer = this.gameState.players[playerIndex];
-    const opposingPlayer = this.gameState.players[playerIndex === 0 ? 1 : 0];
+    const activePlayer = this.state.players[playerIndex];
+    const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
 
     // Trigger end of turn abilities based on state
     await this.triggerStateBasedAbilities(playerIndex, 'end');
@@ -259,7 +283,7 @@ export class GameEngine {
 
     // Check for death after end of turn effects
     if (this.checkForBattleEnd()) {
-      this.gameState.battleState = BattleState.Finished;
+      this.state.battleState = BattleState.Finished;
       return;
     }
   }
@@ -268,8 +292,8 @@ export class GameEngine {
    * Check if battle should end (player health <= 0)
    */
   private checkForBattleEnd(): boolean {
-    const player1 = this.gameState.players[0];
-    const player2 = this.gameState.players[1];
+    const player1 = this.state.players[0];
+    const player2 = this.state.players[1];
 
     return player1.health <= 0 || player2.health <= 0;
   }
@@ -278,13 +302,15 @@ export class GameEngine {
    * End current turn
    */
   public async endTurn(): Promise<void> {
+    const state = this.ensureGameState();
+
     // Determine which end of turn state to transition to
-    if (this.gameState.battleState === BattleState.Player1Playing) {
-      this.gameState.battleState = BattleState.Player1EndOfTurn;
-    } else if (this.gameState.battleState === BattleState.Player2Playing) {
-      this.gameState.battleState = BattleState.Player2EndOfTurn;
+    if (state.battleState === BattleState.Player1Playing) {
+      state.battleState = BattleState.Player1EndOfTurn;
+    } else if (state.battleState === BattleState.Player2Playing) {
+      state.battleState = BattleState.Player2EndOfTurn;
     } else {
-      Logger.error(`Unexpected state during endTurn: ${this.gameState.battleState}`);
+      Logger.error(`Unexpected state during endTurn: ${state.battleState}`);
       return;
     }
 
@@ -399,10 +425,10 @@ export class GameEngine {
         // Only apply habitat if not countered
         if (!trapData.countered) {
           // Replace current habitat
-          if (this.gameState.habitatZone) {
-            player.graveyard.push(this.gameState.habitatZone);
+          if (this.state.habitatZone) {
+            player.graveyard.push(this.state.habitatZone);
           }
-          this.gameState.habitatZone = card;
+          this.state.habitatZone = card;
           Logger.debug(`Played habitat: ${card.name}`);
           // Apply habitat effects
           this.applyHabitatEffects();
@@ -455,7 +481,7 @@ export class GameEngine {
    * Process magic card effects using structured effects
    */
   private processMagicCard(card: MagicCard, player: Player, target?: any): void {
-    const opponent = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+    const opponent = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
     // Process each ability in the magic card (usually just one with OnSummon trigger)
     for (const ability of card.abilities) {
@@ -517,11 +543,11 @@ export class GameEngine {
    * Apply habitat zone effects
    */
   private applyHabitatEffects(): void {
-    if (!this.gameState.habitatZone) return;
+    if (!this.state.habitatZone) return;
 
-    const habitat = this.gameState.habitatZone as HabitatCard;
-    const activePlayer = this.gameState.players[this.gameState.activePlayer];
-    const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+    const habitat = this.state.habitatZone as HabitatCard;
+    const activePlayer = this.state.players[this.state.activePlayer];
+    const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
     // Process each ability in the habitat card
     for (const ability of habitat.abilities) {
@@ -585,7 +611,7 @@ export class GameEngine {
    * Apply buff card effects when played
    */
   private applyBuffCardEffects(buffCard: any, player: Player): void {
-    const opponent = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+    const opponent = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
     // Process each ability in the buff card
     for (const ability of buffCard.abilities) {
@@ -735,8 +761,8 @@ export class GameEngine {
    * Trigger state-based abilities
    */
   private async triggerStateBasedAbilities(playerIndex: 0 | 1, phase: 'start' | 'end'): Promise<void> {
-    const activePlayer = this.gameState.players[playerIndex];
-    const opposingPlayer = this.gameState.players[playerIndex === 0 ? 1 : 0];
+    const activePlayer = this.state.players[playerIndex];
+    const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
 
     // Determine which triggers to use based on player and phase
     const stateTriggers = [];
@@ -840,7 +866,7 @@ export class GameEngine {
         source: beast,
         sourceCard: beastCard,
         trigger,
-        gameState: this.gameState,
+        gameState: this.state,
         controllingPlayer,
         opposingPlayer,
       });
@@ -850,7 +876,7 @@ export class GameEngine {
 
       // Check for battle end after ability effects
       if (this.checkForBattleEnd()) {
-        this.gameState.battleState = BattleState.Finished;
+        this.state.battleState = BattleState.Finished;
       }
     }
   }
@@ -882,8 +908,8 @@ export class GameEngine {
    * Trigger summon abilities
    */
   private triggerSummonAbilities(beast: BloomBeastInstance): void {
-    const activePlayer = this.gameState.players[this.gameState.activePlayer];
-    const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+    const activePlayer = this.state.players[this.state.activePlayer];
+    const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
     // Get the card definition to access abilities
     const cardDef = this.getCardDefinition(beast.cardId);
@@ -898,7 +924,7 @@ export class GameEngine {
         source: beast,
         sourceCard: beastCard,
         trigger: 'OnSummon',
-        gameState: this.gameState,
+        gameState: this.state,
         controllingPlayer: activePlayer,
         opposingPlayer: opposingPlayer,
       });
@@ -912,7 +938,7 @@ export class GameEngine {
    * Trigger OnAllySummon abilities on other beasts when a new ally is summoned
    */
   private triggerAllySummonAbilities(summonedBeast: BloomBeastInstance, controllingPlayer: Player): void {
-    const opposingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+    const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
     // Get the summoned beast's card definition for checking affinity condition
     const summonedCardDef = this.getCardDefinition(summonedBeast.cardId);
@@ -934,7 +960,7 @@ export class GameEngine {
           sourceCard: beastCard,
           trigger: 'OnAllySummon',
           target: summonedBeast,  // Pass the summoned beast as target for condition checking
-          gameState: this.gameState,
+          gameState: this.state,
           controllingPlayer,
           opposingPlayer,
         });
@@ -968,7 +994,7 @@ export class GameEngine {
           source: beast,
           sourceCard: beastCard,
           trigger,
-          gameState: this.gameState,
+          gameState: this.state,
           controllingPlayer,
           opposingPlayer,
         });
@@ -1150,7 +1176,7 @@ export class GameEngine {
       return false;
     }
 
-    const defendingPlayer = this.gameState.players[this.gameState.activePlayer === 0 ? 1 : 0];
+    const defendingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
 
     // Check for traps on attack
     const attackData = { attackNegated: false };
@@ -1202,7 +1228,7 @@ export class GameEngine {
 
           // Check for battle end immediately
           if (this.checkForBattleEnd()) {
-            this.gameState.battleState = BattleState.Finished;
+            this.state.battleState = BattleState.Finished;
             await this.transitionState();
           }
           return true; // Combat ends, defender died before counter-attacking
@@ -1228,7 +1254,7 @@ export class GameEngine {
 
             // Check for battle end
             if (this.checkForBattleEnd()) {
-              this.gameState.battleState = BattleState.Finished;
+              this.state.battleState = BattleState.Finished;
               await this.transitionState();
             }
           }
@@ -1278,7 +1304,7 @@ export class GameEngine {
 
         // Check for battle end after any death
         if (this.checkForBattleEnd()) {
-          this.gameState.battleState = BattleState.Finished;
+          this.state.battleState = BattleState.Finished;
           await this.transitionState();
         }
       }
@@ -1291,14 +1317,14 @@ export class GameEngine {
       // Check if player was defeated
       if (defendingPlayer.health <= 0) {
         Logger.debug(`${defendingPlayer.name} was defeated!`);
-        this.gameState.battleState = BattleState.Finished;
+        this.state.battleState = BattleState.Finished;
         await this.transitionState();
       }
     }
 
     // Always check for battle end after any damage
     if (this.checkForBattleEnd()) {
-      this.gameState.battleState = BattleState.Finished;
+      this.state.battleState = BattleState.Finished;
       await this.transitionState();
     }
 
@@ -1330,7 +1356,7 @@ export class GameEngine {
         trigger,
         target,
         attacker,
-        gameState: this.gameState,
+        gameState: this.state,
         controllingPlayer,
         opposingPlayer,
       });
@@ -1349,9 +1375,9 @@ export class GameEngine {
     triggeringPlayer: Player,
     data?: any
   ): Promise<void> {
-    const opposingPlayer = triggeringPlayer === this.gameState.players[0]
-      ? this.gameState.players[1]
-      : this.gameState.players[0];
+    const opposingPlayer = triggeringPlayer === this.state.players[0]
+      ? this.state.players[1]
+      : this.state.players[0];
 
     // Check opponent's traps - only activate FIRST matching trap
     for (let i = 0; i < opposingPlayer.trapZone.length; i++) {
@@ -1470,7 +1496,7 @@ export class GameEngine {
       if (result.modifiedUnits && result.modifiedUnits.length > 0) {
         for (const modifiedUnit of result.modifiedUnits) {
           // Find and update the unit in both players' fields
-          for (const player of this.gameState.players) {
+          for (const player of this.state.players) {
             const index = player.field.findIndex(
               u => u && u.instanceId === modifiedUnit.instanceId
             );
@@ -1485,14 +1511,14 @@ export class GameEngine {
       // Apply modified state
       if (result.modifiedState) {
         if (result.modifiedState.players) {
-          this.gameState.players = result.modifiedState.players;
+          this.state.players = result.modifiedState.players;
         }
         if (result.modifiedState.habitatCounters) {
-          this.gameState.habitatCounters = result.modifiedState.habitatCounters;
+          this.state.habitatCounters = result.modifiedState.habitatCounters;
         }
         if (result.modifiedState.drawCardsQueued !== undefined) {
-          const playerIndex = result.modifiedState.drawForPlayerIndex ?? this.gameState.activePlayer;
-          const player = this.gameState.players[playerIndex];
+          const playerIndex = result.modifiedState.drawForPlayerIndex ?? this.state.activePlayer;
+          const player = this.state.players[playerIndex];
           this.drawCards(player, result.modifiedState.drawCardsQueued);
         }
       }
@@ -1505,7 +1531,7 @@ export class GameEngine {
 
     // Always check for battle end after applying ability results
     if (this.checkForBattleEnd()) {
-      this.gameState.battleState = BattleState.Finished;
+      this.state.battleState = BattleState.Finished;
       // Don't transition immediately here as we might be in the middle of processing
       // The next game loop iteration will handle the transition
     }
@@ -1514,7 +1540,7 @@ export class GameEngine {
   /**
    * Get current game state
    */
-  public getState(): GameState {
+  public getState(): GameState | null {
     return this.gameState;
   }
 
@@ -1522,7 +1548,8 @@ export class GameEngine {
    * Reset for new game
    */
   public reset(): void {
-    this.gameState = this.createInitialState();
+    // Reset to null - will be recreated on next startMatch()
+    this.gameState = null;
     this.combatSystem.reset();
   }
 }

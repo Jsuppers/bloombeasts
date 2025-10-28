@@ -22,7 +22,6 @@ import { BattleDisplayManager } from './systems/BattleDisplayManager';
 import { MissionManager } from './screens/missions/MissionManager';
 import { MissionSelectionUI } from './screens/missions/MissionSelectionUI';
 import { MissionBattleUI } from './screens/missions/MissionBattleUI';
-import { CardCollection } from './screens/cards/CardCollection';
 import { CardInstance } from './screens/cards/types';
 import { getAllCards } from './engine/cards';
 import { DECK_SIZE } from './engine/constants/gameRules';
@@ -46,6 +45,18 @@ const XP_THRESHOLDS = [
   12700,  // Level 8: 12700 XP total
   25500,  // Level 9: 25500 XP total
 ];
+
+/**
+ * Calculate player level from total XP (derived data)
+ */
+function getPlayerLevel(totalXP: number): number {
+  for (let level = 9; level >= 1; level--) {
+    if (totalXP >= XP_THRESHOLDS[level - 1]) {
+      return level;
+    }
+  }
+  return 1;
+}
 
 // UINode type - represents a UI node returned by UI components
 export type UINode = any;
@@ -186,17 +197,18 @@ export interface PlayerItem {
 /**
  * Player data structure - persisted to platform storage
  * This is the canonical save data format
+ *
+ * Note: Player level is derived from totalXP and not stored directly
  */
 export interface PlayerData {
   // Identity and progression
   name: string;
-  level: number;
-  totalXP: number;
+  totalXP: number; // Level is derived from this via getPlayerLevel()
 
-  // Card collection and deck
+  // Card collection and deck (SINGLE SOURCE OF TRUTH)
   cards: {
-    collected: any[]; // Raw card instances (CardInstance from CardCollection)
-    deck: string[]; // Card IDs in player's deck
+    collected: CardInstance[]; // All owned card instances
+    deck: string[]; // Card instance IDs in player's deck
   };
 
   // Mission tracking
@@ -331,62 +343,33 @@ export class BloomBeastsGame {
   private missionManager: MissionManager;
   private missionUI: MissionSelectionUI;
   private battleUI: MissionBattleUI;
-  private cardCollection: CardCollection;
   private cardCollectionManager: CardCollectionManager;
 
-  // Sound settings and state
-  private soundSettings: SoundSettings = {
-    musicVolume: 80,
-    sfxVolume: 80,
-    musicEnabled: true,
-    sfxEnabled: true,
-  };
+  // Sound and display state
   private currentMusic: string | null = null;
   private battleDisplayManager: BattleDisplayManager;
 
-  // Player data state - single source of truth
-  private playerData: PlayerData = {
-    name: 'Player',
-    level: 1,
-    totalXP: 0,
-    items: [],
-    cards: {
-      collected: [],
-      deck: []
-    },
-    missions: {
-      completedMissions: {}
-    },
-    settings: {
-      musicVolume: 0.7,
-      sfxVolume: 0.7,
-      musicEnabled: true,
-      sfxEnabled: true
-    }
-  };
+  // Player data state - SINGLE SOURCE OF TRUTH (no duplicates!)
+  // Starts as null to indicate data hasn't loaded yet (prevents race conditions)
+  private playerData: PlayerData | null = null;
 
   // Game state
   private isInitializing: boolean = true;  // Prevent renders during initialization
-  private currentScreen: string = 'loading';  // Start with loading screen
-  private playerDeck: string[] = []; // Array of card IDs in player's deck
+  private currentScreen: string = 'loading';  // Current active screen
   private currentBattleId: string | null = null;
   private selectedBeastIndex: number | null = null;
-  private currentCardDetailId: string | null = null;
-  private currentCardPopup: { card: any; player: 'player' | 'opponent'; showCloseButton?: boolean } | null = null;
-  private showForfeitPopup: boolean = false;
 
   // UI State bindings
   private playerDataBinding: BindingInterface<PlayerData | null>;
   private currentScreenBinding: BindingInterface<string>;
-  private cardsBinding: BindingInterface<CardDisplay[]>;
-  private deckSizeBinding: BindingInterface<number>;
-  private deckCardIdsBinding: BindingInterface<string[]>;
   private missionsBinding: BindingInterface<MissionDisplay[]>;
-  private statsBinding: BindingInterface<MenuStats>;
-  private settingsBinding: BindingInterface<SoundSettings>;
+
+  // Battle-specific UI bindings (UI-only state)
   private battleStateBinding: BindingInterface<string>;
   private battleMessageBinding: BindingInterface<string>;
   private battleDisplayBinding: BindingInterface<BattleDisplay | null>;
+
+  // Popup bindings (UI-only state)
   private missionCompletePopupBinding: BindingInterface<any>;
   private forfeitPopupBinding: BindingInterface<any>;
   private cardDetailPopupBinding: BindingInterface<any>;
@@ -442,45 +425,30 @@ export class BloomBeastsGame {
       }
     };
 
-    this.cardCollection = new CardCollection();
     this.cardCollectionManager = new CardCollectionManager();
     this.battleDisplayManager = new BattleDisplayManager();
 
     // Initialize bindings using platform's Binding class
     const BindingClass = this.UI.Binding as any;
-    this.playerDataBinding = new BindingClass(null);
+    this.playerDataBinding = new BindingClass(null);  // Start null - data loads in initialize()
     this.currentScreenBinding = new BindingClass('loading');  // Start with loading
-    this.cardsBinding = new BindingClass([]);
-    this.deckSizeBinding = new BindingClass(0);
-    this.deckCardIdsBinding = new BindingClass([]);
     this.missionsBinding = new BindingClass([]);
-    this.statsBinding = new BindingClass({
-      playerLevel: 1,
-      totalXP: 0,
-      tokens: 100,
-      diamonds: 10,
-      serums: 5
-    });
-    this.settingsBinding = new BindingClass({
-      musicEnabled: true,
-      musicVolume: 80,
-      sfxEnabled: true,
-      sfxVolume: 80
-    });
+
+    // Battle UI bindings
     this.battleStateBinding = new BindingClass('initializing');
     this.battleMessageBinding = new BindingClass('Preparing for battle...');
     this.battleDisplayBinding = new BindingClass(null);
+
+    // Popup bindings
     this.missionCompletePopupBinding = new BindingClass(null);
     this.forfeitPopupBinding = new BindingClass(null);
     this.cardDetailPopupBinding = new BindingClass(null);
 
-    // No need to subscribe to playerData - we manage state via updateBindingsFromGameState()
-
-    // Create screen instances (pass UI methods and async to each screen)
+    // Create screen instances (pass UI methods and playerData binding)
     this.menuScreen = new MenuScreen({
       ui: this.UI,
       async: this.asyncMethods,
-      stats: this.statsBinding,
+      playerDataBinding: this.playerDataBinding,
       onButtonClick: this.handleButtonClick.bind(this),
       onNavigate: this.navigate.bind(this),
       onRenderNeeded: this.triggerRender.bind(this)
@@ -488,10 +456,7 @@ export class BloomBeastsGame {
 
     this.cardsScreen = new CardsScreen({
       ui: this.UI,
-      cards: this.cardsBinding,
-      deckSize: this.deckSizeBinding,
-      deckCardIds: this.deckCardIdsBinding,
-      stats: this.statsBinding,
+      playerDataBinding: this.playerDataBinding,
       onCardSelect: this.handleCardSelect.bind(this),
       onNavigate: this.navigate.bind(this),
       onRenderNeeded: this.triggerRender.bind(this)
@@ -500,7 +465,7 @@ export class BloomBeastsGame {
     this.missionScreen = new MissionScreen({
       ui: this.UI,
       missions: this.missionsBinding,
-      stats: this.statsBinding,
+      playerDataBinding: this.playerDataBinding,
       onMissionSelect: this.handleMissionSelect.bind(this),
       onNavigate: this.navigate.bind(this),
       onRenderNeeded: this.triggerRender.bind(this)
@@ -518,8 +483,7 @@ export class BloomBeastsGame {
 
     this.settingsScreen = new SettingsScreen({
       ui: this.UI,
-      settings: this.settingsBinding,
-      stats: this.statsBinding,
+      playerDataBinding: this.playerDataBinding,
       onSettingChange: this.handleSettingsChange.bind(this),
       onNavigate: this.navigate.bind(this),
       onRenderNeeded: this.triggerRender.bind(this)
@@ -555,18 +519,8 @@ export class BloomBeastsGame {
   async initialize(): Promise<void> {
     console.log('[BloomBeastsGame] Initializing...');
 
-    // Load saved game data
+    // Load saved game data (initializes starting cards if needed)
     await this.loadGameData();
-
-    // Initialize starting cards if first time
-    const collectionSize = this.cardCollection.getAllCards().length;
-    console.log(`[BloomBeastsGame] After loadGameData, collection has ${collectionSize} cards`);
-
-    if (collectionSize === 0) {
-      console.log('[BloomBeastsGame] Collection empty, initializing starting cards...');
-      await this.initializeStartingCollection();
-      console.log(`[BloomBeastsGame] After initialization, collection has ${this.cardCollection.getAllCards().length} cards`);
-    }
 
     // Update bindings from loaded data
     console.log('[BloomBeastsGame] About to call updateBindingsFromGameState...');
@@ -586,72 +540,80 @@ export class BloomBeastsGame {
   }
 
   /**
+   * Get current player level (derived from totalXP)
+   */
+  private get playerLevel(): number {
+    return getPlayerLevel(this.playerData?.totalXP ?? 0);
+  }
+
+  /**
+   * Create default player data structure
+   */
+  private createDefaultPlayerData(): PlayerData {
+    return {
+      name: 'Player',
+      totalXP: 0,
+      items: [],
+      cards: {
+        collected: [],
+        deck: []
+      },
+      missions: {
+        completedMissions: {}
+      },
+      settings: {
+        musicVolume: 80,
+        sfxVolume: 80,
+        musicEnabled: true,
+        sfxEnabled: true
+      }
+    };
+  }
+
+  /**
    * Load game data from platform storage
-   * Always creates default data if none exists
+   * Creates default data if none exists
    */
   private async loadGameData(): Promise<void> {
     try {
       const savedData = this.platform.getPlayerData?.();
 
       if (savedData && Object.keys(savedData).length > 0) {
-        // Load all player data at once
-        this.playerData = {
-          name: savedData.name || 'Player',
-          level: savedData.level || 1,
-          totalXP: savedData.totalXP || 0,
-          items: savedData.items || [],
-          cards: {
-            collected: savedData.cards?.collected || [],
-            deck: savedData.cards?.deck || []
-          },
-          missions: {
-            completedMissions: savedData.missions?.completedMissions || {}
-          },
-          settings: savedData.settings || {
-            musicVolume: 80,
-            sfxVolume: 80,
-            musicEnabled: true,
-            sfxEnabled: true
-          }
-        };
-
-        // Load cards into collection
-        if (this.playerData.cards.collected && Array.isArray(this.playerData.cards.collected)) {
-          console.log(`[BloomBeastsGame] Loading ${this.playerData.cards.collected.length} cards from saved data`);
-          this.playerData.cards.collected.forEach((cardInstance: CardInstance) => {
-            this.cardCollection.addCard(cardInstance);
-          });
-          console.log(`[BloomBeastsGame] Card collection now has ${this.cardCollection.getAllCards().length} cards`);
-        }
-
-        // Load sound settings
-        if (this.playerData.settings) {
-          this.soundSettings = { ...this.playerData.settings };
-
-          // Apply settings to platform
-          this.platform.setMusicVolume?.(this.soundSettings.musicVolume / 100);
-          this.platform.setSfxVolume?.(this.soundSettings.sfxVolume / 100);
-          this.platform.setMusicEnabled?.(this.soundSettings.musicEnabled);
-          this.platform.setSfxEnabled?.(this.soundSettings.sfxEnabled);
-        }
-
-        // Update player level based on XP
-        this.updatePlayerLevel();
-
-        // Load completed missions into MissionManager
-        this.missionManager.loadCompletedMissions(this.playerData.missions.completedMissions);
-
-        Logger.info('[BloomBeastsGame] Player data loaded successfully');
+        // Use saved data directly
+        this.playerData = savedData;
+        Logger.info(`[BloomBeastsGame] Loaded player data with ${savedData.cards.collected.length} cards`);
       } else {
-        Logger.info('[BloomBeastsGame] No saved data found, using defaults');
+        // Create default player data
+        this.playerData = this.createDefaultPlayerData();
+        Logger.info('[BloomBeastsGame] Created default player data');
       }
     } catch (error) {
       Logger.error('[BloomBeastsGame] Error loading player data:', error);
-      Logger.info('[BloomBeastsGame] Starting with defaults');
+      // Create default player data on error
+      this.playerData = this.createDefaultPlayerData();
+      Logger.info('[BloomBeastsGame] Using default player data');
     }
 
-    // Always save after loading to ensure data persists
-    // This creates the initial save if none existed
+    Logger.info(`[BloomBeastsGame] Restored deck with ${this.playerData.cards.deck.length} cards`);
+
+    // Apply sound settings to platform
+    if (this.playerData.settings) {
+      this.platform.setMusicVolume?.(this.playerData.settings!.musicVolume / 100);
+      this.platform.setSfxVolume?.(this.playerData.settings!.sfxVolume / 100);
+      this.platform.setMusicEnabled?.(this.playerData.settings!.musicEnabled);
+      this.platform.setSfxEnabled?.(this.playerData.settings!.sfxEnabled);
+    }
+
+    // Load completed missions into MissionManager
+    this.missionManager.loadCompletedMissions(this.playerData.missions.completedMissions);
+
+    // Initialize starting cards if collection is empty
+    if (this.playerData.cards.collected.length === 0) {
+      Logger.info('[BloomBeastsGame] Initializing starting card collection');
+      await this.initializeStartingCollection();
+    }
+
+    // Save to ensure data persists
     await this.saveGameData();
   }
 
@@ -659,13 +621,37 @@ export class BloomBeastsGame {
    * Save game data to platform storage
    */
   private async saveGameData(): Promise<void> {
-    // Update playerData with latest values from subsystems
-    this.playerData.cards.collected = this.cardCollection.getAllCards();
-    this.playerData.cards.deck = this.playerDeck;
-    this.playerData.settings = { ...this.soundSettings };
-
+    if (!this.playerData) {
+      Logger.warn('[BloomBeastsGame] Cannot save null player data');
+      return;
+    }
     this.platform.setPlayerData?.(this.playerData);
     Logger.debug('[BloomBeastsGame] Player data saved');
+  }
+
+  /**
+   * Update player data (single update method)
+   * This is the ONLY way to update playerData - ensures binding stays in sync
+   */
+  private async updatePlayerData(updates: Partial<PlayerData> | ((current: PlayerData) => PlayerData)): Promise<void> {
+    // Data must be loaded before updates
+    if (!this.playerData) {
+      Logger.error('[BloomBeastsGame] Cannot update player data before it is loaded');
+      return;
+    }
+
+    // Support both object updates and function updates
+    if (typeof updates === 'function') {
+      this.playerData = updates(this.playerData);
+    } else {
+      this.playerData = { ...this.playerData, ...updates };
+    }
+
+    // Update binding
+    this.playerDataBinding.set(this.playerData);
+
+    // Auto-save
+    await this.saveGameData();
   }
 
   /**
@@ -679,8 +665,8 @@ export class BloomBeastsGame {
 
     this.currentMusic = musicId;
 
-    if (this.soundSettings.musicEnabled) {
-      const volume = this.soundSettings.musicVolume / 100;
+    if (this.playerData?.settings?.musicEnabled) {
+      const volume = this.playerData.settings.musicVolume / 100;
       this.platform.playSound?.(musicId, loop, volume);
     }
   }
@@ -697,8 +683,8 @@ export class BloomBeastsGame {
    * Play sound effect
    */
   private playSfx(sfxId: string): void {
-    if (this.soundSettings.sfxEnabled) {
-      const volume = this.soundSettings.sfxVolume / 100;
+    if (this.playerData?.settings?.sfxEnabled) {
+      const volume = this.playerData.settings.sfxVolume / 100;
       this.platform.playSound?.(sfxId, false, volume);
     }
   }
@@ -707,9 +693,10 @@ export class BloomBeastsGame {
    * Set music volume (0-100)
    */
   private setMusicVolume(volume: number): void {
-    this.soundSettings.musicVolume = Math.max(0, Math.min(100, volume));
-    if (this.soundSettings.musicEnabled) {
-      this.platform.setMusicVolume?.(this.soundSettings.musicVolume / 100);
+    if (!this.playerData?.settings) return;
+    this.playerData.settings.musicVolume = Math.max(0, Math.min(100, volume));
+    if (this.playerData.settings.musicEnabled) {
+      this.platform.setMusicVolume?.(this.playerData.settings.musicVolume / 100);
     }
   }
 
@@ -717,9 +704,10 @@ export class BloomBeastsGame {
    * Set SFX volume (0-100)
    */
   private setSfxVolume(volume: number): void {
-    this.soundSettings.sfxVolume = Math.max(0, Math.min(100, volume));
-    if (this.soundSettings.sfxEnabled) {
-      this.platform.setSfxVolume?.(this.soundSettings.sfxVolume / 100);
+    if (!this.playerData?.settings) return;
+    this.playerData.settings.sfxVolume = Math.max(0, Math.min(100, volume));
+    if (this.playerData.settings.sfxEnabled) {
+      this.platform.setSfxVolume?.(this.playerData.settings.sfxVolume / 100);
     }
   }
 
@@ -728,7 +716,8 @@ export class BloomBeastsGame {
    */
   private toggleMusic(enabled: boolean): void {
     console.log('[BloomBeastsGame] toggleMusic called:', { enabled, currentMusic: this.currentMusic });
-    this.soundSettings.musicEnabled = enabled;
+    if (!this.playerData?.settings) return;
+    this.playerData.settings.musicEnabled = enabled;
 
     // Notify platform
     this.platform.setMusicEnabled?.(enabled);
@@ -736,7 +725,7 @@ export class BloomBeastsGame {
     if (enabled && this.currentMusic) {
       // Resume music - force replay even if it's the same track
       const musicToResume = this.currentMusic;
-      const volume = this.soundSettings.musicVolume / 100;
+      const volume = this.playerData.settings.musicVolume / 100;
       console.log('[BloomBeastsGame] Resuming music:', { musicToResume, volume, platformHasPlaySound: !!this.platform.playSound });
       this.platform.playSound?.(musicToResume, true, volume);
     } else if (!enabled) {
@@ -753,38 +742,27 @@ export class BloomBeastsGame {
    * Toggle SFX on/off
    */
   private toggleSfx(enabled: boolean): void {
-    this.soundSettings.sfxEnabled = enabled;
+    if (!this.playerData?.settings) return;
+    this.playerData.settings.sfxEnabled = enabled;
 
     // Notify platform
     this.platform.setSfxEnabled?.(enabled);
   }
 
   /**
-   * Update player level based on XP
-   * Player leveling uses steep exponential scaling
-   */
-  private updatePlayerLevel(): void {
-    for (let level = 9; level >= 1; level--) {
-      if (this.playerData.totalXP >= XP_THRESHOLDS[level - 1]) {
-        this.playerData.level = level;
-        break;
-      }
-    }
-  }
-
-  /**
-   * Add XP to player and update level
+   * Add XP to player (level is automatically derived)
    */
   private addXP(amount: number): void {
+    if (!this.playerData) return;
     this.playerData.totalXP += amount;
-    this.updatePlayerLevel();
-    Logger.debug(`[BloomBeastsGame] Added ${amount} XP (total: ${this.playerData.totalXP}, level: ${this.playerData.level})`);
+    Logger.debug(`[BloomBeastsGame] Added ${amount} XP (total: ${this.playerData.totalXP}, level: ${this.playerLevel})`);
   }
 
   /**
    * Get the quantity of a specific item from player's items array
    */
   private getItemQuantity(itemId: string): number {
+    if (!this.playerData) return 0;
     const item = this.playerData.items.find(i => i.itemId === itemId);
     return item ? item.quantity : 0;
   }
@@ -793,6 +771,7 @@ export class BloomBeastsGame {
    * Track mission completion
    */
   private trackMissionCompletion(missionId: string): void {
+    if (!this.playerData) return;
     const currentCount = this.playerData.missions.completedMissions[missionId] || 0;
     this.playerData.missions.completedMissions[missionId] = currentCount + 1;
     Logger.debug(`[BloomBeastsGame] Mission ${missionId} completed ${currentCount + 1} times`);
@@ -802,6 +781,7 @@ export class BloomBeastsGame {
    * Add items to player's inventory
    */
   private addItems(itemId: string, quantity: number): void {
+    if (!this.playerData) return;
     const existingItem = this.playerData.items.find(i => i.itemId === itemId);
 
     if (existingItem) {
@@ -819,9 +799,10 @@ export class BloomBeastsGame {
    * Initialize a new game with starter cards
    */
   private async initializeStartingCollection(): Promise<void> {
-    this.playerDeck = await this.cardCollectionManager.initializeStartingCollection(
-      this.cardCollection,
-      this.playerDeck
+    if (!this.playerData) return;
+    this.playerData.cards.deck = await this.cardCollectionManager.initializeStartingCollection(
+      this.playerData.cards.collected,
+      this.playerData.cards.deck
     );
     await this.saveGameData();
   }
@@ -831,14 +812,11 @@ export class BloomBeastsGame {
    * This syncs the UI bindings with the actual game state
    */
   private async updateBindingsFromGameState(): Promise<void> {
-    // Get all cards and convert to display format
-    const cards = this.cardCollection.getAllCards();
-    console.log(`[BloomBeastsGame] updateBindingsFromGameState - collection has ${cards.length} cards`);
-    const displayCards = cards.map(card => this.cardInstanceToDisplay(card));
-    console.log(`[BloomBeastsGame] updateBindingsFromGameState - created ${displayCards.length} display cards`);
+    // Update player data binding (screens derive what they need from this)
+    this.playerDataBinding.set(this.playerData);
 
-    // Get available missions
-    this.missionUI.setPlayerLevel(this.playerData.level);
+    // Update missions binding (still separate as it includes availability logic)
+    this.missionUI.setPlayerLevel(this.playerLevel);
     const missionList = this.missionUI.getMissionList();
     const displayMissions: MissionDisplay[] = missionList.map(m => ({
       id: m.mission.id,
@@ -851,24 +829,7 @@ export class BloomBeastsGame {
       affinity: m.mission.affinity,
       beastId: m.mission.beastId,
     }));
-
-    // Get stats
-    const stats: MenuStats = {
-      playerLevel: this.playerData.level,
-      totalXP: this.playerData.totalXP,
-      tokens: this.getItemQuantity('token'),
-      diamonds: this.getItemQuantity('diamond'),
-      serums: this.getItemQuantity('serum'),
-    };
-
-    // Update all bindings
-    this.cardsBinding.set(displayCards);
-    console.log(`[BloomBeastsGame] updateBindingsFromGameState - set cardsBinding with ${displayCards.length} cards`);
-    this.deckCardIdsBinding.set(this.playerDeck);
-    this.deckSizeBinding.set(this.playerDeck.length);
     this.missionsBinding.set(displayMissions);
-    this.statsBinding.set(stats);
-    this.settingsBinding.set({ ...this.soundSettings });
   }
 
   /**
@@ -998,18 +959,19 @@ export class BloomBeastsGame {
    */
   private async handleCardSelect(cardId: string): Promise<void> {
     // console.log('[BloomBeastsGame] Card selected:', cardId);
+    if (!this.playerData) return;
 
     // Play menu button sound
     this.playSfx('sfx-menu-button-select');
 
-    const cardEntry = this.cardCollection.getCard(cardId);
+    const cardEntry = this.playerData.cards.collected.find(c => c.id === cardId);
 
     if (!cardEntry) {
       return;
     }
 
     // Check if card is in deck
-    const isInDeck = this.playerDeck.includes(cardId);
+    const isInDeck = this.playerData.cards.deck.includes(cardId);
 
     // Toggle card in/out of deck
     if (isInDeck) {
@@ -1023,13 +985,14 @@ export class BloomBeastsGame {
    * Add card to player's deck
    */
   private async addCardToDeck(cardId: string): Promise<void> {
-    if (this.playerDeck.length >= DECK_SIZE) {
+    if (!this.playerData) return;
+    if (this.playerData.cards.deck.length >= DECK_SIZE) {
       Logger.warn(`Deck is full (${DECK_SIZE} cards)`);
       return;
     }
 
-    if (!this.playerDeck.includes(cardId)) {
-      this.playerDeck.push(cardId);
+    if (!this.playerData.cards.deck.includes(cardId)) {
+      this.playerData.cards.deck.push(cardId);
       await this.saveGameData();
       await this.updateBindingsFromGameState();
     }
@@ -1039,9 +1002,10 @@ export class BloomBeastsGame {
    * Remove card from player's deck
    */
   private async removeCardFromDeck(cardId: string): Promise<void> {
-    const index = this.playerDeck.indexOf(cardId);
+    if (!this.playerData) return;
+    const index = this.playerData.cards.deck.indexOf(cardId);
     if (index > -1) {
-      this.playerDeck.splice(index, 1);
+      this.playerData.cards.deck.splice(index, 1);
       await this.saveGameData();
       await this.updateBindingsFromGameState();
     }
@@ -1052,6 +1016,7 @@ export class BloomBeastsGame {
    */
   private async handleMissionSelect(missionId: string): Promise<void> {
     Logger.info(`Mission selected: ${missionId}`);
+    if (!this.playerData) return;
 
     // Reset battle state
     this.selectedBeastIndex = null;
@@ -1060,7 +1025,7 @@ export class BloomBeastsGame {
     this.playSfx('sfx-menu-button-select');
 
     // Check if player has cards in deck
-    if (this.playerDeck.length === 0) {
+    if (this.playerData.cards.deck.length === 0) {
       Logger.warn('No cards in deck');
       // TODO: Show dialog or message to user
       return;
@@ -1068,8 +1033,8 @@ export class BloomBeastsGame {
 
     // Get player's deck cards
     const playerDeckCards = this.cardCollectionManager.getPlayerDeckCards(
-      this.playerDeck,
-      this.cardCollection
+      this.playerData.cards.deck,
+      this.playerData.cards.collected
     );
 
     if (playerDeckCards.length === 0) {
@@ -1132,7 +1097,8 @@ export class BloomBeastsGame {
    */
   private handleSettingsChange(settingId: string, value: any): void {
     console.log('[BloomBeastsGame] Settings changed:', settingId, value);
-    console.log('[BloomBeastsGame] Current soundSettings before change:', this.soundSettings);
+    if (!this.playerData) return;
+    console.log('[BloomBeastsGame] Current soundSettings before change:', this.playerData.settings);
 
     // Play button sound for toggles (not sliders)
     if (settingId === 'musicEnabled' || settingId === 'sfxEnabled') {
@@ -1159,14 +1125,11 @@ export class BloomBeastsGame {
         break;
     }
 
-    console.log('[BloomBeastsGame] Current soundSettings after change:', this.soundSettings);
+    console.log('[BloomBeastsGame] Current soundSettings after change:', this.playerData.settings);
 
-    // Save settings
+    // Save settings and update binding
+    this.playerDataBinding.set(this.playerData);
     this.saveGameData();
-
-    // Update binding
-    this.settingsBinding.set({ ...this.soundSettings });
-    console.log('[BloomBeastsGame] Binding updated with:', { ...this.soundSettings });
 
     // Trigger re-render to update UI
     this.triggerRender();
@@ -1298,6 +1261,10 @@ export class BloomBeastsGame {
    */
   private async handleBattleComplete(battleState: any): Promise<void> {
     // console.log('[BloomBeastsGame] Handling battle completion...');
+    if (!this.playerData) return;
+
+    // Capture playerData in local const for TypeScript null safety in callbacks
+    const playerData = this.playerData;
 
     // Stop all timers immediately
     if (this.battleScreen) {
@@ -1325,13 +1292,13 @@ export class BloomBeastsGame {
       const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
       this.cardCollectionManager.awardDeckExperience(
         cardXP,
-        this.playerDeck,
-        this.cardCollection
+        playerData.cards.deck,
+        playerData.cards.collected
       );
 
       // Add cards to collection
       battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
-        this.cardCollectionManager.addCardReward(card, this.cardCollection, index);
+        this.cardCollectionManager.addCardReward(card, playerData.cards.collected, index);
       });
 
       // Add items to inventory
