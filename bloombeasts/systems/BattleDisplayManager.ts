@@ -80,7 +80,7 @@ export class BattleDisplayManager {
       const target = obj.target || 1;
 
       return {
-        description: obj.description,
+        description: obj.description || 'Unknown objective',
         progress: Math.min(progress, target),
         target: target,
         isComplete: progress >= target,

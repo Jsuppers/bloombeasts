@@ -10,8 +10,8 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-28T20:06:08.489Z
- * Files: 78
+ * Generated: 2025-10-28T21:50:57.619Z
+ * Files: 77
  *
  * @version 1.0.0
  * @license MIT
@@ -3932,6 +3932,691 @@ namespace BloomBeasts {
 
   // Utilities
 
+  // ==================== bloombeasts\screens\cards\types.ts ====================
+
+  /**
+   * Type definitions for the card collection system
+   */
+
+
+  /**
+   * Minimal card instance in player's collection
+   * All other data (level, stats, etc.) is computed on-demand from currentXP and card definition
+   */
+  export interface CardInstance {
+    id: string;                    // Unique instance ID (e.g., "forest-bloom-1-1")
+    cardId: string;                 // Base card ID (e.g., "forest-bloom")
+    currentXP: number;              // Only persistent data - everything else is derived
+  }
+
+  /**
+   * Statistics for the card collection
+   */
+  export interface CollectionStats {
+    totalCards: number;
+    uniqueCards: number;
+    cardsByAffinity: Record<Affinity, number>;
+    averageLevel: number;
+    totalXP: number;
+  }
+
+  /**
+   * Deck configuration in inventory
+   */
+  export interface DeckConfiguration {
+    id: string;
+    name: string;
+    cards: string[];                // Array of card instance IDs
+    affinity: Affinity;
+    isValid: boolean;
+    lastModified: Date;
+  }
+
+  /**
+   * Player inventory data
+   */
+  export interface PlayerInventory {
+    playerId: string;
+    cards: CardInstance[];
+    decks: DeckConfiguration[];
+    currency: {
+      nectar: number;
+      crystals?: number;
+    };
+    unlockedCards: string[];         // Base card IDs that have been unlocked
+    achievements?: string[];
+  }
+
+  // ==================== bloombeasts\engine\utils\abilityDescriptionGenerator.ts ====================
+
+  /**
+   * Generates human-readable descriptions from ability effects
+   */
+
+
+  /**
+   * Generate a complete description from a StructuredAbility
+   */
+  export function generateAbilityDescription(ability: StructuredAbility): string {
+    // Handle edge cases
+    if (!ability) {
+      return '';
+    }
+
+    const parts: string[] = [];
+
+    // Add trigger context
+    const triggerText = getTriggerText(ability.trigger);
+    if (triggerText) {
+      parts.push(triggerText);
+    }
+
+    // Add cost if present
+    if (ability.cost) {
+      const costText = getCostText(ability.cost);
+      if (costText) {
+        parts.push(costText);
+      }
+    }
+
+    // Generate effect descriptions
+    if (ability.effects && ability.effects.length > 0) {
+      const effectTexts = ability.effects.map(effect => getEffectText(effect));
+      const combinedEffects = combineEffects(effectTexts);
+      parts.push(combinedEffects);
+    }
+
+    // Add usage limitations
+    if (ability.maxUsesPerTurn) {
+      parts.push(`(${ability.maxUsesPerTurn}x per turn)`);
+    }
+    if (ability.maxUsesPerGame) {
+      parts.push(`(once per game)`);
+    }
+
+    // If no parts were generated, at least return the ability name
+    if (parts.length === 0) {
+      return ability.name || '';
+    }
+
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Get trigger prefix text
+   */
+  function getTriggerText(trigger?: AbilityTrigger): string {
+    switch (trigger) {
+      case AbilityTrigger.OnSummon:
+        return 'When summoned,';
+      case AbilityTrigger.OnAllySummon:
+        return 'When you summon another ally,';
+      case AbilityTrigger.OnAttack:
+        return 'When attacking,';
+      case AbilityTrigger.OnDamage:
+        return 'When attacked,';
+      case AbilityTrigger.OnDestroy:
+        return 'When destroyed,';
+      case AbilityTrigger.OnOwnStartOfTurn:
+        return 'At turn start,';
+      case AbilityTrigger.OnOwnEndOfTurn:
+        return 'At turn end,';
+      case AbilityTrigger.OnAnyStartOfTurn:
+        return 'At any turn start,';
+      case AbilityTrigger.OnAnyEndOfTurn:
+        return 'At any turn end,';
+      case AbilityTrigger.OnOpponentStartOfTurn:
+        return 'At opponent\'s turn start,';
+      case AbilityTrigger.OnOpponentEndOfTurn:
+        return 'At opponent\'s turn end,';
+      case AbilityTrigger.Passive:
+        return '';
+      case AbilityTrigger.Activated:
+        return '';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Get cost text
+   */
+  function getCostText(cost: any): string {
+    if (cost.type === 'nectar') {
+      return `Pay ${cost.value} Nectar:`;
+    }
+    if (cost.type === 'discard') {
+      return `Discard ${cost.value} card${cost.value > 1 ? 's' : ''}:`;
+    }
+    if (cost.type === 'sacrifice') {
+      return `Sacrifice ${cost.value} unit${cost.value > 1 ? 's' : ''}:`;
+    }
+    if (cost.type === 'remove-counter') {
+      return `Remove ${cost.value} ${cost.counter} counter${cost.value > 1 ? 's' : ''}:`;
+    }
+    return '';
+  }
+
+  /**
+   * Get target text
+   */
+  function getTargetText(target: AbilityTarget): string {
+    switch (target) {
+      case AbilityTarget.Self:
+        return 'this';
+      case AbilityTarget.Target:
+        return 'target';
+      case AbilityTarget.Attacker:
+        return 'attacker';
+      case AbilityTarget.AllAllies:
+        return 'all allies';
+      case AbilityTarget.AllEnemies:
+        return 'all enemies';
+      case AbilityTarget.AdjacentAllies:
+        return 'adjacent allies';
+      case AbilityTarget.AdjacentEnemies:
+        return 'adjacent enemies';
+      case AbilityTarget.OpponentGardener:
+        return 'opponent';
+      case AbilityTarget.PlayerGardener:
+        return 'you';
+      case AbilityTarget.RandomEnemy:
+        return 'random enemy';
+      case AbilityTarget.AllUnits:
+        return 'all Beasts';
+      case AbilityTarget.OtherAlly:
+        return 'another ally';
+      default:
+        return target;
+    }
+  }
+
+  /**
+   * Get duration text
+   */
+  function getDurationText(duration?: EffectDuration): string {
+    switch (duration) {
+      case EffectDuration.Permanent:
+        return 'permanently';
+      case EffectDuration.EndOfTurn:
+        return 'until end of turn';
+      case EffectDuration.StartOfNextTurn:
+        return 'until your next turn';
+      case EffectDuration.WhileOnField:
+        return '';
+      case EffectDuration.ThisTurn:
+        return 'this turn';
+      case EffectDuration.NextAttack:
+        return 'for next attack';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Get condition text
+   */
+  function getConditionText(condition?: any): string {
+    if (!condition) return '';
+
+    switch (condition.type) {
+      case ConditionType.IsDamaged:
+        return 'if damaged';
+      case ConditionType.IsWilting:
+        return 'if Wilting';
+      case ConditionType.AffinityMatches:
+        return `if ${condition.value}`;
+      case ConditionType.HealthBelow:
+        return `if HP < ${condition.value}`;
+      case ConditionType.CostAbove:
+        return `if Cost ${condition.value}+`;
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Get effect text for a single effect
+   */
+  function getEffectText(effect: AbilityEffect): string {
+    const target = getTargetText(effect.target);
+    const condition = getConditionText(effect.condition);
+    const duration = getDurationText(effect.duration);
+
+    switch (effect.type) {
+      case EffectType.ModifyStats: {
+        const stat = effect.stat === StatType.Attack ? 'ATK' :
+                     effect.stat === StatType.Health ? 'HP' : 'ATK/HP';
+        const sign = effect.value >= 0 ? '+' : '';
+        const durationPart = duration ? ` ${duration}` : '';
+        return `${target} get${target === 'this' ? 's' : ''} ${sign}${effect.value} ${stat}${durationPart}`;
+      }
+
+      case EffectType.DealDamage: {
+        return `deal ${effect.value} damage to ${target}`;
+      }
+
+      case EffectType.Heal: {
+        if (effect.value === HealValueType.Full) {
+          return `fully heal ${target}`;
+        }
+        return `heal ${target} by ${effect.value} HP`;
+      }
+
+      case EffectType.DrawCards: {
+        return `draw ${effect.value} card${effect.value > 1 ? 's' : ''}`;
+      }
+
+      case EffectType.ApplyCounter: {
+        return `place ${effect.value} ${effect.counter} counter${effect.value > 1 ? 's' : ''} on ${target}`;
+      }
+
+      case EffectType.RemoveCounter: {
+        if (effect.counter) {
+          return `remove ${effect.counter} counters from ${target}`;
+        }
+        return `remove all counters from ${target}`;
+      }
+
+      case EffectType.CannotBeTargeted: {
+        const byWhat = effect.by.join(', ').replace(/,([^,]*)$/, ' or$1');
+        return `cannot be targeted by ${byWhat}`;
+      }
+
+      case EffectType.Immunity: {
+        const immunities = effect.immuneTo.map(type => {
+          switch (type) {
+            case ImmunityType.Magic: return 'Magic';
+            case ImmunityType.Trap: return 'Trap';
+            case ImmunityType.Abilities: return 'abilities';
+            case ImmunityType.NegativeEffects: return 'negative effects';
+            case ImmunityType.Damage: return 'damage';
+            default: return type;
+          }
+        }).join(' and ');
+        return `immune to ${immunities}`;
+      }
+
+      case EffectType.AttackModification: {
+        const mod = effect.modification;
+        if (mod === 'double-damage') return 'deal double damage';
+        if (mod === 'triple-damage') return 'deal triple damage';
+        if (mod === 'instant-destroy') return 'instantly destroy target';
+        if (mod === 'attack-twice') return 'attack twice';
+        if (mod === 'attack-first') return 'strike first (defender cannot counter if killed)';
+        if (mod === 'cannot-counterattack') return 'cannot be counterattacked';
+        if (mod === 'piercing') return 'ignore defensive abilities';
+        return mod;
+      }
+
+      case EffectType.RemoveSummoningSickness: {
+        return 'can attack immediately';
+      }
+
+      case EffectType.GainResource: {
+        if (effect.resource === ResourceType.Nectar) {
+          return `gain ${effect.value} Nectar${duration ? ` ${duration}` : ''}`;
+        }
+        if (effect.resource === ResourceType.ExtraNectarPlay) {
+          return `play ${effect.value} additional Nectar Card${effect.value > 1 ? 's' : ''}${duration ? ` ${duration}` : ''}`;
+        }
+        return `gain ${effect.value} ${effect.resource}`;
+      }
+
+      case EffectType.MoveUnit: {
+        if (effect.destination === 'any-slot') {
+          return 'move to any empty slot';
+        }
+        if (effect.destination === 'adjacent-slot') {
+          return 'move to adjacent empty slot';
+        }
+        return 'move';
+      }
+
+      case EffectType.PreventAttack: {
+        return `${target} cannot attack${duration ? ` ${duration}` : ''}`;
+      }
+
+      case EffectType.PreventAbilities: {
+        return `${target} cannot use abilities${duration ? ` ${duration}` : ''}`;
+      }
+
+      case EffectType.SearchDeck: {
+        const what = effect.searchFor === 'any' ? 'any card' :
+                     effect.searchFor === 'bloom' ? 'Bloom Card' : effect.searchFor;
+        return `search deck for ${effect.quantity} ${what}`;
+      }
+
+      case EffectType.DamageReduction: {
+        return `reduce damage by ${effect.value}${duration ? ` ${duration}` : ''}`;
+      }
+
+      case EffectType.Retaliation: {
+        if (effect.value === 'reflected') {
+          return 'reflect all damage to attacker';
+        }
+        return `deal ${effect.value} damage to attacker`;
+      }
+
+      case EffectType.TemporaryHP: {
+        return `${target} gain${target === 'this' ? 's' : ''} ${effect.value} temporary HP`;
+      }
+
+      case EffectType.SwapPositions: {
+        return `swap ${target} positions`;
+      }
+
+      case EffectType.ReturnToHand: {
+        return `return ${target} to hand`;
+      }
+
+      case EffectType.Destroy: {
+        const conditionText = condition ? ` ${condition}` : '';
+        return `destroy ${target}${conditionText}`;
+      }
+
+      default:
+        return effect.type;
+    }
+  }
+
+  /**
+   * Combine multiple effect texts intelligently
+   */
+  function combineEffects(effects: string[]): string {
+    if (effects.length === 0) return '';
+    if (effects.length === 1) return effects[0];
+    if (effects.length === 2) return `${effects[0]} and ${effects[1]}`;
+
+    // Multiple effects: use commas and "and" for last one
+    const allButLast = effects.slice(0, -1).join(', ');
+    const last = effects[effects.length - 1];
+    return `${allButLast}, and ${last}`;
+  }
+
+  // ==================== bloombeasts\engine\utils\getAbilityDescription.ts ====================
+
+  /**
+   * Helper function to get ability description
+   * Generates description from ability effects
+   */
+
+
+  /**
+   * Get the description for an ability
+   * @param ability The ability to get description for
+   * @returns The description string
+   */
+  export function getAbilityDescription(ability: StructuredAbility): string {
+    return generateAbilityDescription(ability);
+  }
+
+  // ==================== bloombeasts\engine\utils\cardDescriptionGenerator.ts ====================
+
+  /**
+   * Generates human-readable descriptions for all card types
+   * (Magic, Trap, Buff, Habitat, and Bloom cards)
+   */
+
+
+  /**
+   * Get description for any card type
+   * All cards now use the standardized abilities structure
+   */
+  export function getCardDescription(card: any): string {
+    if (!card) return '';
+
+    // All cards use abilities array
+    if (card.abilities && Array.isArray(card.abilities)) {
+      // Generate descriptions for all abilities and combine them
+      const abilityDescriptions = card.abilities
+        .map((ability: any) => getAbilityDescription(ability))
+        .filter((desc: string) => desc.length > 0);
+
+      // Combine ability descriptions with bullet points if multiple
+      if (abilityDescriptions.length === 0) {
+        return '';
+      } else if (abilityDescriptions.length === 1) {
+        return abilityDescriptions[0];
+      } else {
+        // Multiple abilities: join with bullet points
+        return abilityDescriptions.map((desc: string) => `• ${desc}`).join(' ');
+      }
+    }
+
+    // Fallback: return card description if it exists, otherwise empty
+    return card.description || '';
+  }
+
+  // ==================== bloombeasts\utils\cardUtils.ts ====================
+
+  /**
+   * Card utility functions for level/XP calculations and stat computation
+   */
+
+
+  /**
+   * Battle-specific card stats (runtime only, not persisted)
+   * Created when a card enters battle, mutated during combat
+   */
+  export interface CardBattleStats {
+    baseAttack?: number;
+    currentAttack?: number;
+    baseHealth?: number;
+    currentHealth?: number;
+    counters?: Array<{ type: string; amount: number }>;
+    abilities?: any[];
+  }
+
+  /**
+   * XP thresholds for card leveling (cumulative)
+   * Level 2: 100 XP, Level 3: 300 XP, etc.
+   */
+  const CARD_XP_THRESHOLDS = [
+    0,      // Level 1
+    100,    // Level 2
+    300,    // Level 3
+    700,    // Level 4
+    1500,   // Level 5
+    3100,   // Level 6
+    6300,   // Level 7
+    12700,  // Level 8
+    25500,  // Level 9
+  ];
+
+  /**
+   * Calculate card level from current XP
+   * Works for all card types (Bloom, Magic, Trap, Habitat, Buff)
+   */
+  export function getCardLevel(currentXP: number, card?: BloomBeastCard): number {
+    // For Bloom beasts with custom XP requirements, use those
+    if (card?.levelingConfig?.xpRequirements) {
+      const customXP = card.levelingConfig.xpRequirements;
+      let cumulativeXP = 0;
+
+      for (let level = 2; level <= 9; level++) {
+        const levelKey = level as 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+        cumulativeXP += customXP[levelKey] || CARD_XP_THRESHOLDS[level] - CARD_XP_THRESHOLDS[level - 1];
+
+        if (currentXP < cumulativeXP) {
+          return level - 1;
+        }
+      }
+      return 9; // Max level
+    }
+
+    // Standard XP thresholds
+    for (let level = 9; level >= 1; level--) {
+      if (currentXP >= CARD_XP_THRESHOLDS[level - 1]) {
+        return level;
+      }
+    }
+    return 1;
+  }
+
+  /**
+   * Calculate XP required for next level
+   */
+  export function getXPRequired(currentLevel: number, currentXP: number, card?: BloomBeastCard): number {
+    if (currentLevel >= 9) return 0; // Max level
+
+    const nextLevel = currentLevel + 1;
+
+    // For Bloom beasts with custom XP requirements
+    if (card?.levelingConfig?.xpRequirements) {
+      const customXP = card.levelingConfig.xpRequirements;
+      const levelKey = nextLevel as 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+      const nextLevelXP = CARD_XP_THRESHOLDS[nextLevel - 1];
+      return nextLevelXP - currentXP;
+    }
+
+    // Standard XP requirements
+    const nextLevelXP = CARD_XP_THRESHOLDS[nextLevel - 1];
+    return nextLevelXP - currentXP;
+  }
+
+  /**
+   * Get card definition by ID
+   */
+  export function getCardDefinition(cardId: string): AnyCard | undefined {
+    const allCards = getAllCards();
+    return allCards.find((c: any) => c && c.id === cardId);
+  }
+
+  /**
+   * Extract base card ID (remove instance suffix)
+   * e.g., "forest-bloom-1-1" → "forest-bloom"
+   */
+  export function extractBaseCardId(instanceId: string): string {
+    return instanceId.replace(/-\d+-\d+$/, '');
+  }
+
+  /**
+   * Compute display data for a card (for UI rendering)
+   * This is NOT a stored type - computed on-demand
+   */
+  export interface CardDisplayData {
+    // Identity
+    id: string;
+    cardId: string;
+    name: string;
+    type: string;
+    affinity?: string;
+    cost: number;
+
+    // Computed from XP
+    level: number;
+    experience: number;
+    experienceRequired: number;
+
+    // Stats (for Bloom beasts)
+    baseAttack?: number;
+    baseHealth?: number;
+
+    // Abilities and effects
+    abilities?: any[];
+    description?: string;
+
+    // Visual
+    titleColor?: string;
+  }
+
+  /**
+   * Compute display data from a CardInstance
+   * Merges instance data + card definition + computed level/stats
+   */
+  export function computeCardDisplay(instance: CardInstance): CardDisplayData {
+    const baseCardId = extractBaseCardId(instance.cardId);
+    const cardDef = getCardDefinition(baseCardId);
+
+    if (!cardDef) {
+      // Fallback for missing definition
+      return {
+        id: instance.id,
+        cardId: instance.cardId,
+        name: baseCardId,
+        type: 'unknown',
+        level: 1,
+        experience: instance.currentXP,
+        experienceRequired: 100,
+        cost: 0,
+      };
+    }
+
+    const level = getCardLevel(instance.currentXP, cardDef as BloomBeastCard);
+    const xpRequired = getXPRequired(level, instance.currentXP, cardDef as BloomBeastCard);
+
+    const displayData: CardDisplayData = {
+      id: instance.id,
+      cardId: instance.cardId,
+      name: cardDef.name,
+      type: cardDef.type,
+      affinity: 'affinity' in cardDef ? cardDef.affinity : undefined,
+      cost: cardDef.cost || 0,
+      level,
+      experience: instance.currentXP,
+      experienceRequired: xpRequired,
+    };
+
+    // Add type-specific data
+    if (cardDef.type === 'Bloom' && 'baseAttack' in cardDef) {
+      const bloomCard = cardDef as BloomBeastCard;
+
+      // Apply levelingConfig stat gains if they exist
+      let baseAttack = bloomCard.baseAttack;
+      let baseHealth = bloomCard.baseHealth;
+
+      if (bloomCard.levelingConfig?.statGains) {
+        const statGain = bloomCard.levelingConfig.statGains[level as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9];
+        if (statGain) {
+          baseAttack = statGain.atk;
+          baseHealth = statGain.hp;
+        }
+      }
+
+      displayData.baseAttack = baseAttack;
+      displayData.baseHealth = baseHealth;
+    }
+
+    // Add abilities (with level-based upgrades for Bloom cards)
+    if ('abilities' in cardDef) {
+      let abilities = cardDef.abilities as any[];
+
+      // Apply ability upgrades for Bloom cards based on level
+      if (cardDef.type === 'Bloom' && 'levelingConfig' in cardDef) {
+        const bloomCard = cardDef as BloomBeastCard;
+        const upgrades = bloomCard.levelingConfig?.abilityUpgrades;
+
+        if (upgrades) {
+          // Check upgrade levels in reverse order (9, 7, 4) to get the most recent applicable upgrade
+          if (level >= 9 && upgrades[9]) {
+            abilities = upgrades[9].abilities || abilities;
+          } else if (level >= 7 && upgrades[7]) {
+            abilities = upgrades[7].abilities || abilities;
+          } else if (level >= 4 && upgrades[4]) {
+            abilities = upgrades[4].abilities || abilities;
+          }
+        }
+      }
+
+      displayData.abilities = abilities;
+    }
+
+    // Generate description from abilities using getCardDescription
+    const cardWithAbilities = {
+      ...cardDef,
+      abilities: displayData.abilities
+    };
+    displayData.description = getCardDescription(cardWithAbilities);
+
+    // Add visual properties
+    if ('titleColor' in cardDef) {
+      displayData.titleColor = cardDef.titleColor;
+    }
+
+    return displayData;
+  }
+
   // ==================== bloombeasts\gameManager.ts ====================
 
   /**
@@ -3940,6 +4625,7 @@ namespace BloomBeasts {
    * NOTE: This file only contains type exports used by the UI layer.
    * The actual game logic is in BloomBeastsGame.ts.
    */
+
 
   /**
    * Player statistics displayed in UI
@@ -3978,37 +4664,10 @@ namespace BloomBeasts {
   }
 
   /**
-   * Card information for display in card screens
-   */
-  export interface CardDisplay {
-    id: string;
-    name: string;
-    type: string;
-    affinity?: string;
-    cost?: number;
-    level: number;
-    experience: number;
-    experienceRequired?: number;
-    count: number;
-    baseAttack?: number;
-    currentAttack?: number;
-    baseHealth?: number;
-    currentHealth?: number;
-    abilities?: any[]; // Array of all abilities for Bloom cards (used for description generation)
-    effects?: any[]; // For Magic/Trap/Buff cards
-    ongoingEffects?: any[]; // For Buff/Habitat cards
-    onPlayEffects?: any[]; // For Habitat cards
-    activation?: any; // For Trap cards
-    description?: string; // Description for Magic/Trap/Habitat/Buff cards
-    counters?: Array<{ type: string; amount: number }>; // Counters on the card
-    titleColor?: string; // Custom title color (hex color)
-  }
-
-  /**
    * Card detail popup information
    */
   export interface CardDetailDisplay {
-    card: CardDisplay;
+    card: CardDisplayData;
     buttons: string[];
     isInDeck: boolean;
   }
@@ -4061,119 +4720,6 @@ namespace BloomBeasts {
     isComplete: boolean;
   }
 
-  /**
-   * Complete battle state for display in battle screen
-   */
-  export interface BattleDisplay {
-    playerHealth: number;
-    playerMaxHealth: number;
-    playerDeckCount: number;
-    playerNectar: number;
-    playerHand: any[];
-    playerTrapZone: any[]; // Player's trap cards (face-down)
-    playerBuffZone: any[]; // Player's active buff cards
-    opponentHealth: number;
-    opponentMaxHealth: number;
-    opponentDeckCount: number;
-    opponentNectar: number;
-    opponentField: any[];
-    opponentTrapZone: any[]; // Opponent's trap cards (face-down)
-    opponentBuffZone: any[]; // Opponent's active buff cards
-    playerField: any[];
-    currentTurn: number;
-    turnPlayer: string;
-    turnTimeRemaining: number;
-    objectives: ObjectiveDisplay[];
-    habitatZone: any | null; // Current habitat card
-    selectedBeastIndex: number | null; // Track selected beast for attacking
-    attackAnimation?: { // Attack animation state
-      attackerPlayer: 'player' | 'opponent';
-      attackerIndex: number;
-      targetPlayer: 'player' | 'opponent' | 'health';
-      targetIndex?: number; // undefined if targeting health
-    } | null;
-    cardPopup?: { // Card popup display (for magic/trap/buff cards)
-      card: any;
-      player: 'player' | 'opponent';
-      showCloseButton?: boolean; // Show close button for manual popups
-    } | null;
-  }
-
-  // ==================== bloombeasts\screens\cards\types.ts ====================
-
-  /**
-   * Type definitions for the inventory system
-   */
-
-
-  /**
-   * Instance of a card in the player's collection
-   */
-  export interface CardInstance {
-    id: string;                    // Unique instance ID
-    cardId: string;                 // Base card ID
-    name: string;
-    type: CardType;                 // Card type: Bloom, Magic, Trap, Habitat
-    affinity?: Affinity;            // Optional - not all cards have affinity
-    cost: number;                   // Card cost
-    // Level and XP for ALL card types
-    level: number;                  // All cards can level up
-    currentXP: number;              // All cards can gain experience
-    // Bloom Beast specific fields
-    baseAttack?: number;            // Only for Bloom beasts
-    currentAttack?: number;         // Only for Bloom beasts
-    baseHealth?: number;            // Only for Bloom beasts
-    currentHealth?: number;         // Only for Bloom beasts
-    // General fields
-    ability?: {
-      name: string;
-      description: string;
-    };
-    effects?: string[];             // For Magic/Trap cards - simplified effect descriptions
-    obtainedDate?: Date;
-    lastUsedDate?: Date;
-    battleCount?: number;
-    winCount?: number;
-  }
-
-  /**
-   * Statistics for the card collection
-   */
-  export interface CollectionStats {
-    totalCards: number;
-    uniqueCards: number;
-    cardsByAffinity: Record<Affinity, number>;
-    averageLevel: number;
-    totalXP: number;
-  }
-
-  /**
-   * Deck configuration in inventory
-   */
-  export interface DeckConfiguration {
-    id: string;
-    name: string;
-    cards: string[];                // Array of card instance IDs
-    affinity: Affinity;
-    isValid: boolean;
-    lastModified: Date;
-  }
-
-  /**
-   * Player inventory data
-   */
-  export interface PlayerInventory {
-    playerId: string;
-    cards: CardInstance[];
-    decks: DeckConfiguration[];
-    currency: {
-      nectar: number;
-      crystals?: number;
-    };
-    unlockedCards: string[];         // Base card IDs that have been unlocked
-    achievements?: string[];
-  }
-
   // ==================== bloombeasts\systems\CardCollectionManager.ts ====================
 
   /**
@@ -4200,144 +4746,6 @@ namespace BloomBeasts {
     }
 
     /**
-     * Convert a CardInstance to CardDisplay format
-     * This centralizes all the logic for enriching card instances with definition data
-     */
-    cardInstanceToDisplay(card: CardInstance): CardDisplay {
-      const allCardDefs = getAllCards();
-      // Extract base ID to match against card definitions
-      const baseCardId = this.extractBaseCardId(card.cardId);
-      const cardDef = allCardDefs.find((c: any) => c && c.id === baseCardId);
-
-      // Build base display card with common properties
-      const displayCard: CardDisplay = this.buildBaseCardDisplay(card, cardDef);
-
-      // Add type-specific fields
-      this.addTypeSpecificFields(displayCard, card, cardDef);
-
-      return displayCard;
-    }
-
-    /**
-     * Build base card display with common properties
-     */
-    private buildBaseCardDisplay(card: CardInstance, cardDef: any): CardDisplay {
-      const displayCard: CardDisplay = {
-        id: card.id,
-        name: card.name,
-        type: card.type,
-        affinity: card.affinity,
-        cost: card.cost,
-        level: card.level,
-        experience: card.currentXP || 0,
-        experienceRequired: this.calculateExperienceRequired(card, cardDef),
-        count: 1,
-      };
-
-      // Copy titleColor from card definition if present (applies to all card types)
-      if (cardDef && cardDef.titleColor) {
-        (displayCard as any).titleColor = cardDef.titleColor;
-      }
-
-      return displayCard;
-    }
-
-    /**
-     * Calculate experience required for next level
-     */
-    private calculateExperienceRequired(card: CardInstance, cardDef: any): number {
-      if (!card.level) return 0;
-
-      if (card.type === 'Bloom') {
-        // For Bloom beasts, use the LevelingSystem
-        return this.levelingSystem.getXPRequirement(card.level as any, cardDef as BloomBeastCard | undefined) || 0;
-      } else {
-        // For Magic/Trap/Habitat/Buff cards, use simple formula (level * 100)
-        return card.level * 100;
-      }
-    }
-
-    /**
-     * Add type-specific fields to card display
-     */
-    private addTypeSpecificFields(displayCard: CardDisplay, card: CardInstance, cardDef: any): void {
-      switch (card.type) {
-        case 'Bloom':
-          this.addBloomCardFields(displayCard, card);
-          break;
-        case 'Trap':
-          this.addTrapCardFields(displayCard, card, cardDef);
-          break;
-        case 'Magic':
-          this.addMagicCardFields(displayCard, card);
-          break;
-        case 'Habitat':
-        case 'Buff':
-          this.addHabitatBuffCardFields(displayCard, cardDef, card);
-          break;
-      }
-    }
-
-    /**
-     * Add Bloom-specific fields to card display
-     */
-    private addBloomCardFields(displayCard: CardDisplay, card: CardInstance): void {
-      displayCard.baseAttack = card.baseAttack;
-      displayCard.currentAttack = card.currentAttack;
-      displayCard.baseHealth = card.baseHealth;
-      displayCard.currentHealth = card.currentHealth;
-
-      // Get the full abilities from the card definition (with effects array)
-      const result = this.getAbilitiesForLevel(card);
-      // Store all abilities for description generation
-      displayCard.abilities = result.abilities;
-    }
-
-    /**
-     * Add Trap-specific fields to card display
-     */
-    private addTrapCardFields(displayCard: CardDisplay, card: CardInstance, cardDef: any): void {
-      // Copy abilities and activation from card definition
-      if (cardDef) {
-        displayCard.activation = cardDef.activation;
-        displayCard.abilities = cardDef.abilities;
-        console.log(`[Trap] ${card.name}: Found cardDef, abilities:`, displayCard.abilities);
-      } else {
-        console.error(`[Trap] ${card.name} (${card.cardId}): CardDef NOT FOUND!`);
-      }
-    }
-
-    /**
-     * Add Magic-specific fields to card display
-     */
-    private addMagicCardFields(displayCard: CardDisplay, card: CardInstance): void {
-      // Copy abilities from card definition for description generation
-      const allCardDefs = getAllCards();
-      const baseCardId = this.extractBaseCardId(card.cardId);
-      const cardDef = allCardDefs.find((c: any) => c && c.id === baseCardId);
-
-      if (cardDef) {
-        displayCard.abilities = (cardDef as any).abilities;
-        console.log(`[Magic] ${card.name}: Found cardDef, abilities:`, displayCard.abilities);
-      } else {
-        console.error(`[Magic] ${card.name} (${card.cardId} -> ${baseCardId}): CardDef NOT FOUND!`);
-      }
-    }
-
-    /**
-     * Add Habitat/Buff-specific fields to card display
-     */
-    private addHabitatBuffCardFields(displayCard: CardDisplay, cardDef: any, card?: CardInstance): void {
-      // Copy abilities from card definition for description generation
-      if (cardDef) {
-        displayCard.abilities = cardDef.abilities;
-        console.log(`[Habitat/Buff] ${card?.name || 'Unknown'}: Found cardDef, abilities:`, displayCard.abilities);
-      } else {
-        console.error(`[Habitat/Buff] ${card?.name || 'Unknown'} (${card?.cardId}): CardDef NOT FOUND!`);
-      }
-    }
-
-    /**
      * Get abilities for a card based on its level
      */
     getAbilitiesForLevel(cardInstance: CardInstance): { abilities: any[] } {
@@ -4354,7 +4762,7 @@ namespace BloomBeasts {
         };
       }
 
-      const level = cardInstance.level || 1;
+      const level = getCardLevel(cardInstance.currentXP, cardDef);
       let abilities = [...cardDef.abilities];
 
       // Apply ability upgrades based on level (use the most recent complete set)
@@ -4376,6 +4784,7 @@ namespace BloomBeasts {
 
     /**
      * Get player's deck cards for battle
+     * Converts minimal CardInstance to full battle cards using definitions
      */
     getPlayerDeckCards(playerDeck: string[], cardInstances: CardInstance[]): AnyCard[] {
       const deckCards: AnyCard[] = [];
@@ -4386,57 +4795,41 @@ namespace BloomBeasts {
         const cardInstance = cardInstances.find(c => c.id === cardId);
 
         if (cardInstance) {
-          if (cardInstance.type === 'Bloom') {
-            // Get the correct abilities for the card's level
+          // Get the card definition
+          const baseCardId = this.extractBaseCardId(cardInstance.cardId);
+          const cardDef = allCardDefs.find((card: any) =>
+            card && card.id === baseCardId
+          );
+
+          if (!cardDef) {
+            Logger.warn(`Card definition not found for ${cardInstance.cardId}`);
+            continue;
+          }
+
+          // For Bloom cards, apply level-based upgrades
+          if (cardDef.type === 'Bloom') {
+            const level = getCardLevel(cardInstance.currentXP, cardDef as BloomBeastCard);
             const abilities = this.getAbilitiesForLevel(cardInstance);
 
-            // Convert CardInstance to BloomBeastCard format for battle
+            // Convert to BloomBeastCard format for battle
             const bloomCard: BloomBeastCard = {
-              id: cardInstance.cardId,
+              id: cardDef.id,
               instanceId: cardInstance.id, // Used for unique identification in battle
-              name: cardInstance.name,
+              name: cardDef.name,
               type: 'Bloom',
-              affinity: cardInstance.affinity || 'Forest',
-              cost: cardInstance.cost,
-              baseAttack: cardInstance.baseAttack || 0,
-              baseHealth: cardInstance.baseHealth || 0,
+              affinity: cardDef.affinity || 'Forest',
+              cost: cardDef.cost,
+              baseAttack: cardDef.baseAttack || 0,
+              baseHealth: cardDef.baseHealth || 0,
               abilities: abilities.abilities,
-              level: cardInstance.level || 1, // Include level for beast instance
+              level: level, // Include computed level for beast instance
               levelingConfig: {} as any, // Not used in battle
             } as any;
 
             deckCards.push(bloomCard);
           } else {
-            // For non-Bloom cards, find the original card definition
-            const baseCardId = this.extractBaseCardId(cardInstance.cardId);
-            const originalCard = allCardDefs.find((card: any) =>
-              card && card.id === baseCardId
-            );
-
-            if (originalCard) {
-              // Use the original card definition for battle
-              deckCards.push(originalCard as AnyCard);
-            } else {
-              // Fallback: create a simple card structure
-              Logger.warn(`Card definition not found for ${cardInstance.cardId}, creating fallback`);
-              const fallbackCard: any = {
-                id: cardInstance.cardId,
-                name: cardInstance.name,
-                type: cardInstance.type,
-                cost: cardInstance.cost || 0,
-                affinity: cardInstance.affinity,
-              };
-
-              // Add type-specific properties
-              if (cardInstance.type === 'Magic' || cardInstance.type === 'Trap') {
-                fallbackCard.effects = [];
-              } else if (cardInstance.type === 'Habitat') {
-                fallbackCard.onPlayEffects = [];
-                fallbackCard.ongoingEffects = [];
-              }
-
-              deckCards.push(fallbackCard);
-            }
+            // For non-Bloom cards, use the card definition directly
+            deckCards.push(cardDef as AnyCard);
           }
         }
       }
@@ -4445,12 +4838,10 @@ namespace BloomBeasts {
     }
 
     /**
-     * Award experience to all cards in the player's deck after battle victory
-     * Card XP is distributed evenly across all cards in the deck
+     * Award experience to all cards in the player's deck (simplified)
+     * Level is computed from XP on-demand, so we just add XP here
      */
     awardDeckExperience(totalCardXP: number, playerDeck: string[], cardInstances: CardInstance[]): void {
-      const allCardDefs = getAllCards();
-
       // Distribute XP evenly across all cards in deck
       const xpPerCard = Math.floor(totalCardXP / playerDeck.length);
 
@@ -4460,90 +4851,16 @@ namespace BloomBeasts {
 
         if (!cardInstance) continue;
 
-        // Add XP
-        cardInstance.currentXP = (cardInstance.currentXP || 0) + xpPerCard;
+        const oldXP = cardInstance.currentXP;
+        cardInstance.currentXP += xpPerCard;
 
-        // Check for level up
-        let leveledUp = false;
-
-        if (cardInstance.type === 'Bloom') {
-          // For Bloom beasts, use the LevelingSystem
-          const baseCardId = this.extractBaseCardId(cardInstance.cardId);
-          const cardDef = allCardDefs.find((c: any) => c && c.id === baseCardId) as BloomBeastCard | undefined;
-
-          if (cardDef) {
-            let currentLevel = cardInstance.level || 1;
-            let currentXP = cardInstance.currentXP;
-
-            // Keep leveling up while possible
-            while (currentLevel < 9) {
-              const nextLevel = (currentLevel + 1) as any;
-              const xpRequired = this.levelingSystem.getXPRequirement(currentLevel as any, cardDef);
-
-              if (xpRequired !== null && currentXP >= xpRequired) {
-                // Level up!
-                currentXP -= xpRequired;
-                currentLevel = nextLevel;
-
-                // Apply stat gains
-                const statGain = this.levelingSystem.getStatGain(currentLevel as any, cardDef);
-                cardInstance.currentAttack = (cardInstance.currentAttack || 0) + statGain.attackGain;
-                cardInstance.currentHealth = (cardInstance.currentHealth || 0) + statGain.healthGain;
-                cardInstance.baseAttack = (cardInstance.baseAttack || 0) + statGain.attackGain;
-                cardInstance.baseHealth = (cardInstance.baseHealth || 0) + statGain.healthGain;
-
-                leveledUp = true;
-              } else {
-                break;
-              }
-            }
-
-            // Update the card instance
-            cardInstance.level = currentLevel;
-            cardInstance.currentXP = currentXP;
-
-            // Update ability if there's an upgrade at this level
-            if (leveledUp) {
-              const result = this.getAbilitiesForLevel(cardInstance);
-              // Store the first ability in CardInstance (internal storage format)
-              cardInstance.ability = result.abilities.length > 0 ? result.abilities[0] : undefined;
-            }
-          }
-        } else {
-          // For Magic/Trap/Habitat/Buff cards, use steep exponential leveling
-          // Formula: XP = 20 * (2.0 ^ (level - 1))
-          const nonBloomXPRequirements = [0, 20, 40, 80, 160, 320, 640, 1280, 2560];
-
-          let currentLevel = cardInstance.level || 1;
-          let currentXP = cardInstance.currentXP;
-
-          // Keep leveling up while possible
-          while (currentLevel < 9) {
-            const xpRequired = nonBloomXPRequirements[currentLevel];
-
-            if (currentXP >= xpRequired) {
-              // Level up!
-              currentXP -= xpRequired;
-              currentLevel++;
-              leveledUp = true;
-            } else {
-              break;
-            }
-          }
-
-          // Update the card instance
-          cardInstance.level = currentLevel;
-          cardInstance.currentXP = currentXP;
-        }
-
-        if (leveledUp) {
-          Logger.info(`${cardInstance.name} leveled up to level ${cardInstance.level}!`);
-        }
+        // Log XP gain (level is computed from XP using cardUtils)
+        Logger.debug(`Card ${cardId} gained ${xpPerCard} XP (${oldXP} → ${cardInstance.currentXP})`);
       }
     }
 
     /**
-     * Initialize starting collection
+     * Initialize starting collection with minimal CardInstance format
      */
     async initializeStartingCollection(cardInstances: CardInstance[], playerDeck: string[]): Promise<string[]> {
       // Give player the first 30 cards from the card catalog as the default deck
@@ -4551,54 +4868,20 @@ namespace BloomBeasts {
       const starterCards = allCards.slice(0, 30);
 
       starterCards.forEach((card, index) => {
-        const baseId = `${card.id}-${Date.now()}-${index}`;
+        const instanceId = `${card.id}-${Date.now()}-${index}`;
 
-        if (card.type === 'Bloom') {
-          // Process Bloom Beast cards
-          const beastCard = card as BloomBeastCard;
-          const cardInstance: CardInstance = {
-            id: baseId,
-            cardId: beastCard.id,
-            name: beastCard.name,
-            type: 'Bloom',
-            affinity: beastCard.affinity,
-            cost: beastCard.cost,
-            level: 1,
-            currentXP: 0,
-            baseAttack: beastCard.baseAttack,
-            currentAttack: beastCard.baseAttack,
-            baseHealth: beastCard.baseHealth,
-            currentHealth: beastCard.baseHealth,
-            ability: beastCard.abilities && beastCard.abilities.length > 0 ? {
-              name: (beastCard.abilities[0] as any).name || '',
-              description: (beastCard.abilities[0] as any).description || ''
-            } : undefined,
-          };
-          cardInstances.push(cardInstance);
-          // Add to player's deck (up to DECK_SIZE cards)
-          if (playerDeck.length < DECK_SIZE) {
-            playerDeck.push(cardInstance.id);
-          }
-        } else {
-          // Process Magic, Trap, and Habitat cards
-          const cardInstance: CardInstance = {
-            id: baseId,
-            cardId: card.id,
-            name: card.name,
-            type: card.type,
-            affinity: (card as any).affinity,
-            cost: card.cost || 0,
-            level: 1,           // All cards start at level 1
-            currentXP: 0,       // All cards start with 0 XP
-            // Add simplified effect descriptions for display
-            effects: this.getEffectDescriptions(card),
-            ability: undefined, // Non-Bloom cards use effects instead
-          };
-          cardInstances.push(cardInstance);
-          // Add to player's deck (up to DECK_SIZE cards)
-          if (playerDeck.length < DECK_SIZE) {
-            playerDeck.push(cardInstance.id);
-          }
+        // Create minimal card instance (all types use same format now)
+        const cardInstance: CardInstance = {
+          id: instanceId,
+          cardId: card.id,
+          currentXP: 0, // Start at 0 XP (level 1)
+        };
+
+        cardInstances.push(cardInstance);
+
+        // Add to player's deck (up to DECK_SIZE cards)
+        if (playerDeck.length < DECK_SIZE) {
+          playerDeck.push(cardInstance.id);
         }
       });
 
@@ -4606,188 +4889,21 @@ namespace BloomBeasts {
     }
 
     /**
-     * Add card reward to collection
+     * Add card reward to collection (minimal format)
      */
     addCardReward(card: any, cardInstances: CardInstance[], index: number): void {
-      const baseId = `${card.id}-reward-${Date.now()}-${index}`;
+      const instanceId = `${card.id}-reward-${Date.now()}-${index}`;
 
-      if (card.type === 'Bloom') {
-        // Convert Bloom Beast card rewards to CardInstance for collection
-        const beastCard = card as BloomBeastCard;
-        const cardInstance: CardInstance = {
-          id: baseId,
-          cardId: beastCard.id,
-          name: beastCard.name,
-          type: 'Bloom',
-          affinity: beastCard.affinity,
-          cost: beastCard.cost,
-          level: 1,
-          currentXP: 0,
-          baseAttack: beastCard.baseAttack,
-          currentAttack: beastCard.baseAttack,
-          baseHealth: beastCard.baseHealth,
-          currentHealth: beastCard.baseHealth,
-          ability: beastCard.abilities && beastCard.abilities.length > 0 ? {
-            name: (beastCard.abilities[0] as any).name || '',
-            description: (beastCard.abilities[0] as any).description || ''
-          } : undefined,
-        };
-        cardInstances.push(cardInstance);
-      } else {
-        // Convert Magic, Trap, and Habitat card rewards to CardInstance
-        const cardInstance: CardInstance = {
-          id: baseId,
-          cardId: card.id,
-          name: card.name,
-          type: card.type,
-          affinity: card.affinity,
-          cost: card.cost || 0,
-          level: 1,           // All cards start at level 1
-          currentXP: 0,       // All cards start with 0 XP
-          effects: this.getEffectDescriptions(card),
-          ability: undefined,
-        };
-        cardInstances.push(cardInstance);
-      }
+      // Create minimal card instance (all types use same format)
+      const cardInstance: CardInstance = {
+        id: instanceId,
+        cardId: card.id,
+        currentXP: 0, // New cards start at 0 XP (level 1)
+      };
+
+      cardInstances.push(cardInstance);
     }
 
-    /**
-     * Get simplified effect descriptions for Magic/Trap/Habitat cards
-     */
-    getEffectDescriptions(card: any): string[] {
-      const allCardDefs = getAllCards();
-      const lookupId = card.cardId || card.id;
-      const baseCardId = this.extractBaseCardId(lookupId);
-      const cardDef = allCardDefs.find((c: any) => c && c.id === baseCardId);
-
-      let descriptions: string[] = [];
-
-      switch (card.type) {
-        case 'Magic':
-          descriptions = this.getMagicCardDescriptions(card, cardDef);
-          break;
-        case 'Trap':
-          descriptions = this.getTrapCardDescriptions(card, cardDef);
-          break;
-        case 'Habitat':
-          descriptions = this.getHabitatCardDescriptions(card, cardDef);
-          break;
-        case 'Buff':
-          descriptions = this.getBuffCardDescriptions(card, cardDef);
-          break;
-      }
-
-      return descriptions.length > 0 ? descriptions : ['Special card'];
-    }
-
-    /**
-     * Get descriptions for Buff card effects
-     */
-    private getBuffCardDescriptions(card: any, cardDef: any): string[] {
-      const descriptions: string[] = [];
-
-      if (card.onPlayEffects || cardDef?.onPlayEffects) {
-        descriptions.push('On Play: Immediate effect');
-      }
-      if (card.ongoingEffects || cardDef?.ongoingEffects) {
-        descriptions.push('Ongoing: Field-wide bonus');
-      }
-
-      return descriptions;
-    }
-
-    /**
-     * Get descriptions for Magic card effects
-     */
-    private getMagicCardDescriptions(card: any, cardDef: any): string[] {
-      const descriptions: string[] = [];
-
-      // Check if card definition has a description first (preferred method)
-      if (cardDef && cardDef.description) {
-        descriptions.push(cardDef.description);
-        return descriptions;
-      }
-
-      // Fallback to parsing effects
-      const effects = cardDef?.effects || card.effects || [];
-      effects.forEach((effect: any) => {
-        descriptions.push(this.getEffectDescription(effect));
-      });
-
-      return descriptions;
-    }
-
-    /**
-     * Get descriptions for Trap card effects
-     */
-    private getTrapCardDescriptions(card: any, cardDef: any): string[] {
-      const descriptions: string[] = [];
-
-      // For trap cards, use the card's description if available
-      if (cardDef && cardDef.description) {
-        descriptions.push(cardDef.description);
-        return descriptions;
-      }
-
-      // Fallback to parsing effects
-      const effects = cardDef?.effects || card.effects || [];
-      effects.forEach((effect: any) => {
-        const effectType = effect.type || '';
-        if (effectType === 'nullify-effect' || effectType === 'NullifyEffect') {
-          descriptions.push('Counter and negate effect');
-        } else if (effectType === 'damage' || effectType === 'Damage') {
-          descriptions.push(`Deal ${effect.value || 0} damage`);
-        } else {
-          const typeStr = effectType.toString().replace(/([A-Z])/g, ' $1').trim();
-          descriptions.push(typeStr || 'Trap effect');
-        }
-      });
-
-      return descriptions;
-    }
-
-    /**
-     * Get descriptions for Habitat card effects
-     */
-    private getHabitatCardDescriptions(card: any, cardDef: any): string[] {
-      const descriptions: string[] = [];
-
-      if (card.onPlayEffects || cardDef?.onPlayEffects) {
-        descriptions.push('On Play: Field transformation');
-      }
-      if (card.ongoingEffects || cardDef?.ongoingEffects) {
-        descriptions.push('Ongoing: Field bonuses');
-      }
-
-      return descriptions;
-    }
-
-    /**
-     * Convert a single effect to a readable description
-     */
-    private getEffectDescription(effect: any): string {
-      const effectType = effect.type || '';
-
-      if (effectType === 'draw-cards' || effectType === 'DrawCards') {
-        return `Draw ${effect.value || 1} card(s)`;
-      } else if (effectType === 'heal' || effectType === 'Heal') {
-        return `Heal ${effect.value || 0}`;
-      } else if (effectType === 'deal-damage' || effectType === 'Damage') {
-        return `Deal ${effect.value || 0} damage`;
-      } else if (effectType === 'modify-stats' || effectType === 'ModifyStats') {
-        return `Modify stats by ${effect.attack || 0}/${effect.health || 0}`;
-      } else if (effectType === 'gain-resource' || effectType === 'GainResource') {
-        return `Gain ${effect.value || 1} ${effect.resource || 'nectar'}`;
-      } else if (effectType === 'remove-counter' || effectType === 'RemoveCounter') {
-        return `Remove ${effect.counter || 'all'} counters`;
-      } else if (effectType === 'destroy' || effectType === 'Destroy') {
-        return `Destroy target`;
-      } else {
-        // Try to create a readable description from the effect type
-        const typeStr = effectType.toString().replace(/([A-Z])/g, ' $1').replace(/-/g, ' ').trim();
-        return typeStr || 'Special effect';
-      }
-    }
   }
 
   // ==================== bloombeasts\systems\BattleDisplayManager.ts ====================
@@ -4870,7 +4986,7 @@ namespace BloomBeasts {
         const target = obj.target || 1;
 
         return {
-          description: obj.description,
+          description: obj.description || 'Unknown objective',
           progress: Math.min(progress, target),
           target: target,
           isComplete: progress >= target,
@@ -10542,327 +10658,6 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\cards\InventoryFilters.ts ====================
-
-  /**
-   * Inventory Filters - Manage filtering options for the card collection
-   */
-
-
-  export type FilterType = 'affinity' | 'minLevel' | 'maxLevel' | 'hasAbility' | 'search';
-
-  export interface Filter {
-    type: FilterType;
-    value: any;
-    active: boolean;
-  }
-
-  export class InventoryFilters {
-    private filters: SimpleMap<FilterType, Filter> = new SimpleMap();
-
-    constructor() {
-      this.initializeFilters();
-    }
-
-    /**
-     * Initialize default filters
-     */
-    private initializeFilters(): void {
-      this.filters.set('affinity', {
-        type: 'affinity',
-        value: 'all',
-        active: false,
-      });
-
-      this.filters.set('minLevel', {
-        type: 'minLevel',
-        value: 1,
-        active: false,
-      });
-
-      this.filters.set('maxLevel', {
-        type: 'maxLevel',
-        value: 9,
-        active: false,
-      });
-
-      this.filters.set('hasAbility', {
-        type: 'hasAbility',
-        value: '',
-        active: false,
-      });
-
-      this.filters.set('search', {
-        type: 'search',
-        value: '',
-        active: false,
-      });
-    }
-
-    /**
-     * Update a filter value
-     */
-    public updateFilter(type: FilterType, value: any): void {
-      const filter = this.filters.get(type);
-      if (filter) {
-        filter.value = value;
-        filter.active = value !== null && value !== '' && value !== 'all';
-      }
-    }
-
-    /**
-     * Get a specific filter value
-     */
-    public getFilter(type: FilterType): any {
-      const filter = this.filters.get(type);
-      return filter?.active ? filter.value : null;
-    }
-
-    /**
-     * Get all active filters
-     */
-    public getActiveFilters(): Filter[] {
-      return Array.from(this.filters.values()).filter(f => f.active);
-    }
-
-    /**
-     * Clear all filters
-     */
-    public clearAll(): void {
-      this.initializeFilters();
-    }
-
-    /**
-     * Clear a specific filter
-     */
-    public clearFilter(type: FilterType): void {
-      const filter = this.filters.get(type);
-      if (filter) {
-        switch (type) {
-          case 'affinity':
-            filter.value = 'all';
-            break;
-          case 'minLevel':
-            filter.value = 1;
-            break;
-          case 'maxLevel':
-            filter.value = 9;
-            break;
-          default:
-            filter.value = '';
-        }
-        filter.active = false;
-      }
-    }
-
-    /**
-     * Get filter presets
-     */
-    public static getPresets(): Record<string, Partial<Record<FilterType, any>>> {
-      return {
-        'high-level': {
-          minLevel: 7,
-        },
-        'fire-cards': {
-          affinity: 'Fire',
-        },
-        'forest-cards': {
-          affinity: 'Forest',
-        },
-        'water-cards': {
-          affinity: 'Water',
-        },
-        'sky-cards': {
-          affinity: 'Sky',
-        },
-        'low-level': {
-          maxLevel: 3,
-        },
-      };
-    }
-
-    /**
-     * Apply a preset
-     */
-    public applyPreset(presetName: string): void {
-      const presets = InventoryFilters.getPresets();
-      const preset = presets[presetName];
-
-      if (preset) {
-        this.clearAll();
-        for (const [type, value] of Object.entries(preset)) {
-          this.updateFilter(type as FilterType, value);
-        }
-      }
-    }
-  }
-
-  // ==================== bloombeasts\screens\cards\CardCollection.ts ====================
-
-  /**
-   * Card Collection - Manages the player's collection of cards
-   */
-
-
-  export type SortOption = 'name' | 'level' | 'affinity' | 'attack' | 'health' | 'xp' | 'recent';
-
-  export class CardCollection {
-    private cards: CardInstance[] = [];
-    private sortBy: SortOption = 'name';
-    private sortAscending: boolean = true;
-
-    constructor() {
-      // Initialize with empty collection
-    }
-
-    /**
-     * Set the player's card collection (called by platform layer)
-     */
-    public setCards(cards: CardInstance[]): void {
-      this.cards = cards;
-    }
-
-    /**
-     * Get all cards in collection
-     */
-    public getAllCards(): CardInstance[] {
-      return this.cards;
-    }
-
-    /**
-     * Get a specific card by ID
-     */
-    public getCard(id: string): CardInstance | undefined {
-      return this.cards.find(card => card.id === id);
-    }
-
-    /**
-     * Get cards filtered by criteria
-     */
-    public getFilteredCards(filters: InventoryFilters): CardInstance[] {
-      let filtered = [...this.cards];
-
-      // Apply affinity filter
-      const affinityFilter = filters.getFilter('affinity');
-      if (affinityFilter && affinityFilter !== 'all') {
-        filtered = filtered.filter(card => card.affinity === affinityFilter);
-      }
-
-      // Apply level filter
-      const levelFilter = filters.getFilter('minLevel');
-      if (levelFilter) {
-        filtered = filtered.filter(card => card.level >= levelFilter);
-      }
-
-      // Apply search filter
-      const searchFilter = filters.getFilter('search');
-      if (searchFilter) {
-        const search = searchFilter.toLowerCase();
-        filtered = filtered.filter(card =>
-          card.name.toLowerCase().includes(search) ||
-          (card.affinity && card.affinity.toLowerCase().includes(search))
-        );
-      }
-
-      // Apply sorting
-      this.applySorting(filtered);
-
-      return filtered;
-    }
-
-    /**
-     * Sort cards by specified criteria
-     */
-    public sortCards(sortBy: SortOption, ascending: boolean = true): void {
-      this.sortBy = sortBy;
-      this.sortAscending = ascending;
-      this.applySorting(this.cards);
-    }
-
-    /**
-     * Apply sorting to a card array
-     */
-    private applySorting(cards: CardInstance[]): void {
-      cards.sort((a, b) => {
-        let comparison = 0;
-
-        switch (this.sortBy) {
-          case 'name':
-            comparison = a.name.localeCompare(b.name);
-            break;
-          case 'level':
-            comparison = a.level - b.level;
-            break;
-          case 'affinity':
-            comparison = (a.affinity || '').localeCompare(b.affinity || '');
-            break;
-          case 'attack':
-            comparison = (a.currentAttack || 0) - (b.currentAttack || 0);
-            break;
-          case 'health':
-            comparison = (a.currentHealth || 0) - (b.currentHealth || 0);
-            break;
-          case 'xp':
-            comparison = a.currentXP - b.currentXP;
-            break;
-        }
-
-        return this.sortAscending ? comparison : -comparison;
-      });
-    }
-
-    /**
-     * Get collection statistics
-     */
-    public getStats(): CollectionStats {
-      const stats: CollectionStats = {
-        totalCards: this.cards.length,
-        uniqueCards: new Set(this.cards.map(c => c.cardId)).size,
-        cardsByAffinity: {
-          Forest: 0,
-          Fire: 0,
-          Water: 0,
-          Sky: 0,
-          Generic: 0,
-        },
-        averageLevel: 0,
-        totalXP: 0,
-      };
-
-      let totalLevel = 0;
-      for (const card of this.cards) {
-        if (card.affinity) {
-          stats.cardsByAffinity[card.affinity]++;
-        }
-        totalLevel += card.level;
-        stats.totalXP += card.currentXP;
-      }
-
-      stats.averageLevel = this.cards.length > 0 ? totalLevel / this.cards.length : 0;
-
-      return stats;
-    }
-
-    /**
-     * Add a new card to collection
-     */
-    public addCard(card: CardInstance): void {
-      this.cards.push(card);
-    }
-
-    /**
-     * Remove a card from collection
-     */
-    public removeCard(id: string): boolean {
-      const index = this.cards.findIndex(card => card.id === id);
-      if (index !== -1) {
-        this.cards.splice(index, 1);
-        return true;
-      }
-      return false;
-    }
-  }
-
   // ==================== bloombeasts\AssetCatalog.ts ====================
 
   /**
@@ -11271,10 +11066,10 @@ namespace BloomBeasts {
   export type UINodeType<T = any> = any;
 
   /**
-   * Extend CardDisplay with additional UI properties
+   * Extend CardDisplayData with additional UI properties
    * These are properties used in the UI but not in the core game model
    */
-  export interface UICardDisplay extends CardDisplay {
+  export interface UICardDisplay extends CardDisplayData {
     // Add emoji based on affinity
     emoji?: string;
     // Use level as rarity indicator
@@ -11286,14 +11081,14 @@ namespace BloomBeasts {
   }
 
   /**
-   * Convert CardDisplay to UICardDisplay with additional UI properties
+   * Convert CardDisplayData to UICardDisplay with additional UI properties
    */
-  export function toUICard(card: CardDisplay): UICardDisplay {
+  export function toUICard(card: CardDisplayData): UICardDisplay {
     const uiCard: UICardDisplay = {
       ...card,
-      attack: card.baseAttack || card.currentAttack || 0,
-      defense: 0, // Not in CardDisplay - using 0 as default
-      health: card.baseHealth || card.currentHealth || 0,
+      attack: card.baseAttack || 0,
+      defense: 0, // Not in CardDisplayData - using 0 as default
+      health: card.baseHealth || 0,
       emoji: getCardEmoji(card),
       rarityLevel: getCardRarity(card)
     };
@@ -11303,7 +11098,7 @@ namespace BloomBeasts {
   /**
    * Get emoji based on card affinity
    */
-  function getCardEmoji(card: CardDisplay): string {
+  function getCardEmoji(card: CardDisplayData): string {
     switch (card.affinity?.toLowerCase()) {
       case 'fire':
         return '🔥';
@@ -11321,7 +11116,7 @@ namespace BloomBeasts {
   /**
    * Determine rarity based on card level
    */
-  function getCardRarity(card: CardDisplay): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
+  function getCardRarity(card: CardDisplayData): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
     const level = card.level || 1;
     if (level >= 10) return 'legendary';
     if (level >= 7) return 'epic';
@@ -11664,14 +11459,22 @@ namespace BloomBeasts {
       // Create hover state binding for opacity effect
       const hoverBinding = new ui.Binding(false);
 
-      // Calculate opacity based on hover and disabled state
-      const opacityBinding = ui.Binding.derive(
-          [hoverBinding],
-          (isHovered: boolean) => {
-              if (disabledValue) return 0.5;
-              return isHovered ? 0.8 : 1.0;
-          }
-      );
+      // Calculate opacity based on hover and disabled state (reactive to binding if present)
+      const opacityBinding = disabledBinding
+          ? ui.Binding.derive(
+              [hoverBinding, disabledBinding],
+              (isHovered: boolean, isDisabled: boolean) => {
+                  if (isDisabled) return 0.5;
+                  return isHovered ? 0.8 : 1.0;
+              }
+          )
+          : ui.Binding.derive(
+              [hoverBinding],
+              (isHovered: boolean) => {
+                  if (disabledValue) return 0.5;
+                  return isHovered ? 0.8 : 1.0;
+              }
+          );
 
       return ui.Pressable({
           onClick: onClick,
@@ -11718,7 +11521,12 @@ namespace BloomBeasts {
                       text: labelBinding,
                       style: {
                           fontSize: DIMENSIONS.fontSize.md,
-                          color: disabledValue ? '#888' : COLORS.textPrimary,
+                          color: disabledBinding
+                              ? ui.Binding.derive(
+                                  [disabledBinding],
+                                  (isDisabled: boolean) => isDisabled ? '#888' : COLORS.textPrimary
+                              )
+                              : (disabledValue ? '#888' : COLORS.textPrimary),
                           textAlign: 'center',
                           fontWeight: 'bold',
                           textAlignVertical: 'center',
@@ -12313,407 +12121,6 @@ namespace BloomBeasts {
   export const playerLevelEmoji = '💪';
   export const playerExperienceEmoji = '🧪';
 
-  // ==================== bloombeasts\engine\utils\abilityDescriptionGenerator.ts ====================
-
-  /**
-   * Generates human-readable descriptions from ability effects
-   */
-
-
-  /**
-   * Generate a complete description from a StructuredAbility
-   */
-  export function generateAbilityDescription(ability: StructuredAbility): string {
-    // Handle edge cases
-    if (!ability) {
-      return '';
-    }
-
-    const parts: string[] = [];
-
-    // Add trigger context
-    const triggerText = getTriggerText(ability.trigger);
-    if (triggerText) {
-      parts.push(triggerText);
-    }
-
-    // Add cost if present
-    if (ability.cost) {
-      const costText = getCostText(ability.cost);
-      if (costText) {
-        parts.push(costText);
-      }
-    }
-
-    // Generate effect descriptions
-    if (ability.effects && ability.effects.length > 0) {
-      const effectTexts = ability.effects.map(effect => getEffectText(effect));
-      const combinedEffects = combineEffects(effectTexts);
-      parts.push(combinedEffects);
-    }
-
-    // Add usage limitations
-    if (ability.maxUsesPerTurn) {
-      parts.push(`(${ability.maxUsesPerTurn}x per turn)`);
-    }
-    if (ability.maxUsesPerGame) {
-      parts.push(`(once per game)`);
-    }
-
-    // If no parts were generated, at least return the ability name
-    if (parts.length === 0) {
-      return ability.name || '';
-    }
-
-    return parts.join(' ').replace(/\s+/g, ' ').trim();
-  }
-
-  /**
-   * Get trigger prefix text
-   */
-  function getTriggerText(trigger?: AbilityTrigger): string {
-    switch (trigger) {
-      case AbilityTrigger.OnSummon:
-        return 'When summoned,';
-      case AbilityTrigger.OnAllySummon:
-        return 'When you summon another ally,';
-      case AbilityTrigger.OnAttack:
-        return 'When attacking,';
-      case AbilityTrigger.OnDamage:
-        return 'When attacked,';
-      case AbilityTrigger.OnDestroy:
-        return 'When destroyed,';
-      case AbilityTrigger.OnOwnStartOfTurn:
-        return 'At turn start,';
-      case AbilityTrigger.OnOwnEndOfTurn:
-        return 'At turn end,';
-      case AbilityTrigger.OnAnyStartOfTurn:
-        return 'At any turn start,';
-      case AbilityTrigger.OnAnyEndOfTurn:
-        return 'At any turn end,';
-      case AbilityTrigger.OnOpponentStartOfTurn:
-        return 'At opponent\'s turn start,';
-      case AbilityTrigger.OnOpponentEndOfTurn:
-        return 'At opponent\'s turn end,';
-      case AbilityTrigger.Passive:
-        return '';
-      case AbilityTrigger.Activated:
-        return '';
-      default:
-        return '';
-    }
-  }
-
-  /**
-   * Get cost text
-   */
-  function getCostText(cost: any): string {
-    if (cost.type === 'nectar') {
-      return `Pay ${cost.value} Nectar:`;
-    }
-    if (cost.type === 'discard') {
-      return `Discard ${cost.value} card${cost.value > 1 ? 's' : ''}:`;
-    }
-    if (cost.type === 'sacrifice') {
-      return `Sacrifice ${cost.value} unit${cost.value > 1 ? 's' : ''}:`;
-    }
-    if (cost.type === 'remove-counter') {
-      return `Remove ${cost.value} ${cost.counter} counter${cost.value > 1 ? 's' : ''}:`;
-    }
-    return '';
-  }
-
-  /**
-   * Get target text
-   */
-  function getTargetText(target: AbilityTarget): string {
-    switch (target) {
-      case AbilityTarget.Self:
-        return 'this';
-      case AbilityTarget.Target:
-        return 'target';
-      case AbilityTarget.Attacker:
-        return 'attacker';
-      case AbilityTarget.AllAllies:
-        return 'all allies';
-      case AbilityTarget.AllEnemies:
-        return 'all enemies';
-      case AbilityTarget.AdjacentAllies:
-        return 'adjacent allies';
-      case AbilityTarget.AdjacentEnemies:
-        return 'adjacent enemies';
-      case AbilityTarget.OpponentGardener:
-        return 'opponent';
-      case AbilityTarget.PlayerGardener:
-        return 'you';
-      case AbilityTarget.RandomEnemy:
-        return 'random enemy';
-      case AbilityTarget.AllUnits:
-        return 'all Beasts';
-      case AbilityTarget.OtherAlly:
-        return 'another ally';
-      default:
-        return target;
-    }
-  }
-
-  /**
-   * Get duration text
-   */
-  function getDurationText(duration?: EffectDuration): string {
-    switch (duration) {
-      case EffectDuration.Permanent:
-        return 'permanently';
-      case EffectDuration.EndOfTurn:
-        return 'until end of turn';
-      case EffectDuration.StartOfNextTurn:
-        return 'until your next turn';
-      case EffectDuration.WhileOnField:
-        return '';
-      case EffectDuration.ThisTurn:
-        return 'this turn';
-      case EffectDuration.NextAttack:
-        return 'for next attack';
-      default:
-        return '';
-    }
-  }
-
-  /**
-   * Get condition text
-   */
-  function getConditionText(condition?: any): string {
-    if (!condition) return '';
-
-    switch (condition.type) {
-      case ConditionType.IsDamaged:
-        return 'if damaged';
-      case ConditionType.IsWilting:
-        return 'if Wilting';
-      case ConditionType.AffinityMatches:
-        return `if ${condition.value}`;
-      case ConditionType.HealthBelow:
-        return `if HP < ${condition.value}`;
-      case ConditionType.CostAbove:
-        return `if Cost ${condition.value}+`;
-      default:
-        return '';
-    }
-  }
-
-  /**
-   * Get effect text for a single effect
-   */
-  function getEffectText(effect: AbilityEffect): string {
-    const target = getTargetText(effect.target);
-    const condition = getConditionText(effect.condition);
-    const duration = getDurationText(effect.duration);
-
-    switch (effect.type) {
-      case EffectType.ModifyStats: {
-        const stat = effect.stat === StatType.Attack ? 'ATK' :
-                     effect.stat === StatType.Health ? 'HP' : 'ATK/HP';
-        const sign = effect.value >= 0 ? '+' : '';
-        const durationPart = duration ? ` ${duration}` : '';
-        return `${target} get${target === 'this' ? 's' : ''} ${sign}${effect.value} ${stat}${durationPart}`;
-      }
-
-      case EffectType.DealDamage: {
-        return `deal ${effect.value} damage to ${target}`;
-      }
-
-      case EffectType.Heal: {
-        if (effect.value === HealValueType.Full) {
-          return `fully heal ${target}`;
-        }
-        return `heal ${target} by ${effect.value} HP`;
-      }
-
-      case EffectType.DrawCards: {
-        return `draw ${effect.value} card${effect.value > 1 ? 's' : ''}`;
-      }
-
-      case EffectType.ApplyCounter: {
-        return `place ${effect.value} ${effect.counter} counter${effect.value > 1 ? 's' : ''} on ${target}`;
-      }
-
-      case EffectType.RemoveCounter: {
-        if (effect.counter) {
-          return `remove ${effect.counter} counters from ${target}`;
-        }
-        return `remove all counters from ${target}`;
-      }
-
-      case EffectType.CannotBeTargeted: {
-        const byWhat = effect.by.join(', ').replace(/,([^,]*)$/, ' or$1');
-        return `cannot be targeted by ${byWhat}`;
-      }
-
-      case EffectType.Immunity: {
-        const immunities = effect.immuneTo.map(type => {
-          switch (type) {
-            case ImmunityType.Magic: return 'Magic';
-            case ImmunityType.Trap: return 'Trap';
-            case ImmunityType.Abilities: return 'abilities';
-            case ImmunityType.NegativeEffects: return 'negative effects';
-            case ImmunityType.Damage: return 'damage';
-            default: return type;
-          }
-        }).join(' and ');
-        return `immune to ${immunities}`;
-      }
-
-      case EffectType.AttackModification: {
-        const mod = effect.modification;
-        if (mod === 'double-damage') return 'deal double damage';
-        if (mod === 'triple-damage') return 'deal triple damage';
-        if (mod === 'instant-destroy') return 'instantly destroy target';
-        if (mod === 'attack-twice') return 'attack twice';
-        if (mod === 'attack-first') return 'strike first (defender cannot counter if killed)';
-        if (mod === 'cannot-counterattack') return 'cannot be counterattacked';
-        if (mod === 'piercing') return 'ignore defensive abilities';
-        return mod;
-      }
-
-      case EffectType.RemoveSummoningSickness: {
-        return 'can attack immediately';
-      }
-
-      case EffectType.GainResource: {
-        if (effect.resource === ResourceType.Nectar) {
-          return `gain ${effect.value} Nectar${duration ? ` ${duration}` : ''}`;
-        }
-        if (effect.resource === ResourceType.ExtraNectarPlay) {
-          return `play ${effect.value} additional Nectar Card${effect.value > 1 ? 's' : ''}${duration ? ` ${duration}` : ''}`;
-        }
-        return `gain ${effect.value} ${effect.resource}`;
-      }
-
-      case EffectType.MoveUnit: {
-        if (effect.destination === 'any-slot') {
-          return 'move to any empty slot';
-        }
-        if (effect.destination === 'adjacent-slot') {
-          return 'move to adjacent empty slot';
-        }
-        return 'move';
-      }
-
-      case EffectType.PreventAttack: {
-        return `${target} cannot attack${duration ? ` ${duration}` : ''}`;
-      }
-
-      case EffectType.PreventAbilities: {
-        return `${target} cannot use abilities${duration ? ` ${duration}` : ''}`;
-      }
-
-      case EffectType.SearchDeck: {
-        const what = effect.searchFor === 'any' ? 'any card' :
-                     effect.searchFor === 'bloom' ? 'Bloom Card' : effect.searchFor;
-        return `search deck for ${effect.quantity} ${what}`;
-      }
-
-      case EffectType.DamageReduction: {
-        return `reduce damage by ${effect.value}${duration ? ` ${duration}` : ''}`;
-      }
-
-      case EffectType.Retaliation: {
-        if (effect.value === 'reflected') {
-          return 'reflect all damage to attacker';
-        }
-        return `deal ${effect.value} damage to attacker`;
-      }
-
-      case EffectType.TemporaryHP: {
-        return `${target} gain${target === 'this' ? 's' : ''} ${effect.value} temporary HP`;
-      }
-
-      case EffectType.SwapPositions: {
-        return `swap ${target} positions`;
-      }
-
-      case EffectType.ReturnToHand: {
-        return `return ${target} to hand`;
-      }
-
-      case EffectType.Destroy: {
-        const conditionText = condition ? ` ${condition}` : '';
-        return `destroy ${target}${conditionText}`;
-      }
-
-      default:
-        return effect.type;
-    }
-  }
-
-  /**
-   * Combine multiple effect texts intelligently
-   */
-  function combineEffects(effects: string[]): string {
-    if (effects.length === 0) return '';
-    if (effects.length === 1) return effects[0];
-    if (effects.length === 2) return `${effects[0]} and ${effects[1]}`;
-
-    // Multiple effects: use commas and "and" for last one
-    const allButLast = effects.slice(0, -1).join(', ');
-    const last = effects[effects.length - 1];
-    return `${allButLast}, and ${last}`;
-  }
-
-  // ==================== bloombeasts\engine\utils\getAbilityDescription.ts ====================
-
-  /**
-   * Helper function to get ability description
-   * Generates description from ability effects
-   */
-
-
-  /**
-   * Get the description for an ability
-   * @param ability The ability to get description for
-   * @returns The description string
-   */
-  export function getAbilityDescription(ability: StructuredAbility): string {
-    return generateAbilityDescription(ability);
-  }
-
-  // ==================== bloombeasts\engine\utils\cardDescriptionGenerator.ts ====================
-
-  /**
-   * Generates human-readable descriptions for all card types
-   * (Magic, Trap, Buff, Habitat, and Bloom cards)
-   */
-
-
-  /**
-   * Get description for any card type
-   * All cards now use the standardized abilities structure
-   */
-  export function getCardDescription(card: any): string {
-    if (!card) return '';
-
-    // All cards use abilities array
-    if (card.abilities && Array.isArray(card.abilities)) {
-      // Generate descriptions for all abilities and combine them
-      const abilityDescriptions = card.abilities
-        .map((ability: any) => getAbilityDescription(ability))
-        .filter((desc: string) => desc.length > 0);
-
-      // Combine ability descriptions with bullet points if multiple
-      if (abilityDescriptions.length === 0) {
-        return '';
-      } else if (abilityDescriptions.length === 1) {
-        return abilityDescriptions[0];
-      } else {
-        // Multiple abilities: join with bullet points
-        return abilityDescriptions.map((desc: string) => `• ${desc}`).join(' ');
-      }
-    }
-
-    // Fallback: return card description if it exists, otherwise empty
-    return card.description || '';
-  }
-
   // ==================== bloombeasts\ui\screens\common\CardRenderer.ts ====================
 
   /**
@@ -12723,7 +12130,7 @@ namespace BloomBeasts {
 
 
   export interface CardRendererProps {
-    card: CardDisplay;
+    card: CardDisplayData;
     isInDeck?: boolean;
     onClick?: (cardId: string) => void;
     showDeckIndicator?: boolean;
@@ -13102,7 +12509,7 @@ namespace BloomBeasts {
     };
 
     // Track card data for click handler
-    let trackedCard: CardDisplay | null = null;
+    let trackedCard: CardDisplayData | null = null;
 
     // Create dependencies array based on mode
     // Use playerDataBinding directly in dependencies to avoid nesting
@@ -13116,24 +12523,28 @@ namespace BloomBeasts {
     }
 
     // Helper to get card based on mode
-    const getCard = (args: any[]): CardDisplay | null => {
-      // Extract cards from PlayerData
-      const cards: CardDisplay[] = args[0]?.cards?.collected || [];
+    // Now computes display data on-demand from CardInstance
+    const getCard = (args: any[]): CardDisplayData | null => {
+      // Extract card instances from PlayerData
+      const cardInstances: CardInstance[] = args[0]?.cards?.collected || [];
+
+      let instance: CardInstance | null = null;
 
       if (isIdMode && cardIdBinding) {
         // ID-based mode: find card by ID
         const cardId: string | null = args[1];
         if (!cardId) return null;
-        return cards.find((c: CardDisplay) => c.id === cardId) || null;
+        instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;
       } else if (isSlotMode && slotIndex !== undefined && cardsPerPage !== undefined && scrollOffsetBinding) {
         // Slot-based mode: find card by slot index
         const offset: number = args[1];
         const pageStart = offset * cardsPerPage;
         const cardIndex = pageStart + slotIndex;
-        return cardIndex < cards.length ? cards[cardIndex] : null;
+        instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
       }
 
-      return null;
+      // Compute display data from instance
+      return instance ? computeCardDisplay(instance) : null;
     };
 
     // Helper to check if card is in deck
@@ -18119,14 +17530,6 @@ namespace BloomBeasts {
     }
 
     /**
-     * Convert CardInstance to CardDisplay for UI
-     */
-    private cardInstanceToDisplay(card: CardInstance): CardDisplay {
-      return this.cardCollectionManager.cardInstanceToDisplay(card);
-    }
-
-
-    /**
      * Navigate to a different screen
      */
     private navigate(screen: string): void {
@@ -18137,7 +17540,7 @@ namespace BloomBeasts {
 
     /**
      * Trigger a render
-     * Recreates the UI tree to ensure all values are up-to-date
+     * Notifies the platform to render (bindings update automatically)
      */
     private triggerRender(): void {
       // Skip rendering during initialization to prevent errors
@@ -18145,8 +17548,8 @@ namespace BloomBeasts {
         return;
       }
 
-      // Recreate the UI tree to get fresh values from bindings
-      this.uiTree = this.createUI();
+      // Just notify platform - UI tree is reactive via bindings
+      // No need to recreate the entire tree!
       this.platform.render(this.uiTree);
     }
 

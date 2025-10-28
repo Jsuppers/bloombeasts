@@ -5,6 +5,8 @@
  * The actual game logic is in BloomBeastsGame.ts.
  */
 
+import type { CardDisplayData } from './utils/cardUtils';
+
 /**
  * Player statistics displayed in UI
  */
@@ -42,37 +44,10 @@ export interface MissionDisplay {
 }
 
 /**
- * Card information for display in card screens
- */
-export interface CardDisplay {
-  id: string;
-  name: string;
-  type: string;
-  affinity?: string;
-  cost?: number;
-  level: number;
-  experience: number;
-  experienceRequired?: number;
-  count: number;
-  baseAttack?: number;
-  currentAttack?: number;
-  baseHealth?: number;
-  currentHealth?: number;
-  abilities?: any[]; // Array of all abilities for Bloom cards (used for description generation)
-  effects?: any[]; // For Magic/Trap/Buff cards
-  ongoingEffects?: any[]; // For Buff/Habitat cards
-  onPlayEffects?: any[]; // For Habitat cards
-  activation?: any; // For Trap cards
-  description?: string; // Description for Magic/Trap/Habitat/Buff cards
-  counters?: Array<{ type: string; amount: number }>; // Counters on the card
-  titleColor?: string; // Custom title color (hex color)
-}
-
-/**
  * Card detail popup information
  */
 export interface CardDetailDisplay {
-  card: CardDisplay;
+  card: CardDisplayData;
   buttons: string[];
   isInDeck: boolean;
 }
@@ -123,42 +98,4 @@ export interface ObjectiveDisplay {
   progress: number;
   target: number;
   isComplete: boolean;
-}
-
-/**
- * Complete battle state for display in battle screen
- */
-export interface BattleDisplay {
-  playerHealth: number;
-  playerMaxHealth: number;
-  playerDeckCount: number;
-  playerNectar: number;
-  playerHand: any[];
-  playerTrapZone: any[]; // Player's trap cards (face-down)
-  playerBuffZone: any[]; // Player's active buff cards
-  opponentHealth: number;
-  opponentMaxHealth: number;
-  opponentDeckCount: number;
-  opponentNectar: number;
-  opponentField: any[];
-  opponentTrapZone: any[]; // Opponent's trap cards (face-down)
-  opponentBuffZone: any[]; // Opponent's active buff cards
-  playerField: any[];
-  currentTurn: number;
-  turnPlayer: string;
-  turnTimeRemaining: number;
-  objectives: ObjectiveDisplay[];
-  habitatZone: any | null; // Current habitat card
-  selectedBeastIndex: number | null; // Track selected beast for attacking
-  attackAnimation?: { // Attack animation state
-    attackerPlayer: 'player' | 'opponent';
-    attackerIndex: number;
-    targetPlayer: 'player' | 'opponent' | 'health';
-    targetIndex?: number; // undefined if targeting health
-  } | null;
-  cardPopup?: { // Card popup display (for magic/trap/buff cards)
-    card: any;
-    player: 'player' | 'opponent';
-    showCloseButton?: boolean; // Show close button for manual popups
-  } | null;
 }

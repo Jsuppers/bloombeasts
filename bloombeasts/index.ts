@@ -68,8 +68,6 @@ import * as CombatHelpers from './engine/utils/combatHelpers';
 // Import UI components
 import { StartMenuUI } from './screens/startmenu/StartMenuUI';
 import { MenuController } from './screens/startmenu/MenuController';
-import { CardsUI } from './screens/cards/CardsUI';
-import { CardCollection } from './screens/cards/CardCollection';
 import { MissionManager } from './screens/missions/MissionManager';
 import { MissionSelectionUI } from './screens/missions/MissionSelectionUI';
 import { MissionBattleUI } from './screens/missions/MissionBattleUI';
@@ -101,8 +99,6 @@ export namespace Bloombeasts {
   export const UI = {
     StartMenuUI,
     MenuController,
-    CardsUI,
-    CardCollection,
     MissionManager,
     MissionSelectionUI,
     MissionBattleUI
@@ -144,7 +140,7 @@ export namespace Bloombeasts {
 
   // Platform integration types from GameManager
   export type MissionDisplay = any; // These would be imported from GameManager if it exported them
-  export type CardDisplay = any;
+  export type CardDisplayData = any;
   export type BattleDisplay = any;
   export type RewardDisplay = any;
   export type ObjectiveDisplay = any;
@@ -153,7 +149,7 @@ export namespace Bloombeasts {
   export interface PlatformCallbacks {
     renderStartMenu(options: string[]): void;
     renderMissionSelect(missions: MissionDisplay[]): void;
-    renderCards(cards: CardDisplay[]): void;
+    renderCards(cards: CardDisplayData[]): void;
     renderBattle(battleState: BattleDisplay): void;
     onButtonClick(callback: (buttonId: string) => void): void;
     onCardSelect(callback: (cardId: string) => void): void;

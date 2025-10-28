@@ -28,7 +28,7 @@ import { DECK_SIZE } from './engine/constants/gameRules';
 import { Logger } from './engine/utils/Logger';
 import type { AsyncMethods } from './ui/types/bindings';
 import { normalizeSoundId } from './AssetCatalog';
-import type { MenuStats, CardDisplay, MissionDisplay, BattleDisplay, ObjectiveDisplay, CardDetailDisplay, SoundSettings } from './gameManager';
+import type { MenuStats, MissionDisplay, BattleDisplay, ObjectiveDisplay, CardDetailDisplay, SoundSettings } from './gameManager';
 
 /**
  * XP thresholds for player leveling (cumulative)
@@ -833,14 +833,6 @@ export class BloomBeastsGame {
   }
 
   /**
-   * Convert CardInstance to CardDisplay for UI
-   */
-  private cardInstanceToDisplay(card: CardInstance): CardDisplay {
-    return this.cardCollectionManager.cardInstanceToDisplay(card);
-  }
-
-
-  /**
    * Navigate to a different screen
    */
   private navigate(screen: string): void {
@@ -851,7 +843,7 @@ export class BloomBeastsGame {
 
   /**
    * Trigger a render
-   * Recreates the UI tree to ensure all values are up-to-date
+   * Notifies the platform to render (bindings update automatically)
    */
   private triggerRender(): void {
     // Skip rendering during initialization to prevent errors
@@ -859,8 +851,8 @@ export class BloomBeastsGame {
       return;
     }
 
-    // Recreate the UI tree to get fresh values from bindings
-    this.uiTree = this.createUI();
+    // Just notify platform - UI tree is reactive via bindings
+    // No need to recreate the entire tree!
     this.platform.render(this.uiTree);
   }
 

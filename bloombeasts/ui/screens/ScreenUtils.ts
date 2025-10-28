@@ -3,7 +3,7 @@
  * Provides type-safe ways to work with dynamic UI components
  */
 
-import type { CardDisplay } from '../../../bloombeasts/gameManager';
+import type { CardDisplayData } from '../../utils/cardUtils';
 
 /**
  * Type annotation for UINode - since UINode is dynamically loaded, we use 'any' type
@@ -11,10 +11,10 @@ import type { CardDisplay } from '../../../bloombeasts/gameManager';
 export type UINodeType<T = any> = any;
 
 /**
- * Extend CardDisplay with additional UI properties
+ * Extend CardDisplayData with additional UI properties
  * These are properties used in the UI but not in the core game model
  */
-export interface UICardDisplay extends CardDisplay {
+export interface UICardDisplay extends CardDisplayData {
   // Add emoji based on affinity
   emoji?: string;
   // Use level as rarity indicator
@@ -26,14 +26,14 @@ export interface UICardDisplay extends CardDisplay {
 }
 
 /**
- * Convert CardDisplay to UICardDisplay with additional UI properties
+ * Convert CardDisplayData to UICardDisplay with additional UI properties
  */
-export function toUICard(card: CardDisplay): UICardDisplay {
+export function toUICard(card: CardDisplayData): UICardDisplay {
   const uiCard: UICardDisplay = {
     ...card,
-    attack: card.baseAttack || card.currentAttack || 0,
-    defense: 0, // Not in CardDisplay - using 0 as default
-    health: card.baseHealth || card.currentHealth || 0,
+    attack: card.baseAttack || 0,
+    defense: 0, // Not in CardDisplayData - using 0 as default
+    health: card.baseHealth || 0,
     emoji: getCardEmoji(card),
     rarityLevel: getCardRarity(card)
   };
@@ -43,7 +43,7 @@ export function toUICard(card: CardDisplay): UICardDisplay {
 /**
  * Get emoji based on card affinity
  */
-function getCardEmoji(card: CardDisplay): string {
+function getCardEmoji(card: CardDisplayData): string {
   switch (card.affinity?.toLowerCase()) {
     case 'fire':
       return '🔥';
@@ -61,7 +61,7 @@ function getCardEmoji(card: CardDisplay): string {
 /**
  * Determine rarity based on card level
  */
-function getCardRarity(card: CardDisplay): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
+function getCardRarity(card: CardDisplayData): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
   const level = card.level || 1;
   if (level >= 10) return 'legendary';
   if (level >= 7) return 'epic';

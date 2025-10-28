@@ -9,7 +9,7 @@ import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { DIMENSIONS, GAPS } from '../styles/dimensions';
 import { sideMenuButtonDimensions } from '../constants/dimensions';
 import { deckEmoji } from '../constants/emojis';
-import type { CardDisplay, MenuStats, CardDetailDisplay } from '../../../bloombeasts/gameManager';
+import type { MenuStats, CardDetailDisplay } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu, createTextRow } from './common/SideMenu';
 import { createCardComponent, createReactiveCardComponent, CARD_DIMENSIONS } from './common/CardRenderer';

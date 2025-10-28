@@ -1,37 +1,17 @@
 /**
- * Type definitions for the inventory system
+ * Type definitions for the card collection system
  */
 
 import type { Affinity, CardType } from '../../engine/types/core';
 
 /**
- * Instance of a card in the player's collection
+ * Minimal card instance in player's collection
+ * All other data (level, stats, etc.) is computed on-demand from currentXP and card definition
  */
 export interface CardInstance {
-  id: string;                    // Unique instance ID
-  cardId: string;                 // Base card ID
-  name: string;
-  type: CardType;                 // Card type: Bloom, Magic, Trap, Habitat
-  affinity?: Affinity;            // Optional - not all cards have affinity
-  cost: number;                   // Card cost
-  // Level and XP for ALL card types
-  level: number;                  // All cards can level up
-  currentXP: number;              // All cards can gain experience
-  // Bloom Beast specific fields
-  baseAttack?: number;            // Only for Bloom beasts
-  currentAttack?: number;         // Only for Bloom beasts
-  baseHealth?: number;            // Only for Bloom beasts
-  currentHealth?: number;         // Only for Bloom beasts
-  // General fields
-  ability?: {
-    name: string;
-    description: string;
-  };
-  effects?: string[];             // For Magic/Trap cards - simplified effect descriptions
-  obtainedDate?: Date;
-  lastUsedDate?: Date;
-  battleCount?: number;
-  winCount?: number;
+  id: string;                    // Unique instance ID (e.g., "forest-bloom-1-1")
+  cardId: string;                 // Base card ID (e.g., "forest-bloom")
+  currentXP: number;              // Only persistent data - everything else is derived
 }
 
 /**

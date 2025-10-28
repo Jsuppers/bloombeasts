@@ -192,14 +192,22 @@ function createSideMenuButton(
     // Create hover state binding for opacity effect
     const hoverBinding = new ui.Binding(false);
 
-    // Calculate opacity based on hover and disabled state
-    const opacityBinding = ui.Binding.derive(
-        [hoverBinding],
-        (isHovered: boolean) => {
-            if (disabledValue) return 0.5;
-            return isHovered ? 0.8 : 1.0;
-        }
-    );
+    // Calculate opacity based on hover and disabled state (reactive to binding if present)
+    const opacityBinding = disabledBinding
+        ? ui.Binding.derive(
+            [hoverBinding, disabledBinding],
+            (isHovered: boolean, isDisabled: boolean) => {
+                if (isDisabled) return 0.5;
+                return isHovered ? 0.8 : 1.0;
+            }
+        )
+        : ui.Binding.derive(
+            [hoverBinding],
+            (isHovered: boolean) => {
+                if (disabledValue) return 0.5;
+                return isHovered ? 0.8 : 1.0;
+            }
+        );
 
     return ui.Pressable({
         onClick: onClick,
@@ -246,7 +254,12 @@ function createSideMenuButton(
                     text: labelBinding,
                     style: {
                         fontSize: DIMENSIONS.fontSize.md,
-                        color: disabledValue ? '#888' : COLORS.textPrimary,
+                        color: disabledBinding
+                            ? ui.Binding.derive(
+                                [disabledBinding],
+                                (isDisabled: boolean) => isDisabled ? '#888' : COLORS.textPrimary
+                            )
+                            : (disabledValue ? '#888' : COLORS.textPrimary),
                         textAlign: 'center',
                         fontWeight: 'bold',
                         textAlignVertical: 'center',

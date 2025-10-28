@@ -5,13 +5,14 @@
 
 import { COLORS } from '../../styles/colors';
 import { DIMENSIONS } from '../../styles/dimensions';
-import type { CardDisplay } from '../../../../bloombeasts/gameManager';
+import type { CardInstance } from '../../../screens/cards/types';
+import { computeCardDisplay, type CardDisplayData } from '../../../utils/cardUtils';
 import { getCardDescription } from '../../../engine/utils/cardDescriptionGenerator';
 import { UINodeType } from '../ScreenUtils';
 import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 
 export interface CardRendererProps {
-  card: CardDisplay;
+  card: CardDisplayData;
   isInDeck?: boolean;
   onClick?: (cardId: string) => void;
   showDeckIndicator?: boolean;
@@ -390,7 +391,7 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   };
 
   // Track card data for click handler
-  let trackedCard: CardDisplay | null = null;
+  let trackedCard: CardDisplayData | null = null;
 
   // Create dependencies array based on mode
   // Use playerDataBinding directly in dependencies to avoid nesting
@@ -404,24 +405,28 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   }
 
   // Helper to get card based on mode
-  const getCard = (args: any[]): CardDisplay | null => {
-    // Extract cards from PlayerData
-    const cards: CardDisplay[] = args[0]?.cards?.collected || [];
+  // Now computes display data on-demand from CardInstance
+  const getCard = (args: any[]): CardDisplayData | null => {
+    // Extract card instances from PlayerData
+    const cardInstances: CardInstance[] = args[0]?.cards?.collected || [];
+
+    let instance: CardInstance | null = null;
 
     if (isIdMode && cardIdBinding) {
       // ID-based mode: find card by ID
       const cardId: string | null = args[1];
       if (!cardId) return null;
-      return cards.find((c: CardDisplay) => c.id === cardId) || null;
+      instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;
     } else if (isSlotMode && slotIndex !== undefined && cardsPerPage !== undefined && scrollOffsetBinding) {
       // Slot-based mode: find card by slot index
       const offset: number = args[1];
       const pageStart = offset * cardsPerPage;
       const cardIndex = pageStart + slotIndex;
-      return cardIndex < cards.length ? cards[cardIndex] : null;
+      instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
     }
 
-    return null;
+    // Compute display data from instance
+    return instance ? computeCardDisplay(instance) : null;
   };
 
   // Helper to check if card is in deck
