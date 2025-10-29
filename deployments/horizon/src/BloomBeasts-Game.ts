@@ -20,7 +20,7 @@ import {
   Easing,
   ImageSource
 } from 'horizon/ui';
-import { type Player, AudioGizmo, AudioOptions } from 'horizon/core';
+import { type Player, AudioGizmo, AudioOptions, NetworkEvent } from 'horizon/core';
 
 // Import from standalone bundle
 import { BloomBeasts } from './BloomBeasts-GameEngine-Standalone';
@@ -35,14 +35,43 @@ type AssetCatalog = BloomBeasts.AssetCatalog;
 const BloomBeastsGame = BloomBeasts.BloomBeastsGame;
 const AssetCatalogManager = BloomBeasts.AssetCatalogManager;
 
+/**
+ * NetworkEvent payload types for server communication
+ * Note: Must have index signature to satisfy SerializableState constraint
+ */
+type SavePlayerDataPayload = {
+  playerIndex: number;
+  data: any; // Use 'any' to satisfy SerializableState (PlayerData will be serialized as JSON)
+  [key: string]: any;
+};
+
+type LoadPlayerDataPayload = {
+  playerIndex: number;
+  [key: string]: any;
+};
+
+type LoadPlayerDataResponse = {
+  playerIndex: number;
+  data: any; // Use 'any' to satisfy SerializableState (PlayerData | null will be serialized as JSON)
+  [key: string]: any;
+};
+
 // Simplified: No adapter needed - we just use Horizon's Binding directly!
 
 /**
- * Main Horizon UI Component
+ * Main Horizon UI Component (Local Mode)
  * This is the entry point that Horizon Worlds will instantiate
+ *
+ * Ownership Flow:
+ * 1. Server transfers ownership to player
+ * 2. Script restarts on player's client
+ * 3. receiveOwnership() is called
+ * 4. Local Mode initializes with smooth UI
  */
-class BloomBeastsUI extends UIComponent {
+class BloomBeastsUI extends UIComponent<{}, {}> {
   static propsDefinition = {
+    serverEntity: { type: hz.PropTypes.Entity },
+
     // Asset Catalogs - Upload JSON files as Text assets and assign them here
     fireAssetsCatalog: { type: hz.PropTypes.Asset },
     forestAssetsCatalog: { type: hz.PropTypes.Asset },
@@ -71,12 +100,16 @@ class BloomBeastsUI extends UIComponent {
   panelHeight = 720;
 
   // Properties inherited from UIComponent (declared for TypeScript)
-  public world: any;
   public props: any;
   public async: any;
 
+  // Current player (NOT in a Binding - Player objects have circular references)
+  private currentPlayer: Player | null = null;
+
+  // Cached player data (loaded from server once, then used locally)
+  private cachedPlayerData: PlayerData | null = null;
+
   // Reactive bindings with imperative API (get/set/addListener)
-  private currentPlayerBinding = this.createReactiveBinding<Player | null>(null);
   private assetsLoadedBinding = this.createReactiveBinding<boolean>(false);
 
   // Raw Horizon Binding for UI usage (compatible with Binding.derive)
@@ -86,6 +119,11 @@ class BloomBeastsUI extends UIComponent {
 
   // Game instance - created early so uiTree is available immediately
   private game!: BloomBeastsGame;
+
+  // NetworkEvents for server communication
+  private saveDataEvent!: NetworkEvent<SavePlayerDataPayload>;
+  private loadDataEvent!: NetworkEvent<LoadPlayerDataPayload>;
+  private loadDataResponseEvent!: NetworkEvent<LoadPlayerDataResponse>;
 
   // Audio state tracking
   private currentMusicSrc: any = null;
@@ -133,46 +171,101 @@ class BloomBeastsUI extends UIComponent {
     };
   }
 
-  start() {
-    this.connectCodeBlockEvent(
-      this.entity,
-      hz.CodeBlockEvents.OnPlayerEnterWorld,
-      async (player: Player) => {
-        console.log('[Horizon] Player entered world', player);
-        this.currentPlayerBinding.set(player);
+  /**
+   * Called when ownership is transferred to a player
+   * This is where we initialize Local Mode for the player
+   */
+  receiveOwnership(
+    state: {} | null,
+    fromPlayer: Player,
+    toPlayer: Player
+  ): void {
+    console.log('[Client] receiveOwnership called');
+    console.log('[Client] From:', fromPlayer?.name || 'server');
+    console.log('[Client] To:', toPlayer?.name || 'unknown');
 
-        // Load player data and apply audio settings
-        const playerData = this.loadPlayerData();
-        if (playerData?.settings) {
-          console.log('[Horizon] Applying saved audio settings:', playerData.settings);
-          this.currentMusicVolume = playerData.settings.musicVolume / 100;
-          this.currentSfxVolume = playerData.settings.sfxVolume / 100;
-          this.musicEnabled = playerData.settings.musicEnabled;
-          this.sfxEnabled = playerData.settings.sfxEnabled;
-        }
+    // Create NetworkEvents (must match server event names)
+    this.saveDataEvent = new NetworkEvent<SavePlayerDataPayload>('bloombeasts:savePlayerData');
+    this.loadDataEvent = new NetworkEvent<LoadPlayerDataPayload>('bloombeasts:loadPlayerData');
+    this.loadDataResponseEvent = new NetworkEvent<LoadPlayerDataResponse>('bloombeasts:loadPlayerDataResponse');
+
+    // Verify we're the receiving player
+    const localPlayer = this.world.getLocalPlayer();
+    const serverPlayer = this.world.getServerPlayer();
+
+    console.log('[Client] Local player:', localPlayer?.name || 'null');
+    console.log('[Client] Server player:', serverPlayer?.name || 'null');
+
+    if (localPlayer && localPlayer === toPlayer && localPlayer !== serverPlayer) {
+      console.log('[Client] ✅ Ownership received - initializing Local Mode');
+      this.initializeLocalMode(toPlayer);
+    } else {
+      console.log('[Client] ⚠️ receiveOwnership called but not on local client');
+    }
+  }
+
+  /**
+   * Initialize on the player's local client (after ownership transfer from server)
+   */
+  private initializeLocalMode(player: Player): void {
+    console.log('[Client] Initializing Local Mode for:', player.name);
+
+    // Store player reference (NOT in a Binding - Player objects have circular references)
+    this.currentPlayer = player;
+    const playerIndex = player.index.get();
+    console.log('[Client] Player index:', playerIndex);
+
+    // Listen for player data response from server
+    this.connectNetworkEvent(this.entity, this.loadDataResponseEvent, (response: LoadPlayerDataResponse) => {
+      console.log('[Client] Received player data response from server');
+
+      // Cache the player data locally
+      this.cachedPlayerData = response.data as PlayerData | null;
+
+      // Apply settings if available
+      if (response.data?.settings) {
+        console.log('[Client] Applying saved audio settings:', response.data.settings);
+        this.currentMusicVolume = response.data.settings.musicVolume / 100;
+        this.currentSfxVolume = response.data.settings.sfxVolume / 100;
+        this.musicEnabled = response.data.settings.musicEnabled;
+        this.sfxEnabled = response.data.settings.sfxEnabled;
+      } else {
+        console.log('[Client] No saved settings - using defaults');
       }
-    );
 
-    // Load assets if not already loaded
-    this.loadAssetCatalogs().then(() => {
-      console.log('[Horizon] Assets loaded');
-      this.assetsLoadedBinding.set(true);
-      // Note: assetsLoadedBindingRaw is always true in Horizon (set during initialization)
+      // Player data received - now load assets
+      this.loadAssetsAndInitialize();
     });
 
-    // Listen for current player and assets loaded then initialize game
-    [this.currentPlayerBinding, this.assetsLoadedBinding].forEach(binding => {
-      binding.addListener(() => {
-        const currentPlayer = this.currentPlayerBinding.get();
-        const assetsLoaded = this.assetsLoadedBinding.get();
-        // Only initialize game if both current player and assets loaded
-        if (currentPlayer && assetsLoaded) {
-          console.log('[Horizon] Player and assets ready - initializing game');
-          this.game.initialize().then(() => {
-            console.log('[Horizon] Game initialized');
-          });
-        }
+    // Request player data from server immediately
+    console.log('[Client] Requesting player data from server...');
+    this.sendNetworkEvent(this.props.serverEntity, this.loadDataEvent, {
+      playerIndex: playerIndex
+    });
+  }
+
+  /**
+   * Load assets and initialize game (called after player data is received)
+   */
+  private loadAssetsAndInitialize(): void {
+    console.log('[Client] Loading assets...');
+
+    this.loadAssetCatalogs().then(() => {
+      const catalogManager = AssetCatalogManager.getInstance();
+      console.log('[Client] ✅ Assets loaded');
+      console.log('[Client] Loaded categories:', catalogManager.getLoadedCategories());
+      console.log('[Client] Total cards:', catalogManager.getAllCardData().length);
+
+      this.assetsLoadedBinding.set(true);
+
+      // Initialize game
+      this.game.initialize().then(() => {
+        console.log('[Client] ✅ Game initialized - menu should show');
+      }).catch((error: any) => {
+        console.error('[Client] ❌ Game initialization failed:', error);
       });
+    }).catch((error) => {
+      console.error('[Client] ❌ Asset loading failed:', error);
     });
   }
 
@@ -271,7 +364,9 @@ class BloomBeastsUI extends UIComponent {
       },
 
       getPlayerData: () => {
-        return this.loadPlayerData();
+        // Return cached player data (loaded from server once in receiveOwnership)
+        console.log('[Client] getPlayerData called, returning cached data', this.cachedPlayerData);
+        return this.cachedPlayerData;
       },
 
       // Image assets: Not used by Horizon - HorizonImage handles conversion
@@ -462,91 +557,46 @@ class BloomBeastsUI extends UIComponent {
   }
 
   /**
-   * Save player data to Horizon Persistent Storage
-   * Uses player-specific storage for multiplayer support
+   * Save player data via NetworkEvent to server
+   * In Local Mode, we can't access persistent storage directly
+   * Send request to server which handles the actual storage
    */
   private savePlayerData(data: PlayerData): void {
-    const player = this.currentPlayerBinding.get();
-    if (!player || !this.world.persistentStorage) {
-      console.error('[Horizon] Failed to save player data: no player or persistent storage', player, this.world.persistentStorage);
-      // This is normal during initialization - no warnings needed
+    if (!this.currentPlayer) {
+      console.error('[Client] Cannot save: no player');
       return;
     }
 
+    // Update cached data immediately (optimistic update)
+    this.cachedPlayerData = data;
+
+    const playerIndex = this.currentPlayer.index.get();
+    console.log('[Client] Sending save request to server for player index:', playerIndex);
+
     try {
-      // Variable name following Horizon best practices: variableGroup:variableName
-      const varKey = 'BloomBeastsData:playerData';
-      // console.log('[Horizon] Saving player data for player:', this.currentPlayer.id);
-      // console.log('[Horizon] Variable key:', varKey);
-
-      // Use setPlayerVariable for player-specific storage (multiplayer support)
-      this.world.persistentStorage.setPlayerVariable(
-        player,
-        varKey,
-        data as any // PlayerData is compatible with PersistentSerializableState
-      );
-
-      console.log('[Horizon] Player data saved:', data);
-      // console.log('[Horizon] Player data saved successfully');
-    } catch (e) {
-      console.error('[Horizon] Failed to save player data:', e);
+      this.sendNetworkEvent(this.props.serverEntity, this.saveDataEvent, {
+        playerIndex: playerIndex,
+        data: data
+      });
+      console.log('[Client] ✅ Save request sent to server (cached locally)');
+    } catch (error) {
+      console.error('[Client] ❌ Failed to send save request:', error);
     }
   }
 
   /**
-   * Load player data from Horizon Persistent Storage
-   * Uses player-specific storage for multiplayer support
+   * Load player data via NetworkEvent from server
+   * In Local Mode, we can't access persistent storage directly
+   * This is handled in initializeLocalMode() - we request data when client starts
+   *
+   * NOTE: This method is not called directly - data loading happens via
+   * NetworkEvent request/response in initializeLocalMode()
    */
   private loadPlayerData(): PlayerData | null {
-    const player = this.currentPlayerBinding.get();
-    if (!player || !this.world.persistentStorage) {
-      console.error('[Horizon] Failed to load player data: no player or persistent storage', player, this.world.persistentStorage);
-      // This is normal during initialization - no warnings needed
-      return null;
-    }
-
-    try {
-      // Variable name following Horizon best practices: variableGroup:variableName
-      const varKey = 'BloomBeastsData:playerData';
-
-      // Use getPlayerVariable for player-specific storage (multiplayer support)
-      // Note: Don't use type arguments - Horizon doesn't support them
-      const result = this.world.persistentStorage.getPlayerVariable(
-        player,
-        varKey
-      );
-
-      console.log('[Horizon] Player data:', result);
-
-      // Per Horizon docs: getPlayerVariable returns null for uninitialized object-type variables
-      // It may also return 0 for number-type variables, but we're using object-type
-      if (result === null || result === 0 || result === undefined) {
-        console.log('[Horizon] No player data');
-        return null;
-      }
-
-      // Type guard: ensure result is an object before casting
-      if (typeof result !== 'object') {
-        console.error('[Horizon] Invalid data type returned:', typeof result);
-        return null;
-      }
-
-      // Check if it's an empty object (Horizon might return {} for uninitialized)
-      if (Object.keys(result).length === 0) {
-        console.log('[Horizon] Empty player data');
-        return null;
-      }
-
-      console.log('[Horizon] Loaded player data:', result);
-
-      return result as unknown as PlayerData;
-    } catch (e) {
-      // Only log real errors, not empty objects
-      if (e && typeof e === 'object' && Object.keys(e).length > 0) {
-        console.error('[Horizon] Failed to load player data:', e);
-      }
-      return null;
-    }
+    // This method is not used in NetworkEvent-based architecture
+    // Player data is loaded via NetworkEvent in initializeLocalMode()
+    console.warn('[Client] loadPlayerData() called but should use NetworkEvent flow instead');
+    return null;
   }
 
   /**

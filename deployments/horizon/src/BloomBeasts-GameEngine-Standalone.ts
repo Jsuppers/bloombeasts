@@ -10,7 +10,7 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-28T23:44:27.440Z
+ * Generated: 2025-10-29T09:25:17.574Z
  * Files: 77
  *
  * @version 1.0.0
