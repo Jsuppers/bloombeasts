@@ -10,7 +10,7 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-28T21:50:57.619Z
+ * Generated: 2025-10-28T23:44:27.440Z
  * Files: 77
  *
  * @version 1.0.0
@@ -17259,8 +17259,8 @@ namespace BloomBeasts {
           completedMissions: {}
         },
         settings: {
-          musicVolume: 80,
-          sfxVolume: 80,
+          musicVolume: 10,
+          sfxVolume: 50,
           musicEnabled: true,
           sfxEnabled: true
         }

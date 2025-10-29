@@ -562,8 +562,8 @@ export class BloomBeastsGame {
         completedMissions: {}
       },
       settings: {
-        musicVolume: 80,
-        sfxVolume: 80,
+        musicVolume: 10,
+        sfxVolume: 50,
         musicEnabled: true,
         sfxEnabled: true
       }
