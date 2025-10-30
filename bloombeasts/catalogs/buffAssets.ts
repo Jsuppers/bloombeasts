@@ -1,6 +1,13 @@
-{
-  "version": "1.0.0",
-  "category": "buff",
+/**
+ * Auto-generated TypeScript catalog from buffAssets.json
+ * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+ */
+
+import type { AssetCatalog } from '../AssetCatalogManager';
+
+export const buffAssets: AssetCatalog = {
+  version: "1.0.0",
+  category: "buff",
   "description": "Buff cards and assets",
   "data": [
     {
@@ -137,4 +144,4 @@
       ]
     }
   ]
-}
+};

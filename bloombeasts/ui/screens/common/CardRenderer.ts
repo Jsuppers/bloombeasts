@@ -56,7 +56,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
   // We need to extract the base ID (e.g., "nectar-block") to match catalog IDs
   const extractBaseId = (id: string | undefined): string => {
     if (!id) {
-      console.warn('[CardRenderer] Card missing id, using name fallback:', card.name);
+      console.warn('[CardRenderer] Card missing id, using name fallback:', card);
       // Fallback: use card name converted to kebab-case
       return card.name.toLowerCase().replace(/\s+/g, '-');
     }
@@ -97,6 +97,9 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
     console.log(`[CardRenderer] ✅ ${card.name} (${card.type}): "${abilityText}"`);
   }
 
+  // Cache assetIdToImageSource to ensure it's captured properly in closures
+  const getImageSource = ui.assetIdToImageSource!;
+
   const children = [
       // Layer 1: Card/Beast artwork image (185x185)
       // For Bloom cards: use beast image
@@ -104,7 +107,12 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       ui.Image({
         source: ui.Binding.derive(
           [ui.assetsLoadedBinding],
-          (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(card.type === 'Bloom' ? beastImageKey : cardImageKey) : null
+          (assetsLoaded: boolean) => {
+            if (!assetsLoaded) return null;
+            const imageKey = card.type === 'Bloom' ? beastImageKey : cardImageKey;
+            if (!imageKey) return null;
+            return getImageSource(imageKey);
+          }
         ),
         style: {
           width: beastImageWidth,
@@ -119,7 +127,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       ui.Image({
         source: ui.Binding.derive(
           [ui.assetsLoadedBinding],
-          (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(baseCardKey) : null
+          (assetsLoaded: boolean) => assetsLoaded ? getImageSource(baseCardKey) : null
         ),
         style: {
           width: cardWidth,
@@ -135,7 +143,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         ui.Image({
           source: ui.Binding.derive(
             [ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(templateKey) : null
+            (assetsLoaded: boolean) => assetsLoaded ? getImageSource(templateKey) : null
           ),
           style: {
             width: cardWidth,
@@ -152,7 +160,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         ui.Image({
           source: ui.Binding.derive(
             [ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(affinityKey) : null
+            (assetsLoaded: boolean) => assetsLoaded ? getImageSource(affinityKey) : null
           ),
           style: {
             width: 30,
@@ -169,7 +177,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         ui.Image({
           source: ui.Binding.derive(
             [ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(expBarKey) : null
+            (assetsLoaded: boolean) => assetsLoaded ? getImageSource(expBarKey) : null
           ),
           style: {
             width: 120,
@@ -395,31 +403,33 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
 
   // Create dependencies array based on mode
   // Use playerDataBinding directly in dependencies to avoid nesting
+  // ALWAYS include assetsLoadedBinding as first dependency to prevent premature asset lookups
   let dependencies: any[];
   if (isIdMode && cardIdBinding) {
-    dependencies = [playerDataBinding, cardIdBinding];
+    dependencies = [ui.assetsLoadedBinding, playerDataBinding, cardIdBinding];
   } else if (isSlotMode && scrollOffsetBinding) {
-    dependencies = [playerDataBinding, scrollOffsetBinding];
+    dependencies = [ui.assetsLoadedBinding, playerDataBinding, scrollOffsetBinding];
   } else {
-    dependencies = [playerDataBinding];
+    dependencies = [ui.assetsLoadedBinding, playerDataBinding];
   }
 
   // Helper to get card based on mode
   // Now computes display data on-demand from CardInstance
+  // args[0] = assetsLoadedBinding, args[1] = playerDataBinding, args[2] = cardIdBinding or scrollOffsetBinding
   const getCard = (args: any[]): CardDisplayData | null => {
-    // Extract card instances from PlayerData
-    const cardInstances: CardInstance[] = args[0]?.cards?.collected || [];
+    // Extract card instances from PlayerData (now at args[1])
+    const cardInstances: CardInstance[] = args[1]?.cards?.collected || [];
 
     let instance: CardInstance | null = null;
 
     if (isIdMode && cardIdBinding) {
-      // ID-based mode: find card by ID
-      const cardId: string | null = args[1];
+      // ID-based mode: find card by ID (now at args[2])
+      const cardId: string | null = args[2];
       if (!cardId) return null;
       instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;
     } else if (isSlotMode && slotIndex !== undefined && cardsPerPage !== undefined && scrollOffsetBinding) {
-      // Slot-based mode: find card by slot index
-      const offset: number = args[1];
+      // Slot-based mode: find card by slot index (offset now at args[2])
+      const offset: number = args[2];
       const pageStart = offset * cardsPerPage;
       const cardIndex = pageStart + slotIndex;
       instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
@@ -433,7 +443,8 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   const isCardInDeck = (args: any[], cardId: string | undefined): boolean => {
     if (!showDeckIndicator || !cardId) return false;
 
-    const deckCardIds: string[] = args[0]?.cards?.deck || [];
+    // PlayerData is now at args[1] (args[0] is assetsLoadedBinding)
+    const deckCardIds: string[] = args[1]?.cards?.deck || [];
     return deckCardIds.includes(cardId);
   };
 
@@ -479,13 +490,18 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
 
   // Create image source bindings
   const baseCardImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
+    const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding now
+    if (!assetsLoaded) return null;
     const card = getCard(args);
     if (!card) return null;
     const baseId = extractBaseId(card.id, card.name);
-    return ui.assetIdToImageSource?.(baseId) ?? baseId;
+    if (!baseId) return null; // Don't try to load empty asset IDs
+    return ui.assetIdToImageSource?.(baseId) ?? null;
   });
 
   const templateImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
+    const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding now
+    if (!assetsLoaded) return null;
     const card = getCard(args);
     if (!card) return null;
 
@@ -496,14 +512,17 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
       templateAssetId = `${card.type.toLowerCase()}-card`;
     }
 
-    return templateAssetId ? (ui.assetIdToImageSource?.(templateAssetId) ?? templateAssetId) : null;
+    return templateAssetId ? (ui.assetIdToImageSource?.(templateAssetId) ?? null) : null;
   });
 
   const affinityIconBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
+    const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
+    if (!assetsLoaded) return null;
     const card = getCard(args);
     if (!card || card.type !== 'Bloom' || !card.affinity) return null;
     const affinityAssetId = `${card.affinity.toLowerCase()}-icon`;
-    return ui.assetIdToImageSource?.(affinityAssetId) ?? affinityAssetId;
+    if (!affinityAssetId) return null; // Don't try to load empty asset IDs
+    return ui.assetIdToImageSource?.(affinityAssetId) ?? null;
   });
 
 
@@ -525,6 +544,8 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     // Layer 2: Base card frame
     ui.Image({
       source: ui.Binding.derive(dependencies, (...args: any[]) => {
+        const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
+        if (!assetsLoaded) return null;
         const card = getCard(args);
         return card ? ui.assetIdToImageSource?.('base-card') : null;
       }),
@@ -564,6 +585,8 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     // Layer 5: Experience bar
     ui.Image({
       source: ui.Binding.derive(dependencies, (...args: any[]) => {
+        const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
+        if (!assetsLoaded) return null;
         const card = getCard(args);
         if (!card || card.type !== 'Bloom' || card.level === undefined) return null;
         return ui.assetIdToImageSource?.('experience-bar');

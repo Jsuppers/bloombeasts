@@ -6,7 +6,6 @@ import { Mission, MissionObjective, MissionRewards, CardPool } from './types';
 import { missions, getMissionById } from './definitions';
 import { BloomBeastCard, HabitatCard, TrapCard, MagicCard } from '../../engine/types/core';
 import { GameState } from '../../engine/types/game';
-import { getAllCards } from '../../engine/cards';
 import { SimpleMap } from '../../utils/polyfills';
 import { Logger } from '../../engine/utils/Logger';
 
@@ -39,9 +38,14 @@ export interface RewardResult {
 }
 
 export class MissionManager {
+  private catalogManager: any;
   private currentMission: Mission | null = null;
   private progress: MissionRunProgress | null = null;
   private completedMissions: SimpleMap<string, number> = new SimpleMap();
+
+  constructor(catalogManager: any) {
+    this.catalogManager = catalogManager;
+  }
 
   /**
    * Start a mission
@@ -275,10 +279,10 @@ export class MissionManager {
     amount: number,
     affinity?: string
   ): (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[] {
-    const allCards = getAllCards();
+    const allCards = this.catalogManager.getAllCardData();
 
     // Filter by pool and affinity
-    let eligibleCards = allCards.filter(card => {
+    let eligibleCards = allCards.filter((card: any) => {
       if (affinity && 'affinity' in card && card.affinity !== affinity) {
         return false;
       }

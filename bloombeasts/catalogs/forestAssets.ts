@@ -1,4 +1,11 @@
-{
+/**
+ * Auto-generated TypeScript catalog from forestAssets.json
+ * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+ */
+
+import type { AssetCatalog } from '../AssetCatalogManager';
+
+export const forestAssets: AssetCatalog = {
   "version": "1.0.0",
   "category": "forest",
   "description": "Forest affinity cards and assets",
@@ -662,4 +669,4 @@
       ]
     }
   ]
-}
+};

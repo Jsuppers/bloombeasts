@@ -6,11 +6,21 @@ import { AnyCard } from '../types/core';
 import {
   getSharedCoreCards,
   getDeckConfig,
-  getCard,
-  getAllBuffCards,
   type AffinityType,
   type DeckCardEntry
 } from '../cards';
+
+// Module-level catalog manager reference for deck builder
+// Set via setCatalogManagerForDeckBuilder() which is called by BloomBeastsGame
+let _deckBuilderCatalogManager: any = null;
+
+/**
+ * Set the catalog manager instance for deck builder functions
+ * Called by BloomBeastsGame during construction
+ */
+export function setCatalogManagerForDeckBuilder(catalogManager: any): void {
+  _deckBuilderCatalogManager = catalogManager;
+}
 
 export type DeckType = AffinityType;
 
@@ -44,10 +54,15 @@ function expandCards<T extends AnyCard>(cardQuantities: DeckCardEntry<T>[]): T[]
  * Build a complete deck with shared cards and affinity-specific cards
  */
 function buildDeck(type: DeckType): DeckList {
-  // Get deck configuration from centralized config
-  const deckConfig = getDeckConfig(type);
+  if (!_deckBuilderCatalogManager) {
+    console.error('[deckBuilder] catalogManager not initialized');
+    return { name: '', affinity: type, cards: [], totalCards: 0 };
+  }
 
-  const sharedCards = expandCards(getSharedCoreCards());
+  // Get deck configuration from centralized config
+  const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
+
+  const sharedCards = expandCards(getSharedCoreCards(_deckBuilderCatalogManager));
   const beasts = expandCards(deckConfig.beasts);
   const habitats = expandCards(deckConfig.habitats);
 
@@ -112,13 +127,18 @@ export function getStarterDeck(type: DeckType): DeckList {
  * This includes 1 of every card in the game across all affinities
  */
 export function getTestingDeck(type: DeckType): DeckList {
-  const deckConfig = getDeckConfig(type);
+  if (!_deckBuilderCatalogManager) {
+    console.error('[deckBuilder] catalogManager not initialized');
+    return { name: '', affinity: type, cards: [], totalCards: 0 };
+  }
+
+  const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
 
   // Get 1 of each card from all affinities
   const allCards: AnyCard[] = [];
 
   // Add shared cards (Magic, Trap) - 1 of each
-  const sharedCards = getSharedCoreCards();
+  const sharedCards = getSharedCoreCards(_deckBuilderCatalogManager);
   sharedCards.forEach(({ card }) => {
     allCards.push({
       ...card,
@@ -127,8 +147,8 @@ export function getTestingDeck(type: DeckType): DeckList {
   });
 
   // Add buff cards - 1 of each
-  const buffCards = getAllBuffCards();
-  buffCards.forEach(card => {
+  const buffCards = _deckBuilderCatalogManager.getAllBuffCards();
+  buffCards.forEach((card: any) => {
     allCards.push({
       ...card,
       instanceId: `${card.id}-1`,
@@ -137,7 +157,7 @@ export function getTestingDeck(type: DeckType): DeckList {
 
   // Add all beasts from all affinities - 1 of each
   (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).forEach(affinity => {
-    const affinityConfig = getDeckConfig(affinity);
+    const affinityConfig = getDeckConfig(_deckBuilderCatalogManager, affinity);
 
     // Add beasts
     affinityConfig.beasts.forEach(({ card }) => {

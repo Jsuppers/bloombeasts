@@ -1,4 +1,12 @@
-{
+/**
+ * Common Assets Catalog
+ * Source of truth for UI elements, backgrounds, and shared assets
+ * Edit this file directly to add/modify assets
+ */
+
+import type { AssetCatalog } from '../AssetCatalogManager';
+
+export const commonAssets: AssetCatalog = {
   "version": "1.0.0",
   "category": "common",
   "description": "Common UI elements, backgrounds, and shared assets",
@@ -593,4 +601,4 @@
       ]
     }
   ]
-}
+};

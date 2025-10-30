@@ -1,4 +1,11 @@
-{
+/**
+ * Auto-generated TypeScript catalog from skyAssets.json
+ * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+ */
+
+import type { AssetCatalog } from '../AssetCatalogManager';
+
+export const skyAssets: AssetCatalog = {
   "version": "1.0.0",
   "category": "sky",
   "description": "Sky affinity cards and assets",
@@ -758,4 +765,4 @@
       ]
     }
   ]
-}
+};

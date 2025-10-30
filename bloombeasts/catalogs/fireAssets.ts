@@ -1,4 +1,11 @@
-{
+/**
+ * Auto-generated TypeScript catalog from fireAssets.json
+ * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+ */
+
+import type { AssetCatalog } from '../AssetCatalogManager';
+
+export const fireAssets: AssetCatalog = {
   "version": "1.0.0",
   "category": "fire",
   "description": "Fire affinity cards and assets",
@@ -727,4 +734,4 @@
       ]
     }
   ]
-}
+};

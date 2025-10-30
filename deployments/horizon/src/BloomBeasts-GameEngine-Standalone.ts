@@ -10,8 +10,8 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-29T09:25:17.574Z
- * Files: 77
+ * Generated: 2025-10-30T03:40:09.892Z
+ * Files: 85
  *
  * @version 1.0.0
  * @license MIT
@@ -3064,368 +3064,6 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\AssetCatalogManager.ts ====================
-
-  /**
-   * Asset Catalog Manager - Centralized Asset Management System
-   *
-   * This replaces the dynamic asset ID generation with a JSON-based catalog system.
-   * All asset information (paths, Horizon IDs, metadata) is stored in JSON files
-   * organized by affinity and category.
-   *
-   * PLATFORM-SPECIFIC LOADING:
-   * - Web: See deployments/web/src/main.ts for fetch()-based loading
-   * - Horizon: See deployments/horizon/src/AssetCatalogLoader.ts for fetchAsData()-based loading
-   */
-
-  export interface AssetReference {
-    type: 'image' | 'audio' | 'animation';
-    horizonAssetId?: string; // Optional - only for Horizon deployment
-    path: string; // Relative path from project root
-    description?: string; // Optional description for documentation
-  }
-
-  export interface CardAssetEntry {
-    id: string;
-    type: 'beast' | 'buff' | 'trap' | 'magic' | 'habitat';
-    cardType?: 'Bloom' | 'Magic' | 'Trap' | 'Buff'; // Game engine card type
-    affinity?: 'fire' | 'forest' | 'sky' | 'water'; // For beasts and habitats
-    data: {
-      id: string;
-      name: string;
-      displayName?: string; // Display name if different from name
-      description?: string;
-      cost?: number;
-      attack?: number;
-      health?: number;
-      tier?: number;
-      // Additional card properties can be added here
-    };
-    assets: AssetReference[];
-  }
-
-  export interface MissionAssetEntry {
-    id: string;
-    type: 'mission';
-    affinity?: 'fire' | 'forest' | 'sky' | 'water' | 'boss';
-    missionNumber: number;
-    name: string;
-    description: string;
-    assets: AssetReference[];
-  }
-
-  export interface UIAssetEntry {
-    id: string;
-    type: 'ui';
-    category: 'frame' | 'button' | 'background' | 'icon' | 'chest' | 'container' | 'other';
-    name: string;
-    description?: string;
-    assets: AssetReference[];
-  }
-
-  export interface AssetCatalog {
-    version: string;
-    category: 'fire' | 'forest' | 'sky' | 'water' | 'buff' | 'trap' | 'magic' | 'common';
-    description: string;
-    data: (CardAssetEntry | MissionAssetEntry | UIAssetEntry)[];
-  }
-
-  /**
-   * AssetCatalogManager - Manages loading and querying of asset catalogs
-   */
-  export class AssetCatalogManager {
-    private static instance: AssetCatalogManager;
-
-    private catalogs: Map<string, AssetCatalog> = new Map();
-    private assetIndex: Map<string, CardAssetEntry | MissionAssetEntry | UIAssetEntry> = new Map();
-    private pathToIdMap: Map<string, string> = new Map(); // Maps asset paths to IDs
-    private horizonIdMap: Map<string, string> = new Map(); // Maps Horizon IDs to asset IDs
-
-    /**
-     * Get singleton instance
-     */
-    static getInstance(): AssetCatalogManager {
-      if (!AssetCatalogManager.instance) {
-        AssetCatalogManager.instance = new AssetCatalogManager();
-      }
-      return AssetCatalogManager.instance;
-    }
-
-    /**
-     * Load catalog from JSON object
-     * Platform-specific code should fetch/load the JSON and pass it here
-     */
-    loadCatalog(catalog: AssetCatalog): void {
-      const catalogKey = catalog.category;
-      this.catalogs.set(catalogKey, catalog);
-
-      // Index all assets by ID for quick lookup
-      catalog.data.forEach(entry => {
-        this.assetIndex.set(entry.id, entry);
-
-        // Create reverse mappings
-        entry.assets.forEach(asset => {
-          this.pathToIdMap.set(asset.path, entry.id);
-          if (asset.horizonAssetId) {
-            this.horizonIdMap.set(asset.horizonAssetId, entry.id);
-          }
-        });
-      });
-
-      console.log(`Loaded ${catalog.category} catalog with ${catalog.data.length} entries`);
-    }
-
-    /**
-     * Get asset entry by ID
-     */
-    getAsset(id: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
-      return this.assetIndex.get(id);
-    }
-
-    /**
-     * Get asset entry by path
-     */
-    getAssetByPath(path: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
-      const id = this.pathToIdMap.get(path);
-      return id ? this.assetIndex.get(id) : undefined;
-    }
-
-    /**
-     * Get asset entry by Horizon ID
-     */
-    getAssetByHorizonId(horizonId: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
-      const id = this.horizonIdMap.get(horizonId);
-      return id ? this.assetIndex.get(id) : undefined;
-    }
-
-    /**
-     * Get all assets of a specific type
-     */
-    getAssetsByType<T extends CardAssetEntry | MissionAssetEntry | UIAssetEntry>(
-      type: 'beast' | 'buff' | 'trap' | 'magic' | 'habitat' | 'mission' | 'ui'
-    ): T[] {
-      const results: T[] = [];
-      this.assetIndex.forEach(entry => {
-        if (entry.type === type || (entry.type === 'ui' && type === 'ui')) {
-          results.push(entry as T);
-        } else if (type !== 'mission' && type !== 'ui' && (entry as CardAssetEntry).type === type) {
-          results.push(entry as T);
-        }
-      });
-      return results;
-    }
-
-    /**
-     * Get all cards by affinity
-     */
-    getCardsByAffinity(affinity: 'fire' | 'forest' | 'sky' | 'water'): CardAssetEntry[] {
-      const results: CardAssetEntry[] = [];
-      this.assetIndex.forEach(entry => {
-        if (entry.type === 'beast' || entry.type === 'habitat') {
-          const card = entry as CardAssetEntry;
-          if (card.affinity === affinity) {
-            results.push(card);
-          }
-        }
-      });
-      return results;
-    }
-
-    /**
-     * Get Horizon asset ID for a given asset
-     */
-    getHorizonAssetId(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
-      const asset = this.getAsset(assetId);
-      if (!asset) return undefined;
-
-      const assetRef = asset.assets.find(a => a.type === assetType);
-      return assetRef?.horizonAssetId;
-    }
-
-    /**
-     * Get local path for a given asset
-     */
-    getAssetPath(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
-      const asset = this.getAsset(assetId);
-      if (!asset) return undefined;
-
-      const assetRef = asset.assets.find(a => a.type === assetType);
-      return assetRef?.path;
-    }
-
-    /**
-     * Get all assets for a catalog category
-     */
-    getCatalog(category: string): AssetCatalog | undefined {
-      return this.catalogs.get(category);
-    }
-
-    /**
-     * Build asset mappings for web platform
-     */
-    getWebAssetMappings(): {
-      images: Record<string, string>,
-      sounds: Record<string, string>
-    } {
-      const images: Record<string, string> = {};
-      const sounds: Record<string, string> = {};
-
-      this.assetIndex.forEach((entry, id) => {
-        entry.assets.forEach(asset => {
-          // Only use the first asset of each type for the entry
-          if (asset.type === 'image' && !images[id]) {
-            images[id] = asset.path;
-          } else if (asset.type === 'audio' && !sounds[id]) {
-            sounds[id] = asset.path;
-          }
-        });
-      });
-
-      return { images, sounds };
-    }
-
-    /**
-     * Build asset mappings for Horizon platform
-     */
-    getHorizonAssetMappings(): {
-      images: Record<string, string>,
-      sounds: Record<string, string>
-    } {
-      const images: Record<string, string> = {};
-      const sounds: Record<string, string> = {};
-
-      this.assetIndex.forEach((entry, id) => {
-        entry.assets.forEach(asset => {
-          if (asset.horizonAssetId) {
-            // Only use the first asset of each type for the entry
-            if (asset.type === 'image' && !images[id]) {
-              images[id] = asset.horizonAssetId;
-            } else if (asset.type === 'audio' && !sounds[id]) {
-              sounds[id] = asset.horizonAssetId;
-            }
-          }
-        });
-      });
-
-      return { images, sounds };
-    }
-
-    /**
-     * Get all loaded catalog categories
-     */
-    getLoadedCategories(): string[] {
-      return Array.from(this.catalogs.keys());
-    }
-
-    /**
-     * Get all card data from loaded catalogs
-     * Returns the actual card definitions (data property) from all card entries
-     */
-    getAllCardData(): any[] {
-      const cards: any[] = [];
-
-      this.assetIndex.forEach(entry => {
-        // Only include card entries (beast, magic, trap, buff, habitat)
-        if (entry.type === 'beast' || entry.type === 'magic' ||
-            entry.type === 'trap' || entry.type === 'buff' || entry.type === 'habitat') {
-          const cardEntry = entry as CardAssetEntry;
-          // Add rarity for reward system (same logic as old getAllCards)
-          const cardData: any = { ...cardEntry.data };
-
-          if (cardEntry.type === 'beast') {
-            // Assign rarity based on nectar cost
-            const cost = cardData.cost || 0;
-            if (cost >= 5) {
-              cardData.rarity = 'rare';
-            } else if (cost >= 3) {
-              cardData.rarity = 'uncommon';
-            } else {
-              cardData.rarity = 'common';
-            }
-          } else {
-            // Non-beast cards are common by default
-            cardData.rarity = 'common';
-          }
-
-          cards.push(cardData);
-        }
-      });
-
-      return cards;
-    }
-
-    /**
-     * Clear all loaded catalogs
-     */
-    clear(): void {
-      this.catalogs.clear();
-      this.assetIndex.clear();
-      this.pathToIdMap.clear();
-      this.horizonIdMap.clear();
-    }
-  }
-
-  // Singleton instance
-  export const assetCatalogManager = AssetCatalogManager.getInstance();
-
-  // ==================== bloombeasts\engine\cards\cardUtils.ts ====================
-
-  /**
-   * Card Utilities - Central card loading and filtering from JSON catalogs
-   */
-
-
-  /**
-   * Get a single card by ID from the catalog
-   */
-  export function getCard<T = AnyCard>(id: string): T {
-    const allCards = assetCatalogManager.getAllCardData();
-    const card = allCards.find(c => c.id === id);
-    if (!card) {
-      throw new Error(`Card with id "${id}" not found in catalogs`);
-    }
-    return card as T;
-  }
-
-  /**
-   * Get all cards of a specific affinity
-   */
-  export function getCardsByAffinity(affinity: 'Forest' | 'Fire' | 'Water' | 'Sky'): (BloomBeastCard | HabitatCard)[] {
-    const allCards = assetCatalogManager.getAllCardData();
-    return allCards.filter(card =>
-      'affinity' in card && card.affinity === affinity
-    ) as (BloomBeastCard | HabitatCard)[];
-  }
-
-  /**
-   * Get beast cards by affinity from catalog
-   * Note: This gets cards from the catalog, not from a battlefield
-   */
-  export function getBeastCardsFromCatalog(affinity: 'Forest' | 'Fire' | 'Water' | 'Sky'): BloomBeastCard[] {
-    const allCards = assetCatalogManager.getAllCardData();
-    return allCards.filter(card =>
-      card.type === 'Bloom' && 'affinity' in card && card.affinity === affinity
-    ) as BloomBeastCard[];
-  }
-
-  /**
-   * Get habitat cards by affinity
-   */
-  export function getHabitatsByAffinity(affinity: 'Forest' | 'Fire' | 'Water' | 'Sky'): HabitatCard[] {
-    const allCards = assetCatalogManager.getAllCardData();
-    return allCards.filter(card =>
-      card.type === 'Habitat' && 'affinity' in card && card.affinity === affinity
-    ) as HabitatCard[];
-  }
-
-  /**
-   * Get all buff cards
-   */
-  export function getAllBuffCards(): BuffCard[] {
-    const allCards = assetCatalogManager.getAllCardData();
-    return allCards.filter(card => card.type === 'Buff') as BuffCard[];
-  }
-
   // ==================== bloombeasts\engine\cards\deckConfig.ts ====================
 
   /**
@@ -3559,9 +3197,13 @@ namespace BloomBeasts {
   /**
    * Resolve card IDs to card objects
    */
-  function resolveCardIds<T = AnyCard>(cardIdEntries: DeckCardIdEntry[]): DeckCardEntry<T>[] {
+  function resolveCardIds<T = AnyCard>(catalogManager: any, cardIdEntries: DeckCardIdEntry[]): DeckCardEntry<T>[] {
+    if (!catalogManager) {
+      console.error('[deckConfig] catalogManager not provided');
+      return [];
+    }
     return cardIdEntries.map(({ cardId, quantity }) => ({
-      card: getCard<T>(cardId),
+      card: catalogManager.getCard(cardId) as T,
       quantity,
     }));
   }
@@ -3569,33 +3211,33 @@ namespace BloomBeasts {
   /**
    * Get shared core cards configuration (resolved from IDs)
    */
-  export function getSharedCoreCards(): DeckCardEntry<MagicCard | TrapCard>[] {
-    return resolveCardIds<MagicCard | TrapCard>(SHARED_CORE_CARD_IDS);
+  export function getSharedCoreCards(catalogManager: any): DeckCardEntry<MagicCard | TrapCard>[] {
+    return resolveCardIds<MagicCard | TrapCard>(catalogManager, SHARED_CORE_CARD_IDS);
   }
 
   /**
    * Get deck configuration for a specific affinity (resolves card IDs to cards)
    */
-  export function getDeckConfig(affinity: AffinityType): AffinityDeckConfig {
+  export function getDeckConfig(catalogManager: any, affinity: AffinityType): AffinityDeckConfig {
     const configIds = AFFINITY_DECK_CONFIG_IDS[affinity];
 
     return {
       name: configIds.name,
       affinity: configIds.affinity,
-      beasts: resolveCardIds<BloomBeastCard>(configIds.beasts),
-      habitats: resolveCardIds<HabitatCard>(configIds.habitats),
+      beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
+      habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
     };
   }
 
   /**
    * Get all deck configurations (resolves card IDs to cards)
    */
-  export function getAllDeckConfigs(): AffinityDeckConfig[] {
+  export function getAllDeckConfigs(catalogManager: any): AffinityDeckConfig[] {
     return Object.values(AFFINITY_DECK_CONFIG_IDS).map(configIds => ({
       name: configIds.name,
       affinity: configIds.affinity,
-      beasts: resolveCardIds<BloomBeastCard>(configIds.beasts),
-      habitats: resolveCardIds<HabitatCard>(configIds.habitats),
+      beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
+      habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
     }));
   }
 
@@ -3603,29 +3245,9 @@ namespace BloomBeasts {
 
   /**
    * Central card registry
-   * Now loads cards from JSON catalogs with centralized utilities
    */
 
-
-  // Re-export everything from card utilities and config
-
-  /**
-   * Get all cards from JSON catalogs
-   * Requires asset catalogs to be loaded first via assetCatalogManager.loadAllCatalogs()
-   * Also adds rarity property for reward generation
-   */
-  export function getAllCards(): AnyCard[] {
-    // Get all card data from loaded JSON catalogs
-    const cards = assetCatalogManager.getAllCardData();
-
-    // If no cards are loaded, return empty array
-    // This can happen if catalogs haven't been loaded yet
-    if (cards.length === 0) {
-      console.warn('getAllCards(): No cards loaded from catalogs. Make sure to call assetCatalogManager.loadAllCatalogs() during initialization.');
-    }
-
-    return cards as AnyCard[];
-  }
+  // Re-export everything from config
 
   // ==================== bloombeasts\engine\utils\deckBuilder.ts ====================
 
@@ -3633,6 +3255,18 @@ namespace BloomBeasts {
    * Deck Builder Utilities - Construct and manage decks
    */
 
+
+  // Module-level catalog manager reference for deck builder
+  // Set via setCatalogManagerForDeckBuilder() which is called by BloomBeastsGame
+  let _deckBuilderCatalogManager: any = null;
+
+  /**
+   * Set the catalog manager instance for deck builder functions
+   * Called by BloomBeastsGame during construction
+   */
+  export function setCatalogManagerForDeckBuilder(catalogManager: any): void {
+    _deckBuilderCatalogManager = catalogManager;
+  }
 
   export type DeckType = AffinityType;
 
@@ -3666,10 +3300,15 @@ namespace BloomBeasts {
    * Build a complete deck with shared cards and affinity-specific cards
    */
   function buildDeck(type: DeckType): DeckList {
-    // Get deck configuration from centralized config
-    const deckConfig = getDeckConfig(type);
+    if (!_deckBuilderCatalogManager) {
+      console.error('[deckBuilder] catalogManager not initialized');
+      return { name: '', affinity: type, cards: [], totalCards: 0 };
+    }
 
-    const sharedCards = expandCards(getSharedCoreCards());
+    // Get deck configuration from centralized config
+    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
+
+    const sharedCards = expandCards(getSharedCoreCards(_deckBuilderCatalogManager));
     const beasts = expandCards(deckConfig.beasts);
     const habitats = expandCards(deckConfig.habitats);
 
@@ -3734,13 +3373,18 @@ namespace BloomBeasts {
    * This includes 1 of every card in the game across all affinities
    */
   export function getTestingDeck(type: DeckType): DeckList {
-    const deckConfig = getDeckConfig(type);
+    if (!_deckBuilderCatalogManager) {
+      console.error('[deckBuilder] catalogManager not initialized');
+      return { name: '', affinity: type, cards: [], totalCards: 0 };
+    }
+
+    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
 
     // Get 1 of each card from all affinities
     const allCards: AnyCard[] = [];
 
     // Add shared cards (Magic, Trap) - 1 of each
-    const sharedCards = getSharedCoreCards();
+    const sharedCards = getSharedCoreCards(_deckBuilderCatalogManager);
     sharedCards.forEach(({ card }) => {
       allCards.push({
         ...card,
@@ -3749,8 +3393,8 @@ namespace BloomBeasts {
     });
 
     // Add buff cards - 1 of each
-    const buffCards = getAllBuffCards();
-    buffCards.forEach(card => {
+    const buffCards = _deckBuilderCatalogManager.getAllBuffCards();
+    buffCards.forEach((card: any) => {
       allCards.push({
         ...card,
         instanceId: `${card.id}-1`,
@@ -3759,7 +3403,7 @@ namespace BloomBeasts {
 
     // Add all beasts from all affinities - 1 of each
     (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).forEach(affinity => {
-      const affinityConfig = getDeckConfig(affinity);
+      const affinityConfig = getDeckConfig(_deckBuilderCatalogManager, affinity);
 
       // Add beasts
       affinityConfig.beasts.forEach(({ card }) => {
@@ -4395,6 +4039,18 @@ namespace BloomBeasts {
    */
 
 
+  // Module-level catalog manager reference for card utils
+  // Set via setCatalogManagerForUtils() which is called by BloomBeastsGame
+  let _cardUtilsCatalogManager: any = null;
+
+  /**
+   * Set the catalog manager instance for card utility functions
+   * Called by BloomBeastsGame during construction
+   */
+  export function setCatalogManagerForUtils(catalogManager: any): void {
+    _cardUtilsCatalogManager = catalogManager;
+  }
+
   /**
    * Battle-specific card stats (runtime only, not persisted)
    * Created when a card enters battle, mutated during combat
@@ -4479,7 +4135,11 @@ namespace BloomBeasts {
    * Get card definition by ID
    */
   export function getCardDefinition(cardId: string): AnyCard | undefined {
-    const allCards = getAllCards();
+    if (!_cardUtilsCatalogManager) {
+      console.warn('[cardUtils] catalogManager not initialized');
+      return undefined;
+    }
+    const allCards = _cardUtilsCatalogManager.getAllCardData();
     return allCards.find((c: any) => c && c.id === cardId);
   }
 
@@ -4730,9 +4390,11 @@ namespace BloomBeasts {
 
   export class CardCollectionManager {
     private levelingSystem: LevelingSystem;
+    private catalogManager: any;
 
-    constructor() {
+    constructor(catalogManager: any) {
       this.levelingSystem = new LevelingSystem();
+      this.catalogManager = catalogManager;
     }
 
     /**
@@ -4750,7 +4412,7 @@ namespace BloomBeasts {
      */
     getAbilitiesForLevel(cardInstance: CardInstance): { abilities: any[] } {
       // Get the base card definition
-      const allCards = getAllCards();
+      const allCards = this.catalogManager.getAllCardData();
       const baseCardId = this.extractBaseCardId(cardInstance.cardId);
       const cardDef = allCards.find((card: any) =>
         card && card.id === baseCardId
@@ -4788,7 +4450,7 @@ namespace BloomBeasts {
      */
     getPlayerDeckCards(playerDeck: string[], cardInstances: CardInstance[]): AnyCard[] {
       const deckCards: AnyCard[] = [];
-      const allCardDefs = getAllCards();
+      const allCardDefs = this.catalogManager.getAllCardData();
 
       // Convert all cards from player's deck
       for (const cardId of playerDeck) {
@@ -4864,10 +4526,10 @@ namespace BloomBeasts {
      */
     async initializeStartingCollection(cardInstances: CardInstance[], playerDeck: string[]): Promise<string[]> {
       // Give player the first 30 cards from the card catalog as the default deck
-      const allCards = getAllCards();
+      const allCards = this.catalogManager.getAllCardData();
       const starterCards = allCards.slice(0, 30);
 
-      starterCards.forEach((card, index) => {
+      starterCards.forEach((card: any, index: number) => {
         const instanceId = `${card.id}-${Date.now()}-${index}`;
 
         // Create minimal card instance (all types use same format now)
@@ -4915,6 +4577,11 @@ namespace BloomBeasts {
 
 
   export class BattleDisplayManager {
+    private catalogManager: any;
+
+    constructor(catalogManager: any) {
+      this.catalogManager = catalogManager;
+    }
     /**
      * Create a battle display object from battle state
      */
@@ -5001,7 +4668,7 @@ namespace BloomBeasts {
     private enrichFieldBeasts(field: any[], gameState?: any, playerIndex?: number): any[] {
       // Create a card lookup map from all card definitions
       const cardMap = new Map<string, BloomBeastCard>();
-      const allCards = getAllCards();
+      const allCards = this.catalogManager.getAllCardData();
       allCards.forEach((card: any) => {
         if (card && card.type === 'Bloom') {
           cardMap.set(card.id, card as BloomBeastCard);
@@ -6424,13 +6091,12 @@ namespace BloomBeasts {
 
   /**
    * Reactive data binding
+   * Matches Horizon's Binding API (no get() or subscribe() methods)
    */
   declare class Binding<T = any> extends ValueBindingBase<T> {
     constructor(value: T);
-    get(): T;
     set(value: T | ((prev: T) => T)): void;
     derive<U>(fn: (value: T) => U): Binding<U>;
-    subscribe(callback: (value: T) => void): () => void;
     static derive<T extends any[], R>(
       bindings: { [K in keyof T]: Binding<T[K]> },
       deriveFn: (...values: T) => R
@@ -7776,9 +7442,14 @@ namespace BloomBeasts {
   }
 
   export class MissionManager {
+    private catalogManager: any;
     private currentMission: Mission | null = null;
     private progress: MissionRunProgress | null = null;
     private completedMissions: SimpleMap<string, number> = new SimpleMap();
+
+    constructor(catalogManager: any) {
+      this.catalogManager = catalogManager;
+    }
 
     /**
      * Start a mission
@@ -8012,10 +7683,10 @@ namespace BloomBeasts {
       amount: number,
       affinity?: string
     ): (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[] {
-      const allCards = getAllCards();
+      const allCards = this.catalogManager.getAllCardData();
 
       // Filter by pool and affinity
-      let eligibleCards = allCards.filter(card => {
+      let eligibleCards = allCards.filter((card: any) => {
         if (affinity && 'affinity' in card && card.affinity !== affinity) {
           return false;
         }
@@ -8395,13 +8066,15 @@ namespace BloomBeasts {
     private abilityProcessor: AbilityProcessor;
     private levelingSystem: LevelingSystem;
     private cardDatabase: Map<string, AnyCard> | null = null;
+    private catalogManager: any;
 
-    constructor() {
+    constructor(catalogManager: any) {
       // Don't create game state yet - it will be created when startMatch() is called
       // This allows GameEngine to be constructed before asset catalogs are loaded
       this.combatSystem = new CombatSystem();
       this.abilityProcessor = new AbilityProcessor();
       this.levelingSystem = new LevelingSystem();
+      this.catalogManager = catalogManager;
     }
 
     /**
@@ -8428,7 +8101,7 @@ namespace BloomBeasts {
      */
     private buildCardDatabase(): Map<string, AnyCard> {
       const db = new Map<string, AnyCard>();
-      const allCards = getAllCards();
+      const allCards = this.catalogManager.getAllCardData();
       allCards.forEach((card: any) => {
         if (card && card.id && card.type) {
           db.set(card.id, card as AnyCard);
@@ -10673,9 +10346,9 @@ namespace BloomBeasts {
   /**
    * Get all card IDs that need image assets
    */
-  export function getCardImageAssetIds(): string[] {
-    const cards = getAllCards();
-    return cards.map(card => card.id);
+  export function getCardImageAssetIds(catalogManager: any): string[] {
+    const cards = catalogManager.getAllCardData();
+    return cards.map((card: any) => card.id);
   }
 
   /**
@@ -10696,8 +10369,8 @@ namespace BloomBeasts {
    * Get card rendering asset IDs (for CardRenderer)
    * These are the IDs that CardRenderer expects for rendering cards
    */
-  export function getCardRenderingAssetIds(): string[] {
-    const cards = getAllCards();
+  export function getCardRenderingAssetIds(catalogManager: any): string[] {
+    const cards = catalogManager.getAllCardData();
     const assetIds: string[] = [
       'cardsContainer',  // Cards page background
       'baseCard',        // Base card frame template
@@ -10758,12 +10431,12 @@ namespace BloomBeasts {
   /**
    * Get all image asset IDs
    */
-  export function getAllImageAssetIds(): string[] {
+  export function getAllImageAssetIds(catalogManager: any): string[] {
     return [
-      ...getCardImageAssetIds(),
+      ...getCardImageAssetIds(catalogManager),
       ...getAffinityIconAssetIds(),
       ...getCardTemplateAssetIds(),
-      ...getCardRenderingAssetIds(),
+      ...getCardRenderingAssetIds(catalogManager),
       ...getHabitatTemplateAssetIds(),
       ...getUIIconAssetIds(),
       ...getUIElementAssetIds(),
@@ -10854,6 +10527,328 @@ namespace BloomBeasts {
    */
   export function normalizeSoundId(soundId: string): string {
     return LEGACY_SOUND_ID_MAP[soundId] || soundId;
+  }
+
+  // ==================== bloombeasts\AssetCatalogManager.ts ====================
+
+  /**
+   * Asset Catalog Manager - Centralized Asset Management System
+   *
+   * This replaces the dynamic asset ID generation with a JSON-based catalog system.
+   * All asset information (paths, Horizon IDs, metadata) is stored in JSON files
+   * organized by affinity and category.
+   *
+   * PLATFORM-SPECIFIC LOADING:
+   * - Web: See deployments/web/src/main.ts for fetch()-based loading
+   * - Horizon: See deployments/horizon/src/AssetCatalogLoader.ts for fetchAsData()-based loading
+   */
+
+  export interface AssetReference {
+    type: 'image' | 'audio' | 'animation';
+    horizonAssetId?: string; // Optional - only for Horizon deployment
+    path: string; // Relative path from project root
+    description?: string; // Optional description for documentation
+  }
+
+  export interface CardAssetEntry {
+    id: string;
+    type: 'beast' | 'buff' | 'trap' | 'magic' | 'habitat';
+    cardType?: 'Bloom' | 'Magic' | 'Trap' | 'Buff'; // Game engine card type
+    affinity?: 'fire' | 'forest' | 'sky' | 'water'; // For beasts and habitats
+    data: {
+      id: string;
+      name: string;
+      displayName?: string; // Display name if different from name
+      description?: string;
+      cost?: number;
+      attack?: number;
+      health?: number;
+      tier?: number;
+      // Allow any additional properties from card data
+      [key: string]: any;
+    };
+    assets: AssetReference[];
+  }
+
+  export interface MissionAssetEntry {
+    id: string;
+    type: 'mission';
+    affinity?: 'fire' | 'forest' | 'sky' | 'water' | 'boss';
+    missionNumber: number;
+    name: string;
+    description: string;
+    assets: AssetReference[];
+  }
+
+  export interface UIAssetEntry {
+    id: string;
+    type: 'ui';
+    category: 'frame' | 'button' | 'background' | 'icon' | 'chest' | 'container' | 'card-template' | 'other';
+    name: string;
+    description?: string;
+    assets: AssetReference[];
+  }
+
+  export interface AssetCatalog {
+    version: string;
+    category: 'fire' | 'forest' | 'sky' | 'water' | 'buff' | 'trap' | 'magic' | 'common';
+    description: string;
+    data: (CardAssetEntry | MissionAssetEntry | UIAssetEntry)[];
+  }
+
+  /**
+   * AssetCatalogManager - Manages loading and querying of asset catalogs
+   * NOT a singleton - create instances as needed
+   */
+  export class AssetCatalogManager {
+    private catalogs: Map<string, AssetCatalog> = new Map();
+    private assetIndex: Map<string, CardAssetEntry | MissionAssetEntry | UIAssetEntry> = new Map();
+    private pathToIdMap: Map<string, string> = new Map(); // Maps asset paths to IDs
+    private horizonIdMap: Map<string, string> = new Map(); // Maps Horizon IDs to asset IDs
+
+    /**
+     * Load catalog from JSON object
+     * Platform-specific code should fetch/load the JSON and pass it here
+     */
+    loadCatalog(catalog: AssetCatalog): void {
+      const catalogKey = catalog.category;
+      console.log(`[AssetCatalogManager] Loading catalog: ${catalogKey}`);
+      this.catalogs.set(catalogKey, catalog);
+
+      // Index all assets by ID for quick lookup
+      catalog.data.forEach(entry => {
+        console.log(`[AssetCatalogManager]   Indexing entry: ${entry.id}`);
+        this.assetIndex.set(entry.id, entry);
+
+        // Create reverse mappings
+        entry.assets.forEach(asset => {
+          this.pathToIdMap.set(asset.path, entry.id);
+          if (asset.horizonAssetId) {
+            this.horizonIdMap.set(asset.horizonAssetId, entry.id);
+          }
+        });
+      });
+
+      console.log(`[AssetCatalogManager] ✅ Loaded ${catalog.category} catalog with ${catalog.data.length} entries`);
+      console.log(`[AssetCatalogManager]   Total assets indexed: ${this.assetIndex.size}`);
+      console.log(`[AssetCatalogManager]   Total catalogs: ${this.catalogs.size}`);
+    }
+
+    /**
+     * Get asset entry by ID
+     */
+    getAsset(id: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
+      return this.assetIndex.get(id);
+    }
+
+    /**
+     * Get asset entry by path
+     */
+    getAssetByPath(path: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
+      const id = this.pathToIdMap.get(path);
+      return id ? this.assetIndex.get(id) : undefined;
+    }
+
+    /**
+     * Get asset entry by Horizon ID
+     */
+    getAssetByHorizonId(horizonId: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
+      const id = this.horizonIdMap.get(horizonId);
+      return id ? this.assetIndex.get(id) : undefined;
+    }
+
+    /**
+     * Get all assets of a specific type
+     */
+    getAssetsByType<T extends CardAssetEntry | MissionAssetEntry | UIAssetEntry>(
+      type: 'beast' | 'buff' | 'trap' | 'magic' | 'habitat' | 'mission' | 'ui'
+    ): T[] {
+      const results: T[] = [];
+      this.assetIndex.forEach(entry => {
+        if (entry.type === type || (entry.type === 'ui' && type === 'ui')) {
+          results.push(entry as T);
+        } else if (type !== 'mission' && type !== 'ui' && (entry as CardAssetEntry).type === type) {
+          results.push(entry as T);
+        }
+      });
+      return results;
+    }
+
+    /**
+     * Get all cards by affinity
+     */
+    getCardsByAffinity(affinity: 'fire' | 'forest' | 'sky' | 'water'): CardAssetEntry[] {
+      const results: CardAssetEntry[] = [];
+      this.assetIndex.forEach(entry => {
+        if (entry.type === 'beast' || entry.type === 'habitat') {
+          const card = entry as CardAssetEntry;
+          if (card.affinity === affinity) {
+            results.push(card);
+          }
+        }
+      });
+      return results;
+    }
+
+    /**
+     * Get Horizon asset ID for a given asset
+     */
+    getHorizonAssetId(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
+      console.log(`[AssetCatalogManager.getHorizonAssetId] Looking up: "${assetId}", type: ${assetType}`);
+      const asset = this.getAsset(assetId);
+      console.log(`[AssetCatalogManager.getHorizonAssetId] getAsset returned:`, asset ? `found (${asset.id})` : 'null');
+
+      if (!asset) return undefined;
+
+      const assetRef = asset.assets.find(a => a.type === assetType);
+      console.log(`[AssetCatalogManager.getHorizonAssetId] Asset reference:`, assetRef ? `found (horizonId: ${assetRef.horizonAssetId})` : 'not found');
+      return assetRef?.horizonAssetId;
+    }
+
+    /**
+     * Get local path for a given asset
+     */
+    getAssetPath(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
+      const asset = this.getAsset(assetId);
+      if (!asset) return undefined;
+
+      const assetRef = asset.assets.find(a => a.type === assetType);
+      return assetRef?.path;
+    }
+
+    /**
+     * Get all assets for a catalog category
+     */
+    getCatalog(category: string): AssetCatalog | undefined {
+      return this.catalogs.get(category);
+    }
+
+    /**
+     * Build asset mappings for web platform
+     */
+    getWebAssetMappings(): {
+      images: Record<string, string>,
+      sounds: Record<string, string>
+    } {
+      const images: Record<string, string> = {};
+      const sounds: Record<string, string> = {};
+
+      this.assetIndex.forEach((entry, id) => {
+        entry.assets.forEach(asset => {
+          // Only use the first asset of each type for the entry
+          if (asset.type === 'image' && !images[id]) {
+            images[id] = asset.path;
+          } else if (asset.type === 'audio' && !sounds[id]) {
+            sounds[id] = asset.path;
+          }
+        });
+      });
+
+      return { images, sounds };
+    }
+
+    /**
+     * Build asset mappings for Horizon platform
+     */
+    getHorizonAssetMappings(): {
+      images: Record<string, string>,
+      sounds: Record<string, string>
+    } {
+      const images: Record<string, string> = {};
+      const sounds: Record<string, string> = {};
+
+      this.assetIndex.forEach((entry, id) => {
+        entry.assets.forEach(asset => {
+          if (asset.horizonAssetId) {
+            // Only use the first asset of each type for the entry
+            if (asset.type === 'image' && !images[id]) {
+              images[id] = asset.horizonAssetId;
+            } else if (asset.type === 'audio' && !sounds[id]) {
+              sounds[id] = asset.horizonAssetId;
+            }
+          }
+        });
+      });
+
+      return { images, sounds };
+    }
+
+    /**
+     * Get all loaded catalog categories
+     */
+    getLoadedCategories(): string[] {
+      return Array.from(this.catalogs.keys());
+    }
+
+    /**
+     * Get total number of indexed assets (for debugging)
+     */
+    getTotalIndexedAssets(): number {
+      return this.assetIndex.size;
+    }
+
+    /**
+     * Get all card data from loaded catalogs
+     * Returns the actual card definitions (data property) from all card entries
+     */
+    getAllCardData(): any[] {
+      const cards: any[] = [];
+
+      this.assetIndex.forEach(entry => {
+        // Only include card entries (beast, magic, trap, buff, habitat)
+        if (entry.type === 'beast' || entry.type === 'magic' ||
+            entry.type === 'trap' || entry.type === 'buff' || entry.type === 'habitat') {
+          const cardEntry = entry as CardAssetEntry;
+          // Add rarity for reward system (same logic as old getAllCards)
+          const cardData: any = { ...cardEntry.data };
+
+          if (cardEntry.type === 'beast') {
+            // Assign rarity based on nectar cost
+            const cost = cardData.cost || 0;
+            if (cost >= 5) {
+              cardData.rarity = 'rare';
+            } else if (cost >= 3) {
+              cardData.rarity = 'uncommon';
+            } else {
+              cardData.rarity = 'common';
+            }
+          } else {
+            // Non-beast cards are common by default
+            cardData.rarity = 'common';
+          }
+
+          cards.push(cardData);
+        }
+      });
+
+      return cards;
+    }
+
+    /**
+     * Get a specific card by ID
+     */
+    getCard<T = any>(cardId: string): T | undefined {
+      const allCards = this.getAllCardData();
+      return allCards.find((card: any) => card.id === cardId) as T | undefined;
+    }
+
+    /**
+     * Get all buff cards from the catalog
+     */
+    getAllBuffCards(): any[] {
+      const buffEntries = this.getAssetsByType('buff');
+      return buffEntries.map((entry: any) => entry.data);
+    }
+
+    /**
+     * Clear all loaded catalogs
+     */
+    clear(): void {
+      this.catalogs.clear();
+      this.assetIndex.clear();
+      this.pathToIdMap.clear();
+      this.horizonIdMap.clear();
+    }
   }
 
   // ==================== bloombeasts\ui\styles\colors.ts ====================
@@ -11910,7 +11905,8 @@ namespace BloomBeasts {
     // State bindings
     private displayedText: any;
     private playerDataBinding: any;
-    // private menuFrameAnimation: IntervaledBinding<string>;
+    private menuFrameAnimation: BindingInterface<string>;
+    private frameInterval: any;
 
     // Menu frame IDs
     private menuFrameIds: string[] = [
@@ -11941,15 +11937,11 @@ namespace BloomBeasts {
 
       // Create animated binding for menu frames
       let frameIndex = 0;
-      // this.menuFrameAnimation = new IntervaledBinding<string>(
-      //   this.menuFrameIds[0],
-      //   () => {
-      //     frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
-      //     return this.menuFrameIds[frameIndex];
-      //   },
-      //   200, // 200ms per frame
-      //   this.async
-      // );
+      this.menuFrameAnimation = new this.ui.Binding<string>(this.menuFrameIds[0]);
+      this.frameInterval = this.async.setInterval(() => {
+        frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
+        this.menuFrameAnimation.set(this.menuFrameIds[frameIndex]);
+      }, 200);
     }
 
     /**
@@ -12034,7 +12026,10 @@ namespace BloomBeasts {
           this.ui.Image({
             source: this.ui.Binding.derive(
               [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
+              (assetsLoaded: boolean) => {
+                console.log('[MenuScreen] BACKGROUND assetsLoaded:', assetsLoaded);
+                return assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null;
+              }
             ),
             style: {
               position: 'absolute',
@@ -12046,32 +12041,42 @@ namespace BloomBeasts {
           }),
 
           // Main content area with animated character
-          // this.ui.View({
-          //   style: {
-          //     position: 'absolute',
-          //     width: '100%',
-          //     height: '100%',
-          //     justifyContent: 'center',
-          //     alignItems: 'center',
-          //   },
-          //   children: [
-          //     // Animated character frame at position (143, 25)
-          //     this.ui.View({
-          //       style: {
-          //         position: 'absolute',
-          //         left: 143,
-          //         top: 25,
-          //       },
-          //       children: this.ui.Image({
-          //         binding: this.menuFrameAnimation,
-          //         style: {
-          //           width: 750,
-          //           height: 700,
-          //         },
-          //       }),
-          //     }),
-          //   ],
-          // }),
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+            },
+            children: [
+              // Animated character frame - try without centering first
+              this.ui.Image({
+                  source: this.ui.Binding.derive(
+                    [this.ui.assetsLoadedBinding, this.menuFrameAnimation],
+                    (assetsLoaded: boolean, menuFrameAnimation: string) => {
+                      // console.log('[MenuScreen] Image binding fired:', { assetsLoaded, menuFrameAnimation });
+
+                      if (!assetsLoaded) {
+                        console.log('[MenuScreen] Assets not loaded yet');
+                        return null;
+                      }
+
+                      console.log('[MenuScreen] assetIdToImageSource exists?', !!this.ui.assetIdToImageSource);
+                      const imageSource = this.ui.assetIdToImageSource?.(menuFrameAnimation);
+                      // console.log('[MenuScreen] ImageSource result:', imageSource);
+
+                      return imageSource;
+                    },
+                  ),
+                  style: {
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: 750,
+                    height: 700,
+                  },
+                }),
+            ],
+          }),
 
           // Side menu (positioned absolutely on top)
           createSideMenu(this.ui, {
@@ -12109,7 +12114,9 @@ namespace BloomBeasts {
      * Clean up animations
      */
     dispose(): void {
-      // this.menuFrameAnimation.dispose();
+      if (this.frameInterval) {
+        this.async.clearInterval(this.frameInterval);
+      }
     }
   }
 
@@ -12174,7 +12181,7 @@ namespace BloomBeasts {
     // We need to extract the base ID (e.g., "nectar-block") to match catalog IDs
     const extractBaseId = (id: string | undefined): string => {
       if (!id) {
-        console.warn('[CardRenderer] Card missing id, using name fallback:', card.name);
+        console.warn('[CardRenderer] Card missing id, using name fallback:', card);
         // Fallback: use card name converted to kebab-case
         return card.name.toLowerCase().replace(/\s+/g, '-');
       }
@@ -12215,6 +12222,9 @@ namespace BloomBeasts {
       console.log(`[CardRenderer] ✅ ${card.name} (${card.type}): "${abilityText}"`);
     }
 
+    // Cache assetIdToImageSource to ensure it's captured properly in closures
+    const getImageSource = ui.assetIdToImageSource!;
+
     const children = [
         // Layer 1: Card/Beast artwork image (185x185)
         // For Bloom cards: use beast image
@@ -12222,7 +12232,12 @@ namespace BloomBeasts {
         ui.Image({
           source: ui.Binding.derive(
             [ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(card.type === 'Bloom' ? beastImageKey : cardImageKey) : null
+            (assetsLoaded: boolean) => {
+              if (!assetsLoaded) return null;
+              const imageKey = card.type === 'Bloom' ? beastImageKey : cardImageKey;
+              if (!imageKey) return null;
+              return getImageSource(imageKey);
+            }
           ),
           style: {
             width: beastImageWidth,
@@ -12237,7 +12252,7 @@ namespace BloomBeasts {
         ui.Image({
           source: ui.Binding.derive(
             [ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(baseCardKey) : null
+            (assetsLoaded: boolean) => assetsLoaded ? getImageSource(baseCardKey) : null
           ),
           style: {
             width: cardWidth,
@@ -12253,7 +12268,7 @@ namespace BloomBeasts {
           ui.Image({
             source: ui.Binding.derive(
               [ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(templateKey) : null
+              (assetsLoaded: boolean) => assetsLoaded ? getImageSource(templateKey) : null
             ),
             style: {
               width: cardWidth,
@@ -12270,7 +12285,7 @@ namespace BloomBeasts {
           ui.Image({
             source: ui.Binding.derive(
               [ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(affinityKey) : null
+              (assetsLoaded: boolean) => assetsLoaded ? getImageSource(affinityKey) : null
             ),
             style: {
               width: 30,
@@ -12287,7 +12302,7 @@ namespace BloomBeasts {
           ui.Image({
             source: ui.Binding.derive(
               [ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(expBarKey) : null
+              (assetsLoaded: boolean) => assetsLoaded ? getImageSource(expBarKey) : null
             ),
             style: {
               width: 120,
@@ -12513,31 +12528,33 @@ namespace BloomBeasts {
 
     // Create dependencies array based on mode
     // Use playerDataBinding directly in dependencies to avoid nesting
+    // ALWAYS include assetsLoadedBinding as first dependency to prevent premature asset lookups
     let dependencies: any[];
     if (isIdMode && cardIdBinding) {
-      dependencies = [playerDataBinding, cardIdBinding];
+      dependencies = [ui.assetsLoadedBinding, playerDataBinding, cardIdBinding];
     } else if (isSlotMode && scrollOffsetBinding) {
-      dependencies = [playerDataBinding, scrollOffsetBinding];
+      dependencies = [ui.assetsLoadedBinding, playerDataBinding, scrollOffsetBinding];
     } else {
-      dependencies = [playerDataBinding];
+      dependencies = [ui.assetsLoadedBinding, playerDataBinding];
     }
 
     // Helper to get card based on mode
     // Now computes display data on-demand from CardInstance
+    // args[0] = assetsLoadedBinding, args[1] = playerDataBinding, args[2] = cardIdBinding or scrollOffsetBinding
     const getCard = (args: any[]): CardDisplayData | null => {
-      // Extract card instances from PlayerData
-      const cardInstances: CardInstance[] = args[0]?.cards?.collected || [];
+      // Extract card instances from PlayerData (now at args[1])
+      const cardInstances: CardInstance[] = args[1]?.cards?.collected || [];
 
       let instance: CardInstance | null = null;
 
       if (isIdMode && cardIdBinding) {
-        // ID-based mode: find card by ID
-        const cardId: string | null = args[1];
+        // ID-based mode: find card by ID (now at args[2])
+        const cardId: string | null = args[2];
         if (!cardId) return null;
         instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;
       } else if (isSlotMode && slotIndex !== undefined && cardsPerPage !== undefined && scrollOffsetBinding) {
-        // Slot-based mode: find card by slot index
-        const offset: number = args[1];
+        // Slot-based mode: find card by slot index (offset now at args[2])
+        const offset: number = args[2];
         const pageStart = offset * cardsPerPage;
         const cardIndex = pageStart + slotIndex;
         instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
@@ -12551,7 +12568,8 @@ namespace BloomBeasts {
     const isCardInDeck = (args: any[], cardId: string | undefined): boolean => {
       if (!showDeckIndicator || !cardId) return false;
 
-      const deckCardIds: string[] = args[0]?.cards?.deck || [];
+      // PlayerData is now at args[1] (args[0] is assetsLoadedBinding)
+      const deckCardIds: string[] = args[1]?.cards?.deck || [];
       return deckCardIds.includes(cardId);
     };
 
@@ -12597,13 +12615,18 @@ namespace BloomBeasts {
 
     // Create image source bindings
     const baseCardImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
+      const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding now
+      if (!assetsLoaded) return null;
       const card = getCard(args);
       if (!card) return null;
       const baseId = extractBaseId(card.id, card.name);
-      return ui.assetIdToImageSource?.(baseId) ?? baseId;
+      if (!baseId) return null; // Don't try to load empty asset IDs
+      return ui.assetIdToImageSource?.(baseId) ?? null;
     });
 
     const templateImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
+      const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding now
+      if (!assetsLoaded) return null;
       const card = getCard(args);
       if (!card) return null;
 
@@ -12614,14 +12637,17 @@ namespace BloomBeasts {
         templateAssetId = `${card.type.toLowerCase()}-card`;
       }
 
-      return templateAssetId ? (ui.assetIdToImageSource?.(templateAssetId) ?? templateAssetId) : null;
+      return templateAssetId ? (ui.assetIdToImageSource?.(templateAssetId) ?? null) : null;
     });
 
     const affinityIconBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
+      const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
+      if (!assetsLoaded) return null;
       const card = getCard(args);
       if (!card || card.type !== 'Bloom' || !card.affinity) return null;
       const affinityAssetId = `${card.affinity.toLowerCase()}-icon`;
-      return ui.assetIdToImageSource?.(affinityAssetId) ?? affinityAssetId;
+      if (!affinityAssetId) return null; // Don't try to load empty asset IDs
+      return ui.assetIdToImageSource?.(affinityAssetId) ?? null;
     });
 
 
@@ -12643,6 +12669,8 @@ namespace BloomBeasts {
       // Layer 2: Base card frame
       ui.Image({
         source: ui.Binding.derive(dependencies, (...args: any[]) => {
+          const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
+          if (!assetsLoaded) return null;
           const card = getCard(args);
           return card ? ui.assetIdToImageSource?.('base-card') : null;
         }),
@@ -12682,6 +12710,8 @@ namespace BloomBeasts {
       // Layer 5: Experience bar
       ui.Image({
         source: ui.Binding.derive(dependencies, (...args: any[]) => {
+          const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
+          if (!assetsLoaded) return null;
           const card = getCard(args);
           if (!card || card.type !== 'Bloom' || card.level === undefined) return null;
           return ui.assetIdToImageSource?.('experience-bar');
@@ -13525,7 +13555,8 @@ namespace BloomBeasts {
     let trackedMission: MissionDisplay | null = null;
 
     // Create dependencies array
-    const dependencies = [missionsBinding, scrollOffsetBinding];
+    // ALWAYS include assetsLoadedBinding as first dependency to prevent premature asset lookups
+    const dependencies = [ui.assetsLoadedBinding, missionsBinding, scrollOffsetBinding];
 
     // Mission card positions
     const positions = {
@@ -13554,9 +13585,10 @@ namespace BloomBeasts {
     };
 
     // Create reactive bindings for all mission properties
+    // args[0] = assetsLoadedBinding, args[1] = missionsBinding, args[2] = scrollOffsetBinding
     const missionNameBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[0];
-      const offset: number = args[1];
+      const missions: MissionDisplay[] = args[1];
+      const offset: number = args[2];
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -13568,8 +13600,8 @@ namespace BloomBeasts {
     });
 
     const levelTextBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[0];
-      const offset: number = args[1];
+      const missions: MissionDisplay[] = args[1];
+      const offset: number = args[2];
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -13577,8 +13609,8 @@ namespace BloomBeasts {
     });
 
     const difficultyTextBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[0];
-      const offset: number = args[1];
+      const missions: MissionDisplay[] = args[1];
+      const offset: number = args[2];
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -13590,8 +13622,8 @@ namespace BloomBeasts {
     });
 
     const difficultyColorBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[0];
-      const offset: number = args[1];
+      const missions: MissionDisplay[] = args[1];
+      const offset: number = args[2];
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -13599,8 +13631,8 @@ namespace BloomBeasts {
     });
 
     const descriptionBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[0];
-      const offset: number = args[1];
+      const missions: MissionDisplay[] = args[1];
+      const offset: number = args[2];
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -13608,8 +13640,10 @@ namespace BloomBeasts {
     });
 
     const missionImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[0];
-      const offset: number = args[1];
+      const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
+      if (!assetsLoaded) return null;
+      const missions: MissionDisplay[] = args[1];
+      const offset: number = args[2];
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -13623,12 +13657,14 @@ namespace BloomBeasts {
       else if (mission.affinity === 'Sky') missionImageName = 'sky-mission';
       else if (mission.affinity === 'Boss') missionImageName = 'boss-mission';
 
-      return ui.assetIdToImageSource?.(missionImageName) ?? missionImageName;
+      return ui.assetIdToImageSource?.(missionImageName) ?? null;
     });
 
     const beastImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[0];
-      const offset: number = args[1];
+      const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
+      if (!assetsLoaded) return null;
+      const missions: MissionDisplay[] = args[1];
+      const offset: number = args[2];
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -13636,12 +13672,13 @@ namespace BloomBeasts {
       if (!mission || !mission.beastId) return null;
 
       const beastAssetId = mission.beastId.toLowerCase().replace(/\s+/g, '-');
-      return ui.assetIdToImageSource?.(beastAssetId) ?? beastAssetId;
+      if (!beastAssetId) return null; // Don't try to load empty asset IDs
+      return ui.assetIdToImageSource?.(beastAssetId) ?? null;
     });
 
     const opacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[0];
-      const offset: number = args[1];
+      const missions: MissionDisplay[] = args[1];
+      const offset: number = args[2];
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -13649,8 +13686,8 @@ namespace BloomBeasts {
     });
 
     const lockOverlayOpacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[0];
-      const offset: number = args[1];
+      const missions: MissionDisplay[] = args[1];
+      const offset: number = args[2];
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -13658,8 +13695,8 @@ namespace BloomBeasts {
     });
 
     const checkmarkOpacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[0];
-      const offset: number = args[1];
+      const missions: MissionDisplay[] = args[1];
+      const offset: number = args[2];
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -15467,7 +15504,13 @@ namespace BloomBeasts {
             children: [
               // Button background image - green when player turn, standard when opponent turn
               this.ui.Image({
-                source: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => this.ui.assetIdToImageSource?.(state?.turnPlayer === 'player' ? 'green-button' : 'standard-button') ?? null),
+                source: this.ui.Binding.derive(
+                  [this.ui.assetsLoadedBinding, this.battleDisplay],
+                  (assetsLoaded: boolean, state: BattleDisplay) => {
+                    if (!assetsLoaded) return null;
+                    return this.ui.assetIdToImageSource?.(state?.turnPlayer === 'player' ? 'green-button' : 'standard-button') ?? null;
+                  }
+                ),
                 style: {
                   position: 'absolute',
                   width: sideMenuButtonDimensions.width,
@@ -16194,8 +16237,9 @@ namespace BloomBeasts {
               // Button background image (standard or green based on state)
               this.ui.Image({
                 source: this.ui.Binding.derive(
-                  [this.playerDataBinding],
-                  (pd: any) => {
+                  [this.ui.assetsLoadedBinding, this.playerDataBinding],
+                  (assetsLoaded: boolean, pd: any) => {
+                    if (!assetsLoaded) return null;
                     const settings = pd?.settings;
                     return this.ui.assetIdToImageSource?.(settings?.[settingKey] ? 'green-button' : 'standard-button') ?? null;
                   }
@@ -16983,6 +17027,12 @@ namespace BloomBeasts {
     getImageAsset: (assetId: string) => any;
 
     /**
+     * Asset catalog manager instance
+     * Provides access to all game asset metadata and card definitions
+     */
+    catalogManager: any; // AssetCatalogManager instance
+
+    /**
      * Get platform-specific UI method implementations
      *
      * For web: Returns web-specific View, Text, Image, Pressable, Binding
@@ -17099,9 +17149,13 @@ namespace BloomBeasts {
       // Store platform-provided asset getters
       this.platformGetImageAsset = config.getImageAsset;
 
+      // Initialize card utils and deck builder with catalog manager
+      setCatalogManagerForUtils(config.catalogManager);
+      setCatalogManagerForDeckBuilder(config.catalogManager);
+
       // Initialize core systems
-      this.gameEngine = new GameEngine();
-      this.missionManager = new MissionManager();
+      this.gameEngine = new GameEngine(config.catalogManager);
+      this.missionManager = new MissionManager(config.catalogManager);
       this.missionUI = new MissionSelectionUI(this.missionManager);
       this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine, this.asyncMethods);
 
@@ -17122,8 +17176,8 @@ namespace BloomBeasts {
         }
       };
 
-      this.cardCollectionManager = new CardCollectionManager();
-      this.battleDisplayManager = new BattleDisplayManager();
+      this.cardCollectionManager = new CardCollectionManager(config.catalogManager);
+      this.battleDisplayManager = new BattleDisplayManager(config.catalogManager);
 
       // Initialize bindings using platform's Binding class
       const BindingClass = this.UI.Binding as any;
@@ -18176,8 +18230,8 @@ namespace BloomBeasts {
             createCardDetailPopup(this.UI, this.cardDetailPopupValue || {
               cardDetail: {
                 card: {
-                  id: 'empty-card-fallback',
-                  name: 'Loading...',
+                  id: null, // No ID so CardRenderer returns null for images
+                  name: '',
                   type: 'Bloom',
                   level: 1,
                   experience: 0,
@@ -18294,6 +18348,4377 @@ namespace BloomBeasts {
       // TODO: Dispose other resources
     }
   }
+
+  // ==================== bloombeasts\catalogs\buffAssets.ts ====================
+
+  /**
+   * Auto-generated TypeScript catalog from buffAssets.json
+   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   */
+
+
+  export const buffAssets: AssetCatalog = {
+    version: "1.0.0",
+    category: "buff",
+    "description": "Buff cards and assets",
+    "data": [
+      {
+        "id": "battle-fury",
+        "type": "buff",
+        "cardType": "Buff",
+        "data": {
+          "id": "battle-fury",
+          "name": "Battle Fury",
+          "type": "Buff",
+          "cost": 3,
+          "abilities": [
+            {
+              "name": "Battle Fury",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "ModifyStats",
+                  "target": "AllAllies",
+                  "stat": "Attack",
+                  "value": 2,
+                  "duration": "WhileOnField"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1514404306279605",
+            "path": "assets/images/cards_buff_battle-fury.png"
+          }
+        ]
+      },
+      {
+        "id": "mystic-shield",
+        "type": "buff",
+        "cardType": "Buff",
+        "data": {
+          "id": "mystic-shield",
+          "name": "Mystic Shield",
+          "type": "Buff",
+          "cost": 3,
+          "abilities": [
+            {
+              "name": "Mystic Shield",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "ModifyStats",
+                  "target": "AllAllies",
+                  "stat": "Health",
+                  "value": 2,
+                  "duration": "WhileOnField"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "787965707330770",
+            "path": "assets/images/cards_buff_mystic-shield.png"
+          }
+        ]
+      },
+      {
+        "id": "natures-blessing",
+        "type": "buff",
+        "cardType": "Buff",
+        "affinity": "forest",
+        "data": {
+          "id": "natures-blessing",
+          "name": "Nature's Blessing",
+          "type": "Buff",
+          "affinity": "Forest",
+          "cost": 4,
+          "abilities": [
+            {
+              "name": "Nature's Blessing",
+              "trigger": "OnOwnStartOfTurn",
+              "effects": [
+                {
+                  "type": "Heal",
+                  "target": "AllAllies",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "4100038783597004",
+            "path": "assets/images/cards_buff_natures-blessing.png"
+          }
+        ]
+      },
+      {
+        "id": "swift-wind",
+        "type": "buff",
+        "cardType": "Buff",
+        "affinity": "sky",
+        "data": {
+          "id": "swift-wind",
+          "name": "Swift Wind",
+          "type": "Buff",
+          "affinity": "Sky",
+          "cost": 2,
+          "abilities": [
+            {
+              "name": "Swift Wind",
+              "trigger": "OnOwnStartOfTurn",
+              "effects": [
+                {
+                  "type": "GainResource",
+                  "target": "PlayerGardener",
+                  "resource": "Nectar",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "657351040536713",
+            "path": "assets/images/cards_buff_swift-wind.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\catalogs\commonAssets.ts ====================
+
+  /**
+   * Common Assets Catalog
+   * Source of truth for UI elements, backgrounds, and shared assets
+   * Edit this file directly to add/modify assets
+   */
+
+
+  export const commonAssets: AssetCatalog = {
+    "version": "1.0.0",
+    "category": "common",
+    "description": "Common UI elements, backgrounds, and shared assets",
+    "data": [
+      {
+        "id": "background",
+        "type": "ui",
+        "category": "background",
+        "name": "Main Background",
+        "description": "Main game background",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1341821670869568",
+            "path": "assets/images/bg_background.png"
+          }
+        ]
+      },
+      {
+        "id": "menu",
+        "type": "ui",
+        "category": "background",
+        "name": "Menu Background",
+        "description": "Menu screen background",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1341821670869568",
+            "path": "assets/images/misc_menu.png"
+          }
+        ]
+      },
+      {
+        "id": "playboard",
+        "type": "ui",
+        "category": "background",
+        "name": "Playboard",
+        "description": "Battle playboard background",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "802255839066806",
+            "path": "assets/images/misc_playboard.png"
+          }
+        ]
+      },
+      {
+        "id": "cards-container",
+        "type": "ui",
+        "category": "container",
+        "name": "Cards Container",
+        "description": "Cards collection screen container",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1360422829007789",
+            "path": "assets/images/misc_cards-container.png"
+          }
+        ]
+      },
+      {
+        "id": "mission-container",
+        "type": "ui",
+        "category": "container",
+        "name": "Mission Container",
+        "description": "Mission selection container",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "828431839717203",
+            "path": "assets/images/misc_mission-container.png"
+          }
+        ]
+      },
+      {
+        "id": "standard-button",
+        "type": "ui",
+        "category": "button",
+        "name": "Standard Button",
+        "description": "Default button style",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "740500362349295",
+            "path": "assets/images/misc_standard-button.png"
+          }
+        ]
+      },
+      {
+        "id": "green-button",
+        "type": "ui",
+        "category": "button",
+        "name": "Green Button",
+        "description": "Green variant button",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1454989832255109",
+            "path": "assets/images/misc_green-button.png"
+          }
+        ]
+      },
+      {
+        "id": "red-button",
+        "type": "ui",
+        "category": "button",
+        "name": "Red Button",
+        "description": "Red variant button",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1365262285015644",
+            "path": "assets/images/misc_red-button.png"
+          }
+        ]
+      },
+      {
+        "id": "long-green-button",
+        "type": "ui",
+        "category": "button",
+        "name": "Long Green Button",
+        "description": "Long green button variant",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1842026620010613",
+            "path": "assets/images/misc_long-green-button.png"
+          }
+        ]
+      },
+      {
+        "id": "side-menu",
+        "type": "ui",
+        "category": "container",
+        "name": "Side Menu",
+        "description": "Side menu panel",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "794839683168713",
+            "path": "assets/images/misc_side-menu.png"
+          }
+        ]
+      },
+      {
+        "id": "experience-bar",
+        "type": "ui",
+        "category": "other",
+        "name": "Experience Bar",
+        "description": "XP progress bar",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1151343029773719",
+            "path": "assets/images/cards_experience-bar.png"
+          }
+        ]
+      },
+      {
+        "id": "base-card",
+        "type": "ui",
+        "category": "frame",
+        "name": "Base Card Frame",
+        "description": "Default card frame template",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "823441590335166",
+            "path": "assets/images/cards_base-card.png"
+          }
+        ]
+      },
+      {
+        "id": "magic-card",
+        "type": "ui",
+        "category": "frame",
+        "name": "Magic Card Frame",
+        "description": "Magic card frame template",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "802428729033291",
+            "path": "assets/images/cards_magic-card.png"
+          }
+        ]
+      },
+      {
+        "id": "magic-card-playboard",
+        "type": "ui",
+        "category": "frame",
+        "name": "Magic Card Playboard",
+        "description": "Magic card on playboard",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2991234734402522",
+            "path": "assets/images/cards_magic-card-playboard.png"
+          }
+        ]
+      },
+      {
+        "id": "trap-card",
+        "type": "ui",
+        "category": "frame",
+        "name": "Trap Card Frame",
+        "description": "Trap card frame template",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2847974385407960",
+            "path": "assets/images/cards_trap-card.png"
+          }
+        ]
+      },
+      {
+        "id": "trap-card-playboard",
+        "type": "ui",
+        "category": "frame",
+        "name": "Trap Card Playboard",
+        "description": "Trap card on playboard",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1724877334843483",
+            "path": "assets/images/cards_trap-card-playboard.png"
+          }
+        ]
+      },
+      {
+        "id": "buff-card",
+        "type": "ui",
+        "category": "frame",
+        "name": "Buff Card Frame",
+        "description": "Buff card frame template",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1962518914567182",
+            "path": "assets/images/cards_buff-card.png"
+          }
+        ]
+      },
+      {
+        "id": "buff-card-playboard",
+        "type": "ui",
+        "category": "frame",
+        "name": "Buff Card Playboard",
+        "description": "Buff card on playboard",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2628573627486992",
+            "path": "assets/images/cards_buff-card-playboard.png"
+          }
+        ]
+      },
+      {
+        "id": "menu-frame-1",
+        "type": "ui",
+        "category": "frame",
+        "name": "Menu Frame 1",
+        "description": "Menu animation frame 1",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1186506656766961",
+            "path": "assets/images/menu_frame-1.png"
+          }
+        ]
+      },
+      {
+        "id": "menu-frame-2",
+        "type": "ui",
+        "category": "frame",
+        "name": "Menu Frame 2",
+        "description": "Menu animation frame 2",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "816845231314389",
+            "path": "assets/images/menu_frame-2.png"
+          }
+        ]
+      },
+      {
+        "id": "menu-frame-3",
+        "type": "ui",
+        "category": "frame",
+        "name": "Menu Frame 3",
+        "description": "Menu animation frame 3",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2012665279305528",
+            "path": "assets/images/menu_frame-3.png"
+          }
+        ]
+      },
+      {
+        "id": "menu-frame-4",
+        "type": "ui",
+        "category": "frame",
+        "name": "Menu Frame 4",
+        "description": "Menu animation frame 4",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "803392912558689",
+            "path": "assets/images/menu_frame-4.png"
+          }
+        ]
+      },
+      {
+        "id": "menu-frame-5",
+        "type": "ui",
+        "category": "frame",
+        "name": "Menu Frame 5",
+        "description": "Menu animation frame 5",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1141897134114548",
+            "path": "assets/images/menu_frame-5.png"
+          }
+        ]
+      },
+      {
+        "id": "menu-frame-6",
+        "type": "ui",
+        "category": "frame",
+        "name": "Menu Frame 6",
+        "description": "Menu animation frame 6",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1962288661350650",
+            "path": "assets/images/menu_frame-6.png"
+          }
+        ]
+      },
+      {
+        "id": "menu-frame-7",
+        "type": "ui",
+        "category": "frame",
+        "name": "Menu Frame 7",
+        "description": "Menu animation frame 7",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "781356411339489",
+            "path": "assets/images/menu_frame-7.png"
+          }
+        ]
+      },
+      {
+        "id": "menu-frame-8",
+        "type": "ui",
+        "category": "frame",
+        "name": "Menu Frame 8",
+        "description": "Menu animation frame 8",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "844985438202497",
+            "path": "assets/images/menu_frame-8.png"
+          }
+        ]
+      },
+      {
+        "id": "menu-frame-9",
+        "type": "ui",
+        "category": "frame",
+        "name": "Menu Frame 9",
+        "description": "Menu animation frame 9",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1340487887747224",
+            "path": "assets/images/menu_frame-9.png"
+          }
+        ]
+      },
+      {
+        "id": "menu-frame-10",
+        "type": "ui",
+        "category": "frame",
+        "name": "Menu Frame 10",
+        "description": "Menu animation frame 10",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1866001547625853",
+            "path": "assets/images/menu_frame-10.png"
+          }
+        ]
+      },
+      {
+        "id": "icon-ability",
+        "type": "ui",
+        "category": "icon",
+        "name": "Ability Icon",
+        "description": "Ability indicator icon",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1550821249252575",
+            "path": "assets/images/icon_ability.png"
+          }
+        ]
+      },
+      {
+        "id": "icon-attack",
+        "type": "ui",
+        "category": "icon",
+        "name": "Attack Icon",
+        "description": "Attack indicator icon",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "818969787355942",
+            "path": "assets/images/icon_attack.png"
+          }
+        ]
+      },
+      {
+        "id": "lose-image",
+        "type": "ui",
+        "category": "other",
+        "name": "Lose Image",
+        "description": "Game over/lose screen image",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2155452308310801",
+            "path": "assets/images/misc_lose-image.png"
+          }
+        ]
+      },
+      {
+        "id": "boss-mission",
+        "type": "mission",
+        "affinity": "boss",
+        "missionNumber": 5,
+        "name": "The Bloom Master",
+        "description": "Final boss mission",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1879466909654800",
+            "path": "assets/images/cards_boss-mission.png"
+          }
+        ]
+      },
+      {
+        "id": "the-bloom-master",
+        "type": "ui",
+        "category": "other",
+        "name": "The Bloom Master",
+        "description": "Boss card image",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1948729499041670",
+            "path": "assets/images/cards_the-bloom-master.png"
+          }
+        ]
+      },
+      {
+        "id": "sfx-menu-button-select",
+        "type": "ui",
+        "category": "other",
+        "name": "Menu Button Select SFX",
+        "description": "Sound for menu button selection",
+        "assets": [
+          {
+            "type": "audio",
+            "horizonAssetId": "3481449071995903",
+            "path": "assets/audio/sfx_menu-button-select.wav"
+          }
+        ]
+      },
+      {
+        "id": "sfx-play-card",
+        "type": "ui",
+        "category": "other",
+        "name": "Play Card SFX",
+        "description": "Sound for playing a card",
+        "assets": [
+          {
+            "type": "audio",
+            "horizonAssetId": "673115269189210",
+            "path": "assets/audio/sfx_play-card.wav"
+          }
+        ]
+      },
+      {
+        "id": "sfx-attack",
+        "type": "ui",
+        "category": "other",
+        "name": "Attack SFX",
+        "description": "Sound for attack action",
+        "assets": [
+          {
+            "type": "audio",
+            "horizonAssetId": "1718962638781724",
+            "path": "assets/audio/sfx_attack.wav"
+          }
+        ]
+      },
+      {
+        "id": "sfx-trap-card-activated",
+        "type": "ui",
+        "category": "other",
+        "name": "Trap Activated SFX",
+        "description": "Sound for trap activation",
+        "assets": [
+          {
+            "type": "audio",
+            "horizonAssetId": "1180175093968172",
+            "path": "assets/audio/sfx_trap-card-activated.wav"
+          }
+        ]
+      },
+      {
+        "id": "sfx-low-health",
+        "type": "ui",
+        "category": "other",
+        "name": "Low Health SFX",
+        "description": "Warning sound for low health",
+        "assets": [
+          {
+            "type": "audio",
+            "horizonAssetId": "828372796357589",
+            "path": "assets/audio/sfx_low-health.wav"
+          }
+        ]
+      },
+      {
+        "id": "sfx-win",
+        "type": "ui",
+        "category": "other",
+        "name": "Win SFX",
+        "description": "Victory sound effect",
+        "assets": [
+          {
+            "type": "audio",
+            "horizonAssetId": "4241684452770634",
+            "path": "assets/audio/sfx_win.wav"
+          }
+        ]
+      },
+      {
+        "id": "sfx-lose",
+        "type": "ui",
+        "category": "other",
+        "name": "Lose SFX",
+        "description": "Defeat sound effect",
+        "assets": [
+          {
+            "type": "audio",
+            "horizonAssetId": "1323050035978393",
+            "path": "assets/audio/sfx_lose.wav"
+          }
+        ]
+      },
+      {
+        "id": "music-background",
+        "type": "ui",
+        "category": "other",
+        "name": "Background Music",
+        "description": "Main background music",
+        "assets": [
+          {
+            "type": "audio",
+            "horizonAssetId": "802288129374217",
+            "path": "assets/audio/music_background.mp3"
+          }
+        ]
+      },
+      {
+        "id": "music-battle",
+        "type": "ui",
+        "category": "other",
+        "name": "Battle Music",
+        "description": "Battle scene music",
+        "assets": [
+          {
+            "type": "audio",
+            "horizonAssetId": "668023946362739",
+            "path": "assets/audio/music_battle.mp3"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\catalogs\fireAssets.ts ====================
+
+  /**
+   * Auto-generated TypeScript catalog from fireAssets.json
+   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   */
+
+
+  export const fireAssets: AssetCatalog = {
+    "version": "1.0.0",
+    "category": "fire",
+    "description": "Fire affinity cards and assets",
+    "data": [
+      {
+        "id": "blazefinch",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "fire",
+        "data": {
+          "id": "blazefinch",
+          "name": "Blazefinch",
+          "type": "Bloom",
+          "affinity": "Fire",
+          "cost": 1,
+          "baseAttack": 1,
+          "baseHealth": 2,
+          "abilities": [
+            {
+              "name": "Quick Strike",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "RemoveSummoningSickness",
+                  "target": "Self"
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 0,
+                "atk": 1
+              },
+              "3": {
+                "hp": 0,
+                "atk": 3
+              },
+              "4": {
+                "hp": 1,
+                "atk": 5
+              },
+              "5": {
+                "hp": 1,
+                "atk": 6
+              },
+              "6": {
+                "hp": 2,
+                "atk": 8
+              },
+              "7": {
+                "hp": 2,
+                "atk": 9
+              },
+              "8": {
+                "hp": 3,
+                "atk": 11
+              },
+              "9": {
+                "hp": 3,
+                "atk": 13
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Ember Strike",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "triple-damage",
+                        "condition": {
+                          "type": "IsDamaged"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Lightning Speed",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "RemoveSummoningSickness",
+                        "target": "Self"
+                      },
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "attack-twice"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Phoenix Form",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "attack-twice"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Annihilation",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "instant-destroy",
+                        "condition": {
+                          "type": "IsDamaged"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "3218250765004566",
+            "path": "assets/images/cards_fire_blazefinch.png"
+          }
+        ]
+      },
+      {
+        "id": "cinder-pup",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "fire",
+        "data": {
+          "id": "cinder-pup",
+          "name": "Cinder Pup",
+          "type": "Bloom",
+          "affinity": "Fire",
+          "cost": 2,
+          "baseAttack": 2,
+          "baseHealth": 3,
+          "abilities": [
+            {
+              "name": "Burning Passion",
+              "trigger": "OnAttack",
+              "effects": [
+                {
+                  "type": "ApplyCounter",
+                  "target": "Target",
+                  "counter": "Burn",
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 1,
+                "atk": 1
+              },
+              "3": {
+                "hp": 2,
+                "atk": 2
+              },
+              "4": {
+                "hp": 3,
+                "atk": 3
+              },
+              "5": {
+                "hp": 4,
+                "atk": 4
+              },
+              "6": {
+                "hp": 5,
+                "atk": 5
+              },
+              "7": {
+                "hp": 6,
+                "atk": 6
+              },
+              "8": {
+                "hp": 7,
+                "atk": 7
+              },
+              "9": {
+                "hp": 8,
+                "atk": 8
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Inferno Bite",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "ApplyCounter",
+                        "target": "Target",
+                        "counter": "Burn",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Flame Burst",
+                    "trigger": "Activated",
+                    "cost": {
+                      "type": "Discard",
+                      "value": 1
+                    },
+                    "effects": [
+                      {
+                        "type": "ApplyCounter",
+                        "target": "AllEnemies",
+                        "counter": "Burn",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Wildfire Aura",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "ApplyCounter",
+                        "target": "Target",
+                        "counter": "Burn",
+                        "value": 3
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Apocalypse Flame",
+                    "trigger": "Activated",
+                    "effects": [
+                      {
+                        "type": "ApplyCounter",
+                        "target": "AllEnemies",
+                        "counter": "Burn",
+                        "value": 3
+                      },
+                      {
+                        "type": "DealDamage",
+                        "target": "OpponentGardener",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "913214814369510",
+            "path": "assets/images/cards_fire_cinder-pup.png"
+          }
+        ]
+      },
+      {
+        "id": "charcoil",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "fire",
+        "data": {
+          "id": "charcoil",
+          "name": "Charcoil",
+          "type": "Bloom",
+          "affinity": "Fire",
+          "cost": 2,
+          "baseAttack": 3,
+          "baseHealth": 4,
+          "abilities": [
+            {
+              "name": "Flame Retaliation",
+              "trigger": "OnDamage",
+              "effects": [
+                {
+                  "type": "Retaliation",
+                  "target": "Attacker",
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 1,
+                "atk": 1
+              },
+              "3": {
+                "hp": 2,
+                "atk": 2
+              },
+              "4": {
+                "hp": 4,
+                "atk": 3
+              },
+              "5": {
+                "hp": 5,
+                "atk": 4
+              },
+              "6": {
+                "hp": 6,
+                "atk": 5
+              },
+              "7": {
+                "hp": 8,
+                "atk": 6
+              },
+              "8": {
+                "hp": 9,
+                "atk": 7
+              },
+              "9": {
+                "hp": 11,
+                "atk": 8
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Burning Retaliation",
+                    "trigger": "OnDamage",
+                    "effects": [
+                      {
+                        "type": "Retaliation",
+                        "target": "Attacker",
+                        "value": 2
+                      },
+                      {
+                        "type": "ApplyCounter",
+                        "target": "Attacker",
+                        "counter": "Burn",
+                        "value": 1
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Smoke Screen",
+                    "trigger": "OnDamage",
+                    "effects": [
+                      {
+                        "type": "Immunity",
+                        "target": "Self",
+                        "immuneTo": [
+                          "Magic",
+                          "Trap"
+                        ],
+                        "duration": "WhileOnField"
+                      },
+                      {
+                        "type": "ApplyCounter",
+                        "target": "Target",
+                        "counter": "Soot",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Blazing Vengeance",
+                    "trigger": "OnDamage",
+                    "effects": [
+                      {
+                        "type": "Immunity",
+                        "target": "Self",
+                        "immuneTo": [
+                          "Magic",
+                          "Trap"
+                        ],
+                        "duration": "WhileOnField"
+                      },
+                      {
+                        "type": "ApplyCounter",
+                        "target": "Attacker",
+                        "counter": "Burn",
+                        "value": 3
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Infernal Reflection",
+                    "trigger": "OnDamage",
+                    "effects": [
+                      {
+                        "type": "Retaliation",
+                        "target": "Attacker",
+                        "value": "reflected"
+                      },
+                      {
+                        "type": "ApplyCounter",
+                        "target": "Attacker",
+                        "counter": "Burn",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "785856391096811",
+            "path": "assets/images/cards_fire_charcoil.png"
+          }
+        ]
+      },
+      {
+        "id": "magmite",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "fire",
+        "data": {
+          "id": "magmite",
+          "name": "Magmite",
+          "type": "Bloom",
+          "affinity": "Fire",
+          "cost": 3,
+          "baseAttack": 4,
+          "baseHealth": 6,
+          "abilities": [
+            {
+              "name": "Hardened Shell",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "DamageReduction",
+                  "target": "Self",
+                  "value": 1,
+                  "duration": "WhileOnField"
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 2,
+                "atk": 1
+              },
+              "3": {
+                "hp": 3,
+                "atk": 2
+              },
+              "4": {
+                "hp": 5,
+                "atk": 3
+              },
+              "5": {
+                "hp": 7,
+                "atk": 4
+              },
+              "6": {
+                "hp": 9,
+                "atk": 5
+              },
+              "7": {
+                "hp": 11,
+                "atk": 6
+              },
+              "8": {
+                "hp": 13,
+                "atk": 7
+              },
+              "9": {
+                "hp": 15,
+                "atk": 9
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Molten Armor",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "DamageReduction",
+                        "target": "Self",
+                        "value": 2,
+                        "duration": "WhileOnField"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Eruption",
+                    "trigger": "OnDestroy",
+                    "effects": [
+                      {
+                        "type": "DealDamage",
+                        "target": "OpponentGardener",
+                        "value": 5
+                      },
+                      {
+                        "type": "DealDamage",
+                        "target": "AllEnemies",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Obsidian Carapace",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "DamageReduction",
+                        "target": "Self",
+                        "value": 3,
+                        "duration": "WhileOnField"
+                      },
+                      {
+                        "type": "Retaliation",
+                        "target": "Attacker",
+                        "value": 2
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Cataclysm",
+                    "trigger": "OnDestroy",
+                    "effects": [
+                      {
+                        "type": "DealDamage",
+                        "target": "OpponentGardener",
+                        "value": 8
+                      },
+                      {
+                        "type": "Destroy",
+                        "target": "AllEnemies",
+                        "condition": {
+                          "type": "HealthBelow",
+                          "value": 4,
+                          "comparison": "Less"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "25339017082348952",
+            "path": "assets/images/cards_fire_magmite.png"
+          }
+        ]
+      },
+      {
+        "id": "volcanic-scar",
+        "type": "habitat",
+        "affinity": "fire",
+        "data": {
+          "id": "volcanic-scar",
+          "name": "Volcanic Scar",
+          "type": "Habitat",
+          "affinity": "Fire",
+          "cost": 1,
+          "abilities": [
+            {
+              "name": "Volcanic Eruption",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "DealDamage",
+                  "target": "AllUnits",
+                  "value": 1,
+                  "condition": {
+                    "type": "affinity-not-matches",
+                    "value": "Fire"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1878791053043603",
+            "path": "assets/images/cards_fire_volcanic-scar.png"
+          },
+          {
+            "type": "image",
+            "horizonAssetId": "1762741407742835",
+            "path": "assets/images/cards_fire_habitat-card.png"
+          },
+          {
+            "type": "image",
+            "horizonAssetId": "1863280224222620",
+            "path": "assets/images/cards_fire_habitat-card-playboard.png"
+          }
+        ]
+      },
+      {
+        "id": "fire-mission",
+        "type": "mission",
+        "affinity": "fire",
+        "missionNumber": 1,
+        "name": "Fire Mission",
+        "description": "Fire affinity mission",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "795064546836933",
+            "path": "assets/images/cards_fire_fire-mission.png"
+          }
+        ]
+      },
+      {
+        "id": "fire-chest-closed",
+        "type": "ui",
+        "category": "chest",
+        "name": "Fire Chest Closed",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1168387145201364",
+            "path": "assets/images/chest_fire-chest-closed.png"
+          }
+        ]
+      },
+      {
+        "id": "fire-chest-opened",
+        "type": "ui",
+        "category": "chest",
+        "name": "Fire Chest Opened",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "3716217982005558",
+            "path": "assets/images/chest_fire-chest-opened.png"
+          }
+        ]
+      },
+      {
+        "id": "fire-icon",
+        "type": "ui",
+        "category": "icon",
+        "name": "Fire Icon",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2011015256402906",
+            "path": "assets/images/affinity_fire-icon.png"
+          }
+        ]
+      },
+      {
+        "id": "fire-habitat",
+        "type": "ui",
+        "category": "card-template",
+        "name": "Fire Habitat Card Template",
+        "description": "Template overlay for fire habitat cards",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1762741407742835",
+            "path": "assets/images/cards_fire_habitat-card.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\catalogs\forestAssets.ts ====================
+
+  /**
+   * Auto-generated TypeScript catalog from forestAssets.json
+   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   */
+
+
+  export const forestAssets: AssetCatalog = {
+    "version": "1.0.0",
+    "category": "forest",
+    "description": "Forest affinity cards and assets",
+    "data": [
+      {
+        "id": "rootling",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "forest",
+        "data": {
+          "id": "rootling",
+          "name": "Rootling",
+          "displayName": "Rootling",
+          "type": "Bloom",
+          "affinity": "Forest",
+          "cost": 1,
+          "baseAttack": 1,
+          "baseHealth": 3,
+          "abilities": [
+            {
+              "name": "Deep Roots",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "CannotBeTargeted",
+                  "target": "Self",
+                  "by": [
+                    "magic"
+                  ]
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 1,
+                "atk": 0
+              },
+              "3": {
+                "hp": 2,
+                "atk": 1
+              },
+              "4": {
+                "hp": 3,
+                "atk": 2
+              },
+              "5": {
+                "hp": 4,
+                "atk": 3
+              },
+              "6": {
+                "hp": 5,
+                "atk": 4
+              },
+              "7": {
+                "hp": 6,
+                "atk": 5
+              },
+              "8": {
+                "hp": 7,
+                "atk": 6
+              },
+              "9": {
+                "hp": 8,
+                "atk": 7
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Abundant Nourish",
+                    "trigger": "OnDestroy",
+                    "effects": [
+                      {
+                        "type": "GainResource",
+                        "target": "PlayerGardener",
+                        "resource": "Nectar",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Ancient Roots",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "CannotBeTargeted",
+                        "target": "Self",
+                        "by": [
+                          "magic",
+                          "trap"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Eternal Roots",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "CannotBeTargeted",
+                        "target": "Self",
+                        "by": [
+                          "magic",
+                          "trap",
+                          "abilities"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Harvest Feast",
+                    "trigger": "OnDestroy",
+                    "effects": [
+                      {
+                        "type": "GainResource",
+                        "target": "PlayerGardener",
+                        "resource": "Nectar",
+                        "value": 2
+                      },
+                      {
+                        "type": "DrawCards",
+                        "target": "PlayerGardener",
+                        "value": 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1170317305016635",
+            "path": "assets/images/cards_forest_rootling.png",
+            "description": "Rootling card artwork"
+          }
+        ]
+      },
+      {
+        "id": "leaf-sprite",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "forest",
+        "data": {
+          "id": "leaf-sprite",
+          "name": "Leaf Sprite",
+          "displayName": "Leaf Sprite",
+          "type": "Bloom",
+          "affinity": "Forest",
+          "cost": 1,
+          "baseAttack": 1,
+          "baseHealth": 2,
+          "abilities": [
+            {
+              "name": "Nimble",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "DrawCards",
+                  "target": "PlayerGardener",
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 0,
+                "atk": 1
+              },
+              "3": {
+                "hp": 1,
+                "atk": 1
+              },
+              "4": {
+                "hp": 1,
+                "atk": 2
+              },
+              "5": {
+                "hp": 2,
+                "atk": 3
+              },
+              "6": {
+                "hp": 3,
+                "atk": 4
+              },
+              "7": {
+                "hp": 4,
+                "atk": 5
+              },
+              "8": {
+                "hp": 5,
+                "atk": 6
+              },
+              "9": {
+                "hp": 6,
+                "atk": 7
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Swiftness",
+                    "trigger": "OnSummon",
+                    "effects": [
+                      {
+                        "type": "DrawCards",
+                        "target": "PlayerGardener",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Evasive",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "CannotBeTargeted",
+                        "target": "Self",
+                        "by": [
+                          "trap"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Sprint",
+                    "trigger": "OnSummon",
+                    "effects": [
+                      {
+                        "type": "RemoveSummoningSickness",
+                        "target": "Self"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1733091247346351",
+            "path": "assets/images/cards_forest_leaf-sprite.png",
+            "description": "Leaf Sprite card artwork"
+          }
+        ]
+      },
+      {
+        "id": "mosslet",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "forest",
+        "data": {
+          "id": "mosslet",
+          "name": "Mosslet",
+          "displayName": "Mosslet",
+          "type": "Bloom",
+          "affinity": "Forest",
+          "cost": 2,
+          "baseAttack": 2,
+          "baseHealth": 2,
+          "abilities": [
+            {
+              "name": "Growth",
+              "trigger": "OnOwnEndOfTurn",
+              "effects": [
+                {
+                  "type": "ModifyStats",
+                  "target": "Self",
+                  "stat": "Both",
+                  "value": 1,
+                  "duration": "Permanent"
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 1,
+                "atk": 0
+              },
+              "3": {
+                "hp": 1,
+                "atk": 1
+              },
+              "4": {
+                "hp": 2,
+                "atk": 2
+              },
+              "5": {
+                "hp": 3,
+                "atk": 3
+              },
+              "6": {
+                "hp": 4,
+                "atk": 4
+              },
+              "7": {
+                "hp": 5,
+                "atk": 5
+              },
+              "8": {
+                "hp": 6,
+                "atk": 6
+              },
+              "9": {
+                "hp": 7,
+                "atk": 7
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Rapid Growth",
+                    "trigger": "OnOwnEndOfTurn",
+                    "effects": [
+                      {
+                        "type": "ModifyStats",
+                        "target": "Self",
+                        "stat": "Both",
+                        "value": 2,
+                        "duration": "Permanent"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Mossy Armor",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "DamageReduction",
+                        "target": "Self",
+                        "value": 1,
+                        "duration": "WhileOnField"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Overgrowth",
+                    "trigger": "OnOwnEndOfTurn",
+                    "effects": [
+                      {
+                        "type": "ModifyStats",
+                        "target": "Self",
+                        "stat": "Both",
+                        "value": 3,
+                        "duration": "Permanent"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1344114090714721",
+            "path": "assets/images/cards_forest_mosslet.png",
+            "description": "Mosslet card artwork"
+          }
+        ]
+      },
+      {
+        "id": "mushroomancer",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "forest",
+        "data": {
+          "id": "mushroomancer",
+          "name": "Mushroomancer",
+          "displayName": "Mushroomancer",
+          "type": "Bloom",
+          "affinity": "Forest",
+          "cost": 3,
+          "baseAttack": 3,
+          "baseHealth": 4,
+          "abilities": [
+            {
+              "name": "Sporogenesis",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "ApplyCounter",
+                  "target": "AllEnemies",
+                  "counter": "Spore",
+                  "value": 2
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 1,
+                "atk": 0
+              },
+              "3": {
+                "hp": 2,
+                "atk": 1
+              },
+              "4": {
+                "hp": 3,
+                "atk": 2
+              },
+              "5": {
+                "hp": 4,
+                "atk": 3
+              },
+              "6": {
+                "hp": 5,
+                "atk": 4
+              },
+              "7": {
+                "hp": 6,
+                "atk": 5
+              },
+              "8": {
+                "hp": 7,
+                "atk": 6
+              },
+              "9": {
+                "hp": 8,
+                "atk": 7
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Virulent Spores",
+                    "trigger": "OnSummon",
+                    "effects": [
+                      {
+                        "type": "ApplyCounter",
+                        "target": "AllEnemies",
+                        "counter": "Spore",
+                        "value": 3
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Spore Burst",
+                    "trigger": "OnDestroy",
+                    "effects": [
+                      {
+                        "type": "ApplyCounter",
+                        "target": "AllEnemies",
+                        "counter": "Spore",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Fungal Network",
+                    "trigger": "OnOwnEndOfTurn",
+                    "effects": [
+                      {
+                        "type": "DealDamage",
+                        "target": "AllEnemies",
+                        "value": 1,
+                        "condition": {
+                          "type": "HasCounter",
+                          "value": "Spore"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1393693032328550",
+            "path": "assets/images/cards_forest_mushroomancer.png",
+            "description": "Mushroomancer card artwork"
+          }
+        ]
+      },
+      {
+        "id": "ancient-forest",
+        "type": "habitat",
+        "affinity": "forest",
+        "data": {
+          "id": "ancient-forest",
+          "name": "Ancient Forest",
+          "displayName": "Ancient Forest",
+          "type": "Habitat",
+          "affinity": "Forest",
+          "cost": 0,
+          "abilities": [
+            {
+              "name": "Forest Sanctuary",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "ModifyStats",
+                  "target": "AllAllies",
+                  "stat": "Health",
+                  "value": 1,
+                  "duration": "WhileOnField"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1625867191715184",
+            "path": "assets/images/cards_forest_ancient-forest.png",
+            "description": "Ancient Forest habitat card artwork"
+          },
+          {
+            "type": "image",
+            "horizonAssetId": "787776974149741",
+            "path": "assets/images/cards_forest_habitat-card.png",
+            "description": "Forest habitat card template"
+          },
+          {
+            "type": "image",
+            "horizonAssetId": "805969505504149",
+            "path": "assets/images/cards_forest_habitat-card-playboard.png",
+            "description": "Forest habitat card playboard"
+          }
+        ]
+      },
+      {
+        "id": "forest-mission",
+        "type": "mission",
+        "affinity": "forest",
+        "missionNumber": 2,
+        "name": "Forest Mission",
+        "description": "Forest affinity mission",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1351984712974001",
+            "path": "assets/images/cards_forest_forest-mission.png",
+            "description": "Forest mission card"
+          }
+        ]
+      },
+      {
+        "id": "forest-chest-closed",
+        "type": "ui",
+        "category": "chest",
+        "name": "Forest Chest Closed",
+        "description": "Forest chest in closed state",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "678586941962889",
+            "path": "assets/images/chest_forest-chest-closed.png"
+          }
+        ]
+      },
+      {
+        "id": "forest-chest-opened",
+        "type": "ui",
+        "category": "chest",
+        "name": "Forest Chest Opened",
+        "description": "Forest chest in opened state",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1859963367965524",
+            "path": "assets/images/chest_forest-chest-opened.png"
+          }
+        ]
+      },
+      {
+        "id": "forest-icon",
+        "type": "ui",
+        "category": "icon",
+        "name": "Forest Icon",
+        "description": "Forest affinity icon",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1869425844004279",
+            "path": "assets/images/affinity_forest-icon.png"
+          }
+        ]
+      },
+      {
+        "id": "forest-habitat",
+        "type": "ui",
+        "category": "card-template",
+        "name": "Forest Habitat Card Template",
+        "description": "Template overlay for forest habitat cards",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "787776974149741",
+            "path": "assets/images/cards_forest_habitat-card.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\catalogs\magicAssets.ts ====================
+
+  /**
+   * Auto-generated TypeScript catalog from magicAssets.json
+   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   */
+
+
+  export const magicAssets: AssetCatalog = {
+    "version": "1.0.0",
+    "category": "magic",
+    "description": "Magic cards and assets",
+    "data": [
+      {
+        "id": "aether-swap",
+        "type": "magic",
+        "cardType": "Magic",
+        "data": {
+          "id": "aether-swap",
+          "name": "Aether Swap",
+          "type": "Magic",
+          "cost": 1,
+          "targetRequired": true,
+          "abilities": [
+            {
+              "name": "Aether Swap",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "SwapPositions",
+                  "target": "Target"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1846483789630405",
+            "path": "assets/images/cards_magic_aether-swap.png"
+          }
+        ]
+      },
+      {
+        "id": "cleansing-downpour",
+        "type": "magic",
+        "cardType": "Magic",
+        "data": {
+          "id": "cleansing-downpour",
+          "name": "Cleansing Downpour",
+          "type": "Magic",
+          "cost": 2,
+          "targetRequired": false,
+          "abilities": [
+            {
+              "name": "Cleansing Downpour",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "RemoveCounter",
+                  "target": "AllUnits"
+                },
+                {
+                  "type": "DrawCards",
+                  "target": "PlayerGardener",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "710755475386192",
+            "path": "assets/images/cards_magic_cleansing-downpour.png"
+          }
+        ]
+      },
+      {
+        "id": "elemental-burst",
+        "type": "magic",
+        "cardType": "Magic",
+        "data": {
+          "id": "elemental-burst",
+          "name": "Elemental Burst",
+          "type": "Magic",
+          "cost": 3,
+          "targetRequired": false,
+          "abilities": [
+            {
+              "name": "Elemental Burst",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "DealDamage",
+                  "target": "AllEnemies",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1585232092889726",
+            "path": "assets/images/cards_magic_elemental-burst.png"
+          }
+        ]
+      },
+      {
+        "id": "lightning-strike",
+        "type": "magic",
+        "cardType": "Magic",
+        "data": {
+          "id": "lightning-strike",
+          "name": "Lightning Strike",
+          "type": "Magic",
+          "cost": 2,
+          "targetRequired": true,
+          "abilities": [
+            {
+              "name": "Lightning Strike",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "DealDamage",
+                  "target": "Target",
+                  "value": 5,
+                  "piercing": true
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1155953239812167",
+            "path": "assets/images/cards_magic_lightning-strike.png"
+          }
+        ]
+      },
+      {
+        "id": "nectar-block",
+        "type": "magic",
+        "cardType": "Magic",
+        "data": {
+          "id": "nectar-block",
+          "name": "Nectar Block",
+          "type": "Magic",
+          "cost": 0,
+          "targetRequired": false,
+          "abilities": [
+            {
+              "name": "Nectar Block",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "GainResource",
+                  "target": "PlayerGardener",
+                  "resource": "Nectar",
+                  "value": 2,
+                  "duration": "ThisTurn"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1092559439363693",
+            "path": "assets/images/cards_magic_nectar-block.png"
+          }
+        ]
+      },
+      {
+        "id": "nectar-drain",
+        "type": "magic",
+        "cardType": "Magic",
+        "data": {
+          "id": "nectar-drain",
+          "name": "Nectar Drain",
+          "type": "Magic",
+          "cost": 1,
+          "targetRequired": false,
+          "abilities": [
+            {
+              "name": "Nectar Drain",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "GainResource",
+                  "target": "PlayerGardener",
+                  "resource": "Nectar",
+                  "value": 2,
+                  "duration": "ThisTurn"
+                },
+                {
+                  "type": "DrawCards",
+                  "target": "PlayerGardener",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1754732031852523",
+            "path": "assets/images/cards_magic_nectar-drain.png"
+          }
+        ]
+      },
+      {
+        "id": "nectar-surge",
+        "type": "magic",
+        "cardType": "Magic",
+        "data": {
+          "id": "nectar-surge",
+          "name": "Nectar Surge",
+          "type": "Magic",
+          "cost": 1,
+          "targetRequired": false,
+          "abilities": [
+            {
+              "name": "Nectar Surge",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "GainResource",
+                  "target": "PlayerGardener",
+                  "resource": "Nectar",
+                  "value": 3,
+                  "duration": "ThisTurn"
+                },
+                {
+                  "type": "DrawCards",
+                  "target": "PlayerGardener",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1379310950488534",
+            "path": "assets/images/cards_magic_nectar-surge.png"
+          }
+        ]
+      },
+      {
+        "id": "overgrowth",
+        "type": "magic",
+        "cardType": "Magic",
+        "data": {
+          "id": "overgrowth",
+          "name": "Overgrowth",
+          "type": "Magic",
+          "cost": 3,
+          "targetRequired": false,
+          "abilities": [
+            {
+              "name": "Overgrowth",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "ModifyStats",
+                  "target": "AllAllies",
+                  "stat": "Both",
+                  "value": 2,
+                  "duration": "Permanent"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1489977038895297",
+            "path": "assets/images/cards_magic_overgrowth.png"
+          }
+        ]
+      },
+      {
+        "id": "power-up",
+        "type": "magic",
+        "cardType": "Magic",
+        "data": {
+          "id": "power-up",
+          "name": "Power Up",
+          "type": "Magic",
+          "cost": 2,
+          "targetRequired": true,
+          "abilities": [
+            {
+              "name": "Power Up",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "ModifyStats",
+                  "target": "Target",
+                  "stat": "Both",
+                  "value": 3,
+                  "duration": "Permanent"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1140750044697552",
+            "path": "assets/images/cards_magic_power-up.png"
+          }
+        ]
+      },
+      {
+        "id": "purify",
+        "type": "magic",
+        "cardType": "Magic",
+        "data": {
+          "id": "purify",
+          "name": "Purify",
+          "type": "Magic",
+          "cost": 1,
+          "targetRequired": true,
+          "abilities": [
+            {
+              "name": "Purify",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "RemoveCounter",
+                  "target": "Target"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "681285418362907",
+            "path": "assets/images/cards_magic_purify.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\catalogs\skyAssets.ts ====================
+
+  /**
+   * Auto-generated TypeScript catalog from skyAssets.json
+   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   */
+
+
+  export const skyAssets: AssetCatalog = {
+    "version": "1.0.0",
+    "category": "sky",
+    "description": "Sky affinity cards and assets",
+    "data": [
+      {
+        "id": "aero-moth",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "sky",
+        "data": {
+          "id": "aero-moth",
+          "name": "Aero Moth",
+          "type": "Bloom",
+          "affinity": "Sky",
+          "cost": 2,
+          "baseAttack": 3,
+          "baseHealth": 3,
+          "abilities": [
+            {
+              "name": "Wing Flutter",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "DrawCards",
+                  "target": "PlayerGardener",
+                  "value": 1
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 1,
+                "atk": 1
+              },
+              "3": {
+                "hp": 2,
+                "atk": 2
+              },
+              "4": {
+                "hp": 3,
+                "atk": 3
+              },
+              "5": {
+                "hp": 4,
+                "atk": 4
+              },
+              "6": {
+                "hp": 5,
+                "atk": 5
+              },
+              "7": {
+                "hp": 6,
+                "atk": 6
+              },
+              "8": {
+                "hp": 7,
+                "atk": 7
+              },
+              "9": {
+                "hp": 8,
+                "atk": 8
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Hypnotic Wings",
+                    "trigger": "OnSummon",
+                    "effects": [
+                      {
+                        "type": "DrawCards",
+                        "target": "PlayerGardener",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Hypnotic Wings",
+                    "trigger": "OnSummon",
+                    "effects": [
+                      {
+                        "type": "DrawCards",
+                        "target": "PlayerGardener",
+                        "value": 2
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Cyclone",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "SwapPositions",
+                        "target": "AllEnemies"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Rainbow Cascade",
+                    "trigger": "OnSummon",
+                    "effects": [
+                      {
+                        "type": "DrawCards",
+                        "target": "PlayerGardener",
+                        "value": 3
+                      },
+                      {
+                        "type": "ModifyStats",
+                        "target": "AllAllies",
+                        "stat": "Attack",
+                        "value": 1,
+                        "duration": "Permanent"
+                      },
+                      {
+                        "type": "ModifyStats",
+                        "target": "AllAllies",
+                        "stat": "Health",
+                        "value": 1,
+                        "duration": "Permanent"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Chaos Storm",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "SwapPositions",
+                        "target": "AllEnemies"
+                      },
+                      {
+                        "type": "ReturnToHand",
+                        "target": "RandomEnemy",
+                        "value": 1
+                      },
+                      {
+                        "type": "DrawCards",
+                        "target": "PlayerGardener",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1857788838498496",
+            "path": "assets/images/cards_sky_aero-moth.png"
+          }
+        ]
+      },
+      {
+        "id": "cirrus-floof",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "sky",
+        "data": {
+          "id": "cirrus-floof",
+          "name": "Cirrus Floof",
+          "type": "Bloom",
+          "affinity": "Sky",
+          "cost": 2,
+          "baseAttack": 1,
+          "baseHealth": 6,
+          "abilities": [
+            {
+              "name": "Lightness",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "CannotBeTargeted",
+                  "target": "Self",
+                  "by": [
+                    "high-cost-units"
+                  ],
+                  "costThreshold": 3
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 3,
+                "atk": 0
+              },
+              "3": {
+                "hp": 5,
+                "atk": 0
+              },
+              "4": {
+                "hp": 7,
+                "atk": 1
+              },
+              "5": {
+                "hp": 10,
+                "atk": 1
+              },
+              "6": {
+                "hp": 12,
+                "atk": 2
+              },
+              "7": {
+                "hp": 14,
+                "atk": 3
+              },
+              "8": {
+                "hp": 17,
+                "atk": 3
+              },
+              "9": {
+                "hp": 20,
+                "atk": 4
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Storm Shield",
+                    "trigger": "OnOwnStartOfTurn",
+                    "effects": [
+                      {
+                        "type": "TemporaryHP",
+                        "target": "AllAllies",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Ethereal Form",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "CannotBeTargeted",
+                        "target": "Self",
+                        "by": [
+                          "attacks"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Celestial Protector",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "CannotBeTargeted",
+                        "target": "Self",
+                        "by": [
+                          "all"
+                        ]
+                      },
+                      {
+                        "type": "DamageReduction",
+                        "target": "AllAllies",
+                        "value": 1,
+                        "duration": "WhileOnField"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Divine Barrier",
+                    "trigger": "OnOwnStartOfTurn",
+                    "effects": [
+                      {
+                        "type": "TemporaryHP",
+                        "target": "AllAllies",
+                        "value": 3
+                      },
+                      {
+                        "type": "Immunity",
+                        "target": "AllAllies",
+                        "immuneTo": [
+                          "NegativeEffects"
+                        ],
+                        "duration": "ThisTurn"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "849446287592530",
+            "path": "assets/images/cards_sky_cirrus-floof.png"
+          }
+        ]
+      },
+      {
+        "id": "gale-glider",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "sky",
+        "data": {
+          "id": "gale-glider",
+          "name": "Gale Glider",
+          "type": "Bloom",
+          "affinity": "Sky",
+          "cost": 1,
+          "baseAttack": 2,
+          "baseHealth": 2,
+          "abilities": [
+            {
+              "name": "First Wind",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "AttackModification",
+                  "target": "Self",
+                  "modification": "attack-first"
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 0,
+                "atk": 2
+              },
+              "3": {
+                "hp": 0,
+                "atk": 3
+              },
+              "4": {
+                "hp": 1,
+                "atk": 5
+              },
+              "5": {
+                "hp": 1,
+                "atk": 7
+              },
+              "6": {
+                "hp": 2,
+                "atk": 9
+              },
+              "7": {
+                "hp": 2,
+                "atk": 10
+              },
+              "8": {
+                "hp": 3,
+                "atk": 12
+              },
+              "9": {
+                "hp": 3,
+                "atk": 14
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Wind Dance",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "MoveUnit",
+                        "target": "Self",
+                        "destination": "any-slot"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Storm Blade",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "attack-first"
+                      },
+                      {
+                        "type": "ModifyStats",
+                        "target": "Self",
+                        "stat": "Attack",
+                        "value": 2,
+                        "duration": "NextAttack"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Tempest Strike",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "attack-first"
+                      },
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "triple-damage"
+                      },
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "cannot-counterattack"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Hurricane Assault",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "attack-twice"
+                      },
+                      {
+                        "type": "MoveUnit",
+                        "target": "Self",
+                        "destination": "any-slot"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1854780382097596",
+            "path": "assets/images/cards_sky_gale-glider.png"
+          }
+        ]
+      },
+      {
+        "id": "star-bloom",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "sky",
+        "data": {
+          "id": "star-bloom",
+          "name": "Star Bloom",
+          "type": "Bloom",
+          "affinity": "Sky",
+          "cost": 3,
+          "baseAttack": 4,
+          "baseHealth": 5,
+          "abilities": [
+            {
+              "name": "Aura",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "ModifyStats",
+                  "target": "AllAllies",
+                  "stat": "Attack",
+                  "value": 1,
+                  "duration": "WhileOnField"
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 1,
+                "atk": 1
+              },
+              "3": {
+                "hp": 2,
+                "atk": 2
+              },
+              "4": {
+                "hp": 4,
+                "atk": 3
+              },
+              "5": {
+                "hp": 6,
+                "atk": 4
+              },
+              "6": {
+                "hp": 8,
+                "atk": 5
+              },
+              "7": {
+                "hp": 10,
+                "atk": 6
+              },
+              "8": {
+                "hp": 12,
+                "atk": 7
+              },
+              "9": {
+                "hp": 14,
+                "atk": 9
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Radiant Aura",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "ModifyStats",
+                        "target": "AllAllies",
+                        "stat": "Attack",
+                        "value": 2,
+                        "duration": "WhileOnField"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Cosmic Guidance",
+                    "trigger": "Activated",
+                    "maxUsesPerTurn": 1,
+                    "effects": [
+                      {
+                        "type": "SearchDeck",
+                        "target": "PlayerGardener",
+                        "searchFor": "any",
+                        "quantity": 1
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Astral Dominance",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "ModifyStats",
+                        "target": "AllAllies",
+                        "stat": "Attack",
+                        "value": 3,
+                        "duration": "WhileOnField"
+                      },
+                      {
+                        "type": "ModifyStats",
+                        "target": "AllAllies",
+                        "stat": "Health",
+                        "value": 2,
+                        "duration": "WhileOnField"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Universal Harmony",
+                    "trigger": "Activated",
+                    "effects": [
+                      {
+                        "type": "DrawCards",
+                        "target": "PlayerGardener",
+                        "value": 3
+                      },
+                      {
+                        "type": "SearchDeck",
+                        "target": "PlayerGardener",
+                        "searchFor": "any",
+                        "quantity": 2
+                      },
+                      {
+                        "type": "ModifyStats",
+                        "target": "AllAllies",
+                        "stat": "Attack",
+                        "value": 2,
+                        "duration": "Permanent"
+                      },
+                      {
+                        "type": "ModifyStats",
+                        "target": "AllAllies",
+                        "stat": "Health",
+                        "value": 2,
+                        "duration": "Permanent"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "737222956003560",
+            "path": "assets/images/cards_sky_star-bloom.png"
+          }
+        ]
+      },
+      {
+        "id": "clear-zenith",
+        "type": "habitat",
+        "affinity": "sky",
+        "data": {
+          "id": "clear-zenith",
+          "name": "Clear Zenith",
+          "type": "Habitat",
+          "affinity": "Sky",
+          "cost": 1,
+          "titleColor": "#000000",
+          "abilities": [
+            {
+              "name": "Sky Vision",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "DrawCards",
+                  "target": "PlayerGardener",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1941325056416004",
+            "path": "assets/images/cards_sky_clear-zenith.png"
+          },
+          {
+            "type": "image",
+            "horizonAssetId": "1140855177628973",
+            "path": "assets/images/cards_sky_habitat-card.png"
+          },
+          {
+            "type": "image",
+            "horizonAssetId": "674037762415336",
+            "path": "assets/images/cards_sky_habitat-card-playboard.png"
+          }
+        ]
+      },
+      {
+        "id": "sky-mission",
+        "type": "mission",
+        "affinity": "sky",
+        "missionNumber": 4,
+        "name": "Sky Mission",
+        "description": "Sky affinity mission",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1076415204381099",
+            "path": "assets/images/cards_sky_sky-mission.png"
+          }
+        ]
+      },
+      {
+        "id": "sky-chest-closed",
+        "type": "ui",
+        "category": "chest",
+        "name": "Sky Chest Closed",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1988442925266143",
+            "path": "assets/images/chest_sky-chest-closed.png"
+          }
+        ]
+      },
+      {
+        "id": "sky-chest-opened",
+        "type": "ui",
+        "category": "chest",
+        "name": "Sky Chest Opened",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "766596743048030",
+            "path": "assets/images/chest_sky-chest-opened.png"
+          }
+        ]
+      },
+      {
+        "id": "sky-icon",
+        "type": "ui",
+        "category": "icon",
+        "name": "Sky Icon",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2078365889573892",
+            "path": "assets/images/affinity_sky-icon.png"
+          }
+        ]
+      },
+      {
+        "id": "sky-habitat",
+        "type": "ui",
+        "category": "card-template",
+        "name": "Sky Habitat Card Template",
+        "description": "Template overlay for sky habitat cards",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1140855177628973",
+            "path": "assets/images/cards_sky_habitat-card.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\catalogs\trapAssets.ts ====================
+
+  /**
+   * Auto-generated TypeScript catalog from trapAssets.json
+   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   */
+
+
+  export const trapAssets: AssetCatalog = {
+    "version": "1.0.0",
+    "category": "trap",
+    "description": "Trap cards and assets",
+    "data": [
+      {
+        "id": "bear-trap",
+        "type": "trap",
+        "cardType": "Trap",
+        "data": {
+          "id": "bear-trap",
+          "name": "Bear Trap",
+          "type": "Trap",
+          "cost": 1,
+          "activation": {
+            "trigger": "OnAttack"
+          },
+          "abilities": [
+            {
+              "name": "Bear Trap",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "DealDamage",
+                  "target": "Attacker",
+                  "value": 3
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1518992622460625",
+            "path": "assets/images/cards_trap_bear-trap.png"
+          }
+        ]
+      },
+      {
+        "id": "emergency-bloom",
+        "type": "trap",
+        "cardType": "Trap",
+        "data": {
+          "id": "emergency-bloom",
+          "name": "Emergency Bloom",
+          "type": "Trap",
+          "cost": 1,
+          "activation": {
+            "trigger": "OnDestroy"
+          },
+          "abilities": [
+            {
+              "name": "Emergency Bloom",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "DrawCards",
+                  "target": "PlayerGardener",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2247657455738264",
+            "path": "assets/images/cards_trap_emergency-bloom.png"
+          }
+        ]
+      },
+      {
+        "id": "habitat-lock",
+        "type": "trap",
+        "cardType": "Trap",
+        "data": {
+          "id": "habitat-lock",
+          "name": "Habitat Lock",
+          "type": "Trap",
+          "cost": 1,
+          "activation": {
+            "trigger": "OnHabitatPlay"
+          },
+          "abilities": [
+            {
+              "name": "Habitat Lock",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "NullifyEffect",
+                  "target": "Target"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "609610328807674",
+            "path": "assets/images/cards_trap_habitat-lock.png"
+          }
+        ]
+      },
+      {
+        "id": "habitat-shield",
+        "type": "trap",
+        "cardType": "Trap",
+        "data": {
+          "id": "habitat-shield",
+          "name": "Habitat Shield",
+          "type": "Trap",
+          "cost": 2,
+          "activation": {
+            "trigger": "OnHabitatPlay"
+          },
+          "abilities": [
+            {
+              "name": "Habitat Shield",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "NullifyEffect",
+                  "target": "Target"
+                },
+                {
+                  "type": "DrawCards",
+                  "target": "PlayerGardener",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1362245262078336",
+            "path": "assets/images/cards_trap_habitat-shield.png"
+          }
+        ]
+      },
+      {
+        "id": "magic-shield",
+        "type": "trap",
+        "cardType": "Trap",
+        "data": {
+          "id": "magic-shield",
+          "name": "Magic Shield",
+          "type": "Trap",
+          "cost": 1,
+          "activation": {
+            "trigger": "OnMagicPlay"
+          },
+          "abilities": [
+            {
+              "name": "Magic Shield",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "NullifyEffect",
+                  "target": "Target"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1239098601311749",
+            "path": "assets/images/cards_trap_magic-sheild.png"
+          }
+        ]
+      },
+      {
+        "id": "thorn-snare",
+        "type": "trap",
+        "cardType": "Trap",
+        "data": {
+          "id": "thorn-snare",
+          "name": "Thorn Snare",
+          "type": "Trap",
+          "cost": 2,
+          "activation": {
+            "trigger": "OnAttack"
+          },
+          "abilities": [
+            {
+              "name": "Thorn Snare",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "PreventAttack",
+                  "target": "Attacker",
+                  "duration": "Instant"
+                },
+                {
+                  "type": "DealDamage",
+                  "target": "Attacker",
+                  "value": 2
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "4210265565909373",
+            "path": "assets/images/cards_trap_thorn-snare.png"
+          }
+        ]
+      },
+      {
+        "id": "vaporize",
+        "type": "trap",
+        "cardType": "Trap",
+        "data": {
+          "id": "vaporize",
+          "name": "Vaporize",
+          "type": "Trap",
+          "cost": 2,
+          "activation": {
+            "trigger": "OnBloomPlay",
+            "condition": {
+              "type": "CostBelow",
+              "value": 4
+            }
+          },
+          "abilities": [
+            {
+              "name": "Vaporize",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "Destroy",
+                  "target": "Target"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1903759173890506",
+            "path": "assets/images/cards_trap_vaporize.png"
+          }
+        ]
+      },
+      {
+        "id": "xp-harvest",
+        "type": "trap",
+        "cardType": "Trap",
+        "data": {
+          "id": "xp-harvest",
+          "name": "XP Harvest",
+          "type": "Trap",
+          "cost": 1,
+          "activation": {
+            "trigger": "OnDestroy"
+          },
+          "abilities": [
+            {
+              "name": "XP Harvest",
+              "trigger": "OnSummon",
+              "effects": [
+                {
+                  "type": "RemoveCounter",
+                  "target": "Attacker",
+                  "counter": "XP"
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "807213335392971",
+            "path": "assets/images/cards_trap_xpharvest.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\catalogs\waterAssets.ts ====================
+
+  /**
+   * Auto-generated TypeScript catalog from waterAssets.json
+   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   */
+
+
+  export const waterAssets: AssetCatalog = {
+    "version": "1.0.0",
+    "category": "water",
+    "description": "Water affinity cards and assets",
+    "data": [
+      {
+        "id": "aqua-pebble",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "water",
+        "data": {
+          "id": "aqua-pebble",
+          "name": "Aqua Pebble",
+          "type": "Bloom",
+          "affinity": "Water",
+          "cost": 1,
+          "baseAttack": 1,
+          "baseHealth": 4,
+          "abilities": [
+            {
+              "name": "Tide Flow",
+              "trigger": "OnAllySummon",
+              "effects": [
+                {
+                  "type": "ModifyStats",
+                  "target": "Self",
+                  "stat": "Attack",
+                  "value": 1,
+                  "duration": "EndOfTurn",
+                  "condition": {
+                    "type": "AffinityMatches",
+                    "value": "Water"
+                  }
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 1,
+                "atk": 0
+              },
+              "3": {
+                "hp": 3,
+                "atk": 0
+              },
+              "4": {
+                "hp": 4,
+                "atk": 1
+              },
+              "5": {
+                "hp": 6,
+                "atk": 2
+              },
+              "6": {
+                "hp": 7,
+                "atk": 3
+              },
+              "7": {
+                "hp": 9,
+                "atk": 4
+              },
+              "8": {
+                "hp": 10,
+                "atk": 5
+              },
+              "9": {
+                "hp": 12,
+                "atk": 6
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Tidal Surge",
+                    "trigger": "OnAllySummon",
+                    "effects": [
+                      {
+                        "type": "ModifyStats",
+                        "target": "Self",
+                        "stat": "Attack",
+                        "value": 2,
+                        "duration": "EndOfTurn",
+                        "condition": {
+                          "type": "AffinityMatches",
+                          "value": "Water"
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Rejuvenation",
+                    "trigger": "OnOwnEndOfTurn",
+                    "effects": [
+                      {
+                        "type": "Heal",
+                        "target": "AllAllies",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Tsunami Force",
+                    "trigger": "OnAllySummon",
+                    "effects": [
+                      {
+                        "type": "ModifyStats",
+                        "target": "Self",
+                        "stat": "Attack",
+                        "value": 3,
+                        "duration": "Permanent",
+                        "condition": {
+                          "type": "AffinityMatches",
+                          "value": "Water"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Fountain of Life",
+                    "trigger": "OnOwnEndOfTurn",
+                    "effects": [
+                      {
+                        "type": "Heal",
+                        "target": "AllAllies",
+                        "value": "Full"
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2542562209453452",
+            "path": "assets/images/cards_water_aqua-pebble.png"
+          }
+        ]
+      },
+      {
+        "id": "bubblefin",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "water",
+        "data": {
+          "id": "bubblefin",
+          "name": "Bubblefin",
+          "type": "Bloom",
+          "affinity": "Water",
+          "cost": 2,
+          "baseAttack": 2,
+          "baseHealth": 5,
+          "abilities": [
+            {
+              "name": "Emerge",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "CannotBeTargeted",
+                  "target": "Self",
+                  "by": [
+                    "trap"
+                  ]
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 2,
+                "atk": 0
+              },
+              "3": {
+                "hp": 4,
+                "atk": 0
+              },
+              "4": {
+                "hp": 6,
+                "atk": 1
+              },
+              "5": {
+                "hp": 8,
+                "atk": 2
+              },
+              "6": {
+                "hp": 10,
+                "atk": 3
+              },
+              "7": {
+                "hp": 12,
+                "atk": 4
+              },
+              "8": {
+                "hp": 14,
+                "atk": 5
+              },
+              "9": {
+                "hp": 16,
+                "atk": 6
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Tidal Shield",
+                    "trigger": "OnDamage",
+                    "effects": [
+                      {
+                        "type": "ModifyStats",
+                        "target": "Attacker",
+                        "stat": "Attack",
+                        "value": -2,
+                        "duration": "EndOfTurn"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Deep Dive",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "CannotBeTargeted",
+                        "target": "Self",
+                        "by": [
+                          "trap",
+                          "magic"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Ocean Sanctuary",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "CannotBeTargeted",
+                        "target": "Self",
+                        "by": [
+                          "magic",
+                          "trap",
+                          "abilities"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Crushing Depths",
+                    "trigger": "OnDamage",
+                    "effects": [
+                      {
+                        "type": "ModifyStats",
+                        "target": "Attacker",
+                        "stat": "Attack",
+                        "value": -3,
+                        "duration": "Permanent"
+                      },
+                      {
+                        "type": "Heal",
+                        "target": "Self",
+                        "value": 2
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2957682524429594",
+            "path": "assets/images/cards_water_bubblefin.png"
+          }
+        ]
+      },
+      {
+        "id": "dewdrop-drake",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "water",
+        "data": {
+          "id": "dewdrop-drake",
+          "name": "Dewdrop Drake",
+          "type": "Bloom",
+          "affinity": "Water",
+          "cost": 3,
+          "baseAttack": 3,
+          "baseHealth": 6,
+          "abilities": [
+            {
+              "name": "Mist Screen",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "AttackModification",
+                  "target": "Self",
+                  "modification": "attack-first",
+                  "condition": {
+                    "type": "UnitsOnField",
+                    "value": 1,
+                    "comparison": "Equal"
+                  }
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 1,
+                "atk": 1
+              },
+              "3": {
+                "hp": 2,
+                "atk": 2
+              },
+              "4": {
+                "hp": 4,
+                "atk": 3
+              },
+              "5": {
+                "hp": 6,
+                "atk": 4
+              },
+              "6": {
+                "hp": 8,
+                "atk": 5
+              },
+              "7": {
+                "hp": 10,
+                "atk": 6
+              },
+              "8": {
+                "hp": 12,
+                "atk": 7
+              },
+              "9": {
+                "hp": 14,
+                "atk": 8
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Deluge",
+                    "trigger": "OnAttack",
+                    "cost": {
+                      "type": "Nectar",
+                      "value": 1
+                    },
+                    "effects": [
+                      {
+                        "type": "DealDamage",
+                        "target": "OpponentGardener",
+                        "value": 3
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Fog Veil",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "attack-first"
+                      },
+                      {
+                        "type": "DamageReduction",
+                        "target": "Self",
+                        "value": 1,
+                        "duration": "WhileOnField"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Storm Guardian",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "AttackModification",
+                        "target": "Self",
+                        "modification": "attack-first"
+                      },
+                      {
+                        "type": "DamageReduction",
+                        "target": "Self",
+                        "value": 2,
+                        "duration": "WhileOnField"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Maelstrom",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "DealDamage",
+                        "target": "OpponentGardener",
+                        "value": 5
+                      },
+                      {
+                        "type": "ApplyCounter",
+                        "target": "RandomEnemy",
+                        "counter": "Freeze",
+                        "value": 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1232407695362881",
+            "path": "assets/images/cards_water_dewdrop-drake.png"
+          }
+        ]
+      },
+      {
+        "id": "kelp-cub",
+        "type": "beast",
+        "cardType": "Bloom",
+        "affinity": "water",
+        "data": {
+          "id": "kelp-cub",
+          "name": "Kelp Cub",
+          "type": "Bloom",
+          "affinity": "Water",
+          "cost": 2,
+          "baseAttack": 3,
+          "baseHealth": 3,
+          "abilities": [
+            {
+              "name": "Entangle",
+              "trigger": "OnAttack",
+              "effects": [
+                {
+                  "type": "PreventAttack",
+                  "target": "Target",
+                  "duration": "StartOfNextTurn"
+                }
+              ]
+            }
+          ],
+          "levelingConfig": {
+            "statGains": {
+              "1": {
+                "hp": 0,
+                "atk": 0
+              },
+              "2": {
+                "hp": 1,
+                "atk": 1
+              },
+              "3": {
+                "hp": 2,
+                "atk": 2
+              },
+              "4": {
+                "hp": 3,
+                "atk": 3
+              },
+              "5": {
+                "hp": 4,
+                "atk": 4
+              },
+              "6": {
+                "hp": 5,
+                "atk": 5
+              },
+              "7": {
+                "hp": 6,
+                "atk": 6
+              },
+              "8": {
+                "hp": 7,
+                "atk": 7
+              },
+              "9": {
+                "hp": 8,
+                "atk": 8
+              }
+            },
+            "abilityUpgrades": {
+              "4": {
+                "abilities": [
+                  {
+                    "name": "Binding Vines",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "PreventAttack",
+                        "target": "Target",
+                        "duration": "StartOfNextTurn"
+                      },
+                      {
+                        "type": "PreventAbilities",
+                        "target": "Target",
+                        "duration": "StartOfNextTurn"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "7": {
+                "abilities": [
+                  {
+                    "name": "Deep Anchor",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "Immunity",
+                        "target": "Self",
+                        "immuneTo": [
+                          "Magic",
+                          "Trap",
+                          "Abilities"
+                        ],
+                        "duration": "WhileOnField"
+                      }
+                    ]
+                  }
+                ]
+              },
+              "9": {
+                "abilities": [
+                  {
+                    "name": "Strangling Grasp",
+                    "trigger": "OnAttack",
+                    "effects": [
+                      {
+                        "type": "PreventAttack",
+                        "target": "Target",
+                        "duration": "Permanent"
+                      },
+                      {
+                        "type": "PreventAbilities",
+                        "target": "Target",
+                        "duration": "Permanent"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "Immovable Force",
+                    "trigger": "Passive",
+                    "effects": [
+                      {
+                        "type": "Immunity",
+                        "target": "Self",
+                        "immuneTo": [
+                          "Damage",
+                          "Targeting",
+                          "NegativeEffects"
+                        ],
+                        "duration": "WhileOnField"
+                      },
+                      {
+                        "type": "Retaliation",
+                        "target": "Self",
+                        "value": 0,
+                        "applyCounter": "Entangle",
+                        "counterValue": 1
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "2278603722605464",
+            "path": "assets/images/cards_water_kelp-cub.png"
+          }
+        ]
+      },
+      {
+        "id": "deep-sea-grotto",
+        "type": "habitat",
+        "affinity": "water",
+        "data": {
+          "id": "deep-sea-grotto",
+          "name": "Deep Sea Grotto",
+          "type": "Habitat",
+          "affinity": "Water",
+          "cost": 1,
+          "abilities": [
+            {
+              "name": "Aquatic Empowerment",
+              "trigger": "Passive",
+              "effects": [
+                {
+                  "type": "ModifyStats",
+                  "target": "AllAllies",
+                  "stat": "Attack",
+                  "value": 1,
+                  "duration": "WhileOnField",
+                  "condition": {
+                    "type": "AffinityMatches",
+                    "value": "Water"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "594002380404766",
+            "path": "assets/images/cards_water_deep-sea-grotto.png"
+          },
+          {
+            "type": "image",
+            "horizonAssetId": "797144049734620",
+            "path": "assets/images/cards_water_habitat-card.png"
+          },
+          {
+            "type": "image",
+            "horizonAssetId": "805465575687502",
+            "path": "assets/images/cards_water_habitat-card-playboard.png"
+          }
+        ]
+      },
+      {
+        "id": "water-mission",
+        "type": "mission",
+        "affinity": "water",
+        "missionNumber": 3,
+        "name": "Water Mission",
+        "description": "Water affinity mission",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1204438218330106",
+            "path": "assets/images/cards_water_water-mission.png"
+          }
+        ]
+      },
+      {
+        "id": "water-chest-closed",
+        "type": "ui",
+        "category": "chest",
+        "name": "Water Chest Closed",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "1502977104283894",
+            "path": "assets/images/chest_water-chest-closed.png"
+          }
+        ]
+      },
+      {
+        "id": "water-chest-opened",
+        "type": "ui",
+        "category": "chest",
+        "name": "Water Chest Opened",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "817919940747617",
+            "path": "assets/images/chest_water-chest-opened.png"
+          }
+        ]
+      },
+      {
+        "id": "water-icon",
+        "type": "ui",
+        "category": "icon",
+        "name": "Water Icon",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "803389222302576",
+            "path": "assets/images/affinity_water-icon.png"
+          }
+        ]
+      },
+      {
+        "id": "water-habitat",
+        "type": "ui",
+        "category": "card-template",
+        "name": "Water Habitat Card Template",
+        "description": "Template overlay for water habitat cards",
+        "assets": [
+          {
+            "type": "image",
+            "horizonAssetId": "797144049734620",
+            "path": "assets/images/cards_water_habitat-card.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\catalogs\index.ts ====================
+
+  /**
+   * Asset Catalog Index
+   * Source of truth for all game assets
+   */
+
+
+
+  // Export all catalogs as array for easy loading
+
+  export const allCatalogs: AssetCatalog[] = [
+    buffAssets,
+    commonAssets,
+    fireAssets,
+    forestAssets,
+    magicAssets,
+    skyAssets,
+    trapAssets,
+    waterAssets
+  ];
 
 }
 

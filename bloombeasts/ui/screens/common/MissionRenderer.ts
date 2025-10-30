@@ -46,7 +46,8 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
   let trackedMission: MissionDisplay | null = null;
 
   // Create dependencies array
-  const dependencies = [missionsBinding, scrollOffsetBinding];
+  // ALWAYS include assetsLoadedBinding as first dependency to prevent premature asset lookups
+  const dependencies = [ui.assetsLoadedBinding, missionsBinding, scrollOffsetBinding];
 
   // Mission card positions
   const positions = {
@@ -75,9 +76,10 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
   };
 
   // Create reactive bindings for all mission properties
+  // args[0] = assetsLoadedBinding, args[1] = missionsBinding, args[2] = scrollOffsetBinding
   const missionNameBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[0];
-    const offset: number = args[1];
+    const missions: MissionDisplay[] = args[1];
+    const offset: number = args[2];
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -89,8 +91,8 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
   });
 
   const levelTextBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[0];
-    const offset: number = args[1];
+    const missions: MissionDisplay[] = args[1];
+    const offset: number = args[2];
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -98,8 +100,8 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
   });
 
   const difficultyTextBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[0];
-    const offset: number = args[1];
+    const missions: MissionDisplay[] = args[1];
+    const offset: number = args[2];
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -111,8 +113,8 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
   });
 
   const difficultyColorBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[0];
-    const offset: number = args[1];
+    const missions: MissionDisplay[] = args[1];
+    const offset: number = args[2];
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -120,8 +122,8 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
   });
 
   const descriptionBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[0];
-    const offset: number = args[1];
+    const missions: MissionDisplay[] = args[1];
+    const offset: number = args[2];
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -129,8 +131,10 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
   });
 
   const missionImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[0];
-    const offset: number = args[1];
+    const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
+    if (!assetsLoaded) return null;
+    const missions: MissionDisplay[] = args[1];
+    const offset: number = args[2];
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -144,12 +148,14 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
     else if (mission.affinity === 'Sky') missionImageName = 'sky-mission';
     else if (mission.affinity === 'Boss') missionImageName = 'boss-mission';
 
-    return ui.assetIdToImageSource?.(missionImageName) ?? missionImageName;
+    return ui.assetIdToImageSource?.(missionImageName) ?? null;
   });
 
   const beastImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[0];
-    const offset: number = args[1];
+    const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
+    if (!assetsLoaded) return null;
+    const missions: MissionDisplay[] = args[1];
+    const offset: number = args[2];
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -157,12 +163,13 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
     if (!mission || !mission.beastId) return null;
 
     const beastAssetId = mission.beastId.toLowerCase().replace(/\s+/g, '-');
-    return ui.assetIdToImageSource?.(beastAssetId) ?? beastAssetId;
+    if (!beastAssetId) return null; // Don't try to load empty asset IDs
+    return ui.assetIdToImageSource?.(beastAssetId) ?? null;
   });
 
   const opacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[0];
-    const offset: number = args[1];
+    const missions: MissionDisplay[] = args[1];
+    const offset: number = args[2];
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -170,8 +177,8 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
   });
 
   const lockOverlayOpacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[0];
-    const offset: number = args[1];
+    const missions: MissionDisplay[] = args[1];
+    const offset: number = args[2];
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -179,8 +186,8 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
   });
 
   const checkmarkOpacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[0];
-    const offset: number = args[1];
+    const missions: MissionDisplay[] = args[1];
+    const offset: number = args[2];
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;

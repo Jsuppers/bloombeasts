@@ -8,7 +8,7 @@ import { COLORS } from '../styles/colors';
 import { DIMENSIONS, GAPS } from '../styles/dimensions';
 import { sideMenuButtonDimensions } from '../constants/dimensions';
 import type { MenuStats } from '../../../bloombeasts/gameManager';
-import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
+import type { BindingInterface, UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import type { AsyncMethods } from '../types/bindings';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu, createTextRow } from './common/SideMenu';
@@ -34,7 +34,8 @@ export class MenuScreen {
   // State bindings
   private displayedText: any;
   private playerDataBinding: any;
-  // private menuFrameAnimation: IntervaledBinding<string>;
+  private menuFrameAnimation: BindingInterface<string>;
+  private frameInterval: any;
 
   // Menu frame IDs
   private menuFrameIds: string[] = [
@@ -65,15 +66,11 @@ export class MenuScreen {
 
     // Create animated binding for menu frames
     let frameIndex = 0;
-    // this.menuFrameAnimation = new IntervaledBinding<string>(
-    //   this.menuFrameIds[0],
-    //   () => {
-    //     frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
-    //     return this.menuFrameIds[frameIndex];
-    //   },
-    //   200, // 200ms per frame
-    //   this.async
-    // );
+    this.menuFrameAnimation = new this.ui.Binding<string>(this.menuFrameIds[0]);
+    this.frameInterval = this.async.setInterval(() => {
+      frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
+      this.menuFrameAnimation.set(this.menuFrameIds[frameIndex]);
+    }, 200);
   }
 
   /**
@@ -158,7 +155,10 @@ export class MenuScreen {
         this.ui.Image({
           source: this.ui.Binding.derive(
             [this.ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
+            (assetsLoaded: boolean) => {
+              console.log('[MenuScreen] BACKGROUND assetsLoaded:', assetsLoaded);
+              return assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null;
+            }
           ),
           style: {
             position: 'absolute',
@@ -170,32 +170,42 @@ export class MenuScreen {
         }),
 
         // Main content area with animated character
-        // this.ui.View({
-        //   style: {
-        //     position: 'absolute',
-        //     width: '100%',
-        //     height: '100%',
-        //     justifyContent: 'center',
-        //     alignItems: 'center',
-        //   },
-        //   children: [
-        //     // Animated character frame at position (143, 25)
-        //     this.ui.View({
-        //       style: {
-        //         position: 'absolute',
-        //         left: 143,
-        //         top: 25,
-        //       },
-        //       children: this.ui.Image({
-        //         binding: this.menuFrameAnimation,
-        //         style: {
-        //           width: 750,
-        //           height: 700,
-        //         },
-        //       }),
-        //     }),
-        //   ],
-        // }),
+        this.ui.View({
+          style: {
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+          },
+          children: [
+            // Animated character frame - try without centering first
+            this.ui.Image({
+                source: this.ui.Binding.derive(
+                  [this.ui.assetsLoadedBinding, this.menuFrameAnimation],
+                  (assetsLoaded: boolean, menuFrameAnimation: string) => {
+                    // console.log('[MenuScreen] Image binding fired:', { assetsLoaded, menuFrameAnimation });
+
+                    if (!assetsLoaded) {
+                      console.log('[MenuScreen] Assets not loaded yet');
+                      return null;
+                    }
+
+                    console.log('[MenuScreen] assetIdToImageSource exists?', !!this.ui.assetIdToImageSource);
+                    const imageSource = this.ui.assetIdToImageSource?.(menuFrameAnimation);
+                    // console.log('[MenuScreen] ImageSource result:', imageSource);
+
+                    return imageSource;
+                  },
+                ),
+                style: {
+                  position: 'absolute',
+                  left: 150,
+                  top: 40,
+                  width: 750,
+                  height: 700,
+                },
+              }),
+          ],
+        }),
 
         // Side menu (positioned absolutely on top)
         createSideMenu(this.ui, {
@@ -233,6 +243,8 @@ export class MenuScreen {
    * Clean up animations
    */
   dispose(): void {
-    // this.menuFrameAnimation.dispose();
+    if (this.frameInterval) {
+      this.async.clearInterval(this.frameInterval);
+    }
   }
 }

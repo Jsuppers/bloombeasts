@@ -1,4 +1,11 @@
-{
+/**
+ * Auto-generated TypeScript catalog from trapAssets.json
+ * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+ */
+
+import type { AssetCatalog } from '../AssetCatalogManager';
+
+export const trapAssets: AssetCatalog = {
   "version": "1.0.0",
   "category": "trap",
   "description": "Trap cards and assets",
@@ -286,4 +293,4 @@
       ]
     }
   ]
-}
+};

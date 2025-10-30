@@ -1,4 +1,11 @@
-{
+/**
+ * Auto-generated TypeScript catalog from magicAssets.json
+ * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+ */
+
+import type { AssetCatalog } from '../AssetCatalogManager';
+
+export const magicAssets: AssetCatalog = {
   "version": "1.0.0",
   "category": "magic",
   "description": "Magic cards and assets",
@@ -347,4 +354,4 @@
       ]
     }
   ]
-}
+};

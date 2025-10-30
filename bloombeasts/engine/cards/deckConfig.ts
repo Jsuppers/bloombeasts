@@ -3,7 +3,6 @@
  */
 
 import { BloomBeastCard, HabitatCard, MagicCard, TrapCard, AnyCard } from '../types/core';
-import { getCard } from './cardUtils';
 
 export type DeckCardEntry<T = AnyCard> = {
   card: T;
@@ -131,9 +130,13 @@ const SHARED_CORE_CARD_IDS: DeckCardIdEntry[] = [
 /**
  * Resolve card IDs to card objects
  */
-function resolveCardIds<T = AnyCard>(cardIdEntries: DeckCardIdEntry[]): DeckCardEntry<T>[] {
+function resolveCardIds<T = AnyCard>(catalogManager: any, cardIdEntries: DeckCardIdEntry[]): DeckCardEntry<T>[] {
+  if (!catalogManager) {
+    console.error('[deckConfig] catalogManager not provided');
+    return [];
+  }
   return cardIdEntries.map(({ cardId, quantity }) => ({
-    card: getCard<T>(cardId),
+    card: catalogManager.getCard(cardId) as T,
     quantity,
   }));
 }
@@ -141,32 +144,32 @@ function resolveCardIds<T = AnyCard>(cardIdEntries: DeckCardIdEntry[]): DeckCard
 /**
  * Get shared core cards configuration (resolved from IDs)
  */
-export function getSharedCoreCards(): DeckCardEntry<MagicCard | TrapCard>[] {
-  return resolveCardIds<MagicCard | TrapCard>(SHARED_CORE_CARD_IDS);
+export function getSharedCoreCards(catalogManager: any): DeckCardEntry<MagicCard | TrapCard>[] {
+  return resolveCardIds<MagicCard | TrapCard>(catalogManager, SHARED_CORE_CARD_IDS);
 }
 
 /**
  * Get deck configuration for a specific affinity (resolves card IDs to cards)
  */
-export function getDeckConfig(affinity: AffinityType): AffinityDeckConfig {
+export function getDeckConfig(catalogManager: any, affinity: AffinityType): AffinityDeckConfig {
   const configIds = AFFINITY_DECK_CONFIG_IDS[affinity];
 
   return {
     name: configIds.name,
     affinity: configIds.affinity,
-    beasts: resolveCardIds<BloomBeastCard>(configIds.beasts),
-    habitats: resolveCardIds<HabitatCard>(configIds.habitats),
+    beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
+    habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
   };
 }
 
 /**
  * Get all deck configurations (resolves card IDs to cards)
  */
-export function getAllDeckConfigs(): AffinityDeckConfig[] {
+export function getAllDeckConfigs(catalogManager: any): AffinityDeckConfig[] {
   return Object.values(AFFINITY_DECK_CONFIG_IDS).map(configIds => ({
     name: configIds.name,
     affinity: configIds.affinity,
-    beasts: resolveCardIds<BloomBeastCard>(configIds.beasts),
-    habitats: resolveCardIds<HabitatCard>(configIds.habitats),
+    beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
+    habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
   }));
 }

@@ -1376,7 +1376,13 @@ export class BattleScreen {
           children: [
             // Button background image - green when player turn, standard when opponent turn
             this.ui.Image({
-              source: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => this.ui.assetIdToImageSource?.(state?.turnPlayer === 'player' ? 'green-button' : 'standard-button') ?? null),
+              source: this.ui.Binding.derive(
+                [this.ui.assetsLoadedBinding, this.battleDisplay],
+                (assetsLoaded: boolean, state: BattleDisplay) => {
+                  if (!assetsLoaded) return null;
+                  return this.ui.assetIdToImageSource?.(state?.turnPlayer === 'player' ? 'green-button' : 'standard-button') ?? null;
+                }
+              ),
               style: {
                 position: 'absolute',
                 width: sideMenuButtonDimensions.width,

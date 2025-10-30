@@ -31,7 +31,8 @@ export interface CardAssetEntry {
     attack?: number;
     health?: number;
     tier?: number;
-    // Additional card properties can be added here
+    // Allow any additional properties from card data
+    [key: string]: any;
   };
   assets: AssetReference[];
 }
@@ -49,7 +50,7 @@ export interface MissionAssetEntry {
 export interface UIAssetEntry {
   id: string;
   type: 'ui';
-  category: 'frame' | 'button' | 'background' | 'icon' | 'chest' | 'container' | 'other';
+  category: 'frame' | 'button' | 'background' | 'icon' | 'chest' | 'container' | 'card-template' | 'other';
   name: string;
   description?: string;
   assets: AssetReference[];
@@ -64,24 +65,13 @@ export interface AssetCatalog {
 
 /**
  * AssetCatalogManager - Manages loading and querying of asset catalogs
+ * NOT a singleton - create instances as needed
  */
 export class AssetCatalogManager {
-  private static instance: AssetCatalogManager;
-
   private catalogs: Map<string, AssetCatalog> = new Map();
   private assetIndex: Map<string, CardAssetEntry | MissionAssetEntry | UIAssetEntry> = new Map();
   private pathToIdMap: Map<string, string> = new Map(); // Maps asset paths to IDs
   private horizonIdMap: Map<string, string> = new Map(); // Maps Horizon IDs to asset IDs
-
-  /**
-   * Get singleton instance
-   */
-  static getInstance(): AssetCatalogManager {
-    if (!AssetCatalogManager.instance) {
-      AssetCatalogManager.instance = new AssetCatalogManager();
-    }
-    return AssetCatalogManager.instance;
-  }
 
   /**
    * Load catalog from JSON object
@@ -89,10 +79,12 @@ export class AssetCatalogManager {
    */
   loadCatalog(catalog: AssetCatalog): void {
     const catalogKey = catalog.category;
+    console.log(`[AssetCatalogManager] Loading catalog: ${catalogKey}`);
     this.catalogs.set(catalogKey, catalog);
 
     // Index all assets by ID for quick lookup
     catalog.data.forEach(entry => {
+      console.log(`[AssetCatalogManager]   Indexing entry: ${entry.id}`);
       this.assetIndex.set(entry.id, entry);
 
       // Create reverse mappings
@@ -104,7 +96,9 @@ export class AssetCatalogManager {
       });
     });
 
-    console.log(`Loaded ${catalog.category} catalog with ${catalog.data.length} entries`);
+    console.log(`[AssetCatalogManager] ✅ Loaded ${catalog.category} catalog with ${catalog.data.length} entries`);
+    console.log(`[AssetCatalogManager]   Total assets indexed: ${this.assetIndex.size}`);
+    console.log(`[AssetCatalogManager]   Total catalogs: ${this.catalogs.size}`);
   }
 
   /**
@@ -167,10 +161,14 @@ export class AssetCatalogManager {
    * Get Horizon asset ID for a given asset
    */
   getHorizonAssetId(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
+    console.log(`[AssetCatalogManager.getHorizonAssetId] Looking up: "${assetId}", type: ${assetType}`);
     const asset = this.getAsset(assetId);
+    console.log(`[AssetCatalogManager.getHorizonAssetId] getAsset returned:`, asset ? `found (${asset.id})` : 'null');
+
     if (!asset) return undefined;
 
     const assetRef = asset.assets.find(a => a.type === assetType);
+    console.log(`[AssetCatalogManager.getHorizonAssetId] Asset reference:`, assetRef ? `found (horizonId: ${assetRef.horizonAssetId})` : 'not found');
     return assetRef?.horizonAssetId;
   }
 
@@ -250,6 +248,13 @@ export class AssetCatalogManager {
   }
 
   /**
+   * Get total number of indexed assets (for debugging)
+   */
+  getTotalIndexedAssets(): number {
+    return this.assetIndex.size;
+  }
+
+  /**
    * Get all card data from loaded catalogs
    * Returns the actual card definitions (data property) from all card entries
    */
@@ -287,6 +292,22 @@ export class AssetCatalogManager {
   }
 
   /**
+   * Get a specific card by ID
+   */
+  getCard<T = any>(cardId: string): T | undefined {
+    const allCards = this.getAllCardData();
+    return allCards.find((card: any) => card.id === cardId) as T | undefined;
+  }
+
+  /**
+   * Get all buff cards from the catalog
+   */
+  getAllBuffCards(): any[] {
+    const buffEntries = this.getAssetsByType('buff');
+    return buffEntries.map((entry: any) => entry.data);
+  }
+
+  /**
    * Clear all loaded catalogs
    */
   clear(): void {
@@ -296,6 +317,3 @@ export class AssetCatalogManager {
     this.horizonIdMap.clear();
   }
 }
-
-// Singleton instance
-export const assetCatalogManager = AssetCatalogManager.getInstance();

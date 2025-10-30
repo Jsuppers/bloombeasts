@@ -7,15 +7,14 @@
  * NO platform-specific code should be in this file!
  */
 
-import { getAllCards } from './engine/cards';
 import type { AnyCard, BloomBeastCard } from './engine/types/core';
 
 /**
  * Get all card IDs that need image assets
  */
-export function getCardImageAssetIds(): string[] {
-  const cards = getAllCards();
-  return cards.map(card => card.id);
+export function getCardImageAssetIds(catalogManager: any): string[] {
+  const cards = catalogManager.getAllCardData();
+  return cards.map((card: any) => card.id);
 }
 
 /**
@@ -36,8 +35,8 @@ export function getCardTemplateAssetIds(): string[] {
  * Get card rendering asset IDs (for CardRenderer)
  * These are the IDs that CardRenderer expects for rendering cards
  */
-export function getCardRenderingAssetIds(): string[] {
-  const cards = getAllCards();
+export function getCardRenderingAssetIds(catalogManager: any): string[] {
+  const cards = catalogManager.getAllCardData();
   const assetIds: string[] = [
     'cardsContainer',  // Cards page background
     'baseCard',        // Base card frame template
@@ -98,12 +97,12 @@ export function getBackgroundAssetIds(): string[] {
 /**
  * Get all image asset IDs
  */
-export function getAllImageAssetIds(): string[] {
+export function getAllImageAssetIds(catalogManager: any): string[] {
   return [
-    ...getCardImageAssetIds(),
+    ...getCardImageAssetIds(catalogManager),
     ...getAffinityIconAssetIds(),
     ...getCardTemplateAssetIds(),
-    ...getCardRenderingAssetIds(),
+    ...getCardRenderingAssetIds(catalogManager),
     ...getHabitatTemplateAssetIds(),
     ...getUIIconAssetIds(),
     ...getUIElementAssetIds(),

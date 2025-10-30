@@ -205,9 +205,13 @@ processFile(path.resolve(__dirname, './bloombeasts/screens/missions/MissionBattl
 processFile(path.resolve(__dirname, './bloombeasts/screens/missions/definitions/index.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/screens/cards/CardCollection.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/AssetCatalog.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/AssetCatalogManager.ts'));
 
 // Process BloomBeastsGame (main game controller)
 processFile(path.resolve(__dirname, './bloombeasts/BloomBeastsGame.ts'));
+
+// Process asset catalogs (TypeScript files - bundled like any other source file)
+processFile(path.resolve(__dirname, './bloombeasts/catalogs/index.ts'));
 
 // Handle duplicate const declarations
 // Don't rename - namespaces already provide isolation

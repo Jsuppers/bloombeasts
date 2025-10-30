@@ -23,7 +23,8 @@ import { MissionManager } from './screens/missions/MissionManager';
 import { MissionSelectionUI } from './screens/missions/MissionSelectionUI';
 import { MissionBattleUI } from './screens/missions/MissionBattleUI';
 import { CardInstance } from './screens/cards/types';
-import { getAllCards } from './engine/cards';
+import { setCatalogManagerForUtils } from './utils/cardUtils';
+import { setCatalogManagerForDeckBuilder } from './engine/utils/deckBuilder';
 import { DECK_SIZE } from './engine/constants/gameRules';
 import { Logger } from './engine/utils/Logger';
 import type { AsyncMethods } from './ui/types/bindings';
@@ -286,6 +287,12 @@ export interface PlatformConfig {
   getImageAsset: (assetId: string) => any;
 
   /**
+   * Asset catalog manager instance
+   * Provides access to all game asset metadata and card definitions
+   */
+  catalogManager: any; // AssetCatalogManager instance
+
+  /**
    * Get platform-specific UI method implementations
    *
    * For web: Returns web-specific View, Text, Image, Pressable, Binding
@@ -402,9 +409,13 @@ export class BloomBeastsGame {
     // Store platform-provided asset getters
     this.platformGetImageAsset = config.getImageAsset;
 
+    // Initialize card utils and deck builder with catalog manager
+    setCatalogManagerForUtils(config.catalogManager);
+    setCatalogManagerForDeckBuilder(config.catalogManager);
+
     // Initialize core systems
-    this.gameEngine = new GameEngine();
-    this.missionManager = new MissionManager();
+    this.gameEngine = new GameEngine(config.catalogManager);
+    this.missionManager = new MissionManager(config.catalogManager);
     this.missionUI = new MissionSelectionUI(this.missionManager);
     this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine, this.asyncMethods);
 
@@ -425,8 +436,8 @@ export class BloomBeastsGame {
       }
     };
 
-    this.cardCollectionManager = new CardCollectionManager();
-    this.battleDisplayManager = new BattleDisplayManager();
+    this.cardCollectionManager = new CardCollectionManager(config.catalogManager);
+    this.battleDisplayManager = new BattleDisplayManager(config.catalogManager);
 
     // Initialize bindings using platform's Binding class
     const BindingClass = this.UI.Binding as any;
@@ -1479,8 +1490,8 @@ export class BloomBeastsGame {
           createCardDetailPopup(this.UI, this.cardDetailPopupValue || {
             cardDetail: {
               card: {
-                id: 'empty-card-fallback',
-                name: 'Loading...',
+                id: null, // No ID so CardRenderer returns null for images
+                name: '',
                 type: 'Bloom',
                 level: 1,
                 experience: 0,

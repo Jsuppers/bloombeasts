@@ -6,7 +6,6 @@
 import { CardInstance } from '../screens/cards/types';
 import { LevelingSystem } from '../engine/systems/LevelingSystem';
 import { BloomBeastCard, AnyCard } from '../engine/types/core';
-import { getAllCards } from '../engine/cards';
 import { getStarterDeck } from '../engine/utils/deckBuilder';
 import { Logger } from '../engine/utils/Logger';
 import { DECK_SIZE } from '../engine/constants/gameRules';
@@ -14,9 +13,11 @@ import { getCardLevel } from '../utils/cardUtils';
 
 export class CardCollectionManager {
   private levelingSystem: LevelingSystem;
+  private catalogManager: any;
 
-  constructor() {
+  constructor(catalogManager: any) {
     this.levelingSystem = new LevelingSystem();
+    this.catalogManager = catalogManager;
   }
 
   /**
@@ -34,7 +35,7 @@ export class CardCollectionManager {
    */
   getAbilitiesForLevel(cardInstance: CardInstance): { abilities: any[] } {
     // Get the base card definition
-    const allCards = getAllCards();
+    const allCards = this.catalogManager.getAllCardData();
     const baseCardId = this.extractBaseCardId(cardInstance.cardId);
     const cardDef = allCards.find((card: any) =>
       card && card.id === baseCardId
@@ -72,7 +73,7 @@ export class CardCollectionManager {
    */
   getPlayerDeckCards(playerDeck: string[], cardInstances: CardInstance[]): AnyCard[] {
     const deckCards: AnyCard[] = [];
-    const allCardDefs = getAllCards();
+    const allCardDefs = this.catalogManager.getAllCardData();
 
     // Convert all cards from player's deck
     for (const cardId of playerDeck) {
@@ -148,10 +149,10 @@ export class CardCollectionManager {
    */
   async initializeStartingCollection(cardInstances: CardInstance[], playerDeck: string[]): Promise<string[]> {
     // Give player the first 30 cards from the card catalog as the default deck
-    const allCards = getAllCards();
+    const allCards = this.catalogManager.getAllCardData();
     const starterCards = allCards.slice(0, 30);
 
-    starterCards.forEach((card, index) => {
+    starterCards.forEach((card: any, index: number) => {
       const instanceId = `${card.id}-${Date.now()}-${index}`;
 
       // Create minimal card instance (all types use same format now)

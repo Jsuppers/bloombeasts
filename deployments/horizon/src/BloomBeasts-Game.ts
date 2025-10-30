@@ -13,16 +13,15 @@ import {
   Text,
   Image,
   Pressable,
-  ScrollView,
   Binding,
   AnimatedBinding,
   Animation,
   Easing,
   ImageSource
 } from 'horizon/ui';
-import { type Player, AudioGizmo, AudioOptions, NetworkEvent } from 'horizon/core';
+import { type Player, AudioGizmo, NetworkEvent } from 'horizon/core';
 
-// Import from standalone bundle
+// Import from standalone bundle (includes catalogs as regular TypeScript!)
 import { BloomBeasts } from './BloomBeasts-GameEngine-Standalone';
 
 // Type aliases from the BloomBeasts namespace
@@ -31,9 +30,10 @@ type PlatformConfig = BloomBeasts.PlatformConfig;
 type PlayerData = BloomBeasts.PlayerData;
 type AssetCatalog = BloomBeasts.AssetCatalog;
 
-// Access the class from the namespace
+// Access classes and data from the namespace
 const BloomBeastsGame = BloomBeasts.BloomBeastsGame;
 const AssetCatalogManager = BloomBeasts.AssetCatalogManager;
+const allCatalogs = BloomBeasts.allCatalogs; // Catalogs bundled as TypeScript!
 
 /**
  * NetworkEvent payload types for server communication
@@ -58,6 +58,8 @@ type LoadPlayerDataResponse = {
 
 // Simplified: No adapter needed - we just use Horizon's Binding directly!
 
+
+
 /**
  * Main Horizon UI Component (Local Mode)
  * This is the entry point that Horizon Worlds will instantiate
@@ -71,16 +73,6 @@ type LoadPlayerDataResponse = {
 class BloomBeastsUI extends UIComponent<{}, {}> {
   static propsDefinition = {
     serverEntity: { type: hz.PropTypes.Entity },
-
-    // Asset Catalogs - Upload JSON files as Text assets and assign them here
-    fireAssetsCatalog: { type: hz.PropTypes.Asset },
-    forestAssetsCatalog: { type: hz.PropTypes.Asset },
-    skyAssetsCatalog: { type: hz.PropTypes.Asset },
-    waterAssetsCatalog: { type: hz.PropTypes.Asset },
-    buffAssetsCatalog: { type: hz.PropTypes.Asset },
-    trapAssetsCatalog: { type: hz.PropTypes.Asset },
-    magicAssetsCatalog: { type: hz.PropTypes.Asset },
-    commonAssetsCatalog: { type: hz.PropTypes.Asset },
 
     // Audio Entities - Music (Entities with Audio Gizmo component)
     musicBackground: { type: hz.PropTypes.Entity },
@@ -109,13 +101,11 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
   // Cached player data (loaded from server once, then used locally)
   private cachedPlayerData: PlayerData | null = null;
 
-  // Reactive bindings with imperative API (get/set/addListener)
-  private assetsLoadedBinding = this.createReactiveBinding<boolean>(false);
+  // Reactive bindings - uses Horizon's Binding directly
+  private assetsLoadedBinding!: Binding<boolean>;
 
-  // Raw Horizon Binding for UI usage (compatible with Binding.derive)
-  // In Horizon, UI is pre-rendered, so we set this to true immediately
-  // Assets will be loaded before game.initialize() is called
-  // private assetsLoadedBindingRaw: Binding<boolean> = new Binding<boolean>(true);
+  // Asset catalog manager - instance per UI component (not singleton)
+  private catalogManager!: BloomBeasts.AssetCatalogManager;
 
   // Game instance - created early so uiTree is available immediately
   private game!: BloomBeastsGame;
@@ -125,8 +115,6 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
   private loadDataEvent!: NetworkEvent<LoadPlayerDataPayload>;
   private loadDataResponseEvent!: NetworkEvent<LoadPlayerDataResponse>;
 
-  // Audio state tracking
-  private currentMusicSrc: any = null;
   private currentMusicEntity: hz.Entity | null = null;
   private currentMusicVolume: number = 0.5;
   private currentSfxVolume: number = 0.5;
@@ -135,222 +123,87 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
   private isMusicPlaying: boolean = false;
 
   /**
-   * Create a reactive binding with imperative API support
-   * Wraps Horizon's Binding to add .get() and .addListener() methods
-   */
-  private createReactiveBinding<T>(initialValue: T) {
-    let currentValue = initialValue;
-    const binding = new Binding(initialValue);
-    const listeners: Set<(value: T) => void> = new Set();
-
-    // Wrap set to track current value and notify listeners
-    const originalSet = binding.set.bind(binding);
-    (binding as any).set = (value: T) => {
-      currentValue = value;
-      originalSet(value);
-      listeners.forEach(listener => listener(value));
-    };
-
-    // Add get method
-    (binding as any).get = () => currentValue;
-
-    // Add listener support
-    (binding as any).addListener = (listener: (value: T) => void) => {
-      listeners.add(listener);
-    };
-
-    (binding as any).removeListener = (listener: (value: T) => void) => {
-      listeners.delete(listener);
-    };
-
-    return binding as Binding<T> & {
-      get(): T;
-      set(value: T): void;
-      addListener(listener: (value: T) => void): void;
-      removeListener(listener: (value: T) => void): void;
-    };
-  }
-
-  /**
-   * Called when ownership is transferred to a player
-   * This is where we initialize Local Mode for the player
-   */
-  receiveOwnership(
-    state: {} | null,
-    fromPlayer: Player,
-    toPlayer: Player
-  ): void {
-    console.log('[Client] receiveOwnership called');
-    console.log('[Client] From:', fromPlayer?.name || 'server');
-    console.log('[Client] To:', toPlayer?.name || 'unknown');
-
-    // Create NetworkEvents (must match server event names)
-    this.saveDataEvent = new NetworkEvent<SavePlayerDataPayload>('bloombeasts:savePlayerData');
-    this.loadDataEvent = new NetworkEvent<LoadPlayerDataPayload>('bloombeasts:loadPlayerData');
-    this.loadDataResponseEvent = new NetworkEvent<LoadPlayerDataResponse>('bloombeasts:loadPlayerDataResponse');
-
-    // Verify we're the receiving player
-    const localPlayer = this.world.getLocalPlayer();
-    const serverPlayer = this.world.getServerPlayer();
-
-    console.log('[Client] Local player:', localPlayer?.name || 'null');
-    console.log('[Client] Server player:', serverPlayer?.name || 'null');
-
-    if (localPlayer && localPlayer === toPlayer && localPlayer !== serverPlayer) {
-      console.log('[Client] ✅ Ownership received - initializing Local Mode');
-      this.initializeLocalMode(toPlayer);
-    } else {
-      console.log('[Client] ⚠️ receiveOwnership called but not on local client');
-    }
-  }
-
-  /**
-   * Initialize on the player's local client (after ownership transfer from server)
-   */
-  private initializeLocalMode(player: Player): void {
-    console.log('[Client] Initializing Local Mode for:', player.name);
-
-    // Store player reference (NOT in a Binding - Player objects have circular references)
-    this.currentPlayer = player;
-    const playerIndex = player.index.get();
-    console.log('[Client] Player index:', playerIndex);
-
-    // Listen for player data response from server
-    this.connectNetworkEvent(this.entity, this.loadDataResponseEvent, (response: LoadPlayerDataResponse) => {
-      console.log('[Client] Received player data response from server');
-
-      // Cache the player data locally
-      this.cachedPlayerData = response.data as PlayerData | null;
-
-      // Apply settings if available
-      if (response.data?.settings) {
-        console.log('[Client] Applying saved audio settings:', response.data.settings);
-        this.currentMusicVolume = response.data.settings.musicVolume / 100;
-        this.currentSfxVolume = response.data.settings.sfxVolume / 100;
-        this.musicEnabled = response.data.settings.musicEnabled;
-        this.sfxEnabled = response.data.settings.sfxEnabled;
-      } else {
-        console.log('[Client] No saved settings - using defaults');
-      }
-
-      // Player data received - now load assets
-      this.loadAssetsAndInitialize();
-    });
-
-    // Request player data from server immediately
-    console.log('[Client] Requesting player data from server...');
-    this.sendNetworkEvent(this.props.serverEntity, this.loadDataEvent, {
-      playerIndex: playerIndex
-    });
-  }
-
-  /**
    * Load assets and initialize game (called after player data is received)
+   * Now synchronous - catalogs are imported directly!
    */
   private loadAssetsAndInitialize(): void {
-    console.log('[Client] Loading assets...');
+    console.log('[Client] Loading assets (synchronous)...');
 
-    this.loadAssetCatalogs().then(() => {
-      const catalogManager = AssetCatalogManager.getInstance();
-      console.log('[Client] ✅ Assets loaded');
-      console.log('[Client] Loaded categories:', catalogManager.getLoadedCategories());
-      console.log('[Client] Total cards:', catalogManager.getAllCardData().length);
+    // Load catalogs synchronously from TypeScript imports
+    this.loadAssetCatalogs();
 
-      this.assetsLoadedBinding.set(true);
+    console.log('[Client] ✅ All assets loaded successfully');
+    console.log('[Client] Loaded categories:', this.catalogManager.getLoadedCategories());
+    console.log('[Client] Total cards:', this.catalogManager.getAllCardData().length);
 
-      // Initialize game
-      this.game.initialize().then(() => {
-        console.log('[Client] ✅ Game initialized - menu should show');
-      }).catch((error: any) => {
-        console.error('[Client] ❌ Game initialization failed:', error);
-      });
-    }).catch((error) => {
-      console.error('[Client] ❌ Asset loading failed:', error);
+    // Set assetsLoadedBinding to true - this will trigger UI to render images
+    this.assetsLoadedBinding.set(true);
+    console.log('[Client] ✅ assetsLoadedBinding set to true');
+
+    // Initialize game
+    this.game.initialize().then(() => {
+      console.log('[Client] ✅ Game initialized - menu should show');
+    }).catch((error: any) => {
+      console.error('[Client] ❌ Game initialization failed:', error);
     });
   }
 
   /**
-   * Load asset catalogs from Horizon Text assets (async version)
-   * Upload JSON catalog files as Text assets and assign them in the Properties panel
+   * Load asset catalogs from TypeScript imports (synchronous!)
+   * No more async JSON fetching - catalogs are compiled into the code
    */
-  private async loadAssetCatalogs(): Promise<void> {
-    // console.log('[Horizon] 📦 Loading asset catalogs...');
-    // Check if any catalogs are assigned
-    const props = this.props as any;
-    const catalogsAssigned = !!(
-      props.fireAssetsCatalog ||
-      props.forestAssetsCatalog ||
-      props.skyAssetsCatalog ||
-      props.waterAssetsCatalog ||
-      props.buffAssetsCatalog ||
-      props.trapAssetsCatalog ||
-      props.magicAssetsCatalog ||
-      props.commonAssetsCatalog
-    );
+  private loadAssetCatalogs(): void {
+    console.log('[Client] Loading catalogs from TypeScript imports...');
 
-    if (!catalogsAssigned) {
-      console.error('[Horizon] No asset catalogs assigned - check component properties');
-      return;
-    }
+    // Load all catalogs synchronously
+    allCatalogs.forEach(catalog => {
+      this.catalogManager.loadCatalog(catalog);
+    });
 
-    const catalogManager = AssetCatalogManager.getInstance();
-    // Helper function to load a single catalog
-    const loadCatalog = async (textAsset: hz.Asset | undefined, catalogName: string): Promise<void> => {
-      // Skip if asset is not assigned
-      if (!textAsset) {
-        // console.warn(`[Horizon] ⚠️ ${catalogName} not assigned - skipping`);
-        return;
-      }
+    console.log('[Client] ✅ All catalogs loaded synchronously');
+  }
 
-      try {
-        // Minimal logging - only log on errors
-        const assetData: any = textAsset;
+  /**
+   * Create a hidden preload block that statically references all image assets
+   * This is CRITICAL for Horizon - it needs to see the ImageSource.fromTextureAsset calls
+   * in the UI tree for proper asset preloading, even if the element is hidden
+   */
+  private createAssetPreloadBlock(): UINode {
+    console.log('[Client] Creating asset preload block...');
 
-        // Try to fetch with detailed error catching
-        let output: hz.AssetContentData;
-        try {
-          output = await assetData.fetchAsData();
-        } catch (fetchError) {
-          console.error(`[Horizon] fetchAsData() failed for ${catalogName}:`, fetchError);
-          throw fetchError; // Re-throw to be caught by outer try-catch
-        }
+    const preloadImages: UINode[] = [];
 
-        // Try to parse JSON
-        let jsonObj: any;
-        try {
-          jsonObj = output.asJSON();
-        } catch (jsonError) {
-          console.error(`[Horizon] JSON parse failed for ${catalogName}:`, jsonError);
-          throw jsonError;
-        }
+    // Iterate through all catalogs and create hidden Image nodes for each asset
+    allCatalogs.forEach(catalog => {
+      catalog.data.forEach((entry: any) => {
+        entry.assets.forEach((asset: any) => {
+          if (asset.type === 'image' && asset.horizonAssetId) {
+            // Create a hidden image that forces Horizon to preload the asset
+            preloadImages.push(
+              Image({
+                source: ImageSource.fromTextureAsset(new hz.Asset(BigInt(asset.horizonAssetId))),
+                style: { width: 1, height: 1, opacity: 0 } // Invisible but still preloads
+              })
+            );
+          }
+        });
+      });
+    });
 
-        if (jsonObj == null || jsonObj == undefined) {
-          console.error(`[Horizon] Parsed JSON is null/undefined for ${catalogName}`);
-          return;
-        }
+    console.log(`[Client] Created preload block with ${preloadImages.length} images`);
 
-        const catalog: AssetCatalog = jsonObj as unknown as AssetCatalog;
-        catalogManager.loadCatalog(catalog);
-        // console.log(`[Horizon] ✅ Loaded ${catalogName} (${catalog.category})`);
-      } catch (error) {
-        console.error(`[Horizon] Failed to load ${catalogName}:`, error);
-      }
-    };
-
-    // Load all catalogs in parallel
-    await Promise.all([
-      loadCatalog((this.props as any).fireAssetsCatalog, 'fireAssets.json'),
-      loadCatalog((this.props as any).forestAssetsCatalog, 'forestAssets.json'),
-      loadCatalog((this.props as any).skyAssetsCatalog, 'skyAssets.json'),
-      loadCatalog((this.props as any).waterAssetsCatalog, 'waterAssets.json'),
-      loadCatalog((this.props as any).buffAssetsCatalog, 'buffAssets.json'),
-      loadCatalog((this.props as any).trapAssetsCatalog, 'trapAssets.json'),
-      loadCatalog((this.props as any).magicAssetsCatalog, 'magicAssets.json'),
-      loadCatalog((this.props as any).commonAssetsCatalog, 'commonAssets.json'),
-    ]);
-
-    // console.log('[Horizon] ✅ All catalogs loaded');
-    // console.log('[Horizon] Categories:', catalogManager.getLoadedCategories());
+    // Wrap in a hidden View
+    return View({
+      style: {
+        position: 'absolute',
+        width: 1,
+        height: 1,
+        opacity: 0,
+        top: -1000, // Move offscreen
+        left: -1000
+      },
+      children: preloadImages
+    });
   }
 
   /**
@@ -376,11 +229,11 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
         return assetId;
       },
 
+      // Catalog manager instance
+      catalogManager: this.catalogManager,
+
       // UI methods: Horizon UI implementations from horizon/ui
       getUIMethodMappings: () => {
-        // Get asset catalog manager for looking up Horizon asset IDs
-        const catalogManager = AssetCatalogManager.getInstance();
-
         // Cache for ImageSource objects (prevents duplicate creation)
         const imageSourceCache = new Map<string, any>();
 
@@ -388,22 +241,34 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
          * Convert semantic asset ID to Horizon ImageSource
          * Returns null if asset not found (used for direct/non-binding image sources)
          * Cached to avoid recreating the same ImageSource repeatedly
+         *
+         * NOTE: This should ONLY be called from bindings that check assetsLoadedBinding first!
          */
         const assetIdToImageSource = (assetId: string): any => {
+          console.log(`[assetIdToImageSource] Called with assetId: "${assetId}"`);
+
           // Check cache first
           if (imageSourceCache.has(assetId)) {
+            console.log(`[assetIdToImageSource] ✓ Found in cache: ${assetId}`);
             return imageSourceCache.get(assetId);
           }
 
-          const horizonId = catalogManager.getHorizonAssetId(assetId, 'image');
+          console.log(`[assetIdToImageSource] Checking catalogManager...`);
+          console.log(`[assetIdToImageSource] catalogManager instance:`, !!this.catalogManager);
+          console.log(`[assetIdToImageSource] Loaded categories:`, this.catalogManager?.getLoadedCategories());
+
+          const horizonId = this.catalogManager.getHorizonAssetId(assetId, 'image');
+          console.log(`[assetIdToImageSource] getHorizonAssetId("${assetId}") returned:`, horizonId);
+
           if (!horizonId) {
-            // Asset not found in catalog
-            // console.error(`[assetIdToImageSource] Asset not in catalog: ${assetId}`);
+            console.error(`[assetIdToImageSource] ❌ Asset not in catalog: ${assetId}`);
+            console.error(`[assetIdToImageSource] Available categories:`, this.catalogManager.getLoadedCategories());
+            console.error(`[assetIdToImageSource] Total indexed assets:`, this.catalogManager.getTotalIndexedAssets?.() || 'N/A');
             return null;
           }
           try {
             const imageSource = ImageSource.fromTextureAsset(new hz.Asset(BigInt(horizonId)));
-            console.log(`[assetIdToImageSource] Created ImageSource for ${assetId} -> ${horizonId}`);
+            console.log(`[assetIdToImageSource] ✅ Created ImageSource for ${assetId}`);
             // Cache the result
             imageSourceCache.set(assetId, imageSource);
             return imageSource;
@@ -475,29 +340,6 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
           return View(processedProps);
         };
 
-        /**
-         * Helper to create card image bindings without chaining
-         * Creates a single derived binding that goes directly from source bindings to ImageSource
-         */
-        const createCardImageBinding = (cardsBinding: any, scrollOffsetBinding: any, slotIndex: number, cardsPerPage: number) => {
-          const unwrappedCards = cardsBinding.horizonBinding || cardsBinding;
-          const unwrappedScroll = scrollOffsetBinding.horizonBinding || scrollOffsetBinding;
-
-          return Binding.derive([unwrappedCards, unwrappedScroll], (cards: any[], offset: number) => {
-            const pageStart = offset * cardsPerPage;
-            const cardIndex = pageStart + slotIndex;
-            if (cardIndex < cards.length) {
-              const card = cards[cardIndex];
-              // Extract base ID from card.id (remove timestamp suffix)
-              const baseId = card.id.replace(/-\d+-\d+$/, '');
-              console.log(`[createCardImageBinding] Slot ${slotIndex} converting "${baseId}" to ImageSource`);
-              return assetIdToImageSource(baseId);
-            }
-            console.log(`[createCardImageBinding] Slot ${slotIndex} no card, returning null`);
-            return null; // No card at this slot
-          });
-        };
-
         return {
           View: HorizonView,
           Text: (props: any) => Text(unwrapValue(props)),
@@ -509,7 +351,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
           Animation,
           Easing,
           assetIdToImageSource, // Expose for explicit conversion
-          assetsLoadedBinding: this.assetsLoadedBinding, // Expose raw binding (compatible with Binding.derive)
+          assetsLoadedBinding: this.assetsLoadedBinding, // Binding for UI to check before rendering images
         };
       },
 
@@ -603,18 +445,105 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
    * Horizon UI initialization
    * Required by UIComponent - returns the UI tree
    *
-   * This is called BEFORE start() executes
-   * We try to load assets synchronously here so images are available immediately
-   * If synchronous loading fails, assets will be loaded in start() instead
+   * This is called immediately when the script starts, BEFORE receiveOwnership()
+   * In Local Mode, this is where we set up everything since receiveOwnership() comes after
    */
   initializeUI(): UINode {
+    console.log('[Client] initializeUI() called');
+
+    // CRITICAL: Create assetsLoadedBinding FIRST before anything else
+    console.log('[Client] Creating assetsLoadedBinding (starting as FALSE)');
+    this.assetsLoadedBinding = new Binding(false);
+    console.log('[Client] assetsLoadedBinding created');
+
+    // Create a fresh AssetCatalogManager instance for this UI component
+    // NOT a singleton - each client gets its own instance
+    const AssetCatalogManager = BloomBeasts.AssetCatalogManager;
+    this.catalogManager = new AssetCatalogManager();
+    console.log('[Client] Created new AssetCatalogManager instance');
+
+    // Create NetworkEvents for Local Mode (will be used after ownership transfer)
+    this.saveDataEvent = new NetworkEvent<SavePlayerDataPayload>('bloombeasts:savePlayerData');
+    this.loadDataEvent = new NetworkEvent<LoadPlayerDataPayload>('bloombeasts:loadPlayerData');
+    this.loadDataResponseEvent = new NetworkEvent<LoadPlayerDataResponse>('bloombeasts:loadPlayerDataResponse');
+
+    // Check if we should initialize Local Mode
+    // This check will be false on the server, true on the client after ownership transfer
+    const localPlayer = this.world.getLocalPlayer();
+    const serverPlayer = this.world.getServerPlayer();
+
+    console.log('[Client] Local player:', localPlayer?.name || 'null');
+    console.log('[Client] Server player:', serverPlayer?.name || 'null');
+
+    if (localPlayer && localPlayer !== serverPlayer) {
+      // We're on a LOCAL client (after ownership transfer)
+      console.log('[Client] ✅ Detected Local Mode - setting up');
+      this.setupLocalMode(localPlayer);
+    } else {
+      console.log('[Client] Running on server, waiting for ownership transfer');
+    }
+
+    // Load catalogs synchronously BEFORE creating the game
+    // This ensures the catalogManager is populated before createAssetPreloadBlock is called
+    this.loadAssetCatalogs();
+
     // Create the game instance - constructor should NOT load any data
     // Just create the UI tree structure
     const platformConfig = this.createPlatformConfig();
     this.game = new BloomBeastsGame(platformConfig);
 
-    // Return the game's UI tree - it will show loading screen until initialize() is called
-    return this.game.uiTree;
+    // Create the asset preload block - CRITICAL for Horizon asset loading!
+    const preloadBlock = this.createAssetPreloadBlock();
+
+    // Return both the game UI tree AND the preload block
+    // The preload block is hidden but forces Horizon to load all assets
+    return View({
+      style: { width: this.panelWidth, height: this.panelHeight },
+      children: [
+        this.game.uiTree,  // Main game UI
+        preloadBlock        // Hidden preload block (critical for asset loading!)
+      ]
+    });
+  }
+
+  /**
+   * Set up Local Mode (called from initializeUI when on local client)
+   */
+  private setupLocalMode(player: Player): void {
+    console.log('[Client] Setting up Local Mode for:', player.name);
+
+    // Store player reference
+    this.currentPlayer = player;
+    const playerIndex = player.index.get();
+    console.log('[Client] Player index:', playerIndex);
+
+    // Listen for player data response from server
+    this.connectNetworkEvent(this.entity, this.loadDataResponseEvent, (response: LoadPlayerDataResponse) => {
+      console.log('[Client] Received player data response from server');
+
+      // Cache the player data locally
+      this.cachedPlayerData = response.data as PlayerData | null;
+
+      // Apply settings if available
+      if (response.data?.settings) {
+        console.log('[Client] Applying saved audio settings:', response.data.settings);
+        this.currentMusicVolume = response.data.settings.musicVolume / 100;
+        this.currentSfxVolume = response.data.settings.sfxVolume / 100;
+        this.musicEnabled = response.data.settings.musicEnabled;
+        this.sfxEnabled = response.data.settings.sfxEnabled;
+      } else {
+        console.log('[Client] No saved settings - using defaults');
+      }
+
+      // Player data received - now load assets
+      this.loadAssetsAndInitialize();
+    });
+
+    // Request player data from server immediately
+    console.log('[Client] Requesting player data from server...');
+    this.sendNetworkEvent(this.props.serverEntity, this.loadDataEvent, {
+      playerIndex: playerIndex
+    });
   }
 
   /**
@@ -687,7 +616,6 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
         }
       }
 
-      this.currentMusicSrc = entity;
       this.currentMusicEntity = entity;
       this.isMusicPlaying = true;
     }
@@ -717,7 +645,6 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
 
     if (!assetId || this.audioEntityMap[assetId]?.type === 'music') {
       this.isMusicPlaying = false;
-      this.currentMusicSrc = null;
       this.currentMusicEntity = null;
     }
 

@@ -9,7 +9,6 @@ import { AbilityProcessor } from './AbilityProcessor';
 import { LevelingSystem } from './LevelingSystem';
 import { DeckList } from '../utils/deckBuilder';
 import { SimpleMap } from '../../utils/polyfills';
-import { getAllCards } from '../cards';
 import {
   AbilityEffect,
   EffectType,
@@ -34,13 +33,15 @@ export class GameEngine {
   private abilityProcessor: AbilityProcessor;
   private levelingSystem: LevelingSystem;
   private cardDatabase: Map<string, AnyCard> | null = null;
+  private catalogManager: any;
 
-  constructor() {
+  constructor(catalogManager: any) {
     // Don't create game state yet - it will be created when startMatch() is called
     // This allows GameEngine to be constructed before asset catalogs are loaded
     this.combatSystem = new CombatSystem();
     this.abilityProcessor = new AbilityProcessor();
     this.levelingSystem = new LevelingSystem();
+    this.catalogManager = catalogManager;
   }
 
   /**
@@ -67,7 +68,7 @@ export class GameEngine {
    */
   private buildCardDatabase(): Map<string, AnyCard> {
     const db = new Map<string, AnyCard>();
-    const allCards = getAllCards();
+    const allCards = this.catalogManager.getAllCardData();
     allCards.forEach((card: any) => {
       if (card && card.id && card.type) {
         db.set(card.id, card as AnyCard);

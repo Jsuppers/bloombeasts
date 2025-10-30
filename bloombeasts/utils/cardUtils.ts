@@ -5,8 +5,19 @@
 import type { BloomBeastCard, AnyCard } from '../engine/types/core';
 import type { Level } from '../engine/types/leveling';
 import type { CardInstance } from '../screens/cards/types';
-import { getAllCards } from '../engine/cards';
 import { getCardDescription } from '../engine/utils/cardDescriptionGenerator';
+
+// Module-level catalog manager reference for card utils
+// Set via setCatalogManagerForUtils() which is called by BloomBeastsGame
+let _cardUtilsCatalogManager: any = null;
+
+/**
+ * Set the catalog manager instance for card utility functions
+ * Called by BloomBeastsGame during construction
+ */
+export function setCatalogManagerForUtils(catalogManager: any): void {
+  _cardUtilsCatalogManager = catalogManager;
+}
 
 /**
  * Battle-specific card stats (runtime only, not persisted)
@@ -92,7 +103,11 @@ export function getXPRequired(currentLevel: number, currentXP: number, card?: Bl
  * Get card definition by ID
  */
 export function getCardDefinition(cardId: string): AnyCard | undefined {
-  const allCards = getAllCards();
+  if (!_cardUtilsCatalogManager) {
+    console.warn('[cardUtils] catalogManager not initialized');
+    return undefined;
+  }
+  const allCards = _cardUtilsCatalogManager.getAllCardData();
   return allCards.find((c: any) => c && c.id === cardId);
 }
 

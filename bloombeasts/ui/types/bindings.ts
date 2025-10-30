@@ -15,13 +15,12 @@ export declare class ValueBindingBase<T> {
 
 /**
  * Reactive data binding
+ * Matches Horizon's Binding API (no get() or subscribe() methods)
  */
 export declare class Binding<T = any> extends ValueBindingBase<T> {
   constructor(value: T);
-  get(): T;
   set(value: T | ((prev: T) => T)): void;
   derive<U>(fn: (value: T) => U): Binding<U>;
-  subscribe(callback: (value: T) => void): () => void;
   static derive<T extends any[], R>(
     bindings: { [K in keyof T]: Binding<T[K]> },
     deriveFn: (...values: T) => R

@@ -286,8 +286,9 @@ export class SettingsScreen {
             // Button background image (standard or green based on state)
             this.ui.Image({
               source: this.ui.Binding.derive(
-                [this.playerDataBinding],
-                (pd: any) => {
+                [this.ui.assetsLoadedBinding, this.playerDataBinding],
+                (assetsLoaded: boolean, pd: any) => {
+                  if (!assetsLoaded) return null;
                   const settings = pd?.settings;
                   return this.ui.assetIdToImageSource?.(settings?.[settingKey] ? 'green-button' : 'standard-button') ?? null;
                 }

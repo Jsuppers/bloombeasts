@@ -1,4 +1,11 @@
-{
+/**
+ * Auto-generated TypeScript catalog from waterAssets.json
+ * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+ */
+
+import type { AssetCatalog } from '../AssetCatalogManager';
+
+export const waterAssets: AssetCatalog = {
   "version": "1.0.0",
   "category": "water",
   "description": "Water affinity cards and assets",
@@ -742,4 +749,4 @@
       ]
     }
   ]
-}
+};

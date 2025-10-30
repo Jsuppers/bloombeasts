@@ -3,12 +3,16 @@
  * Manages battle state visualization, animations, and card popups
  */
 
-import { getAllCards } from '../engine/cards';
 import { BloomBeastCard } from '../engine/types/core';
 import { STARTING_HEALTH, TURN_TIME_LIMIT } from '../engine/constants/gameRules';
 import type { BattleDisplay, ObjectiveDisplay } from '../gameManager';
 
 export class BattleDisplayManager {
+  private catalogManager: any;
+
+  constructor(catalogManager: any) {
+    this.catalogManager = catalogManager;
+  }
   /**
    * Create a battle display object from battle state
    */
@@ -95,7 +99,7 @@ export class BattleDisplayManager {
   private enrichFieldBeasts(field: any[], gameState?: any, playerIndex?: number): any[] {
     // Create a card lookup map from all card definitions
     const cardMap = new Map<string, BloomBeastCard>();
-    const allCards = getAllCards();
+    const allCards = this.catalogManager.getAllCardData();
     allCards.forEach((card: any) => {
       if (card && card.type === 'Bloom') {
         cardMap.set(card.id, card as BloomBeastCard);
