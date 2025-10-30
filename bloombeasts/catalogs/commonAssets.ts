@@ -7,596 +7,596 @@
 import type { AssetCatalog } from '../AssetCatalogManager';
 
 export const commonAssets: AssetCatalog = {
-  "version": "1.0.0",
-  "category": "common",
-  "description": "Common UI elements, backgrounds, and shared assets",
-  "data": [
+  version: "1.0.0",
+  category: "common",
+  description: "Common UI elements, backgrounds, and shared assets",
+  data: [
     {
-      "id": "background",
-      "type": "ui",
-      "category": "background",
-      "name": "Main Background",
-      "description": "Main game background",
-      "assets": [
+      id: "background",
+      type: "ui",
+      category: "background",
+      name: "Main Background",
+      description: "Main game background",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1341821670869568",
-          "path": "assets/images/bg_background.png"
+          type: "image",
+          horizonAssetId: "1341821670869568",
+          path: "assets/images/bg_background.png"
         }
       ]
     },
     {
-      "id": "menu",
-      "type": "ui",
-      "category": "background",
-      "name": "Menu Background",
-      "description": "Menu screen background",
-      "assets": [
+      id: "menu",
+      type: "ui",
+      category: "background",
+      name: "Menu Background",
+      description: "Menu screen background",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1341821670869568",
-          "path": "assets/images/misc_menu.png"
+          type: "image",
+          horizonAssetId: "1341821670869568",
+          path: "assets/images/misc_menu.png"
         }
       ]
     },
     {
-      "id": "playboard",
-      "type": "ui",
-      "category": "background",
-      "name": "Playboard",
-      "description": "Battle playboard background",
-      "assets": [
+      id: "playboard",
+      type: "ui",
+      category: "background",
+      name: "Playboard",
+      description: "Battle playboard background",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "802255839066806",
-          "path": "assets/images/misc_playboard.png"
+          type: "image",
+          horizonAssetId: "802255839066806",
+          path: "assets/images/misc_playboard.png"
         }
       ]
     },
     {
-      "id": "cards-container",
-      "type": "ui",
-      "category": "container",
-      "name": "Cards Container",
-      "description": "Cards collection screen container",
-      "assets": [
+      id: "cards-container",
+      type: "ui",
+      category: "container",
+      name: "Cards Container",
+      description: "Cards collection screen container",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1360422829007789",
-          "path": "assets/images/misc_cards-container.png"
+          type: "image",
+          horizonAssetId: "1360422829007789",
+          path: "assets/images/misc_cards-container.png"
         }
       ]
     },
     {
-      "id": "mission-container",
-      "type": "ui",
-      "category": "container",
-      "name": "Mission Container",
-      "description": "Mission selection container",
-      "assets": [
+      id: "mission-container",
+      type: "ui",
+      category: "container",
+      name: "Mission Container",
+      description: "Mission selection container",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "828431839717203",
-          "path": "assets/images/misc_mission-container.png"
+          type: "image",
+          horizonAssetId: "828431839717203",
+          path: "assets/images/misc_mission-container.png"
         }
       ]
     },
     {
-      "id": "standard-button",
-      "type": "ui",
-      "category": "button",
-      "name": "Standard Button",
-      "description": "Default button style",
-      "assets": [
+      id: "standard-button",
+      type: "ui",
+      category: "button",
+      name: "Standard Button",
+      description: "Default button style",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "740500362349295",
-          "path": "assets/images/misc_standard-button.png"
+          type: "image",
+          horizonAssetId: "740500362349295",
+          path: "assets/images/misc_standard-button.png"
         }
       ]
     },
     {
-      "id": "green-button",
-      "type": "ui",
-      "category": "button",
-      "name": "Green Button",
-      "description": "Green variant button",
-      "assets": [
+      id: "green-button",
+      type: "ui",
+      category: "button",
+      name: "Green Button",
+      description: "Green variant button",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1454989832255109",
-          "path": "assets/images/misc_green-button.png"
+          type: "image",
+          horizonAssetId: "1454989832255109",
+          path: "assets/images/misc_green-button.png"
         }
       ]
     },
     {
-      "id": "red-button",
-      "type": "ui",
-      "category": "button",
-      "name": "Red Button",
-      "description": "Red variant button",
-      "assets": [
+      id: "red-button",
+      type: "ui",
+      category: "button",
+      name: "Red Button",
+      description: "Red variant button",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1365262285015644",
-          "path": "assets/images/misc_red-button.png"
+          type: "image",
+          horizonAssetId: "1365262285015644",
+          path: "assets/images/misc_red-button.png"
         }
       ]
     },
     {
-      "id": "long-green-button",
-      "type": "ui",
-      "category": "button",
-      "name": "Long Green Button",
-      "description": "Long green button variant",
-      "assets": [
+      id: "long-green-button",
+      type: "ui",
+      category: "button",
+      name: "Long Green Button",
+      description: "Long green button variant",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1842026620010613",
-          "path": "assets/images/misc_long-green-button.png"
+          type: "image",
+          horizonAssetId: "1842026620010613",
+          path: "assets/images/misc_long-green-button.png"
         }
       ]
     },
     {
-      "id": "side-menu",
-      "type": "ui",
-      "category": "container",
-      "name": "Side Menu",
-      "description": "Side menu panel",
-      "assets": [
+      id: "side-menu",
+      type: "ui",
+      category: "container",
+      name: "Side Menu",
+      description: "Side menu panel",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "794839683168713",
-          "path": "assets/images/misc_side-menu.png"
+          type: "image",
+          horizonAssetId: "794839683168713",
+          path: "assets/images/misc_side-menu.png"
         }
       ]
     },
     {
-      "id": "experience-bar",
-      "type": "ui",
-      "category": "other",
-      "name": "Experience Bar",
-      "description": "XP progress bar",
-      "assets": [
+      id: "experience-bar",
+      type: "ui",
+      category: "other",
+      name: "Experience Bar",
+      description: "XP progress bar",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1151343029773719",
-          "path": "assets/images/cards_experience-bar.png"
+          type: "image",
+          horizonAssetId: "1151343029773719",
+          path: "assets/images/cards_experience-bar.png"
         }
       ]
     },
     {
-      "id": "base-card",
-      "type": "ui",
-      "category": "frame",
-      "name": "Base Card Frame",
-      "description": "Default card frame template",
-      "assets": [
+      id: "base-card",
+      type: "ui",
+      category: "frame",
+      name: "Base Card Frame",
+      description: "Default card frame template",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "823441590335166",
-          "path": "assets/images/cards_base-card.png"
+          type: "image",
+          horizonAssetId: "823441590335166",
+          path: "assets/images/cards_base-card.png"
         }
       ]
     },
     {
-      "id": "magic-card",
-      "type": "ui",
-      "category": "frame",
-      "name": "Magic Card Frame",
-      "description": "Magic card frame template",
-      "assets": [
+      id: "magic-card",
+      type: "ui",
+      category: "frame",
+      name: "Magic Card Frame",
+      description: "Magic card frame template",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "802428729033291",
-          "path": "assets/images/cards_magic-card.png"
+          type: "image",
+          horizonAssetId: "802428729033291",
+          path: "assets/images/cards_magic-card.png"
         }
       ]
     },
     {
-      "id": "magic-card-playboard",
-      "type": "ui",
-      "category": "frame",
-      "name": "Magic Card Playboard",
-      "description": "Magic card on playboard",
-      "assets": [
+      id: "magic-card-playboard",
+      type: "ui",
+      category: "frame",
+      name: "Magic Card Playboard",
+      description: "Magic card on playboard",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "2991234734402522",
-          "path": "assets/images/cards_magic-card-playboard.png"
+          type: "image",
+          horizonAssetId: "2991234734402522",
+          path: "assets/images/cards_magic-card-playboard.png"
         }
       ]
     },
     {
-      "id": "trap-card",
-      "type": "ui",
-      "category": "frame",
-      "name": "Trap Card Frame",
-      "description": "Trap card frame template",
-      "assets": [
+      id: "trap-card",
+      type: "ui",
+      category: "frame",
+      name: "Trap Card Frame",
+      description: "Trap card frame template",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "2847974385407960",
-          "path": "assets/images/cards_trap-card.png"
+          type: "image",
+          horizonAssetId: "2847974385407960",
+          path: "assets/images/cards_trap-card.png"
         }
       ]
     },
     {
-      "id": "trap-card-playboard",
-      "type": "ui",
-      "category": "frame",
-      "name": "Trap Card Playboard",
-      "description": "Trap card on playboard",
-      "assets": [
+      id: "trap-card-playboard",
+      type: "ui",
+      category: "frame",
+      name: "Trap Card Playboard",
+      description: "Trap card on playboard",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1724877334843483",
-          "path": "assets/images/cards_trap-card-playboard.png"
+          type: "image",
+          horizonAssetId: "1724877334843483",
+          path: "assets/images/cards_trap-card-playboard.png"
         }
       ]
     },
     {
-      "id": "buff-card",
-      "type": "ui",
-      "category": "frame",
-      "name": "Buff Card Frame",
-      "description": "Buff card frame template",
-      "assets": [
+      id: "buff-card",
+      type: "ui",
+      category: "frame",
+      name: "Buff Card Frame",
+      description: "Buff card frame template",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1962518914567182",
-          "path": "assets/images/cards_buff-card.png"
+          type: "image",
+          horizonAssetId: "1962518914567182",
+          path: "assets/images/cards_buff-card.png"
         }
       ]
     },
     {
-      "id": "buff-card-playboard",
-      "type": "ui",
-      "category": "frame",
-      "name": "Buff Card Playboard",
-      "description": "Buff card on playboard",
-      "assets": [
+      id: "buff-card-playboard",
+      type: "ui",
+      category: "frame",
+      name: "Buff Card Playboard",
+      description: "Buff card on playboard",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "2628573627486992",
-          "path": "assets/images/cards_buff-card-playboard.png"
+          type: "image",
+          horizonAssetId: "2628573627486992",
+          path: "assets/images/cards_buff-card-playboard.png"
         }
       ]
     },
     {
-      "id": "menu-frame-1",
-      "type": "ui",
-      "category": "frame",
-      "name": "Menu Frame 1",
-      "description": "Menu animation frame 1",
-      "assets": [
+      id: "menu-frame-1",
+      type: "ui",
+      category: "frame",
+      name: "Menu Frame 1",
+      description: "Menu animation frame 1",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1186506656766961",
-          "path": "assets/images/menu_frame-1.png"
+          type: "image",
+          horizonAssetId: "1186506656766961",
+          path: "assets/images/menu_frame-1.png"
         }
       ]
     },
     {
-      "id": "menu-frame-2",
-      "type": "ui",
-      "category": "frame",
-      "name": "Menu Frame 2",
-      "description": "Menu animation frame 2",
-      "assets": [
+      id: "menu-frame-2",
+      type: "ui",
+      category: "frame",
+      name: "Menu Frame 2",
+      description: "Menu animation frame 2",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "816845231314389",
-          "path": "assets/images/menu_frame-2.png"
+          type: "image",
+          horizonAssetId: "816845231314389",
+          path: "assets/images/menu_frame-2.png"
         }
       ]
     },
     {
-      "id": "menu-frame-3",
-      "type": "ui",
-      "category": "frame",
-      "name": "Menu Frame 3",
-      "description": "Menu animation frame 3",
-      "assets": [
+      id: "menu-frame-3",
+      type: "ui",
+      category: "frame",
+      name: "Menu Frame 3",
+      description: "Menu animation frame 3",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "2012665279305528",
-          "path": "assets/images/menu_frame-3.png"
+          type: "image",
+          horizonAssetId: "2012665279305528",
+          path: "assets/images/menu_frame-3.png"
         }
       ]
     },
     {
-      "id": "menu-frame-4",
-      "type": "ui",
-      "category": "frame",
-      "name": "Menu Frame 4",
-      "description": "Menu animation frame 4",
-      "assets": [
+      id: "menu-frame-4",
+      type: "ui",
+      category: "frame",
+      name: "Menu Frame 4",
+      description: "Menu animation frame 4",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "803392912558689",
-          "path": "assets/images/menu_frame-4.png"
+          type: "image",
+          horizonAssetId: "803392912558689",
+          path: "assets/images/menu_frame-4.png"
         }
       ]
     },
     {
-      "id": "menu-frame-5",
-      "type": "ui",
-      "category": "frame",
-      "name": "Menu Frame 5",
-      "description": "Menu animation frame 5",
-      "assets": [
+      id: "menu-frame-5",
+      type: "ui",
+      category: "frame",
+      name: "Menu Frame 5",
+      description: "Menu animation frame 5",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1141897134114548",
-          "path": "assets/images/menu_frame-5.png"
+          type: "image",
+          horizonAssetId: "1141897134114548",
+          path: "assets/images/menu_frame-5.png"
         }
       ]
     },
     {
-      "id": "menu-frame-6",
-      "type": "ui",
-      "category": "frame",
-      "name": "Menu Frame 6",
-      "description": "Menu animation frame 6",
-      "assets": [
+      id: "menu-frame-6",
+      type: "ui",
+      category: "frame",
+      name: "Menu Frame 6",
+      description: "Menu animation frame 6",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1962288661350650",
-          "path": "assets/images/menu_frame-6.png"
+          type: "image",
+          horizonAssetId: "1962288661350650",
+          path: "assets/images/menu_frame-6.png"
         }
       ]
     },
     {
-      "id": "menu-frame-7",
-      "type": "ui",
-      "category": "frame",
-      "name": "Menu Frame 7",
-      "description": "Menu animation frame 7",
-      "assets": [
+      id: "menu-frame-7",
+      type: "ui",
+      category: "frame",
+      name: "Menu Frame 7",
+      description: "Menu animation frame 7",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "781356411339489",
-          "path": "assets/images/menu_frame-7.png"
+          type: "image",
+          horizonAssetId: "781356411339489",
+          path: "assets/images/menu_frame-7.png"
         }
       ]
     },
     {
-      "id": "menu-frame-8",
-      "type": "ui",
-      "category": "frame",
-      "name": "Menu Frame 8",
-      "description": "Menu animation frame 8",
-      "assets": [
+      id: "menu-frame-8",
+      type: "ui",
+      category: "frame",
+      name: "Menu Frame 8",
+      description: "Menu animation frame 8",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "844985438202497",
-          "path": "assets/images/menu_frame-8.png"
+          type: "image",
+          horizonAssetId: "844985438202497",
+          path: "assets/images/menu_frame-8.png"
         }
       ]
     },
     {
-      "id": "menu-frame-9",
-      "type": "ui",
-      "category": "frame",
-      "name": "Menu Frame 9",
-      "description": "Menu animation frame 9",
-      "assets": [
+      id: "menu-frame-9",
+      type: "ui",
+      category: "frame",
+      name: "Menu Frame 9",
+      description: "Menu animation frame 9",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1340487887747224",
-          "path": "assets/images/menu_frame-9.png"
+          type: "image",
+          horizonAssetId: "1340487887747224",
+          path: "assets/images/menu_frame-9.png"
         }
       ]
     },
     {
-      "id": "menu-frame-10",
-      "type": "ui",
-      "category": "frame",
-      "name": "Menu Frame 10",
-      "description": "Menu animation frame 10",
-      "assets": [
+      id: "menu-frame-10",
+      type: "ui",
+      category: "frame",
+      name: "Menu Frame 10",
+      description: "Menu animation frame 10",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1866001547625853",
-          "path": "assets/images/menu_frame-10.png"
+          type: "image",
+          horizonAssetId: "1866001547625853",
+          path: "assets/images/menu_frame-10.png"
         }
       ]
     },
     {
-      "id": "icon-ability",
-      "type": "ui",
-      "category": "icon",
-      "name": "Ability Icon",
-      "description": "Ability indicator icon",
-      "assets": [
+      id: "icon-ability",
+      type: "ui",
+      category: "icon",
+      name: "Ability Icon",
+      description: "Ability indicator icon",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1550821249252575",
-          "path": "assets/images/icon_ability.png"
+          type: "image",
+          horizonAssetId: "1550821249252575",
+          path: "assets/images/icon_ability.png"
         }
       ]
     },
     {
-      "id": "icon-attack",
-      "type": "ui",
-      "category": "icon",
-      "name": "Attack Icon",
-      "description": "Attack indicator icon",
-      "assets": [
+      id: "icon-attack",
+      type: "ui",
+      category: "icon",
+      name: "Attack Icon",
+      description: "Attack indicator icon",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "818969787355942",
-          "path": "assets/images/icon_attack.png"
+          type: "image",
+          horizonAssetId: "818969787355942",
+          path: "assets/images/icon_attack.png"
         }
       ]
     },
     {
-      "id": "lose-image",
-      "type": "ui",
-      "category": "other",
-      "name": "Lose Image",
-      "description": "Game over/lose screen image",
-      "assets": [
+      id: "lose-image",
+      type: "ui",
+      category: "other",
+      name: "Lose Image",
+      description: "Game over/lose screen image",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "2155452308310801",
-          "path": "assets/images/misc_lose-image.png"
+          type: "image",
+          horizonAssetId: "2155452308310801",
+          path: "assets/images/misc_lose-image.png"
         }
       ]
     },
     {
-      "id": "boss-mission",
-      "type": "mission",
-      "affinity": "boss",
-      "missionNumber": 5,
-      "name": "The Bloom Master",
-      "description": "Final boss mission",
-      "assets": [
+      id: "boss-mission",
+      type: "mission",
+      affinity: "boss",
+      missionNumber: 5,
+      name: "The Bloom Master",
+      description: "Final boss mission",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1879466909654800",
-          "path": "assets/images/cards_boss-mission.png"
+          type: "image",
+          horizonAssetId: "1879466909654800",
+          path: "assets/images/cards_boss-mission.png"
         }
       ]
     },
     {
-      "id": "the-bloom-master",
-      "type": "ui",
-      "category": "other",
-      "name": "The Bloom Master",
-      "description": "Boss card image",
-      "assets": [
+      id: "the-bloom-master",
+      type: "ui",
+      category: "other",
+      name: "The Bloom Master",
+      description: "Boss card image",
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1948729499041670",
-          "path": "assets/images/cards_the-bloom-master.png"
+          type: "image",
+          horizonAssetId: "1948729499041670",
+          path: "assets/images/cards_the-bloom-master.png"
         }
       ]
     },
     {
-      "id": "sfx-menu-button-select",
-      "type": "ui",
-      "category": "other",
-      "name": "Menu Button Select SFX",
-      "description": "Sound for menu button selection",
-      "assets": [
+      id: "sfx-menu-button-select",
+      type: "ui",
+      category: "other",
+      name: "Menu Button Select SFX",
+      description: "Sound for menu button selection",
+      assets: [
         {
-          "type": "audio",
-          "horizonAssetId": "3481449071995903",
-          "path": "assets/audio/sfx_menu-button-select.wav"
+          type: "audio",
+          horizonAssetId: "3481449071995903",
+          path: "assets/audio/sfx_menu-button-select.wav"
         }
       ]
     },
     {
-      "id": "sfx-play-card",
-      "type": "ui",
-      "category": "other",
-      "name": "Play Card SFX",
-      "description": "Sound for playing a card",
-      "assets": [
+      id: "sfx-play-card",
+      type: "ui",
+      category: "other",
+      name: "Play Card SFX",
+      description: "Sound for playing a card",
+      assets: [
         {
-          "type": "audio",
-          "horizonAssetId": "673115269189210",
-          "path": "assets/audio/sfx_play-card.wav"
+          type: "audio",
+          horizonAssetId: "673115269189210",
+          path: "assets/audio/sfx_play-card.wav"
         }
       ]
     },
     {
-      "id": "sfx-attack",
-      "type": "ui",
-      "category": "other",
-      "name": "Attack SFX",
-      "description": "Sound for attack action",
-      "assets": [
+      id: "sfx-attack",
+      type: "ui",
+      category: "other",
+      name: "Attack SFX",
+      description: "Sound for attack action",
+      assets: [
         {
-          "type": "audio",
-          "horizonAssetId": "1718962638781724",
-          "path": "assets/audio/sfx_attack.wav"
+          type: "audio",
+          horizonAssetId: "1718962638781724",
+          path: "assets/audio/sfx_attack.wav"
         }
       ]
     },
     {
-      "id": "sfx-trap-card-activated",
-      "type": "ui",
-      "category": "other",
-      "name": "Trap Activated SFX",
-      "description": "Sound for trap activation",
-      "assets": [
+      id: "sfx-trap-card-activated",
+      type: "ui",
+      category: "other",
+      name: "Trap Activated SFX",
+      description: "Sound for trap activation",
+      assets: [
         {
-          "type": "audio",
-          "horizonAssetId": "1180175093968172",
-          "path": "assets/audio/sfx_trap-card-activated.wav"
+          type: "audio",
+          horizonAssetId: "1180175093968172",
+          path: "assets/audio/sfx_trap-card-activated.wav"
         }
       ]
     },
     {
-      "id": "sfx-low-health",
-      "type": "ui",
-      "category": "other",
-      "name": "Low Health SFX",
-      "description": "Warning sound for low health",
-      "assets": [
+      id: "sfx-low-health",
+      type: "ui",
+      category: "other",
+      name: "Low Health SFX",
+      description: "Warning sound for low health",
+      assets: [
         {
-          "type": "audio",
-          "horizonAssetId": "828372796357589",
-          "path": "assets/audio/sfx_low-health.wav"
+          type: "audio",
+          horizonAssetId: "828372796357589",
+          path: "assets/audio/sfx_low-health.wav"
         }
       ]
     },
     {
-      "id": "sfx-win",
-      "type": "ui",
-      "category": "other",
-      "name": "Win SFX",
-      "description": "Victory sound effect",
-      "assets": [
+      id: "sfx-win",
+      type: "ui",
+      category: "other",
+      name: "Win SFX",
+      description: "Victory sound effect",
+      assets: [
         {
-          "type": "audio",
-          "horizonAssetId": "4241684452770634",
-          "path": "assets/audio/sfx_win.wav"
+          type: "audio",
+          horizonAssetId: "4241684452770634",
+          path: "assets/audio/sfx_win.wav"
         }
       ]
     },
     {
-      "id": "sfx-lose",
-      "type": "ui",
-      "category": "other",
-      "name": "Lose SFX",
-      "description": "Defeat sound effect",
-      "assets": [
+      id: "sfx-lose",
+      type: "ui",
+      category: "other",
+      name: "Lose SFX",
+      description: "Defeat sound effect",
+      assets: [
         {
-          "type": "audio",
-          "horizonAssetId": "1323050035978393",
-          "path": "assets/audio/sfx_lose.wav"
+          type: "audio",
+          horizonAssetId: "1323050035978393",
+          path: "assets/audio/sfx_lose.wav"
         }
       ]
     },
     {
-      "id": "music-background",
-      "type": "ui",
-      "category": "other",
-      "name": "Background Music",
-      "description": "Main background music",
-      "assets": [
+      id: "music-background",
+      type: "ui",
+      category: "other",
+      name: "Background Music",
+      description: "Main background music",
+      assets: [
         {
-          "type": "audio",
-          "horizonAssetId": "802288129374217",
-          "path": "assets/audio/music_background.mp3"
+          type: "audio",
+          horizonAssetId: "802288129374217",
+          path: "assets/audio/music_background.mp3"
         }
       ]
     },
     {
-      "id": "music-battle",
-      "type": "ui",
-      "category": "other",
-      "name": "Battle Music",
-      "description": "Battle scene music",
-      "assets": [
+      id: "music-battle",
+      type: "ui",
+      category: "other",
+      name: "Battle Music",
+      description: "Battle scene music",
+      assets: [
         {
-          "type": "audio",
-          "horizonAssetId": "668023946362739",
-          "path": "assets/audio/music_battle.mp3"
+          type: "audio",
+          horizonAssetId: "668023946362739",
+          path: "assets/audio/music_battle.mp3"
         }
       ]
     }

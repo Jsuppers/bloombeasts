@@ -365,8 +365,8 @@ export class GameEngine {
     player.field[position] = instance;
     player.summonsThisTurn++;
 
-    // Apply passive buff card stat modifications to the newly summoned beast
-    this.applyPassiveBuffStats(instance, player);
+    // Apply WhileOnField buff card stat modifications to the newly summoned beast
+    this.applyWhileOnFieldBuffStats(instance, player);
 
     // Trigger summon abilities on the summoned beast
     this.triggerSummonAbilities(instance);
@@ -561,11 +561,11 @@ export class GameEngine {
           this.processHabitatEffect(effect, activePlayer, opposingPlayer);
         }
       }
-      // Note: Passive abilities are handled elsewhere during combat/ability processing
+      // Note: WhileOnField abilities are handled elsewhere during combat/ability processing
     }
 
-    // Count ongoing (passive) abilities for logging
-    const ongoingCount = habitat.abilities.filter(a => a.trigger === AbilityTrigger.Passive).length;
+    // Count ongoing WhileOnField abilities for logging
+    const ongoingCount = habitat.abilities.filter(a => a.trigger === AbilityTrigger.WhileOnField).length;
     Logger.debug(`Habitat ${habitat.name} active with ${ongoingCount} ongoing abilities`);
   }
 
@@ -626,8 +626,8 @@ export class GameEngine {
         }
       }
 
-      // Apply passive stat modifications to all existing beasts
-      if (ability.trigger === AbilityTrigger.Passive) {
+      // Apply WhileOnField stat modifications to all existing beasts
+      if (ability.trigger === AbilityTrigger.WhileOnField) {
         // Type guard: only process structured abilities with effects
         if (!('effects' in ability)) continue;
 
@@ -646,10 +646,10 @@ export class GameEngine {
                 if (effect.stat === StatType.Health) {
                   beast.currentHealth += effect.value;
                   beast.maxHealth += effect.value;
-                  Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Health to ${beast.name}`);
+                  Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Health to ${beast.name}`);
                 } else if (effect.stat === StatType.Attack) {
                   beast.currentAttack += effect.value;
-                  Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Attack to ${beast.name}`);
+                  Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Attack to ${beast.name}`);
                 }
               }
             }
@@ -660,7 +660,7 @@ export class GameEngine {
 
     // Count ongoing abilities for logging
     const ongoingCount = buffCard.abilities.filter((a: any) =>
-      a.trigger === AbilityTrigger.Passive ||
+      a.trigger === AbilityTrigger.WhileOnField ||
       a.trigger === AbilityTrigger.OnOwnStartOfTurn ||
       a.trigger === AbilityTrigger.OnOwnEndOfTurn
     ).length;
@@ -694,17 +694,17 @@ export class GameEngine {
   }
 
   /**
-   * Apply passive buff card stat modifications to a beast
+   * Apply WhileOnField buff card stat modifications to a beast
    */
-  private applyPassiveBuffStats(beast: BloomBeastInstance, player: Player): void {
+  private applyWhileOnFieldBuffStats(beast: BloomBeastInstance, player: Player): void {
     // Check all buff cards in the player's buff zone
     for (const buffCard of player.buffZone) {
       if (!buffCard) continue;
 
       // Process each ability in the buff card
       for (const ability of buffCard.abilities) {
-        // Only process passive abilities
-        if (ability.trigger !== AbilityTrigger.Passive) continue;
+        // Only process WhileOnField abilities
+        if (ability.trigger !== AbilityTrigger.WhileOnField) continue;
 
         // Type guard: only process structured abilities with effects
         if (!('effects' in ability)) continue;
@@ -724,10 +724,10 @@ export class GameEngine {
           if (effect.stat === StatType.Health) {
             beast.currentHealth += effect.value;
             beast.maxHealth += effect.value;
-            Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Health to ${beast.name}`);
+            Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Health to ${beast.name}`);
           } else if (effect.stat === StatType.Attack) {
             beast.currentAttack += effect.value;
-            Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Attack to ${beast.name}`);
+            Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Attack to ${beast.name}`);
           }
         }
       }
@@ -765,29 +765,12 @@ export class GameEngine {
     const activePlayer = this.state.players[playerIndex];
     const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
 
-    // Determine which triggers to use based on player and phase
-    const stateTriggers = [];
-
+    // Trigger abilities based on phase
     if (phase === 'start') {
-      // Player-specific triggers
-      if (playerIndex === 0) {
-        stateTriggers.push('OnPlayer1StartOfTurn');
-      } else {
-        stateTriggers.push('OnPlayer2StartOfTurn');
-      }
-
-      // Generic triggers
-      stateTriggers.push('OnAnyStartOfTurn');
-
-      // Own/Opponent relative triggers for beasts
+      // Trigger OnOwnStartOfTurn for active player's beasts
       for (const beast of activePlayer.field) {
         if (beast) {
           await this.triggerBeastAbility(beast, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
-        }
-      }
-      for (const beast of opposingPlayer.field) {
-        if (beast) {
-          await this.triggerBeastAbility(beast, 'OnOpponentStartOfTurn', opposingPlayer, activePlayer);
         }
       }
 
@@ -797,32 +780,11 @@ export class GameEngine {
           await this.triggerBuffCardAbility(buffCard, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
         }
       }
-      // Trigger OnOpponentStartOfTurn for opposing player's buff cards
-      for (const buffCard of opposingPlayer.buffZone) {
-        if (buffCard) {
-          await this.triggerBuffCardAbility(buffCard, 'OnOpponentStartOfTurn', opposingPlayer, activePlayer);
-        }
-      }
     } else {
-      // Player-specific triggers
-      if (playerIndex === 0) {
-        stateTriggers.push('OnPlayer1EndOfTurn');
-      } else {
-        stateTriggers.push('OnPlayer2EndOfTurn');
-      }
-
-      // Generic triggers
-      stateTriggers.push('OnAnyEndOfTurn');
-
-      // Own/Opponent relative triggers for beasts
+      // Trigger OnOwnEndOfTurn for active player's beasts
       for (const beast of activePlayer.field) {
         if (beast) {
           await this.triggerBeastAbility(beast, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
-        }
-      }
-      for (const beast of opposingPlayer.field) {
-        if (beast) {
-          await this.triggerBeastAbility(beast, 'OnOpponentEndOfTurn', opposingPlayer, activePlayer);
         }
       }
 
@@ -832,17 +794,6 @@ export class GameEngine {
           await this.triggerBuffCardAbility(buffCard, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
         }
       }
-      // Trigger OnOpponentEndOfTurn for opposing player's buff cards
-      for (const buffCard of opposingPlayer.buffZone) {
-        if (buffCard) {
-          await this.triggerBuffCardAbility(buffCard, 'OnOpponentEndOfTurn', opposingPlayer, activePlayer);
-        }
-      }
-    }
-
-    // Trigger abilities for each state trigger
-    for (const trigger of stateTriggers) {
-      await this.triggerPassiveAbilities(trigger, activePlayer, opposingPlayer);
     }
   }
 
@@ -961,40 +912,6 @@ export class GameEngine {
           sourceCard: beastCard,
           trigger: 'OnAllySummon',
           target: summonedBeast,  // Pass the summoned beast as target for condition checking
-          gameState: this.state,
-          controllingPlayer,
-          opposingPlayer,
-        });
-
-        // Apply ability results to game state
-        this.applyAbilityResults(results);
-      }
-    }
-  }
-
-  /**
-   * Trigger abilities for all beasts with the specified trigger
-   */
-  private async triggerPassiveAbilities(
-    trigger: string,
-    controllingPlayer: Player,
-    opposingPlayer: Player
-  ): Promise<void> {
-    for (const beast of controllingPlayer.field) {
-      if (!beast) continue;
-
-      const cardDef = this.getCardDefinition(beast.cardId);
-      if (!cardDef || cardDef.type !== 'Bloom') continue;
-
-      const beastCard = cardDef as BloomBeastCard;
-      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
-
-      // Process each ability with this trigger
-      for (const ability of abilities) {
-        const results = this.abilityProcessor.processAbility(ability, {
-          source: beast,
-          sourceCard: beastCard,
-          trigger,
           gameState: this.state,
           controllingPlayer,
           opposingPlayer,

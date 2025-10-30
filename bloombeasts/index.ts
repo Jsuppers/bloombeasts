@@ -62,7 +62,6 @@ import {
   buildSkyDeck,
   getAllStarterDecks
 } from './engine/utils/deckBuilder';
-import { getAllCards, getCardsByAffinity } from './engine/cards';
 import * as CombatHelpers from './engine/utils/combatHelpers';
 
 // Import UI components
@@ -117,9 +116,7 @@ export namespace Bloombeasts {
     filterByAffinity,
     getBloomBeasts,
     findCardById,
-    findCardByName,
-    getAllCards,
-    getCardsByAffinity
+    findCardByName
   };
 
   // Export deck builders

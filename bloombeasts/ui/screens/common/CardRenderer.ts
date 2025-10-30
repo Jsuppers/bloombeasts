@@ -398,9 +398,6 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     return id.replace(/-\d+-\d+$/, '');
   };
 
-  // Track card data for click handler
-  let trackedCard: CardDisplayData | null = null;
-
   // Create dependencies array based on mode
   // Use playerDataBinding directly in dependencies to avoid nesting
   // ALWAYS include assetsLoadedBinding as first dependency to prevent premature asset lookups
@@ -439,6 +436,24 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     return instance ? computeCardDisplay(instance) : null;
   };
 
+  // Helper to get current card ID from bindings (for onClick handler)
+  const getCurrentCardId = (): string | null => {
+    if (isIdMode && cardIdBinding) {
+      // For ID mode, directly get the ID from the binding
+      return cardIdBinding.get ? cardIdBinding.get() : null;
+    } else if (isSlotMode && scrollOffsetBinding) {
+      // For slot mode, calculate from current player data and scroll offset
+      const playerData = playerDataBinding.get ? playerDataBinding.get() : null;
+      const cardInstances: CardInstance[] = playerData?.cards?.collected || [];
+      const offset = scrollOffsetBinding.get ? scrollOffsetBinding.get() : 0;
+      const pageStart = offset * cardsPerPage!;
+      const cardIndex = pageStart + slotIndex!;
+      const instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
+      return instance?.id || null;
+    }
+    return null;
+  };
+
   // Helper to check if card is in deck
   const isCardInDeck = (args: any[], cardId: string | undefined): boolean => {
     if (!showDeckIndicator || !cardId) return false;
@@ -452,10 +467,6 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   // This avoids nesting by deriving each property separately from the same sources
   const cardNameBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
     const card = getCard(args);
-
-    // Track the card for click handler
-    trackedCard = card;
-
     return card?.name || '';
   });
 
@@ -712,12 +723,13 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   if (onClick) {
     return ui.Pressable({
       onClick: () => {
-        console.log('[CardRenderer] Pressable clicked, trackedCard:', trackedCard);
-        if (trackedCard) {
-          console.log('[CardRenderer] Calling onClick with cardId:', trackedCard.id);
-          onClick(trackedCard.id);
+        const cardId = getCurrentCardId();
+        console.log('[CardRenderer] Pressable clicked, cardId:', cardId);
+        if (cardId) {
+          console.log('[CardRenderer] Calling onClick with cardId:', cardId);
+          onClick(cardId);
         } else {
-          console.log('[CardRenderer] trackedCard is null, not calling onClick');
+          console.log('[CardRenderer] cardId is null, not calling onClick');
         }
       },
       style: {

@@ -245,21 +245,12 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
          * NOTE: This should ONLY be called from bindings that check assetsLoadedBinding first!
          */
         const assetIdToImageSource = (assetId: string): any => {
-          console.log(`[assetIdToImageSource] Called with assetId: "${assetId}"`);
 
           // Check cache first
           if (imageSourceCache.has(assetId)) {
-            console.log(`[assetIdToImageSource] ✓ Found in cache: ${assetId}`);
             return imageSourceCache.get(assetId);
           }
-
-          console.log(`[assetIdToImageSource] Checking catalogManager...`);
-          console.log(`[assetIdToImageSource] catalogManager instance:`, !!this.catalogManager);
-          console.log(`[assetIdToImageSource] Loaded categories:`, this.catalogManager?.getLoadedCategories());
-
           const horizonId = this.catalogManager.getHorizonAssetId(assetId, 'image');
-          console.log(`[assetIdToImageSource] getHorizonAssetId("${assetId}") returned:`, horizonId);
-
           if (!horizonId) {
             console.error(`[assetIdToImageSource] ❌ Asset not in catalog: ${assetId}`);
             console.error(`[assetIdToImageSource] Available categories:`, this.catalogManager.getLoadedCategories());
@@ -268,7 +259,6 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
           }
           try {
             const imageSource = ImageSource.fromTextureAsset(new hz.Asset(BigInt(horizonId)));
-            console.log(`[assetIdToImageSource] ✅ Created ImageSource for ${assetId}`);
             // Cache the result
             imageSourceCache.set(assetId, imageSource);
             return imageSource;

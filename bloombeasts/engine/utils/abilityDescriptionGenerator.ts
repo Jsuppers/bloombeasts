@@ -84,17 +84,7 @@ function getTriggerText(trigger?: AbilityTrigger): string {
       return 'At turn start,';
     case AbilityTrigger.OnOwnEndOfTurn:
       return 'At turn end,';
-    case AbilityTrigger.OnAnyStartOfTurn:
-      return 'At any turn start,';
-    case AbilityTrigger.OnAnyEndOfTurn:
-      return 'At any turn end,';
-    case AbilityTrigger.OnOpponentStartOfTurn:
-      return 'At opponent\'s turn start,';
-    case AbilityTrigger.OnOpponentEndOfTurn:
-      return 'At opponent\'s turn end,';
-    case AbilityTrigger.Passive:
-      return '';
-    case AbilityTrigger.Activated:
+    case AbilityTrigger.WhileOnField:
       return '';
     default:
       return '';
@@ -302,12 +292,6 @@ function getEffectText(effect: AbilityEffect): string {
 
     case EffectType.PreventAbilities: {
       return `${target} cannot use abilities${duration ? ` ${duration}` : ''}`;
-    }
-
-    case EffectType.SearchDeck: {
-      const what = effect.searchFor === 'any' ? 'any card' :
-                   effect.searchFor === 'bloom' ? 'Bloom Card' : effect.searchFor;
-      return `search deck for ${effect.quantity} ${what}`;
     }
 
     case EffectType.DamageReduction: {

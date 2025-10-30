@@ -50,15 +50,22 @@ export class MissionSelectionUI {
    * Check if a mission can be played
    */
   private isMissionPlayable(mission: Mission): boolean {
-    // Check if mission is unlocked
-    if (!mission.unlocked && mission.timesCompleted === 0) {
+    // First mission is always unlocked
+    if (mission.unlocked) {
+      return true;
+    }
+
+    // Check if mission is unlocked by checking actual completion counts
+    const completionCount = this.missionManager.getCompletedCount(mission.id);
+    if (completionCount === 0) {
       // Check if previous mission is completed
       const allMissions = getAvailableMissions(99); // Get all missions
       const missionIndex = allMissions.findIndex(m => m.id === mission.id);
 
       if (missionIndex > 0) {
         const previousMission = allMissions[missionIndex - 1];
-        if (previousMission.timesCompleted === 0) {
+        const previousCompletionCount = this.missionManager.getCompletedCount(previousMission.id);
+        if (previousCompletionCount === 0) {
           return false;
         }
       }

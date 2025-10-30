@@ -25,7 +25,6 @@ import {
   MoveEffect,
   ResourceGainEffect,
   PreventEffect,
-  SearchDeckEffect,
   DestroyEffect,
   TemporaryHPEffect,
   EffectType,
@@ -169,8 +168,6 @@ export class AbilityProcessor implements IAbilityProcessor {
       case EffectType.PreventAttack:
       case EffectType.PreventAbilities:
         return this.processPrevent(effect as PreventEffect, targets, context);
-      case EffectType.SearchDeck:
-        return this.processSearchDeck(effect as SearchDeckEffect, context);
       case EffectType.Destroy:
         return this.processDestroy(effect as DestroyEffect, targets, context);
       case EffectType.TemporaryHP:
@@ -660,26 +657,6 @@ export class AbilityProcessor implements IAbilityProcessor {
       success: true,
       modifiedUnits,
       message: `Applied ${effect.type} to ${targets.length} unit(s)`,
-    };
-  }
-
-  /**
-   * Process search deck effect
-   */
-  private processSearchDeck(
-    effect: SearchDeckEffect,
-    context: AbilityContext
-  ): EffectResult {
-    return {
-      success: true,
-      message: `Search deck for ${effect.quantity} ${effect.searchFor} card(s)`,
-      modifiedState: {
-        pendingSearch: {
-          searchFor: effect.searchFor,
-          quantity: effect.quantity,
-          affinity: effect.affinity,
-        },
-      },
     };
   }
 

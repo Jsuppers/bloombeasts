@@ -62,7 +62,14 @@ class BloomBeastsServer extends Component {
 
     this.connectNetworkEvent(this.entity, this.saveDataEvent, (payload: SavePlayerDataPayload) => {
       console.log('[Server] Received save request for player index:', payload.playerIndex);
-      this.savePlayerData(payload.playerIndex, payload.data);
+  
+      const player = this.world.getPlayerFromIndex(payload.playerIndex);
+      const uiGizmo = this.props.uiGizmo as hz.Entity;
+      const currentOwner = uiGizmo.owner.get();
+      // Only save data if the player is the current owner of the UI gizmo to prevent users from saving data for other players
+      if (player && currentOwner === player) {
+        this.savePlayerData(payload.playerIndex, payload.data);
+      }
     });
 
     // Listen for load data requests from clients

@@ -4,47 +4,35 @@
  */
 
 import { BloomBeastsGame, PlatformConfig, type PlayerData } from '../../../bloombeasts/BloomBeastsGame';
-import { assetCatalogManager, AssetCatalogManager } from '../../../bloombeasts/AssetCatalogManager';
+import { AssetCatalogManager } from '../../../bloombeasts/AssetCatalogManager';
+import { allCatalogs } from '../../../bloombeasts/catalogs';
 import { UIRenderer } from './ui/UIRenderer';
 import { View, Text, Image, Pressable, Binding, DerivedBinding, ValueBindingBase, UINode } from './ui';
 import { AnimatedBinding, Animation, Easing } from './ui';
 
 /**
- * Initialize and load all asset catalogs using the singleton instance
- * Web-specific: Uses fetch to load JSON files
+ * Initialize and load all asset catalogs
+ * Web-specific: Uses TypeScript imports for catalogs
  */
-async function initializeAssetCatalogs() {
+function initializeAssetCatalogs(): AssetCatalogManager {
     console.log('📦 Initializing Asset Catalogs...');
 
-    const catalogFiles = [
-        'fireAssets.json',
-        'forestAssets.json',
-        'skyAssets.json',
-        'waterAssets.json',
-        'buffAssets.json',
-        'trapAssets.json',
-        'magicAssets.json',
-        'commonAssets.json'
-    ];
-
-    const basePath = '/assets/catalogs';
+    const manager = new AssetCatalogManager();
 
     try {
-        await Promise.all(
-            catalogFiles.map(async file => {
-                const response = await fetch(`${basePath}/${file}`);
-                const catalog = await response.json();
-                assetCatalogManager.loadCatalog(catalog);
-            })
-        );
+        // Load all catalogs from TypeScript modules
+        allCatalogs.forEach(catalog => {
+            manager.loadCatalog(catalog);
+        });
+
         console.log('✅ Asset catalogs loaded successfully');
-        console.log('   Categories:', assetCatalogManager.getLoadedCategories());
+        console.log('   Categories:', manager.getLoadedCategories());
     } catch (error) {
         console.error('❌ Failed to load asset catalogs:', error);
         throw error;
     }
 
-    return assetCatalogManager;
+    return manager;
 }
 
 /**
@@ -152,6 +140,9 @@ class WebGameApp {
                 // Add leading slash for web server absolute paths
                 return path.startsWith('/') ? path : `/${path}`;
             },
+
+            // Asset catalog manager
+            catalogManager: manager,
 
             // UI methods: web implementations with asset transformation
             getUIMethodMappings: () => {
@@ -359,7 +350,7 @@ class WebGameApp {
         try {
             // Step 1: Load asset catalogs
             console.log('📦 Step 1: Loading asset catalogs...');
-            this.assetManager = await initializeAssetCatalogs();
+            this.assetManager = initializeAssetCatalogs();
 
             // Step 2: Create game with platform config
             console.log('🎮 Step 2: Creating game instance...');

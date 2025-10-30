@@ -1,294 +1,295 @@
 /**
- * Auto-generated TypeScript catalog from trapAssets.json
- * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+ * Edit this file directly to add/modify assets
  */
 
 import type { AssetCatalog } from '../AssetCatalogManager';
+import { AbilityTrigger, AbilityTarget, EffectType, StatType, EffectDuration } from '../engine/types/abilities';
+import { TrapTrigger } from '../engine/types/core';
 
 export const trapAssets: AssetCatalog = {
-  "version": "1.0.0",
-  "category": "trap",
-  "description": "Trap cards and assets",
-  "data": [
+  version: "1.0.0",
+  category: "trap",
+  description: "Trap cards and assets",
+  data: [
     {
-      "id": "bear-trap",
-      "type": "trap",
-      "cardType": "Trap",
-      "data": {
-        "id": "bear-trap",
-        "name": "Bear Trap",
-        "type": "Trap",
-        "cost": 1,
-        "activation": {
-          "trigger": "OnAttack"
+      id: "bear-trap",
+      type: "trap",
+      cardType: "Trap",
+      data: {
+        id: "bear-trap",
+        name: "Bear Trap",
+        type: "Trap",
+        cost: 1,
+        activation: {
+          trigger: TrapTrigger.OnAttack
         },
-        "abilities": [
+        abilities: [
           {
-            "name": "Bear Trap",
-            "trigger": "OnSummon",
-            "effects": [
+            name: "Bear Trap",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
               {
-                "type": "DealDamage",
-                "target": "Attacker",
-                "value": 3
+                type: EffectType.DealDamage,
+                target: AbilityTarget.Attacker,
+                value: 3
               }
             ]
           }
         ]
       },
-      "assets": [
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1518992622460625",
-          "path": "assets/images/cards_trap_bear-trap.png"
+          type: "image",
+          horizonAssetId: "1518992622460625",
+          path: "assets/images/cards_trap_bear-trap.png"
         }
       ]
     },
     {
-      "id": "emergency-bloom",
-      "type": "trap",
-      "cardType": "Trap",
-      "data": {
-        "id": "emergency-bloom",
-        "name": "Emergency Bloom",
-        "type": "Trap",
-        "cost": 1,
-        "activation": {
-          "trigger": "OnDestroy"
+      id: "emergency-bloom",
+      type: "trap",
+      cardType: "Trap",
+      data: {
+        id: "emergency-bloom",
+        name: "Emergency Bloom",
+        type: "Trap",
+        cost: 1,
+        activation: {
+          trigger: TrapTrigger.OnDestroy
         },
-        "abilities": [
+        abilities: [
           {
-            "name": "Emergency Bloom",
-            "trigger": "OnSummon",
-            "effects": [
+            name: "Emergency Bloom",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
               {
-                "type": "DrawCards",
-                "target": "PlayerGardener",
-                "value": 2
+                type: EffectType.DrawCards,
+                target: AbilityTarget.PlayerGardener,
+                value: 2
               }
             ]
           }
         ]
       },
-      "assets": [
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "2247657455738264",
-          "path": "assets/images/cards_trap_emergency-bloom.png"
+          type: "image",
+          horizonAssetId: "2247657455738264",
+          path: "assets/images/cards_trap_emergency-bloom.png"
         }
       ]
     },
     {
-      "id": "habitat-lock",
-      "type": "trap",
-      "cardType": "Trap",
-      "data": {
-        "id": "habitat-lock",
-        "name": "Habitat Lock",
-        "type": "Trap",
-        "cost": 1,
-        "activation": {
-          "trigger": "OnHabitatPlay"
+      id: "habitat-lock",
+      type: "trap",
+      cardType: "Trap",
+      data: {
+        id: "habitat-lock",
+        name: "Habitat Lock",
+        type: "Trap",
+        cost: 1,
+        activation: {
+          trigger: TrapTrigger.OnHabitatPlay
         },
-        "abilities": [
+        abilities: [
           {
-            "name": "Habitat Lock",
-            "trigger": "OnSummon",
-            "effects": [
+            name: "Habitat Lock",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
               {
-                "type": "NullifyEffect",
-                "target": "Target"
+                type: EffectType.NullifyEffect,
+                target: AbilityTarget.Target
               }
             ]
           }
         ]
       },
-      "assets": [
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "609610328807674",
-          "path": "assets/images/cards_trap_habitat-lock.png"
+          type: "image",
+          horizonAssetId: "609610328807674",
+          path: "assets/images/cards_trap_habitat-lock.png"
         }
       ]
     },
     {
-      "id": "habitat-shield",
-      "type": "trap",
-      "cardType": "Trap",
-      "data": {
-        "id": "habitat-shield",
-        "name": "Habitat Shield",
-        "type": "Trap",
-        "cost": 2,
-        "activation": {
-          "trigger": "OnHabitatPlay"
+      id: "habitat-shield",
+      type: "trap",
+      cardType: "Trap",
+      data: {
+        id: "habitat-shield",
+        name: "Habitat Shield",
+        type: "Trap",
+        cost: 2,
+        activation: {
+          trigger: TrapTrigger.OnHabitatPlay
         },
-        "abilities": [
+        abilities: [
           {
-            "name": "Habitat Shield",
-            "trigger": "OnSummon",
-            "effects": [
+            name: "Habitat Shield",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
               {
-                "type": "NullifyEffect",
-                "target": "Target"
+                type: EffectType.NullifyEffect,
+                target: AbilityTarget.Target
               },
               {
-                "type": "DrawCards",
-                "target": "PlayerGardener",
-                "value": 1
+                type: EffectType.DrawCards,
+                target: AbilityTarget.PlayerGardener,
+                value: 1
               }
             ]
           }
         ]
       },
-      "assets": [
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1362245262078336",
-          "path": "assets/images/cards_trap_habitat-shield.png"
+          type: "image",
+          horizonAssetId: "1362245262078336",
+          path: "assets/images/cards_trap_habitat-shield.png"
         }
       ]
     },
     {
-      "id": "magic-shield",
-      "type": "trap",
-      "cardType": "Trap",
-      "data": {
-        "id": "magic-shield",
-        "name": "Magic Shield",
-        "type": "Trap",
-        "cost": 1,
-        "activation": {
-          "trigger": "OnMagicPlay"
+      id: "magic-shield",
+      type: "trap",
+      cardType: "Trap",
+      data: {
+        id: "magic-shield",
+        name: "Magic Shield",
+        type: "Trap",
+        cost: 1,
+        activation: {
+          trigger: TrapTrigger.OnMagicPlay
         },
-        "abilities": [
+        abilities: [
           {
-            "name": "Magic Shield",
-            "trigger": "OnSummon",
-            "effects": [
+            name: "Magic Shield",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
               {
-                "type": "NullifyEffect",
-                "target": "Target"
+                type: EffectType.NullifyEffect,
+                target: AbilityTarget.Target
               }
             ]
           }
         ]
       },
-      "assets": [
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1239098601311749",
-          "path": "assets/images/cards_trap_magic-sheild.png"
+          type: "image",
+          horizonAssetId: "1239098601311749",
+          path: "assets/images/cards_trap_magic-sheild.png"
         }
       ]
     },
     {
-      "id": "thorn-snare",
-      "type": "trap",
-      "cardType": "Trap",
-      "data": {
-        "id": "thorn-snare",
-        "name": "Thorn Snare",
-        "type": "Trap",
-        "cost": 2,
-        "activation": {
-          "trigger": "OnAttack"
+      id: "thorn-snare",
+      type: "trap",
+      cardType: "Trap",
+      data: {
+        id: "thorn-snare",
+        name: "Thorn Snare",
+        type: "Trap",
+        cost: 2,
+        activation: {
+          trigger: TrapTrigger.OnAttack
         },
-        "abilities": [
+        abilities: [
           {
-            "name": "Thorn Snare",
-            "trigger": "OnSummon",
-            "effects": [
+            name: "Thorn Snare",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
               {
-                "type": "PreventAttack",
-                "target": "Attacker",
-                "duration": "Instant"
+                type: EffectType.PreventAttack,
+                target: AbilityTarget.Attacker,
+                duration: EffectDuration.Instant
               },
               {
-                "type": "DealDamage",
-                "target": "Attacker",
-                "value": 2
+                type: EffectType.DealDamage,
+                target: AbilityTarget.Attacker,
+                value: 2
               }
             ]
           }
         ]
       },
-      "assets": [
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "4210265565909373",
-          "path": "assets/images/cards_trap_thorn-snare.png"
+          type: "image",
+          horizonAssetId: "4210265565909373",
+          path: "assets/images/cards_trap_thorn-snare.png"
         }
       ]
     },
     {
-      "id": "vaporize",
-      "type": "trap",
-      "cardType": "Trap",
-      "data": {
-        "id": "vaporize",
-        "name": "Vaporize",
-        "type": "Trap",
-        "cost": 2,
-        "activation": {
-          "trigger": "OnBloomPlay",
-          "condition": {
-            "type": "CostBelow",
-            "value": 4
+      id: "vaporize",
+      type: "trap",
+      cardType: "Trap",
+      data: {
+        id: "vaporize",
+        name: "Vaporize",
+        type: "Trap",
+        cost: 2,
+        activation: {
+          trigger: TrapTrigger.OnBloomPlay,
+          condition: {
+            type: "CostBelow",
+            value: 4
           }
         },
-        "abilities": [
+        abilities: [
           {
-            "name": "Vaporize",
-            "trigger": "OnSummon",
-            "effects": [
+            name: "Vaporize",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
               {
-                "type": "Destroy",
-                "target": "Target"
+                type: EffectType.Destroy,
+                target: AbilityTarget.Target
               }
             ]
           }
         ]
       },
-      "assets": [
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "1903759173890506",
-          "path": "assets/images/cards_trap_vaporize.png"
+          type: "image",
+          horizonAssetId: "1903759173890506",
+          path: "assets/images/cards_trap_vaporize.png"
         }
       ]
     },
     {
-      "id": "xp-harvest",
-      "type": "trap",
-      "cardType": "Trap",
-      "data": {
-        "id": "xp-harvest",
-        "name": "XP Harvest",
-        "type": "Trap",
-        "cost": 1,
-        "activation": {
-          "trigger": "OnDestroy"
+      id: "xp-harvest",
+      type: "trap",
+      cardType: "Trap",
+      data: {
+        id: "xp-harvest",
+        name: "XP Harvest",
+        type: "Trap",
+        cost: 1,
+        activation: {
+          trigger: TrapTrigger.OnDestroy
         },
-        "abilities": [
+        abilities: [
           {
-            "name": "XP Harvest",
-            "trigger": "OnSummon",
-            "effects": [
+            name: "XP Harvest",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
               {
-                "type": "RemoveCounter",
-                "target": "Attacker",
-                "counter": "XP"
+                type: EffectType.RemoveCounter,
+                target: AbilityTarget.Attacker,
+                counter: "XP"
               }
             ]
           }
         ]
       },
-      "assets": [
+      assets: [
         {
-          "type": "image",
-          "horizonAssetId": "807213335392971",
-          "path": "assets/images/cards_trap_xpharvest.png"
+          type: "image",
+          horizonAssetId: "807213335392971",
+          path: "assets/images/cards_trap_xpharvest.png"
         }
       ]
     }

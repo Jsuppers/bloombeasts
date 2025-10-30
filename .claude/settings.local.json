@@ -29,7 +29,11 @@
       "Bash(if [[ \"$file\" != \"index.ts\" ]])",
       "Bash(then)",
       "Bash(echo:*)",
-      "Bash(fi)"
+      "Bash(fi)",
+      "Read(//c/Users/joris/AppData/LocalLow/Meta/Horizon Worlds/861948146997513/scripts/**)",
+      "Bash(awk:*)",
+      "Bash(tasklist:*)",
+      "Bash(lsof:*)"
     ],
     "deny": [],
     "ask": []

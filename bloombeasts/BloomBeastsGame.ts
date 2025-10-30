@@ -486,7 +486,6 @@ export class BloomBeastsGame {
       ui: this.UI,
       async: this.asyncMethods,
       battleDisplay: this.battleDisplayBinding,
-      message: this.battleMessageBinding,
       onAction: this.handleBattleAction.bind(this),
       onNavigate: this.navigate.bind(this),
       onRenderNeeded: this.triggerRender.bind(this)
@@ -1511,6 +1510,7 @@ export class BloomBeastsGame {
       style: {
         width: '100%',
         height: '100%',
+        backgroundColor: 'blue',
       },
       children,
     });

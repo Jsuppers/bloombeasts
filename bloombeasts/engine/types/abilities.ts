@@ -61,7 +61,6 @@ export enum EffectType {
   ReturnToHand = 'return-to-hand',
   Destroy = 'destroy',
   GainResource = 'gain-resource',
-  SearchDeck = 'search-deck',
   PreventAttack = 'prevent-attack',
   PreventAbilities = 'prevent-abilities',
   SwapPositions = 'swap-positions',
@@ -112,21 +111,12 @@ export enum AbilityTrigger {
   OnDamage = 'OnDamage',
   OnDestroy = 'OnDestroy',
 
-  // State-based triggers
-  OnPlayer1StartOfTurn = 'OnPlayer1StartOfTurn',
-  OnPlayer1EndOfTurn = 'OnPlayer1EndOfTurn',
-  OnPlayer2StartOfTurn = 'OnPlayer2StartOfTurn',
-  OnPlayer2EndOfTurn = 'OnPlayer2EndOfTurn',
-  OnAnyStartOfTurn = 'OnAnyStartOfTurn',  // Triggers for any player's start
-  OnAnyEndOfTurn = 'OnAnyEndOfTurn',      // Triggers for any player's end
+  // Turn-based triggers
   OnOwnStartOfTurn = 'OnOwnStartOfTurn',  // Triggers only on controlling player's start
   OnOwnEndOfTurn = 'OnOwnEndOfTurn',      // Triggers only on controlling player's end
-  OnOpponentStartOfTurn = 'OnOpponentStartOfTurn',  // Triggers on opponent's start
-  OnOpponentEndOfTurn = 'OnOpponentEndOfTurn',      // Triggers on opponent's end
 
-  // Ability types
-  Passive = 'Passive',
-  Activated = 'Activated'
+  // Continuous ability
+  WhileOnField = 'WhileOnField'  // Active while the card is on the field
 }
 
 /**
@@ -313,16 +303,6 @@ export interface PreventEffect extends BaseEffect {
 }
 
 /**
- * Search deck effect
- */
-export interface SearchDeckEffect extends BaseEffect {
-  type: EffectType.SearchDeck;
-  searchFor: 'any' | 'bloom' | 'magic' | 'trap' | 'habitat' | 'specific-affinity';
-  affinity?: Affinity;
-  quantity: number;
-}
-
-/**
  * Destroy effect
  */
 export interface DestroyEffect extends BaseEffect {
@@ -427,7 +407,6 @@ export type AbilityEffect =
   | MoveEffect
   | ResourceGainEffect
   | PreventEffect
-  | SearchDeckEffect
   | DestroyEffect
   | TemporaryHPEffect
   | RemoveSummoningSicknessEffect

@@ -10,8 +10,8 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-30T03:40:09.892Z
- * Files: 85
+ * Generated: 2025-10-30T08:42:34.083Z
+ * Files: 95
  *
  * @version 1.0.0
  * @license MIT
@@ -94,7 +94,6 @@ namespace BloomBeasts {
     ReturnToHand = 'return-to-hand',
     Destroy = 'destroy',
     GainResource = 'gain-resource',
-    SearchDeck = 'search-deck',
     PreventAttack = 'prevent-attack',
     PreventAbilities = 'prevent-abilities',
     SwapPositions = 'swap-positions',
@@ -145,21 +144,12 @@ namespace BloomBeasts {
     OnDamage = 'OnDamage',
     OnDestroy = 'OnDestroy',
 
-    // State-based triggers
-    OnPlayer1StartOfTurn = 'OnPlayer1StartOfTurn',
-    OnPlayer1EndOfTurn = 'OnPlayer1EndOfTurn',
-    OnPlayer2StartOfTurn = 'OnPlayer2StartOfTurn',
-    OnPlayer2EndOfTurn = 'OnPlayer2EndOfTurn',
-    OnAnyStartOfTurn = 'OnAnyStartOfTurn',  // Triggers for any player's start
-    OnAnyEndOfTurn = 'OnAnyEndOfTurn',      // Triggers for any player's end
+    // Turn-based triggers
     OnOwnStartOfTurn = 'OnOwnStartOfTurn',  // Triggers only on controlling player's start
     OnOwnEndOfTurn = 'OnOwnEndOfTurn',      // Triggers only on controlling player's end
-    OnOpponentStartOfTurn = 'OnOpponentStartOfTurn',  // Triggers on opponent's start
-    OnOpponentEndOfTurn = 'OnOpponentEndOfTurn',      // Triggers on opponent's end
 
-    // Ability types
-    Passive = 'Passive',
-    Activated = 'Activated'
+    // Continuous ability
+    WhileOnField = 'WhileOnField'  // Active while the card is on the field
   }
 
   /**
@@ -346,16 +336,6 @@ namespace BloomBeasts {
   }
 
   /**
-   * Search deck effect
-   */
-  export interface SearchDeckEffect extends BaseEffect {
-    type: EffectType.SearchDeck;
-    searchFor: 'any' | 'bloom' | 'magic' | 'trap' | 'habitat' | 'specific-affinity';
-    affinity?: Affinity;
-    quantity: number;
-  }
-
-  /**
    * Destroy effect
    */
   export interface DestroyEffect extends BaseEffect {
@@ -460,7 +440,6 @@ namespace BloomBeasts {
     | MoveEffect
     | ResourceGainEffect
     | PreventEffect
-    | SearchDeckEffect
     | DestroyEffect
     | TemporaryHPEffect
     | RemoveSummoningSicknessEffect
@@ -1603,8 +1582,6 @@ namespace BloomBeasts {
         case EffectType.PreventAttack:
         case EffectType.PreventAbilities:
           return this.processPrevent(effect as PreventEffect, targets, context);
-        case EffectType.SearchDeck:
-          return this.processSearchDeck(effect as SearchDeckEffect, context);
         case EffectType.Destroy:
           return this.processDestroy(effect as DestroyEffect, targets, context);
         case EffectType.TemporaryHP:
@@ -2094,26 +2071,6 @@ namespace BloomBeasts {
         success: true,
         modifiedUnits,
         message: `Applied ${effect.type} to ${targets.length} unit(s)`,
-      };
-    }
-
-    /**
-     * Process search deck effect
-     */
-    private processSearchDeck(
-      effect: SearchDeckEffect,
-      context: AbilityContext
-    ): EffectResult {
-      return {
-        success: true,
-        message: `Search deck for ${effect.quantity} ${effect.searchFor} card(s)`,
-        modifiedState: {
-          pendingSearch: {
-            searchFor: effect.searchFor,
-            quantity: effect.quantity,
-            affinity: effect.affinity,
-          },
-        },
       };
     }
 
@@ -3705,17 +3662,7 @@ namespace BloomBeasts {
         return 'At turn start,';
       case AbilityTrigger.OnOwnEndOfTurn:
         return 'At turn end,';
-      case AbilityTrigger.OnAnyStartOfTurn:
-        return 'At any turn start,';
-      case AbilityTrigger.OnAnyEndOfTurn:
-        return 'At any turn end,';
-      case AbilityTrigger.OnOpponentStartOfTurn:
-        return 'At opponent\'s turn start,';
-      case AbilityTrigger.OnOpponentEndOfTurn:
-        return 'At opponent\'s turn end,';
-      case AbilityTrigger.Passive:
-        return '';
-      case AbilityTrigger.Activated:
+      case AbilityTrigger.WhileOnField:
         return '';
       default:
         return '';
@@ -3923,12 +3870,6 @@ namespace BloomBeasts {
 
       case EffectType.PreventAbilities: {
         return `${target} cannot use abilities${duration ? ` ${duration}` : ''}`;
-      }
-
-      case EffectType.SearchDeck: {
-        const what = effect.searchFor === 'any' ? 'any card' :
-                     effect.searchFor === 'bloom' ? 'Bloom Card' : effect.searchFor;
-        return `search deck for ${effect.quantity} ${what}`;
       }
 
       case EffectType.DamageReduction: {
@@ -7857,15 +7798,22 @@ namespace BloomBeasts {
      * Check if a mission can be played
      */
     private isMissionPlayable(mission: Mission): boolean {
-      // Check if mission is unlocked
-      if (!mission.unlocked && mission.timesCompleted === 0) {
+      // First mission is always unlocked
+      if (mission.unlocked) {
+        return true;
+      }
+
+      // Check if mission is unlocked by checking actual completion counts
+      const completionCount = this.missionManager.getCompletedCount(mission.id);
+      if (completionCount === 0) {
         // Check if previous mission is completed
         const allMissions = getAvailableMissions(99); // Get all missions
         const missionIndex = allMissions.findIndex(m => m.id === mission.id);
 
         if (missionIndex > 0) {
           const previousMission = allMissions[missionIndex - 1];
-          if (previousMission.timesCompleted === 0) {
+          const previousCompletionCount = this.missionManager.getCompletedCount(previousMission.id);
+          if (previousCompletionCount === 0) {
             return false;
           }
         }
@@ -8398,8 +8346,8 @@ namespace BloomBeasts {
       player.field[position] = instance;
       player.summonsThisTurn++;
 
-      // Apply passive buff card stat modifications to the newly summoned beast
-      this.applyPassiveBuffStats(instance, player);
+      // Apply WhileOnField buff card stat modifications to the newly summoned beast
+      this.applyWhileOnFieldBuffStats(instance, player);
 
       // Trigger summon abilities on the summoned beast
       this.triggerSummonAbilities(instance);
@@ -8594,11 +8542,11 @@ namespace BloomBeasts {
             this.processHabitatEffect(effect, activePlayer, opposingPlayer);
           }
         }
-        // Note: Passive abilities are handled elsewhere during combat/ability processing
+        // Note: WhileOnField abilities are handled elsewhere during combat/ability processing
       }
 
-      // Count ongoing (passive) abilities for logging
-      const ongoingCount = habitat.abilities.filter(a => a.trigger === AbilityTrigger.Passive).length;
+      // Count ongoing WhileOnField abilities for logging
+      const ongoingCount = habitat.abilities.filter(a => a.trigger === AbilityTrigger.WhileOnField).length;
       Logger.debug(`Habitat ${habitat.name} active with ${ongoingCount} ongoing abilities`);
     }
 
@@ -8659,8 +8607,8 @@ namespace BloomBeasts {
           }
         }
 
-        // Apply passive stat modifications to all existing beasts
-        if (ability.trigger === AbilityTrigger.Passive) {
+        // Apply WhileOnField stat modifications to all existing beasts
+        if (ability.trigger === AbilityTrigger.WhileOnField) {
           // Type guard: only process structured abilities with effects
           if (!('effects' in ability)) continue;
 
@@ -8679,10 +8627,10 @@ namespace BloomBeasts {
                   if (effect.stat === StatType.Health) {
                     beast.currentHealth += effect.value;
                     beast.maxHealth += effect.value;
-                    Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Health to ${beast.name}`);
+                    Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Health to ${beast.name}`);
                   } else if (effect.stat === StatType.Attack) {
                     beast.currentAttack += effect.value;
-                    Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Attack to ${beast.name}`);
+                    Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Attack to ${beast.name}`);
                   }
                 }
               }
@@ -8693,7 +8641,7 @@ namespace BloomBeasts {
 
       // Count ongoing abilities for logging
       const ongoingCount = buffCard.abilities.filter((a: any) =>
-        a.trigger === AbilityTrigger.Passive ||
+        a.trigger === AbilityTrigger.WhileOnField ||
         a.trigger === AbilityTrigger.OnOwnStartOfTurn ||
         a.trigger === AbilityTrigger.OnOwnEndOfTurn
       ).length;
@@ -8727,17 +8675,17 @@ namespace BloomBeasts {
     }
 
     /**
-     * Apply passive buff card stat modifications to a beast
+     * Apply WhileOnField buff card stat modifications to a beast
      */
-    private applyPassiveBuffStats(beast: BloomBeastInstance, player: Player): void {
+    private applyWhileOnFieldBuffStats(beast: BloomBeastInstance, player: Player): void {
       // Check all buff cards in the player's buff zone
       for (const buffCard of player.buffZone) {
         if (!buffCard) continue;
 
         // Process each ability in the buff card
         for (const ability of buffCard.abilities) {
-          // Only process passive abilities
-          if (ability.trigger !== AbilityTrigger.Passive) continue;
+          // Only process WhileOnField abilities
+          if (ability.trigger !== AbilityTrigger.WhileOnField) continue;
 
           // Type guard: only process structured abilities with effects
           if (!('effects' in ability)) continue;
@@ -8757,10 +8705,10 @@ namespace BloomBeasts {
             if (effect.stat === StatType.Health) {
               beast.currentHealth += effect.value;
               beast.maxHealth += effect.value;
-              Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Health to ${beast.name}`);
+              Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Health to ${beast.name}`);
             } else if (effect.stat === StatType.Attack) {
               beast.currentAttack += effect.value;
-              Logger.debug(`Applied ${buffCard.name} passive: +${effect.value} Attack to ${beast.name}`);
+              Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Attack to ${beast.name}`);
             }
           }
         }
@@ -8798,29 +8746,12 @@ namespace BloomBeasts {
       const activePlayer = this.state.players[playerIndex];
       const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
 
-      // Determine which triggers to use based on player and phase
-      const stateTriggers = [];
-
+      // Trigger abilities based on phase
       if (phase === 'start') {
-        // Player-specific triggers
-        if (playerIndex === 0) {
-          stateTriggers.push('OnPlayer1StartOfTurn');
-        } else {
-          stateTriggers.push('OnPlayer2StartOfTurn');
-        }
-
-        // Generic triggers
-        stateTriggers.push('OnAnyStartOfTurn');
-
-        // Own/Opponent relative triggers for beasts
+        // Trigger OnOwnStartOfTurn for active player's beasts
         for (const beast of activePlayer.field) {
           if (beast) {
             await this.triggerBeastAbility(beast, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
-          }
-        }
-        for (const beast of opposingPlayer.field) {
-          if (beast) {
-            await this.triggerBeastAbility(beast, 'OnOpponentStartOfTurn', opposingPlayer, activePlayer);
           }
         }
 
@@ -8830,32 +8761,11 @@ namespace BloomBeasts {
             await this.triggerBuffCardAbility(buffCard, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
           }
         }
-        // Trigger OnOpponentStartOfTurn for opposing player's buff cards
-        for (const buffCard of opposingPlayer.buffZone) {
-          if (buffCard) {
-            await this.triggerBuffCardAbility(buffCard, 'OnOpponentStartOfTurn', opposingPlayer, activePlayer);
-          }
-        }
       } else {
-        // Player-specific triggers
-        if (playerIndex === 0) {
-          stateTriggers.push('OnPlayer1EndOfTurn');
-        } else {
-          stateTriggers.push('OnPlayer2EndOfTurn');
-        }
-
-        // Generic triggers
-        stateTriggers.push('OnAnyEndOfTurn');
-
-        // Own/Opponent relative triggers for beasts
+        // Trigger OnOwnEndOfTurn for active player's beasts
         for (const beast of activePlayer.field) {
           if (beast) {
             await this.triggerBeastAbility(beast, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
-          }
-        }
-        for (const beast of opposingPlayer.field) {
-          if (beast) {
-            await this.triggerBeastAbility(beast, 'OnOpponentEndOfTurn', opposingPlayer, activePlayer);
           }
         }
 
@@ -8865,17 +8775,6 @@ namespace BloomBeasts {
             await this.triggerBuffCardAbility(buffCard, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
           }
         }
-        // Trigger OnOpponentEndOfTurn for opposing player's buff cards
-        for (const buffCard of opposingPlayer.buffZone) {
-          if (buffCard) {
-            await this.triggerBuffCardAbility(buffCard, 'OnOpponentEndOfTurn', opposingPlayer, activePlayer);
-          }
-        }
-      }
-
-      // Trigger abilities for each state trigger
-      for (const trigger of stateTriggers) {
-        await this.triggerPassiveAbilities(trigger, activePlayer, opposingPlayer);
       }
     }
 
@@ -8994,40 +8893,6 @@ namespace BloomBeasts {
             sourceCard: beastCard,
             trigger: 'OnAllySummon',
             target: summonedBeast,  // Pass the summoned beast as target for condition checking
-            gameState: this.state,
-            controllingPlayer,
-            opposingPlayer,
-          });
-
-          // Apply ability results to game state
-          this.applyAbilityResults(results);
-        }
-      }
-    }
-
-    /**
-     * Trigger abilities for all beasts with the specified trigger
-     */
-    private async triggerPassiveAbilities(
-      trigger: string,
-      controllingPlayer: Player,
-      opposingPlayer: Player
-    ): Promise<void> {
-      for (const beast of controllingPlayer.field) {
-        if (!beast) continue;
-
-        const cardDef = this.getCardDefinition(beast.cardId);
-        if (!cardDef || cardDef.type !== 'Bloom') continue;
-
-        const beastCard = cardDef as BloomBeastCard;
-        const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
-
-        // Process each ability with this trigger
-        for (const ability of abilities) {
-          const results = this.abilityProcessor.processAbility(ability, {
-            source: beast,
-            sourceCard: beastCard,
-            trigger,
             gameState: this.state,
             controllingPlayer,
             opposingPlayer,
@@ -12069,8 +11934,8 @@ namespace BloomBeasts {
                   ),
                   style: {
                     position: 'absolute',
-                    left: 0,
-                    top: 0,
+                    left: 150,
+                    top: 40,
                     width: 750,
                     height: 700,
                   },
@@ -12523,9 +12388,6 @@ namespace BloomBeasts {
       return id.replace(/-\d+-\d+$/, '');
     };
 
-    // Track card data for click handler
-    let trackedCard: CardDisplayData | null = null;
-
     // Create dependencies array based on mode
     // Use playerDataBinding directly in dependencies to avoid nesting
     // ALWAYS include assetsLoadedBinding as first dependency to prevent premature asset lookups
@@ -12564,6 +12426,24 @@ namespace BloomBeasts {
       return instance ? computeCardDisplay(instance) : null;
     };
 
+    // Helper to get current card ID from bindings (for onClick handler)
+    const getCurrentCardId = (): string | null => {
+      if (isIdMode && cardIdBinding) {
+        // For ID mode, directly get the ID from the binding
+        return cardIdBinding.get ? cardIdBinding.get() : null;
+      } else if (isSlotMode && scrollOffsetBinding) {
+        // For slot mode, calculate from current player data and scroll offset
+        const playerData = playerDataBinding.get ? playerDataBinding.get() : null;
+        const cardInstances: CardInstance[] = playerData?.cards?.collected || [];
+        const offset = scrollOffsetBinding.get ? scrollOffsetBinding.get() : 0;
+        const pageStart = offset * cardsPerPage!;
+        const cardIndex = pageStart + slotIndex!;
+        const instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
+        return instance?.id || null;
+      }
+      return null;
+    };
+
     // Helper to check if card is in deck
     const isCardInDeck = (args: any[], cardId: string | undefined): boolean => {
       if (!showDeckIndicator || !cardId) return false;
@@ -12577,10 +12457,6 @@ namespace BloomBeasts {
     // This avoids nesting by deriving each property separately from the same sources
     const cardNameBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
       const card = getCard(args);
-
-      // Track the card for click handler
-      trackedCard = card;
-
       return card?.name || '';
     });
 
@@ -12837,12 +12713,13 @@ namespace BloomBeasts {
     if (onClick) {
       return ui.Pressable({
         onClick: () => {
-          console.log('[CardRenderer] Pressable clicked, trackedCard:', trackedCard);
-          if (trackedCard) {
-            console.log('[CardRenderer] Calling onClick with cardId:', trackedCard.id);
-            onClick(trackedCard.id);
+          const cardId = getCurrentCardId();
+          console.log('[CardRenderer] Pressable clicked, cardId:', cardId);
+          if (cardId) {
+            console.log('[CardRenderer] Calling onClick with cardId:', cardId);
+            onClick(cardId);
           } else {
-            console.log('[CardRenderer] trackedCard is null, not calling onClick');
+            console.log('[CardRenderer] cardId is null, not calling onClick');
           }
         },
         style: {
@@ -14137,498 +14014,142 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\BattleScreen.ts ====================
+  // ==================== bloombeasts\ui\screens\battle\types.ts ====================
 
   /**
-   * Unified Battle Screen Component
-   * Works on both Horizon and Web platforms
-   * Exactly mimics the UI from deployments/web/src/screens/battleScreen.ts
+   * Shared types and constants for Battle Screen components
    */
 
 
-  // BattleScreen-specific constants
-  const gameDimensions = {
+  // Re-export standardCardDimensions from dimensions.ts to avoid duplication
+
+  /**
+   * Card dimensions (battle-specific)
+   */
+
+  export const trapCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  export const buffCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  export const habitatShiftCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  /**
+   * Game dimensions
+   */
+  export const gameDimensions = {
     panelWidth: 1280,
     panelHeight: 720,
   };
 
-  const buffCardDimensions = {
-    width: 128,
-    height: 130,
-  };
-
-  const trapCardDimensions = {
-    width: 85,
-    height: 85,
-  };
-
-  const habitatShiftCardDimensions = {
-    width: 100,
-    height: 100,
-  };
-
-  const playboardImagePositions: SimplePosition = {
-    x: 64,
-    y: 72,
-  };
-
-  const battleBoardAssetPositions: BattleBoardAssetPositions = {
+  /**
+   * Battle board asset positions (from canvas version)
+   */
+  export const battleBoardAssetPositions = {
     playerOne: {
-      beastOne: { x: 64, y: 72 },
-      beastTwo: { x: 284, y: 72 },
-      beastThree: { x: 504, y: 72 },
-      buffOne: { x: 724, y: 72 },
-      buffTwo: { x: 861, y: 72 },
-      trapOne: { x: 725, y: 212 },
-      trapTwo: { x: 814, y: 212 },
-      trapThree: { x: 903, y: 212 },
-      health: { x: 915, y: 324 },
+      beastOne: { x: 170, y: 50 },
+      beastTwo: { x: 535, y: 50 },
+      beastThree: { x: 900, y: 50 },
+      trapOne: { x: 120, y: 240 },
+      trapTwo: { x: 590, y: 240 },
+      trapThree: { x: 1060, y: 240 },
+      buffOne: { x: 20, y: 50 },
+      buffTwo: { x: 20, y: 193 },
+      health: { x: 30, y: 10 },
+      nectar: { x: 930, y: 10 },
+      deckCount: { x: 1150, y: 10 },
     },
-    playOneInfoPosition: { x: 1015, y: 88 },
     playerTwo: {
-      beastOne: { x: 64, y: 363 },
-      beastTwo: { x: 284, y: 363 },
-      beastThree: { x: 504, y: 363 },
-      buffOne: { x: 724, y: 514 },
-      buffTwo: { x: 861, y: 514 },
-      trapOne: { x: 725, y: 420 },
-      trapTwo: { x: 814, y: 420 },
-      trapThree: { x: 903, y: 420 },
-      health: { x: 915, y: 378 },
+      beastOne: { x: 170, y: 390 },
+      beastTwo: { x: 535, y: 390 },
+      beastThree: { x: 900, y: 390 },
+      trapOne: { x: 120, y: 347 },
+      trapTwo: { x: 590, y: 347 },
+      trapThree: { x: 1060, y: 347 },
+      buffOne: { x: 1160, y: 477 },
+      buffTwo: { x: 1160, y: 587 },
+      health: { x: 30, y: 680 },
+      nectar: { x: 930, y: 680 },
+      deckCount: { x: 1150, y: 680 },
     },
-    playerTwoInfoPosition: { x: 1015, y: 379 },
-    habitatZone: { x: 725, y: 310 },
-    cardTextPositions: {
-      cost: { x: 20, y: 10, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
-      affinity: { x: 175, y: 7 },
-      beastImage: { x: 12, y: 13 },
-      level: { x: 105, y: 182, size: DIMENSIONS.fontSize.xs, textAlign: 'center', textBaseline: 'top' },
-      experienceBar: { x: 44, y: 182 },
-      name: { x: 105, y: 13, size: DIMENSIONS.fontSize.md, textAlign: 'center', textBaseline: 'top' },
-      ability: { x: 21, y: 212, size: DIMENSIONS.fontSize.xs, textAlign: 'left', textBaseline: 'top' },
-      attack: { x: 20, y: 176, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
-      health: { x: 188, y: 176, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
-      icons: {
-        attack: { x: 17, y: 44, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
-        ability: { x: 157, y: 44, size: DIMENSIONS.fontSize.xxl + 2, textAlign: 'center', textBaseline: 'top' },
-      }
-    },
+    habitatZone: { x: 330, y: 293 },
+    playOneInfoPosition: { x: 640, y: 20 },
+    playTwoInfoPosition: { x: 640, y: 680 },
   };
 
-  export interface BattleScreenProps {
+  /**
+   * Component props interface for battle components
+   */
+  export interface BattleComponentProps {
     ui: UIMethodMappings;
-    async: AsyncMethods;
-    battleState?: any; // Can be BindingInterface<string> OR BindingInterface<BattleDisplay>
-    message?: any; // BindingInterface<string> for simple messages
-    battleDisplay?: any; // Direct BattleDisplay binding for full battle data
-    onAction?: (action: string) => void;
-    onNavigate?: (screen: string) => void;
-    onRenderNeeded?: () => void;
+    battleDisplay: any; // BattleDisplay binding
   }
 
   /**
-   * Unified Battle Screen that exactly replicates web deployment's battle UI
+   * Extended props for components that need callbacks
    */
-  export class BattleScreen {
-    // UI methods (injected)
-    private ui: UIMethodMappings;
-    private async: AsyncMethods;
+  export interface BattleComponentWithCallbacks extends BattleComponentProps {
+    onAction?: (action: string) => void;
+    targetingCardIndex: number | null;
+    targetingCard: any | null;
+    showPlayedCard?: (card: any, callback?: () => void) => void;
+    onCardDetailSelected?: (card: any) => void;
+  }
 
-    // State bindings
-    private battleState: any; // Simple string state
-    private message: any; // Simple message
-    private battleDisplay: any; // Full BattleDisplay binding
-    private showHand: any;
-    private handScrollOffset: any;
-    private turnTimer: any;
-    private selectedCardDetail: any;
-    private isPlayerTurn: any; // Initialize to false - will be set when battle data arrives
-    private endTurnButtonText: any; // Binding for button text that updates reactively
+  /**
+   * Props for PlayerHand component
+   */
+  export interface PlayerHandProps extends BattleComponentProps {
+    showHand: any; // Binding for show/hide state
+    handScrollOffset: any; // Binding for scroll offset
+    showHandValue: boolean; // Current show/hide value
+    handScrollOffsetValue: number; // Current scroll value
+    targetingCardIndex: number | null;
+    targetingCard: any | null;
+    onAction?: (action: string) => void;
+    onShowHandChange?: (newValue: boolean) => void;
+    onScrollOffsetChange?: (newValue: number) => void;
+    onRenderNeeded?: () => void;
+    onEnterTargetingMode?: (cardIndex: number, card: any) => void;
+    showPlayedCard?: (card: any, callback?: () => void) => void;
+  }
 
-    // Targeting state for cards that require targets
-    private targetingCardIndex: number | null = null;
-    private targetingCard: any | null = null;
+  /**
+   * Props for BattleSideMenu component
+   */
+  export interface BattleSideMenuProps extends BattleComponentProps {
+    endTurnButtonText: any; // Binding for button text
+    isPlayerTurnValue: boolean; // Current turn state
+    onAction?: (action: string) => void;
+    onStopTurnTimer?: () => void;
+  }
 
-    // Temporary card display (for showing played cards)
-    private playedCardDisplay: any | null = null;
-    private playedCardTimeout: number | null = null;
+  // ==================== bloombeasts\ui\screens\battle\BattleBackground.ts ====================
 
-    // Timer management
-    private timerInterval: number | null = null;
+  /**
+   * Battle background and playboard rendering
+   */
 
-    // Track binding values separately (as per Horizon docs - no .get() method)
-    private timerValue = 60;
-    private isPlayerTurnValue = false;
-    private showHandValue = true;
-    private handScrollOffsetValue = 0;
-    private selectedCardDetailValue: any = null;
-    private battleDisplayValue: BattleDisplay = {
-      playerHealth: 20,
-      playerMaxHealth: 20,
-      playerDeckCount: 30,
-      playerNectar: 0,
-      playerHand: [],
-      playerTrapZone: [],
-      playerBuffZone: [],
-      playerField: [],
-      opponentHealth: 20,
-      opponentMaxHealth: 20,
-      opponentDeckCount: 30,
-      opponentNectar: 0,
-      opponentField: [],
-      opponentTrapZone: [],
-      opponentBuffZone: [],
-      currentTurn: 1,
-      turnPlayer: 'player',
-      turnTimeRemaining: 60,
-      objectives: [],
-      habitatZone: null,
-      selectedBeastIndex: null,
-      attackAnimation: null
-    };
 
-    // Configuration
-    private cardsPerRow = 5;
-    private rowsPerPage = 1;
+  export class BattleBackground {
+    private ui: BattleComponentProps['ui'];
 
-    // Render guard to prevent infinite loops
-    private isRendering = false;
-    private needsRerender = false;
-
-    // Callbacks
-    private onAction?: (action: string) => void;
-    private onNavigate?: (screen: string) => void;
-    private onRenderNeeded?: () => void;
-
-    constructor(props: BattleScreenProps) {
+    constructor(props: BattleComponentProps) {
       this.ui = props.ui;
-      this.async = props.async;
-
-      // Initialize bindings after ui is set
-      this.showHandValue = true;
-      this.showHand = new this.ui.Binding(this.showHandValue);
-
-      this.handScrollOffsetValue = 0;
-      this.handScrollOffset = new this.ui.Binding(this.handScrollOffsetValue);
-
-      this.timerValue = 60;
-      this.turnTimer = new this.ui.Binding(this.timerValue);
-
-      this.selectedCardDetailValue = null;
-      this.selectedCardDetail = new this.ui.Binding<any | null>(this.selectedCardDetailValue);
-
-      // isPlayerTurn and endTurnButtonText will be managed separately
-
-      // console.log('[BattleScreen] Constructor called, props:', {
-      //   hasBattleDisplay: !!props.battleDisplay,
-      //   battleDisplayType: props.battleDisplay ? typeof props.battleDisplay : 'undefined',
-      //   battleDisplayGet: props.battleDisplay && typeof props.battleDisplay.get === 'function' ? props.battleDisplay.get() : 'no get method'
-      // });
-
-      // Handle both simple and full battle modes
-      this.battleState = props.battleState;
-      this.message = props.message;
-      this.battleDisplay = props.battleDisplay;
-
-      this.onAction = props.onAction;
-      this.onNavigate = props.onNavigate;
-      this.onRenderNeeded = props.onRenderNeeded;
-
-      // Initialize player turn tracking with derived bindings
-      if (this.battleDisplay) {
-        // Create derived binding for isPlayerTurn
-        this.isPlayerTurn = this.ui.Binding.derive(
-          [this.battleDisplay],
-          (state: BattleDisplay) => {
-            // Only update if state is not null - preserve defaults during initialization
-            if (state) {
-              this.battleDisplayValue = state;
-            }
-            const newIsPlayerTurn = state?.turnPlayer === 'player';
-
-            // Start/stop timer based on turn changes
-            if (this.isPlayerTurnValue !== newIsPlayerTurn) {
-              this.isPlayerTurnValue = newIsPlayerTurn;
-              if (newIsPlayerTurn) {
-                this.startTurnTimer();
-              } else {
-                this.stopTurnTimer();
-              }
-            }
-
-            return newIsPlayerTurn;
-          }
-        );
-
-        // Create derived binding for endTurnButtonText
-        // Note: Can't derive from isPlayerTurn (already derived), so derive from battleDisplay directly
-        this.endTurnButtonText = this.ui.Binding.derive(
-          [this.battleDisplay, this.turnTimer],
-          (state: BattleDisplay, timer: number) => state?.turnPlayer === 'player' ? `(${timer})` : 'Enemy Turn'
-        );
-      }
-    }
-
-    /**
-     * Safe render wrapper to prevent infinite loops
-     */
-    private safeRender(): void {
-      if (this.isRendering) {
-        // Already rendering, schedule for after current render completes
-        this.needsRerender = true;
-        return;
-      }
-      this.onRenderNeeded?.();
-    }
-
-    /**
-     * Create the complete battle UI
-     */
-    createUI(): UINodeType {
-      // console.log('[BattleScreen] createUI called');
-      this.isRendering = true;
-      this.needsRerender = false;
-      // Check if we have full battle display data
-      if (this.battleDisplay) {
-        // Use the tracked value (initialized with default values)
-        const state = this.battleDisplayValue;
-
-        // Mark rendering as complete
-        this.finishRender();
-
-        // Full battle UI
-        return this.ui.View({
-          style: {
-            width: gameDimensions.panelWidth,
-            height: gameDimensions.panelHeight,
-            position: 'relative',
-            overflow: 'hidden',
-          },
-          children: [
-            // Layer 1: Background image (full screen)
-            this.createBackground(),
-
-            // Layer 2: Playboard overlay
-            this.createPlayboard(),
-
-            // Layer 3: Battle zones (beasts, traps, buffs, habitat)
-            this.createBattleZones(state),
-
-            // Layer 4: Player/Opponent info displays
-            this.createInfoDisplays(state),
-
-            // Layer 5: Side menu with controls
-            this.createBattleSideMenu(state),
-
-            // Layer 6: Player hand overlay (conditionally shown)
-            this.createPlayerHand(state),
-
-            // Layer 7: Card detail popup (if active)
-            state.cardPopup ? this.createCardPopup(state.cardPopup) : null,
-
-            // Layer 7.25: Selected card detail popup (from clicking buff/trap cards)
-            this.selectedCardDetailValue ? createCardDetailPopup(this.ui, {
-              cardDetail: {
-                card: this.selectedCardDetailValue,
-                isInDeck: false,
-                buttons: ['Close']
-              },
-              onButtonClick: (buttonId: string) => {
-                // console.log('[BattleScreen] Closing selected card detail, buttonId:', buttonId);
-                this.selectedCardDetailValue = null;
-                this.selectedCardDetail.set(null);
-                this.onRenderNeeded?.();
-              }
-            }) : null,
-
-            // Layer 7.5: Played card popup (temporary 2-second display)
-            this.playedCardDisplay ? this.createPlayedCardPopup(this.playedCardDisplay) : null,
-
-            // Layer 8: Attack animation overlays
-            this.createAttackAnimations(state),
-          ].filter(Boolean),
-        });
-      }
-
-      // Simple placeholder mode (for compatibility with BloomBeastsGame)
-      // console.log('[BattleScreen] No battleDisplay binding, using simple mode');
-      return this.createSimpleBattleUI();
-    }
-
-    /**
-     * Create simple battle UI (placeholder mode for BloomBeastsGame compatibility)
-     */
-    private createSimpleBattleUI(): UINodeType {
-      // Mark rendering as complete
-      this.finishRender();
-
-      return this.ui.View({
-        style: {
-          width: DIMENSIONS.panel.width,
-          height: DIMENSIONS.panel.height,
-          backgroundColor: COLORS.background,
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 40
-        },
-        children: [
-          // Battle title
-          this.ui.Text({
-            text: new this.ui.Binding('⚔️ Battle Arena ⚔️'),
-            style: {
-              fontSize: DIMENSIONS.fontSize.hero,
-              fontWeight: 'bold',
-              color: COLORS.textPrimary,
-              marginBottom: 30
-            }
-          }),
-
-          // Battle state
-          this.ui.View({
-            style: {
-              backgroundColor: COLORS.surface,
-              borderRadius: 12,
-              padding: 30,
-              marginBottom: 30,
-              minWidth: 400,
-              alignItems: 'center'
-            },
-            children: [
-              this.ui.Text({
-                text: this.battleState || new this.ui.Binding('initializing'),
-                style: {
-                  fontSize: DIMENSIONS.fontSize.xl,
-                  fontWeight: 'bold',
-                  color: COLORS.warning,
-                  marginBottom: 10
-                }
-              }),
-              this.ui.Text({
-                text: this.message || new this.ui.Binding('Preparing for battle...'),
-                style: {
-                  fontSize: DIMENSIONS.fontSize.lg,
-                  color: COLORS.textSecondary,
-                  textAlign: 'center'
-                }
-              })
-            ]
-          }),
-
-          // Action buttons
-          this.ui.View({
-            style: {
-              flexDirection: 'row',
-              marginBottom: 30
-            },
-            children: [
-              this.ui.Pressable({
-                onClick: () => this.onAction?.('attack'),
-                style: {
-                  backgroundColor: COLORS.error,
-                  borderRadius: 8,
-                  padding: 15,
-                  minWidth: 120,
-                  marginRight: 20
-                },
-                children: this.ui.Text({
-                  text: '⚔️ Attack',
-                  style: {
-                    fontSize: DIMENSIONS.fontSize.lg,
-                    fontWeight: 'bold',
-                    color: '#fff',
-                    textAlign: 'center'
-                  }
-                })
-              }),
-              this.ui.Pressable({
-                onClick: () => this.onAction?.('defend'),
-                style: {
-                  backgroundColor: COLORS.info,
-                  borderRadius: 8,
-                  padding: 15,
-                  minWidth: 120
-                },
-                children: this.ui.Text({
-                  text: '🛡️ Defend',
-                  style: {
-                    fontSize: DIMENSIONS.fontSize.lg,
-                    fontWeight: 'bold',
-                    color: '#fff',
-                    textAlign: 'center'
-                  }
-                })
-              }),
-              this.ui.Pressable({
-                onClick: () => this.onAction?.('special'),
-                style: {
-                  backgroundColor: COLORS.warning,
-                  borderRadius: 8,
-                  padding: 15,
-                  minWidth: 120
-                },
-                children: this.ui.Text({
-                  text: '✨ Special',
-                  style: {
-                    fontSize: DIMENSIONS.fontSize.lg,
-                    fontWeight: 'bold',
-                    color: '#fff',
-                    textAlign: 'center'
-                  }
-                })
-              })
-            ]
-          }),
-
-          // Back button
-          this.ui.Pressable({
-            onClick: () => this.onNavigate?.('menu'),
-            style: {
-              backgroundColor: COLORS.surface,
-              borderRadius: 8,
-              padding: 12
-            },
-            children: this.ui.Text({
-              text: '← Exit Battle',
-              style: {
-                fontSize: DIMENSIONS.fontSize.md,
-                color: COLORS.textSecondary
-              }
-            })
-          })
-        ]
-      });
-    }
-
-    /**
-     * Create loading state placeholder
-     */
-    private createLoadingState(): UINodeType {
-      // Mark rendering as complete
-      this.finishRender();
-
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          backgroundColor: COLORS.background,
-          justifyContent: 'center',
-          alignItems: 'center',
-        },
-        children: this.ui.Text({
-          text: 'Loading Battle...',
-          style: {
-            fontSize: DIMENSIONS.fontSize.xl,
-            color: COLORS.textPrimary,
-          },
-        }),
-      });
     }
 
     /**
      * Create full-screen background
      */
-    private createBackground(): UINodeType {
+    createBackground(): UINodeType {
       return this.ui.Image({
         source: this.ui.Binding.derive(
           [this.ui.assetsLoadedBinding],
@@ -14647,7 +14168,7 @@ namespace BloomBeasts {
     /**
      * Create playboard overlay image
      */
-    private createPlayboard(): UINodeType {
+    createPlayboard(): UINodeType {
       return this.ui.Image({
         source: this.ui.Binding.derive(
           [this.ui.assetsLoadedBinding],
@@ -14655,88 +14176,217 @@ namespace BloomBeasts {
         ),
         style: {
           position: 'absolute',
-          width: 1073,
-          height: 572,
-          left: playboardImagePositions.x,
-          top: playboardImagePositions.y,
+          width: gameDimensions.panelWidth,
+          height: gameDimensions.panelHeight,
+          top: 0,
+          left: 0,
         },
       });
     }
+  }
 
-    /**
-     * Create all battle zones (beasts, traps, buffs, habitat)
-     */
-    private createBattleZones(state: BattleDisplay | null): UINodeType {
-      // Defensive: return empty view if state is null
-      if (!state) {
-        return this.ui.View({
-          style: { position: 'absolute', width: '100%', height: '100%' },
-          children: [],
-        });
-      }
+  // ==================== bloombeasts\ui\screens\battle\BeastField.ts ====================
 
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-        },
-        children: [
-          // Player battlefield (bottom)
-          ...this.createBeastField('player', state.playerField, state),
+  /**
+   * Beast field rendering - 3 slots per player
+   */
 
-          // Opponent battlefield (top)
-          ...this.createBeastField('opponent', state.opponentField, state),
 
-          // Player trap zone
-          ...this.createTrapZone('player', state.playerTrapZone),
+  export class BeastField {
+    private ui: BattleComponentWithCallbacks['ui'];
+    private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
+    private onAction?: (action: string) => void;
+    private targetingCardIndex: number | null;
+    private targetingCard: any | null;
+    private showPlayedCard?: (card: any, callback?: () => void) => void;
 
-          // Opponent trap zone
-          ...this.createTrapZone('opponent', state.opponentTrapZone),
-
-          // Player buff zone
-          ...this.createBuffZone('player', state.playerBuffZone),
-
-          // Opponent buff zone
-          ...this.createBuffZone('opponent', state.opponentBuffZone),
-
-          // Habitat zone (center)
-          state.habitatZone ? this.createHabitatZone(state.habitatZone) : null,
-        ].filter(Boolean),
-      });
+    constructor(props: BattleComponentWithCallbacks) {
+      this.ui = props.ui;
+      this.battleDisplay = props.battleDisplay;
+      this.onAction = props.onAction;
+      this.targetingCardIndex = props.targetingCardIndex;
+      this.targetingCard = props.targetingCard;
+      this.showPlayedCard = props.showPlayedCard;
     }
 
     /**
-     * Create beast field for a player
+     * Create static beast card structure with reactive properties
+     * All images, text, etc. use bindings instead of being dynamically created
      */
-    private createBeastField(
-      player: 'player' | 'opponent',
-      beasts: any[],
-      state: BattleDisplay
-    ): UINodeType[] {
-      // Ensure beasts is an array (default to empty array if undefined)
-      if (!beasts || !Array.isArray(beasts)) {
-        beasts = [];
-      }
+    private createBeastCardStructure(player: 'player' | 'opponent', slotIndex: number): UINodeType[] {
+      const cardWidth = standardCardDimensions.width;
+      const cardHeight = standardCardDimensions.height;
+      const beastImageWidth = 185;
+      const beastImageHeight = 185;
 
+      const positions = {
+        beastImage: { x: 12, y: 13 },
+        cost: { x: 20, y: 10 },
+        affinity: { x: 175, y: 7 },
+        name: { x: 105, y: 13 },
+        attack: { x: 20, y: 176 },
+        health: { x: 188, y: 176 },
+      };
+
+      return [
+        // Layer 1: Beast artwork image - reactive source
+        this.ui.Image({
+          source: this.ui.Binding.derive(
+            [this.battleDisplay],
+            (state: BattleDisplay | null) => {
+              if (!state) return null;
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              if (!beast) return null;
+              const baseId = beast.id?.replace(/-\d+-\d+$/, '') || beast.name.toLowerCase().replace(/\s+/g, '-');
+              return this.ui.assetIdToImageSource?.(baseId) || null;
+            }
+          ),
+          style: {
+            width: beastImageWidth,
+            height: beastImageHeight,
+            position: 'absolute',
+            top: positions.beastImage.y,
+            left: positions.beastImage.x,
+          },
+        }),
+
+        // Layer 2: Base card frame
+        this.ui.Image({
+          source: this.ui.assetIdToImageSource?.('base-card') || null,
+          style: {
+            width: cardWidth,
+            height: cardHeight,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          },
+        }),
+
+        // Layer 3: Affinity icon - reactive source
+        this.ui.Image({
+          source: this.ui.Binding.derive(
+            [this.battleDisplay],
+            (state: BattleDisplay | null) => {
+              if (!state) return null;
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              if (!beast || !beast.affinity) return null;
+              return this.ui.assetIdToImageSource?.(`${beast.affinity.toLowerCase()}-icon`) || null;
+            }
+          ),
+          style: {
+            width: 30,
+            height: 30,
+            position: 'absolute',
+            top: positions.affinity.y,
+            left: positions.affinity.x,
+          },
+        }),
+
+        // Layer 4: Card name - reactive text
+        this.ui.Text({
+          text: this.ui.Binding.derive(
+            [this.battleDisplay],
+            (state: BattleDisplay | null) => {
+              if (!state) return '';
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              return beast?.name || '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.name.y,
+            left: 0,
+            width: cardWidth,
+            fontSize: 14,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 5: Cost - reactive text
+        this.ui.Text({
+          text: this.ui.Binding.derive(
+            [this.battleDisplay],
+            (state: BattleDisplay | null) => {
+              if (!state) return '';
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              return beast && beast.cost !== undefined ? String(beast.cost) : '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.cost.y,
+            left: positions.cost.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 6: Attack - reactive text
+        this.ui.Text({
+          text: this.ui.Binding.derive(
+            [this.battleDisplay],
+            (state: BattleDisplay | null) => {
+              if (!state) return '';
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              return beast ? String(beast.currentAttack ?? beast.baseAttack ?? 0) : '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.attack.y,
+            left: positions.attack.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 7: Health - reactive text
+        this.ui.Text({
+          text: this.ui.Binding.derive(
+            [this.battleDisplay],
+            (state: BattleDisplay | null) => {
+              if (!state) return '';
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              return beast ? String(beast.currentHealth ?? beast.baseHealth ?? 0) : '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.health.y,
+            left: positions.health.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+      ];
+    }
+
+    /**
+     * Create beast field for a player - REACTIVE
+     * Creates 3 slots, bindings determine what's shown
+     */
+    createBeastField(player: 'player' | 'opponent'): UINodeType[] {
       const positions = player === 'player'
         ? battleBoardAssetPositions.playerTwo
         : battleBoardAssetPositions.playerOne;
       const slots = [positions.beastOne, positions.beastTwo, positions.beastThree];
 
-      return beasts.map((beast, index) => {
-        if (!beast || !slots[index]) return null;
-
-        const pos = slots[index];
-        const isSelected = player === 'player' && state.selectedBeastIndex === index;
-        const isAttacking = state.attackAnimation?.attackerPlayer === player &&
-                           state.attackAnimation?.attackerIndex === index;
-        const isTarget = state.attackAnimation?.targetPlayer === player &&
-                        state.attackAnimation?.targetIndex === index;
-
-        // Check if this beast is a valid target in targeting mode
-        const isTargetable = player === 'opponent' && this.targetingCardIndex !== null;
-
+      // Create 3 beast slots
+      return slots.map((pos, index) => {
+        // All bindings must derive from this.battleDisplay, not from other derived bindings
         return this.ui.View({
           style: {
             position: 'absolute',
@@ -14744,31 +14394,31 @@ namespace BloomBeasts {
             top: pos.y,
             width: standardCardDimensions.width,
             height: standardCardDimensions.height,
+            // Hide slot if no beast - derive directly from battleDisplay
+            display: this.ui.Binding.derive(
+              [this.battleDisplay],
+              (state: BattleDisplay | null) => {
+                if (!state) return 'none';
+                const field = player === 'player' ? state.playerField : state.opponentField;
+                const beast = field?.[index];
+                return beast ? 'flex' : 'none';
+              }
+            ),
           },
           children: [
-            // Beast card component wrapped in Pressable for click handling
+            // Beast card - static structure with reactive properties
             this.ui.Pressable({
               onClick: () => {
-                // console.log(`[BattleScreen] Beast card clicked: ${player}-${index}`);
-
                 // Check if we're in targeting mode
                 if (this.targetingCardIndex !== null && player === 'opponent') {
-                  // Show card popup first, then play with target
                   const cardIndex = this.targetingCardIndex;
                   const card = this.targetingCard;
 
-                  // Exit targeting mode
-                  this.targetingCardIndex = null;
-                  this.targetingCard = null;
-
                   if (card && (card.type === 'Magic' || card.type === 'Buff')) {
-                    this.showPlayedCard(card, () => {
-                      // console.log(`[BattleScreen] Playing card ${cardIndex} targeting opponent beast ${index} after popup`);
+                    this.showPlayedCard?.(card, () => {
                       this.onAction?.(`play-card-${cardIndex}-target-${index}`);
                     });
                   } else {
-                    // Play immediately for other card types
-                    // console.log(`[BattleScreen] Playing card ${cardIndex} targeting opponent beast ${index}`);
                     this.onAction?.(`play-card-${cardIndex}-target-${index}`);
                   }
                 } else {
@@ -14779,15 +14429,13 @@ namespace BloomBeasts {
               style: {
                 width: standardCardDimensions.width,
                 height: standardCardDimensions.height,
+                position: 'relative',
               },
-              children: createCardComponent(this.ui, {
-                card: { ...beast, type: 'Bloom' },
-                // Don't pass onClick to avoid nested Pressables
-              }),
+              children: this.createBeastCardStructure(player, index),
             }),
 
             // Targeting highlight (green for valid targets)
-            isTargetable ? this.ui.View({
+            this.ui.View({
               style: {
                 position: 'absolute',
                 top: -5,
@@ -14797,11 +14445,12 @@ namespace BloomBeasts {
                 borderWidth: 3,
                 borderColor: '#00ff00',
                 borderRadius: 8,
+                display: player === 'opponent' && this.targetingCardIndex !== null ? 'flex' : 'none',
               },
-            }) : null,
+            }),
 
-            // Selection highlight
-            isSelected ? this.ui.View({
+            // Selection highlight - derive directly from battleDisplay
+            this.ui.View({
               style: {
                 position: 'absolute',
                 top: -5,
@@ -14811,72 +14460,113 @@ namespace BloomBeasts {
                 borderWidth: 5,
                 borderColor: '#FFD700',
                 borderRadius: 12,
+                display: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay | null) => {
+                    const isSelected = player === 'player' && state?.selectedBeastIndex === index;
+                    return isSelected ? 'flex' : 'none';
+                  }
+                ),
               },
-            }) : null,
+            }),
 
-            // Attack animation overlay
-            (isAttacking || isTarget) ? this.ui.View({
+            // Attack animation overlay - derive directly from battleDisplay
+            this.ui.View({
               style: {
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 right: 0,
                 bottom: 0,
-                backgroundColor: isAttacking ? 'rgba(0, 255, 0, 0.4)' : 'rgba(255, 0, 0, 0.4)',
+                backgroundColor: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay | null) => {
+                    const isAttacking = state?.attackAnimation?.attackerPlayer === player &&
+                                       state?.attackAnimation?.attackerIndex === index;
+                    const isTarget = state?.attackAnimation?.targetPlayer === player &&
+                                    state?.attackAnimation?.targetIndex === index;
+                    if (isAttacking) return 'rgba(0, 255, 0, 0.4)';
+                    if (isTarget) return 'rgba(255, 0, 0, 0.4)';
+                    return 'transparent';
+                  }
+                ),
                 borderRadius: 12,
+                display: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay | null) => {
+                    const isAttacking = state?.attackAnimation?.attackerPlayer === player &&
+                                       state?.attackAnimation?.attackerIndex === index;
+                    const isTarget = state?.attackAnimation?.targetPlayer === player &&
+                                    state?.attackAnimation?.targetIndex === index;
+                    return (isAttacking || isTarget) ? 'flex' : 'none';
+                  }
+                ),
               },
-            }) : null,
+            }),
 
-            // Action icons overlay
-            this.createBeastActionIcons(beast, pos),
-          ].filter(Boolean),
+            // Action icons overlay wrapper - always exists, visibility controlled by display
+            this.ui.View({
+              style: {
+                position: 'absolute',
+                left: 17,
+                top: 44,
+                width: 26,
+                height: 26,
+                // Hide when no beast or beast has summoning sickness
+                display: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay | null) => {
+                    if (!state) return 'none';
+                    const field = player === 'player' ? state.playerField : state.opponentField;
+                    const beast = field?.[index];
+                    if (!beast || beast.summoningSickness) return 'none';
+                    return 'flex';
+                  }
+                ),
+              },
+              children: this.ui.Image({
+                source: this.ui.assetIdToImageSource?.('icon-attack') || null,
+                style: { width: 26, height: 26 },
+              }),
+            }),
+          ],
         });
-      }).filter(Boolean);
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\TrapZone.ts ====================
+
+  /**
+   * Trap zone rendering - 3 slots per player
+   */
+
+
+  export class TrapZone {
+    private ui: BattleComponentWithCallbacks['ui'];
+    private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
+    private onCardDetailSelected?: (card: any) => void;
+
+    constructor(props: BattleComponentWithCallbacks) {
+      this.ui = props.ui;
+      this.battleDisplay = props.battleDisplay;
+      this.onCardDetailSelected = props.onCardDetailSelected;
     }
 
     /**
-     * Create action icons for beast cards
+     * Create trap zone for a player - REACTIVE
+     * Creates 3 slots, bindings determine what's shown
      */
-    private createBeastActionIcons(beast: any, pos: { x: number; y: number }): UINodeType | null {
-      if (!beast.summoningSickness) {
-        return this.ui.View({
-          style: {
-            position: 'absolute',
-            left: 17,
-            top: 44,
-            width: 26,
-            height: 26,
-          },
-          children: this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('icon-attack') : null
-            ),
-            style: { width: 26, height: 26 },
-          }),
-        });
-      }
-      return null;
-    }
-
-    /**
-     * Create trap zone for a player
-     */
-    private createTrapZone(player: 'player' | 'opponent', traps: any[]): UINodeType[] {
-      // Ensure traps is an array (default to empty array if undefined)
-      if (!traps || !Array.isArray(traps)) {
-        traps = [];
-      }
-
+    createTrapZone(player: 'player' | 'opponent'): UINodeType[] {
       const positions = player === 'player'
         ? battleBoardAssetPositions.playerTwo
         : battleBoardAssetPositions.playerOne;
       const trapSlots = [positions.trapOne, positions.trapTwo, positions.trapThree];
 
-      return traps.map((trap, index) => {
-        if (!trap || !trapSlots[index]) return null;
-
-        const pos = trapSlots[index];
+      // Create 3 trap slots
+      return trapSlots.map((pos, index) => {
+        // Get trap card image source directly
+        const trapCardSource = this.ui.assetIdToImageSource?.('trap-card-playboard') || null;
 
         return this.ui.View({
           style: {
@@ -14885,27 +14575,34 @@ namespace BloomBeasts {
             top: pos.y,
             width: trapCardDimensions.width,
             height: trapCardDimensions.height,
+            // Hide slot if no trap - derive directly from battleDisplay
+            display: this.ui.Binding.derive(
+              [this.battleDisplay],
+              (state: BattleDisplay | null) => {
+                if (!state) return 'none';
+                const trapZone = player === 'player' ? state.playerTrapZone : state.opponentTrapZone;
+                const trap = trapZone?.[index];
+                return trap ? 'flex' : 'none';
+              }
+            ),
           },
           children: [
-            // Trap card playboard image (face-down, hidden for both players)
-            this.ui.Image({
-              source: this.ui.Binding.derive(
-                [this.ui.assetsLoadedBinding],
-                (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('trap-card-playboard') : null
-              ),
-              style: {
-                width: trapCardDimensions.width,
-                height: trapCardDimensions.height,
-              },
-            }),
-
-            // Click handler for player's traps to view details
-            player === 'player' ? this.ui.Pressable({
+            // Clickable wrapper for trap card
+            this.ui.Pressable({
               onClick: () => {
-                console.log('[BattleScreen] Player trap clicked, showing detail');
-                this.selectedCardDetailValue = trap;
-                this.selectedCardDetail.set(trap);
-                this.onRenderNeeded?.();
+                // Only allow player to view their own trap cards
+                if (player === 'player') {
+                  console.log('[TrapZone] Player trap clicked, showing detail');
+                  // Get current trap at click time
+                  const state = this.battleDisplay;
+                  if (state && typeof state === 'object' && 'playerTrapZone' in state) {
+                    const trapZone = (state as any).playerTrapZone;
+                    const trap = trapZone?.[index];
+                    if (trap) {
+                      this.onCardDetailSelected?.(trap);
+                    }
+                  }
+                }
               },
               style: {
                 position: 'absolute',
@@ -14914,31 +14611,55 @@ namespace BloomBeasts {
                 right: 0,
                 bottom: 0,
               },
-              children: null,
-            }) : null,
-          ].filter(Boolean),
+              children: [
+                // Trap card playboard image (face-down)
+                this.ui.Image({
+                  source: trapCardSource,
+                  style: {
+                    width: trapCardDimensions.width,
+                    height: trapCardDimensions.height,
+                  },
+                }),
+              ],
+            }),
+          ],
         });
-      }).filter(Boolean);
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\BuffZone.ts ====================
+
+  /**
+   * Buff zone rendering - 2 slots per player
+   */
+
+
+  export class BuffZone {
+    private ui: BattleComponentWithCallbacks['ui'];
+    private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
+    private onCardDetailSelected?: (card: any) => void;
+
+    constructor(props: BattleComponentWithCallbacks) {
+      this.ui = props.ui;
+      this.battleDisplay = props.battleDisplay;
+      this.onCardDetailSelected = props.onCardDetailSelected;
     }
 
     /**
-     * Create buff zone for a player
+     * Create buff zone for a player - REACTIVE
+     * Creates 2 slots, bindings determine what's shown
      */
-    private createBuffZone(player: 'player' | 'opponent', buffs: any[]): UINodeType[] {
-      // Ensure buffs is an array (default to empty array if undefined)
-      if (!buffs || !Array.isArray(buffs)) {
-        buffs = [];
-      }
-
+    createBuffZone(player: 'player' | 'opponent'): UINodeType[] {
       const positions = player === 'player'
         ? battleBoardAssetPositions.playerTwo
         : battleBoardAssetPositions.playerOne;
       const buffSlots = [positions.buffOne, positions.buffTwo];
 
-      return buffs.map((buff, index) => {
-        if (!buff || !buffSlots[index]) return null;
-
-        const pos = buffSlots[index];
+      // Create 2 buff slots
+      return buffSlots.map((pos, index) => {
+        // Get buff card template source directly
+        const buffCardSource = this.ui.assetIdToImageSource?.('buff-card-playboard') || null;
 
         return this.ui.View({
           style: {
@@ -14947,58 +14668,31 @@ namespace BloomBeasts {
             top: pos.y,
             width: buffCardDimensions.width,
             height: buffCardDimensions.height,
+            // Hide slot if no buff - derive directly from battleDisplay
+            display: this.ui.Binding.derive(
+              [this.battleDisplay],
+              (state: BattleDisplay | null) => {
+                if (!state) return 'none';
+                const buffZone = player === 'player' ? state.playerBuffZone : state.opponentBuffZone;
+                const buff = buffZone?.[index];
+                return buff ? 'flex' : 'none';
+              }
+            ),
           },
           children: [
-            // Buff card playboard template (face-up, showing the buff on the field)
-            this.ui.Image({
-              source: this.ui.Binding.derive(
-                [this.ui.assetsLoadedBinding],
-                (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('buff-card-playboard') : null
-              ),
-              style: {
-                width: buffCardDimensions.width,
-                height: buffCardDimensions.height,
-              },
-            }),
-
-            // Buff card artwork image (100x100) centered inside the playboard
-            this.ui.Image({
-              source: this.ui.Binding.derive(
-                [this.ui.assetsLoadedBinding],
-                (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.(buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-')) : null
-              ),
-              style: {
-                position: 'absolute',
-                top: (buffCardDimensions.height - 100) / 2,
-                left: (buffCardDimensions.width - 100) / 2,
-                width: 100,
-                height: 100,
-              },
-            }),
-
-            // Golden glow effect for active buffs
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                top: -3,
-                left: -3,
-                right: -3,
-                bottom: -3,
-                borderWidth: 3,
-                borderColor: '#FFD700',
-                borderRadius: 8,
-                shadowColor: '#FFD700',
-                shadowRadius: 8,
-              },
-            }),
-
-            // Click handler for viewing buff details (works for both player and opponent)
+            // Clickable wrapper for buff card
             this.ui.Pressable({
               onClick: () => {
-                console.log(`[BattleScreen] Buff card clicked: ${player}-${index}, showing detail`);
-                this.selectedCardDetailValue = buff;
-                this.selectedCardDetail.set(buff);
-                this.onRenderNeeded?.();
+                console.log(`[BuffZone] Buff card clicked: ${player}-${index}, showing detail`);
+                // Get current buff at click time
+                const state = this.battleDisplay;
+                if (state && typeof state === 'object' && 'playerBuffZone' in state) {
+                  const buffZone = player === 'player' ? (state as any).playerBuffZone : (state as any).opponentBuffZone;
+                  const buff = buffZone?.[index];
+                  if (buff) {
+                    this.onCardDetailSelected?.(buff);
+                  }
+                }
               },
               style: {
                 position: 'absolute',
@@ -15007,17 +14701,89 @@ namespace BloomBeasts {
                 right: 0,
                 bottom: 0,
               },
-              children: null,
+              children: [
+                // Buff card playboard template (face-up)
+                this.ui.Image({
+                  source: buffCardSource,
+                  style: {
+                    width: buffCardDimensions.width,
+                    height: buffCardDimensions.height,
+                  },
+                }),
+
+                // Buff card artwork image wrapper - always exists, image source is reactive
+                this.ui.View({
+                  style: {
+                    position: 'absolute',
+                    top: (buffCardDimensions.height - 100) / 2,
+                    left: (buffCardDimensions.width - 100) / 2,
+                    width: 100,
+                    height: 100,
+                  },
+                  children: this.ui.Image({
+                    source: this.ui.Binding.derive(
+                      [this.battleDisplay],
+                      (state: BattleDisplay | null) => {
+                        if (!state) return null;
+                        const buffZone = player === 'player' ? state.playerBuffZone : state.opponentBuffZone;
+                        const buff = buffZone?.[index];
+                        if (!buff) return null;
+                        return this.ui.assetIdToImageSource?.(buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-'));
+                      }
+                    ),
+                    style: {
+                      width: 100,
+                      height: 100,
+                    },
+                  }),
+                }),
+
+                // Golden glow effect
+                this.ui.View({
+                  style: {
+                    position: 'absolute',
+                    top: -3,
+                    left: -3,
+                    right: -3,
+                    bottom: -3,
+                    borderWidth: 3,
+                    borderColor: '#FFD700',
+                    borderRadius: 8,
+                    shadowColor: '#FFD700',
+                    shadowRadius: 8,
+                  },
+                }),
+              ],
             }),
           ],
         });
-      }).filter(Boolean);
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\HabitatZone.ts ====================
+
+  /**
+   * Habitat zone rendering (center of board)
+   */
+
+
+  export class HabitatZone {
+    private ui: BattleComponentWithCallbacks['ui'];
+    private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
+    private onCardDetailSelected?: (card: any) => void;
+
+    constructor(props: BattleComponentWithCallbacks) {
+      this.ui = props.ui;
+      this.battleDisplay = props.battleDisplay;
+      this.onCardDetailSelected = props.onCardDetailSelected;
     }
 
     /**
-     * Create habitat zone
+     * Create habitat zone - REACTIVE
+     * Derives habitat from battleDisplay binding
      */
-    private createHabitatZone(habitat: any): UINodeType {
+    createHabitatZone(): UINodeType {
       const pos = battleBoardAssetPositions.habitatZone;
 
       return this.ui.View({
@@ -15027,64 +14793,26 @@ namespace BloomBeasts {
           top: pos.y,
           width: habitatShiftCardDimensions.width,
           height: habitatShiftCardDimensions.height,
+          // Hide if no habitat
+          display: this.ui.Binding.derive(
+            [this.battleDisplay],
+            (state: BattleDisplay | null) => state?.habitatZone ? 'flex' : 'none'
+          ),
         },
         children: [
-          // Habitat card playboard template
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('habitat-playboard') : null
-            ),
-            style: {
-              width: habitatShiftCardDimensions.width,
-              height: habitatShiftCardDimensions.height,
-            },
-          }),
-
-          // Habitat artwork image (70x70) centered inside the playboard
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.(habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-')) : null
-            ),
-            style: {
-              position: 'absolute',
-              top: (habitatShiftCardDimensions.height - 70) / 2,
-              left: (habitatShiftCardDimensions.width - 70) / 2,
-              width: 70,
-              height: 70,
-            },
-          }),
-
-          // Green glow effect for active habitat
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              top: -4,
-              left: -4,
-              right: -4,
-              bottom: -4,
-              borderWidth: 4,
-              borderColor: '#4caf50',
-              borderRadius: 8,
-              shadowColor: '#4caf50',
-              shadowRadius: 10,
-            },
-          }),
-
-          // Counter badges
-          habitat.counters && habitat.counters.length > 0
-            ? this.createCounterBadges(habitat.counters, pos)
-            : null,
-
-          // Click handler for viewing habitat details
+          // Clickable wrapper for entire habitat card
           this.ui.Pressable({
             onClick: () => {
-              console.log('[BattleScreen] Habitat card clicked, showing detail');
-              const habitatWithType = { ...habitat, type: 'Habitat' };
-              this.selectedCardDetailValue = habitatWithType;
-              this.selectedCardDetail.set(habitatWithType);
-              this.onRenderNeeded?.();
+              console.log('[HabitatZone] Habitat card clicked, showing detail');
+              // Get current habitat at click time
+              const state = this.battleDisplay;
+              if (state && typeof state === 'object' && 'habitatZone' in state) {
+                const habitat = (state as any).habitatZone;
+                if (habitat) {
+                  const habitatWithType = { ...habitat, type: 'Habitat' };
+                  this.onCardDetailSelected?.(habitatWithType);
+                }
+              }
             },
             style: {
               position: 'absolute',
@@ -15093,9 +14821,65 @@ namespace BloomBeasts {
               right: 0,
               bottom: 0,
             },
-            children: null,
+            children: [
+              // Habitat card playboard template
+              this.ui.Image({
+                source: this.ui.Binding.derive(
+                  [this.ui.assetsLoadedBinding],
+                  (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('habitat-playboard') : null
+                ),
+                style: {
+                  width: habitatShiftCardDimensions.width,
+                  height: habitatShiftCardDimensions.height,
+                },
+              }),
+
+              // Habitat artwork image wrapper - always exists, image source is reactive
+              this.ui.View({
+                style: {
+                  position: 'absolute',
+                  top: (habitatShiftCardDimensions.height - 70) / 2,
+                  left: (habitatShiftCardDimensions.width - 70) / 2,
+                  width: 70,
+                  height: 70,
+                },
+                children: this.ui.Image({
+                  source: this.ui.Binding.derive(
+                    [this.battleDisplay],
+                    (state: BattleDisplay | null) => {
+                      if (!state?.habitatZone) return null;
+                      const habitat = state.habitatZone;
+                      return this.ui.assetIdToImageSource?.(habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-'));
+                    }
+                  ),
+                  style: {
+                    width: 70,
+                    height: 70,
+                  },
+                }),
+              }),
+
+              // Green glow effect
+              this.ui.View({
+                style: {
+                  position: 'absolute',
+                  top: -4,
+                  left: -4,
+                  right: -4,
+                  bottom: -4,
+                  borderWidth: 4,
+                  borderColor: '#4caf50',
+                  borderRadius: 8,
+                  shadowColor: '#4caf50',
+                  shadowRadius: 10,
+                },
+              }),
+
+              // TODO: Counter badges - need to implement without Binding.derive in children
+              // For now, counter badges are disabled until we implement proper reactive rendering
+            ],
           }),
-        ].filter(Boolean),
+        ],
       });
     }
 
@@ -15119,7 +14903,6 @@ namespace BloomBeasts {
         const config = counterConfigs[type] || { emoji: '●', color: '#868e96' };
         const badgeSize = 28;
         const badgeSpacing = 32;
-        const offsetX = habitatShiftCardDimensions.width - 10 - (index * badgeSpacing);
 
         return this.ui.View({
           style: {
@@ -15158,23 +14941,555 @@ namespace BloomBeasts {
         children: badges,
       });
     }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\PlayerHand.ts ====================
+
+  /**
+   * Player hand overlay - 5 card slots with scroll and toggle
+   */
+
+
+  export class PlayerHand {
+    private ui: PlayerHandProps['ui'];
+    private battleDisplay: PlayerHandProps['battleDisplay'];
+    private showHand: PlayerHandProps['showHand'];
+    private handScrollOffset: PlayerHandProps['handScrollOffset'];
+    private showHandValue: boolean;
+    private handScrollOffsetValue: number;
+    private targetingCardIndex: number | null;
+    private targetingCard: any | null;
+    private onAction?: (action: string) => void;
+    private onShowHandChange?: (newValue: boolean) => void;
+    private onScrollOffsetChange?: (newValue: number) => void;
+    private onRenderNeeded?: () => void;
+    private onEnterTargetingMode?: (cardIndex: number, card: any) => void;
+    private showPlayedCard?: (card: any, callback?: () => void) => void;
+
+    constructor(props: PlayerHandProps) {
+      this.ui = props.ui;
+      this.battleDisplay = props.battleDisplay;
+      this.showHand = props.showHand;
+      this.handScrollOffset = props.handScrollOffset;
+      this.showHandValue = props.showHandValue;
+      this.handScrollOffsetValue = props.handScrollOffsetValue;
+      this.targetingCardIndex = props.targetingCardIndex;
+      this.targetingCard = props.targetingCard;
+      this.onAction = props.onAction;
+      this.onShowHandChange = props.onShowHandChange;
+      this.onScrollOffsetChange = props.onScrollOffsetChange;
+      this.onRenderNeeded = props.onRenderNeeded;
+      this.onEnterTargetingMode = props.onEnterTargetingMode;
+      this.showPlayedCard = props.showPlayedCard;
+    }
 
     /**
-     * Create player and opponent info displays
+     * Create static card structure with reactive properties for hand slot
+     * Handles all card types: Bloom, Magic, Trap, Buff, Habitat
      */
-    private createInfoDisplays(state: BattleDisplay | null): UINodeType {
-      // Defensive: return empty view if state is null
-      if (!state) {
-        return this.ui.View({
-          style: { position: 'absolute', width: '100%', height: '100%' },
-          children: [],
-        });
-      }
+    private createHandCardStructure(slotIndex: number, cardsPerPage: number): UINodeType[] {
+      const cardWidth = standardCardDimensions.width;
+      const cardHeight = standardCardDimensions.height;
+      const beastImageWidth = 185;
+      const beastImageHeight = 185;
 
+      const positions = {
+        beastImage: { x: 12, y: 13 },
+        cost: { x: 20, y: 10 },
+        affinity: { x: 175, y: 7 },
+        name: { x: 105, y: 13 },
+        ability: { x: 21, y: 212 },
+        attack: { x: 20, y: 176 },
+        health: { x: 188, y: 176 },
+      };
+
+      return [
+        // Layer 1: Card/Beast artwork image - reactive source
+        this.ui.Image({
+          source: this.ui.Binding.derive(
+            [this.battleDisplay, this.handScrollOffset],
+            (display: BattleDisplay | null, scrollOffset: number) => {
+              if (!display || !display.playerHand) return null;
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card) return null;
+              const baseId = card.id?.replace(/-\d+-\d+$/, '') || card.name.toLowerCase().replace(/\s+/g, '-');
+              return this.ui.assetIdToImageSource?.(baseId) || null;
+            }
+          ),
+          style: {
+            width: beastImageWidth,
+            height: beastImageHeight,
+            position: 'absolute',
+            top: positions.beastImage.y,
+            left: positions.beastImage.x,
+          },
+        }),
+
+        // Layer 2: Base card frame
+        this.ui.Image({
+          source: this.ui.assetIdToImageSource?.('base-card') || null,
+          style: {
+            width: cardWidth,
+            height: cardHeight,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          },
+        }),
+
+        // Layer 3: Type-specific template overlay - reactive source
+        this.ui.Image({
+          source: this.ui.Binding.derive(
+            [this.battleDisplay, this.handScrollOffset],
+            (display: BattleDisplay | null, scrollOffset: number) => {
+              if (!display || !display.playerHand) return null;
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card || card.type === 'Bloom') return null;
+
+              let templateKey = '';
+              if (card.type === 'Habitat' && card.affinity) {
+                templateKey = `${card.affinity.toLowerCase()}-habitat`;
+              } else {
+                templateKey = `${card.type.toLowerCase()}-card`;
+              }
+              return this.ui.assetIdToImageSource?.(templateKey) || null;
+            }
+          ),
+          style: {
+            width: cardWidth,
+            height: cardHeight,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          },
+        }),
+
+        // Layer 4: Affinity icon (for Bloom cards) - reactive source
+        this.ui.Image({
+          source: this.ui.Binding.derive(
+            [this.battleDisplay, this.handScrollOffset],
+            (display: BattleDisplay | null, scrollOffset: number) => {
+              if (!display || !display.playerHand) return null;
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card || card.type !== 'Bloom' || !card.affinity) return null;
+              return this.ui.assetIdToImageSource?.(`${card.affinity.toLowerCase()}-icon`) || null;
+            }
+          ),
+          style: {
+            width: 30,
+            height: 30,
+            position: 'absolute',
+            top: positions.affinity.y,
+            left: positions.affinity.x,
+          },
+        }),
+
+        // Layer 5: Card name - reactive text
+        this.ui.Text({
+          text: this.ui.Binding.derive(
+            [this.battleDisplay, this.handScrollOffset],
+            (display: BattleDisplay | null, scrollOffset: number) => {
+              if (!display || !display.playerHand) return '';
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              return card?.name || '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.name.y,
+            left: 0,
+            width: cardWidth,
+            fontSize: 14,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 6: Cost - reactive text
+        this.ui.Text({
+          text: this.ui.Binding.derive(
+            [this.battleDisplay, this.handScrollOffset],
+            (display: BattleDisplay | null, scrollOffset: number) => {
+              if (!display || !display.playerHand) return '';
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              return card && card.cost !== undefined ? String(card.cost) : '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.cost.y,
+            left: positions.cost.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 7: Attack (for Bloom cards) - reactive text
+        this.ui.Text({
+          text: this.ui.Binding.derive(
+            [this.battleDisplay, this.handScrollOffset],
+            (display: BattleDisplay | null, scrollOffset: number) => {
+              if (!display || !display.playerHand) return '';
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card || card.type !== 'Bloom') return '';
+              return String((card as any).currentAttack ?? (card as any).baseAttack ?? 0);
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.attack.y,
+            left: positions.attack.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 8: Health (for Bloom cards) - reactive text
+        this.ui.Text({
+          text: this.ui.Binding.derive(
+            [this.battleDisplay, this.handScrollOffset],
+            (display: BattleDisplay | null, scrollOffset: number) => {
+              if (!display || !display.playerHand) return '';
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card || card.type !== 'Bloom') return '';
+              return String((card as any).currentHealth ?? (card as any).baseHealth ?? 0);
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.health.y,
+            left: positions.health.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 9: Ability text (for non-Bloom cards) - reactive text
+        this.ui.Text({
+          text: this.ui.Binding.derive(
+            [this.battleDisplay, this.handScrollOffset],
+            (display: BattleDisplay | null, scrollOffset: number) => {
+              if (!display || !display.playerHand) return '';
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card || card.type === 'Bloom') return '';
+              // For now, show basic ability text - could enhance with description generator
+              return card.abilities?.[0]?.description || '';
+            }
+          ),
+          numberOfLines: 3,
+          style: {
+            position: 'absolute',
+            top: positions.ability.y,
+            left: positions.ability.x,
+            width: 168,
+            fontSize: 10,
+            color: '#fff',
+            textAlign: 'left',
+          },
+        }),
+      ];
+    }
+
+    /**
+     * Create player hand overlay - REACTIVE version using bindings
+     * Creates all slots upfront, uses bindings to show/hide cards
+     */
+    createPlayerHand(): UINodeType {
+      // Hand overlay dimensions
+      const cardWidth = standardCardDimensions.width;  // 210
+      const cardHeight = standardCardDimensions.height; // 280
+      const cardsPerRow = 5;
+      const rowsPerPage = 1;
+      const spacing = 10;
+      const startX = 50;
+      const overlayWidth = 1210;
+      const startY = 10;
+
+      const cardsPerPage = cardsPerRow * rowsPerPage;
+
+      // Create card slots (5 slots total for one row)
+      const cardSlots = Array.from({ length: cardsPerPage }, (_, slotIndex) => {
+        const col = slotIndex % cardsPerRow;
+        const row = Math.floor(slotIndex / cardsPerRow);
+        const x = startX + col * (cardWidth + spacing);
+        const y = startY + row * (cardHeight + spacing);
+
+        return this.ui.View({
+          style: {
+            position: 'absolute',
+            left: x,
+            top: y,
+            width: cardWidth,
+            height: cardHeight,
+            // Hide slot if no card - derive directly from battleDisplay and handScrollOffset
+            display: this.ui.Binding.derive(
+              [this.battleDisplay, this.handScrollOffset],
+              (display: BattleDisplay | null, scrollOffset: number) => {
+                if (!display || !display.playerHand) return 'none';
+                const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+                const card = display.playerHand[actualIndex];
+                return card ? 'flex' : 'none';
+              }
+            ),
+          },
+          children: [
+            // Card component wrapper - always exists, card content is reactive
+            this.ui.View({
+              style: {
+                width: cardWidth,
+                height: cardHeight,
+              },
+              children: this.ui.Pressable({
+                onClick: () => {
+                  const actualIndex = this.handScrollOffsetValue * cardsPerPage + slotIndex;
+                  // Get current card state
+                  const display = this.battleDisplay;
+                  if (display && typeof display === 'object' && 'playerHand' in display) {
+                    const card = (display as any).playerHand?.[actualIndex];
+                    if (card) {
+                      console.log(`[PlayerHand] Card clicked: ${actualIndex}, card: ${card.name}`);
+
+                      // Check if card requires a target
+                      if (card.targetRequired) {
+                        console.log('[PlayerHand] Entering targeting mode for card:', card.name);
+                        this.onEnterTargetingMode?.(actualIndex, card);
+                      } else {
+                        // Show card popup for magic/buff cards, then play
+                        if (card.type === 'Magic' || card.type === 'Buff') {
+                          this.showPlayedCard?.(card, () => {
+                            this.onAction?.(`play-card-${actualIndex}`);
+                          });
+                        } else {
+                          this.onAction?.(`play-card-${actualIndex}`);
+                        }
+                      }
+                    }
+                  }
+                },
+                style: {
+                  width: cardWidth,
+                  height: cardHeight,
+                  position: 'relative',
+                },
+                children: this.createHandCardStructure(slotIndex, cardsPerPage),
+              }),
+            }),
+
+            // Dim overlay if not affordable - derive directly from battleDisplay and handScrollOffset
+            this.ui.View({
+              style: {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: this.ui.Binding.derive(
+                  [this.battleDisplay, this.handScrollOffset],
+                  (display: BattleDisplay | null, scrollOffset: number) => {
+                    if (!display || !display.playerHand) return 'transparent';
+                    const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+                    const card = display.playerHand[actualIndex];
+                    if (!card) return 'transparent';
+                    const canAfford = card.cost <= display.playerNectar;
+                    return canAfford ? 'transparent' : 'rgba(0, 0, 0, 0.5)';
+                  }
+                ),
+              },
+            }),
+          ].filter(Boolean),
+        });
+      });
+
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          left: 40,
+          top: this.ui.Binding.derive(
+            [this.showHand],
+            (showFull: boolean) => gameDimensions.panelHeight - (showFull ? 300 : 60)
+          ),
+          width: overlayWidth,
+          height: this.ui.Binding.derive(
+            [this.showHand],
+            (showFull: boolean) => showFull ? 300 : 60
+          ),
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          borderWidth: 3,
+          borderColor: '#4a8ec2',
+        },
+        children: [
+          // Render all card slots (they show/hide based on bindings)
+          ...cardSlots,
+
+          // Toggle button
+          this.ui.Pressable({
+            onClick: () => {
+              const newShowHand = !this.showHandValue;
+              this.onShowHandChange?.(newShowHand);
+              this.onAction?.('toggle-hand');
+            },
+            style: {
+              position: 'absolute',
+              left: overlayWidth - 50,
+              top: 10,
+              width: 60,
+              height: 50,
+              backgroundColor: '#4a8ec2',
+              borderRadius: 8,
+              justifyContent: 'center',
+              alignItems: 'center',
+            },
+            children: this.ui.Text({
+              text: this.ui.Binding.derive(
+                [this.showHand],
+                (showFull: boolean) => showFull ? 'X' : '↑'
+              ),
+              style: {
+                fontSize: 24,
+                fontWeight: 'bold',
+                color: '#fff',
+              },
+            }),
+          }),
+
+          // Scroll buttons (show/hide based on showHand binding)
+          // Up button (positioned below toggle button)
+          this.ui.Pressable({
+            onClick: () => {
+              const newOffset = Math.max(0, this.handScrollOffsetValue - 1);
+              this.onScrollOffsetChange?.(newOffset);
+            },
+            disabled: this.ui.Binding.derive(
+              [this.handScrollOffset],
+              (offset: number) => offset <= 0
+            ),
+            style: {
+              position: 'absolute',
+              left: overlayWidth - 50,
+              top: 10 + 50 + 10, // Below toggle button
+              width: 60,
+              height: 50,
+              backgroundColor: this.ui.Binding.derive(
+                [this.handScrollOffset],
+                (offset: number) => offset > 0 ? '#4a8ec2' : '#666'
+              ),
+              borderRadius: 8,
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: this.ui.Binding.derive(
+                [this.handScrollOffset],
+                (offset: number) => offset > 0 ? 1 : 0.5
+              ),
+              display: this.ui.Binding.derive(
+                [this.showHand],
+                (showFull: boolean) => showFull ? 'flex' : 'none'
+              ),
+            },
+            children: this.ui.Text({
+              text: new this.ui.Binding('⬆'),
+              style: {
+                fontSize: 24,
+                fontWeight: 'bold',
+                color: '#fff',
+              },
+            }),
+          }),
+
+          // Down button (positioned below up button)
+          this.ui.Pressable({
+            onClick: () => {
+              this.onScrollOffsetChange?.(this.handScrollOffsetValue + 1);
+            },
+            disabled: this.ui.Binding.derive(
+              [this.handScrollOffset, this.battleDisplay],
+              (offset: number, state: BattleDisplay | null) => {
+                if (!state || !state.playerHand) return true;
+                const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
+                return offset >= totalPages - 1 || state.playerHand.length <= cardsPerPage;
+              }
+            ),
+            style: {
+              position: 'absolute',
+              left: overlayWidth - 50,
+              top: 10 + 50 + 10 + 50 + 10, // Below up button
+              width: 60,
+              height: 50,
+              backgroundColor: this.ui.Binding.derive(
+                [this.handScrollOffset, this.battleDisplay],
+                (offset: number, state: BattleDisplay | null) => {
+                  if (!state || !state.playerHand) return '#666';
+                  const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
+                  return (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? '#4a8ec2' : '#666';
+                }
+              ),
+              borderRadius: 8,
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: this.ui.Binding.derive(
+                [this.handScrollOffset, this.battleDisplay],
+                (offset: number, state: BattleDisplay | null) => {
+                  if (!state || !state.playerHand) return 0.5;
+                  const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
+                  return (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? 1 : 0.5;
+                }
+              ),
+              display: this.ui.Binding.derive(
+                [this.showHand],
+                (showFull: boolean) => showFull ? 'flex' : 'none'
+              ),
+            },
+            children: this.ui.Text({
+              text: new this.ui.Binding('↓'),
+              style: {
+                fontSize: 24,
+                fontWeight: 'bold',
+                color: '#fff',
+              },
+            }),
+          }),
+        ].filter(Boolean),
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\InfoDisplays.ts ====================
+
+  /**
+   * Player and opponent info displays (health, nectar, deck count)
+   */
+
+
+  export class InfoDisplays {
+    private ui: BattleComponentProps['ui'];
+    private battleDisplay: BattleComponentProps['battleDisplay'];
+
+    constructor(props: BattleComponentProps) {
+      this.ui = props.ui;
+      this.battleDisplay = props.battleDisplay;
+    }
+
+    /**
+     * Create player and opponent info displays - Fully reactive
+     */
+    createInfoDisplays(): UINodeType {
       const opponentHealthPos = battleBoardAssetPositions.playerOne.health;
       const playerHealthPos = battleBoardAssetPositions.playerTwo.health;
       const opponentInfoPos = battleBoardAssetPositions.playOneInfoPosition;
-      const playerInfoPos = battleBoardAssetPositions.playerTwoInfoPosition;
+      const playerInfoPos = battleBoardAssetPositions.playTwoInfoPosition;
 
       return this.ui.View({
         style: {
@@ -15204,35 +15519,18 @@ namespace BloomBeasts {
               ),
               borderRadius: 4,
             },
-            children: [
-              this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay) => state ? `${state.opponentHealth}/${state.opponentMaxHealth}` : '20/20'
-                ),
-                style: {
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                  color: '#fff',
-                  textAlign: 'center',
-                },
-              }),
-              // Make clickable if a beast is selected for direct attack
-              this.battleDisplayValue.selectedBeastIndex !== null ? this.ui.Pressable({
-                onClick: () => {
-                  console.log(`[BattleScreen] Opponent health clicked, attacking with beast ${this.battleDisplayValue.selectedBeastIndex}`);
-                  this.onAction?.(`attack-player-${this.battleDisplayValue.selectedBeastIndex}`);
-                },
-                style: {
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                },
-                children: null,
-              }) : null,
-            ].filter(Boolean),
+            children: this.ui.Text({
+              text: this.ui.Binding.derive(
+                [this.battleDisplay],
+                (state: BattleDisplay) => state ? `${state.opponentHealth}/${state.opponentMaxHealth}` : '20/20'
+              ),
+              style: {
+                fontSize: 20,
+                fontWeight: 'bold',
+                color: '#fff',
+                textAlign: 'center',
+              },
+            }),
           }),
 
           // Player health
@@ -15354,14 +15652,36 @@ namespace BloomBeasts {
         ],
       });
     }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\BattleSideMenu.ts ====================
+
+  /**
+   * Battle side menu - Turn counter, end turn button, forfeit
+   */
+
+
+  export class BattleSideMenu {
+    private ui: BattleSideMenuProps['ui'];
+    private battleDisplay: BattleSideMenuProps['battleDisplay'];
+    private endTurnButtonText: BattleSideMenuProps['endTurnButtonText'];
+    private isPlayerTurnValue: boolean;
+    private onAction?: (action: string) => void;
+    private onStopTurnTimer?: () => void;
+
+    constructor(props: BattleSideMenuProps) {
+      this.ui = props.ui;
+      this.battleDisplay = props.battleDisplay;
+      this.endTurnButtonText = props.endTurnButtonText;
+      this.isPlayerTurnValue = props.isPlayerTurnValue;
+      this.onAction = props.onAction;
+      this.onStopTurnTimer = props.onStopTurnTimer;
+    }
 
     /**
-     * Create battle-specific side menu
+     * Create battle-specific side menu - Fully reactive
      */
-    private createBattleSideMenu(state: BattleDisplay): UINodeType {
-      // Timer is now managed via battleDisplay derived bindings, not during render
-      // This prevents infinite render loops
-
+    createBattleSideMenu(): UINodeType {
       return this.ui.View({
         style: {
           position: 'absolute',
@@ -15387,7 +15707,7 @@ namespace BloomBeasts {
           // Forfeit button (at header position)
           this.ui.Pressable({
             onClick: () => {
-              console.log('[BattleScreen] Forfeit button clicked');
+              console.log('[BattleSideMenu] Forfeit button clicked');
               this.onAction?.('btn-forfeit');
             },
             style: {
@@ -15460,12 +15780,12 @@ namespace BloomBeasts {
                   marginBottom: 5,
                 },
               }),
-              // Deathmatch warning (conditionally rendered based on turn)
-              this.battleDisplayValue.currentTurn >= 30 ? this.ui.Text({
+              // Deathmatch warning (reactive) - always rendered, conditionally visible
+              this.ui.Text({
                 text: this.ui.Binding.derive(
                   [this.battleDisplay],
-                  (state: BattleDisplay) => {
-                    if (!state) return 'Deathmatch! -1 HP';
+                  (state: BattleDisplay | null) => {
+                    if (!state || state.currentTurn < 30) return '';
                     const deathmatchDamage = Math.floor((state.currentTurn - 30) / 5) + 1;
                     return `Deathmatch! -${deathmatchDamage} HP`;
                   }
@@ -15474,22 +15794,28 @@ namespace BloomBeasts {
                   fontSize: 16,
                   color: '#ff6b6b',
                   fontWeight: 'bold',
+                  display: this.ui.Binding.derive(
+                    [this.battleDisplay],
+                    (state: BattleDisplay | null) => {
+                      return (state && state.currentTurn >= 30) ? 'flex' : 'none';
+                    }
+                  ),
                 },
-              }) : null,
-            ].filter(Boolean),
+              }),
+            ],
           }),
 
           // End Turn button with timer - uses derived bindings for reactive updates
           this.ui.Pressable({
             onClick: () => {
               const currentIsPlayerTurn = this.isPlayerTurnValue;
-              console.log('[BattleScreen] End Turn button clicked, isPlayerTurn:', currentIsPlayerTurn);
+              console.log('[BattleSideMenu] End Turn button clicked, isPlayerTurn:', currentIsPlayerTurn);
               if (currentIsPlayerTurn) {
-                this.stopTurnTimer();
-                console.log('[BattleScreen] Calling onAction with btn-end-turn');
+                this.onStopTurnTimer?.();
+                console.log('[BattleSideMenu] Calling onAction with end-turn');
                 this.onAction?.('end-turn');
               } else {
-                console.log('[BattleScreen] End Turn clicked but not player turn');
+                console.log('[BattleSideMenu] End Turn clicked but not player turn');
               }
             },
             disabled: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => state?.turnPlayer !== 'player'),
@@ -15526,250 +15852,417 @@ namespace BloomBeasts {
                   justifyContent: 'center',
                   alignItems: 'center',
                 },
-                children: (() => {
-                  // endTurnButtonText is a derived binding, text is reactive
-                  const buttonText = 'End Turn';  // Default text, binding handles the actual display
-                  console.log('[BattleScreen] Rendering button text:', buttonText);
-                  return this.ui.Text({
-                    text: this.endTurnButtonText,
-                    style: {
-                      fontSize: DIMENSIONS.fontSize.md,
-                      fontWeight: 'bold',
-                      color: '#fff',
-                      textAlign: 'center',
-                    },
-                  });
-                })(),
+                children: this.ui.Text({
+                  text: this.endTurnButtonText,
+                  style: {
+                    fontSize: DIMENSIONS.fontSize.md,
+                    fontWeight: 'bold',
+                    color: '#fff',
+                    textAlign: 'center',
+                  },
+                }),
               }),
             ],
           }),
         ],
       });
     }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\index.ts ====================
+
+  /**
+   * Battle screen components - Modular, reactive battle UI
+   */
+
+  // Export components
+
+  // Export constants from types
+
+  // Note: Prop interfaces (BattleComponentProps, etc.) are exported from types.ts
+  // but not re-exported here to avoid namespace bundling issues.
+  // Import them directly from './types' if needed externally.
+
+  // ==================== bloombeasts\ui\screens\BattleScreen.ts ====================
+
+  /**
+   * Unified Battle Screen Component
+   * Works on both Horizon and Web platforms
+   * Exactly mimics the UI from deployments/web/src/screens/battleScreen.ts
+   */
+
+
+  // Import modular battle components
+
+  export interface BattleScreenProps {
+    ui: UIMethodMappings;
+    async: AsyncMethods;
+    battleDisplay: any; // BattleDisplay binding - REQUIRED
+    onAction?: (action: string) => void;
+    onNavigate?: (screen: string) => void;
+    onRenderNeeded?: () => void;
+  }
+
+  /**
+   * Unified Battle Screen that exactly replicates web deployment's battle UI
+   */
+  export class BattleScreen {
+    // UI methods (injected)
+    private ui: UIMethodMappings;
+    private async: AsyncMethods;
+
+    // State bindings
+    private battleDisplay: any; // BattleDisplay binding - REQUIRED
+    private showHand: any;
+    private handScrollOffset: any;
+    private turnTimer: any;
+    private selectedCardDetail: any;
+    private isPlayerTurn: any;
+    private endTurnButtonText: any; // Binding for button text that updates reactively
+
+    // Targeting state for cards that require targets
+    private targetingCardIndex: number | null = null;
+    private targetingCard: any | null = null;
+
+    // Temporary card display (for showing played cards)
+    private playedCardDisplay: any | null = null;
+    private playedCardTimeout: number | null = null;
+
+    // Timer management
+    private timerInterval: number | null = null;
+
+    // Track binding values separately (as per Horizon docs - no .get() method)
+    private timerValue = 60;
+    private isPlayerTurnValue = false;
+    private showHandValue = true;
+    private handScrollOffsetValue = 0;
+    private selectedCardDetailValue: any = null;
+
+    // Configuration
+    private cardsPerRow = 5;
+    private rowsPerPage = 1;
+
+    // Render guard to prevent infinite loops
+    private isRendering = false;
+    private needsRerender = false;
+
+    // Callbacks
+    private onAction?: (action: string) => void;
+    private onNavigate?: (screen: string) => void;
+    private onRenderNeeded?: () => void;
+
+    // Battle components (modular)
+    private backgroundComponent!: BattleBackground;
+    private beastFieldComponent!: BeastField;
+    private trapZoneComponent!: TrapZone;
+    private buffZoneComponent!: BuffZone;
+    private habitatZoneComponent!: HabitatZone;
+    private playerHandComponent!: PlayerHand;
+    private infoDisplaysComponent!: InfoDisplays;
+    private sideMenuComponent!: BattleSideMenu;
+
+    constructor(props: BattleScreenProps) {
+      this.ui = props.ui;
+      this.async = props.async;
+
+      // Initialize bindings after ui is set
+      this.showHandValue = true;
+      this.showHand = new this.ui.Binding(this.showHandValue);
+
+      this.handScrollOffsetValue = 0;
+      this.handScrollOffset = new this.ui.Binding(this.handScrollOffsetValue);
+
+      this.timerValue = 60;
+      this.turnTimer = new this.ui.Binding(this.timerValue);
+
+      this.selectedCardDetailValue = null;
+      this.selectedCardDetail = new this.ui.Binding<any | null>(this.selectedCardDetailValue);
+
+      // Store required battleDisplay binding
+      this.battleDisplay = props.battleDisplay;
+
+      this.onAction = props.onAction;
+      this.onNavigate = props.onNavigate;
+      this.onRenderNeeded = props.onRenderNeeded;
+
+      // Initialize player turn tracking with derived bindings
+      // Create derived binding for isPlayerTurn
+      this.isPlayerTurn = this.ui.Binding.derive(
+        [this.battleDisplay],
+        (state: BattleDisplay | null) => {
+          const newIsPlayerTurn = state?.turnPlayer === 'player';
+
+          // Start/stop timer based on turn changes
+          if (this.isPlayerTurnValue !== newIsPlayerTurn) {
+            this.isPlayerTurnValue = newIsPlayerTurn;
+            if (newIsPlayerTurn) {
+              this.startTurnTimer();
+            } else {
+              this.stopTurnTimer();
+            }
+          }
+
+          return newIsPlayerTurn;
+        }
+      );
+
+      // Create derived binding for endTurnButtonText
+      this.endTurnButtonText = this.ui.Binding.derive(
+        [this.battleDisplay, this.turnTimer],
+        (state: BattleDisplay | null, timer: number) => state?.turnPlayer === 'player' ? `(${timer})` : 'Enemy Turn'
+      );
+
+      // Initialize battle components
+      this.backgroundComponent = new BattleBackground({
+        ui: this.ui,
+        battleDisplay: this.battleDisplay,
+      });
+
+      this.beastFieldComponent = new BeastField({
+        ui: this.ui,
+        battleDisplay: this.battleDisplay,
+        targetingCardIndex: this.targetingCardIndex,
+        targetingCard: this.targetingCard,
+        onAction: this.onAction,
+        showPlayedCard: this.showPlayedCard.bind(this),
+      });
+
+      this.trapZoneComponent = new TrapZone({
+        ui: this.ui,
+        battleDisplay: this.battleDisplay,
+        targetingCardIndex: null,
+        targetingCard: null,
+        onCardDetailSelected: (card) => {
+          this.selectedCardDetailValue = card;
+          this.selectedCardDetail.set(card);
+        },
+      });
+
+      this.buffZoneComponent = new BuffZone({
+        ui: this.ui,
+        battleDisplay: this.battleDisplay,
+        targetingCardIndex: null,
+        targetingCard: null,
+        onCardDetailSelected: (card) => {
+          this.selectedCardDetailValue = card;
+          this.selectedCardDetail.set(card);
+        },
+      });
+
+      this.habitatZoneComponent = new HabitatZone({
+        ui: this.ui,
+        battleDisplay: this.battleDisplay,
+        targetingCardIndex: null,
+        targetingCard: null,
+        onCardDetailSelected: (card) => {
+          const habitatWithType = { ...card, type: 'Habitat' };
+          this.selectedCardDetailValue = habitatWithType;
+          this.selectedCardDetail.set(habitatWithType);
+        },
+      });
+
+      this.playerHandComponent = new PlayerHand({
+        ui: this.ui,
+        battleDisplay: this.battleDisplay,
+        showHand: this.showHand,
+        handScrollOffset: this.handScrollOffset,
+        showHandValue: this.showHandValue,
+        handScrollOffsetValue: this.handScrollOffsetValue,
+        targetingCardIndex: this.targetingCardIndex,
+        targetingCard: this.targetingCard,
+        onAction: this.onAction,
+        onShowHandChange: (newValue) => {
+          this.showHandValue = newValue;
+          this.showHand.set(newValue);
+        },
+        onScrollOffsetChange: (newValue) => {
+          this.handScrollOffsetValue = newValue;
+          this.handScrollOffset.set(newValue);
+        },
+        onEnterTargetingMode: (cardIndex, card) => {
+          this.targetingCardIndex = cardIndex;
+          this.targetingCard = card;
+          this.onRenderNeeded?.();
+        },
+        showPlayedCard: this.showPlayedCard.bind(this),
+      });
+
+      this.infoDisplaysComponent = new InfoDisplays({
+        ui: this.ui,
+        battleDisplay: this.battleDisplay,
+      });
+
+      this.sideMenuComponent = new BattleSideMenu({
+        ui: this.ui,
+        battleDisplay: this.battleDisplay,
+        endTurnButtonText: this.endTurnButtonText,
+        isPlayerTurnValue: this.isPlayerTurnValue,
+        onAction: this.onAction,
+        onStopTurnTimer: () => this.stopTurnTimer(),
+      });
+    }
 
     /**
-     * Create player hand overlay - matches canvas version exactly
+     * Safe render wrapper to prevent infinite loops
      */
-    private createPlayerHand(state: BattleDisplay): UINodeType | null {
-      if (!state.playerHand || state.playerHand.length === 0) return null;
+    private safeRender(): void {
+      if (this.isRendering) {
+        // Already rendering, schedule for after current render completes
+        this.needsRerender = true;
+        return;
+      }
+      this.onRenderNeeded?.();
+    }
 
-      // Match canvas version dimensions exactly
-      const cardWidth = standardCardDimensions.width;  // 210
-      const cardHeight = standardCardDimensions.height; // 280
-      const cardsPerRow = 5;
-      const rowsPerPage = 1;
-      const spacing = 10;
-      const startX = 50;
-      const overlayWidth = 1210;
-      const overlayHeight = this.showHandValue ? 300 : 60;
-      const overlayY = gameDimensions.panelHeight - overlayHeight; // 720 - overlayHeight
-      const startY = overlayY + 10;
+    /**
+     * Create the complete battle UI
+     */
+    createUI(): UINodeType {
+      // console.log('[BattleScreen] createUI called');
+      this.isRendering = true;
+      this.needsRerender = false;
 
-      // Calculate visible cards
-      const cardsPerPage = cardsPerRow * rowsPerPage;
-      const startIndex = this.handScrollOffsetValue * cardsPerPage;
-      const endIndex = Math.min(startIndex + cardsPerPage, state.playerHand.length);
-      const visibleCards = state.playerHand.slice(startIndex, endIndex);
-      const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
+      // Mark rendering as complete
+      this.finishRender();
 
+      // Full battle UI - all structure created once, bindings handle updates
       return this.ui.View({
         style: {
-          position: 'absolute',
-          left: 40,
-          top: overlayY,
-          width: overlayWidth,
-          height: overlayHeight,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          borderWidth: 3,
-          borderColor: '#4a8ec2',
+          width: gameDimensions.panelWidth,
+          height: gameDimensions.panelHeight,
+          position: 'relative',
+          overflow: 'hidden',
         },
         children: [
-          // Render cards (always render, even when minimized)
-          ...visibleCards.map((card, i) => {
-            const actualIndex = startIndex + i;
-            const col = i % cardsPerRow;
-            const row = Math.floor(i / cardsPerRow);
-            const x = startX + col * (cardWidth + spacing);
-            const y = startY + row * (cardHeight + spacing);
-            const canAfford = card.cost <= state.playerNectar;
+          // Layer 1: Background image (full screen)
+          this.backgroundComponent.createBackground(),
 
-            return this.ui.View({
-              style: {
-                position: 'absolute',
-                left: x - 40, // Relative to overlay left edge
-                top: y - overlayY, // Relative to overlay top edge
-                width: cardWidth,
-                height: cardHeight,
-              },
-              children: [
-                // Card component with click handler
-                this.ui.Pressable({
-                  onClick: () => {
-                    console.log(`[BattleScreen] Card clicked: ${actualIndex}, card: ${card.name}`);
-                    console.log('[BattleScreen] Card targetRequired:', card.targetRequired);
+          // Layer 2: Playboard overlay
+          this.backgroundComponent.createPlayboard(),
 
-                    // Check if card requires a target
-                    if (card.targetRequired) {
-                      // Enter targeting mode
-                      console.log('[BattleScreen] Entering targeting mode for card:', card.name);
-                      this.targetingCardIndex = actualIndex;
-                      this.targetingCard = card;
-                      this.onRenderNeeded?.();
-                    } else {
-                      // Show card popup for magic/buff cards, then play
-                      if (card.type === 'Magic' || card.type === 'Buff') {
-                        this.showPlayedCard(card, () => {
-                          console.log('[BattleScreen] Playing card without target after popup');
-                          this.onAction?.(`play-card-${actualIndex}`);
-                        });
-                      } else {
-                        // Play card immediately (Bloom, Trap, etc.)
-                        console.log('[BattleScreen] Playing card without target');
-                        this.onAction?.(`play-card-${actualIndex}`);
-                      }
-                    }
-                  },
-                  style: {
-                    width: cardWidth,
-                    height: cardHeight,
-                  },
-                  children: createCardComponent(this.ui, {
-                    card: card,
-                  }),
-                }),
+          // Layer 3: Battle zones (beasts, traps, buffs, habitat)
+          ...this.beastFieldComponent.createBeastField('player'),
+          ...this.beastFieldComponent.createBeastField('opponent'),
+          ...this.trapZoneComponent.createTrapZone('player'),
+          ...this.trapZoneComponent.createTrapZone('opponent'),
+          ...this.buffZoneComponent.createBuffZone('player'),
+          ...this.buffZoneComponent.createBuffZone('opponent'),
+          this.habitatZoneComponent.createHabitatZone(),
 
-                // Dim overlay if not affordable (matches canvas version exactly)
-                !canAfford ? this.ui.View({
-                  style: {
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                  },
-                }) : null,
-              ].filter(Boolean),
-            });
-          }),
+          // Layer 4: Player/Opponent info displays
+          this.infoDisplaysComponent.createInfoDisplays(),
 
-          // Toggle button - matches canvas version exactly (60x50, at overlayWidth - 50, overlayY + 10)
-          this.ui.Pressable({
-            onClick: () => {
-              const newShowHand = !this.showHandValue;
-              this.showHandValue = newShowHand;
-              this.showHand.set(newShowHand);
-              // Trigger re-render
-              this.onRenderNeeded?.();
-              this.onAction?.('toggle-hand');
-            },
+          // Layer 5: Side menu with controls
+          this.sideMenuComponent.createBattleSideMenu(),
+
+          // Layer 6: Player hand overlay (always rendered, bindings control visibility)
+          this.playerHandComponent.createPlayerHand(),
+
+          // Layer 7: Card detail popup (from battleDisplay) - conditionally visible
+          this.createCardPopupLayer(),
+
+          // Layer 7.25: Selected card detail popup (from clicking buff/trap cards) - conditionally visible
+          this.createSelectedCardDetailLayer(),
+
+          // Layer 7.5: Played card popup (temporary 2-second display) - conditionally visible
+          this.createPlayedCardPopupLayer(),
+
+          // Layer 8: Attack animation overlays
+          this.createAttackAnimations(),
+        ],
+      });
+    }
+
+
+    /**
+     * Create card popup layer with conditional visibility
+     */
+    private createCardPopupLayer(): UINodeType {
+      // Use UINode.if for conditional rendering if available
+      if (this.ui.UINode?.if) {
+        return this.ui.UINode.if(
+          this.battleDisplay.derive((state: BattleDisplay | null) => !!state?.cardPopup),
+          this.ui.View({
             style: {
               position: 'absolute',
-              left: overlayWidth - 50,
-              top: 10,
-              width: 60,
-              height: 50,
-              backgroundColor: '#4a8ec2',
-              borderRadius: 8,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
               justifyContent: 'center',
               alignItems: 'center',
+              zIndex: 1000,
             },
             children: this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.showHand],
-                (showFull: boolean) => showFull ? 'X' : '↑'
-              ),
-              style: {
-                fontSize: 24,
-                fontWeight: 'bold',
-                color: '#fff',
-              },
+              text: 'Card Popup - TODO: Implement with reactive data',
+              style: { color: '#fff', fontSize: 20 }
             }),
-          }),
+          })
+        );
+      }
 
-          // Scroll buttons (only when showing full hand)
-          ...(this.showHandValue ? [
-            // Up button (positioned below toggle button)
-            this.ui.Pressable({
-              onClick: () => {
-                const newOffset = Math.max(0, this.handScrollOffsetValue - 1);
-                this.handScrollOffsetValue = newOffset;
-                this.handScrollOffset.set(newOffset);
-                // Trigger re-render
-                this.onRenderNeeded?.();
-              },
-              disabled: this.handScrollOffset.derive((offset: number) => offset <= 0),
-              style: {
-                position: 'absolute',
-                left: overlayWidth - 50,
-                top: 10 + 50 + 10, // Below toggle button
-                width: 60,
-                height: 50,
-                backgroundColor: this.ui.Binding.derive(
-                  [this.handScrollOffset],
-                  (offset: number) => offset > 0 ? '#4a8ec2' : '#666'
-                ),
-                borderRadius: 8,
-                justifyContent: 'center',
-                alignItems: 'center',
-                opacity: this.ui.Binding.derive(
-                  [this.handScrollOffset],
-                  (offset: number) => offset > 0 ? 1 : 0.5
-                ),
-              },
-              children: this.ui.Text({
-                text: new this.ui.Binding('⬆'),
+      // Fallback: empty View (popup won't work)
+      return this.ui.View({ style: { display: 'none' } });
+    }
+
+    /**
+     * Create selected card detail popup layer with conditional visibility
+     */
+    private createSelectedCardDetailLayer(): UINodeType {
+      // Use UINode.if for conditional rendering if available
+      if (this.ui.UINode?.if) {
+        return this.ui.UINode.if(
+          this.selectedCardDetail.derive((card: any) => !!card),
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              top: 0,
+              left: 0,
+            },
+            children: [
+              // Black backdrop
+              this.ui.Pressable({
+                onClick: () => {
+                  this.selectedCardDetailValue = null;
+                  this.selectedCardDetail.set(null);
+                },
                 style: {
-                  fontSize: 24,
-                  fontWeight: 'bold',
-                  color: '#fff',
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
                 },
               }),
-            }),
-
-            // Down button (positioned below up button)
-            this.ui.Pressable({
-              onClick: () => {
-                const newOffset = Math.min(totalPages - 1, this.handScrollOffsetValue + 1);
-                this.handScrollOffsetValue = newOffset;
-                this.handScrollOffset.set(newOffset);
-                // Trigger re-render
-                this.onRenderNeeded?.();
-              },
-              disabled: this.ui.Binding.derive(
-                [this.handScrollOffset, this.battleDisplay],
-                (offset: number, state: BattleDisplay) => offset >= totalPages - 1 || state.playerHand.length <= cardsPerPage
-              ),
-              style: {
-                position: 'absolute',
-                left: overlayWidth - 50,
-                top: 10 + 50 + 10 + 50 + 10, // Below up button
-                width: 60,
-                height: 50,
-                backgroundColor: this.ui.Binding.derive(
-                  [this.handScrollOffset, this.battleDisplay],
-                  (offset: number, state: BattleDisplay) => (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? '#4a8ec2' : '#666'
-                ),
-                borderRadius: 8,
-                justifyContent: 'center',
-                alignItems: 'center',
-                opacity: this.ui.Binding.derive(
-                  [this.handScrollOffset, this.battleDisplay],
-                  (offset: number, state: BattleDisplay) => (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? 1 : 0.5
-                ),
-              },
-              children: this.ui.Text({
-                text: new this.ui.Binding('↓'),
+              // Card display
+              this.ui.Text({
+                text: 'Selected Card Detail - TODO: Implement with reactive card rendering',
                 style: {
-                  fontSize: 24,
-                  fontWeight: 'bold',
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
                   color: '#fff',
-                },
+                  fontSize: 20,
+                }
               }),
-            }),
-          ] : []),
-        ].filter(Boolean),
-      });
+            ],
+          })
+        );
+      }
+
+      // Fallback: empty View
+      return this.ui.View({ style: { display: 'none' } });
+    }
+
+    /**
+     * Create played card popup layer with conditional visibility
+     */
+    private createPlayedCardPopupLayer(): UINodeType {
+      // For now, return empty View since playedCardDisplay is not reactive yet
+      // TODO: Make playedCardDisplay reactive and implement properly
+      return this.ui.View({ style: { display: 'none' } });
     }
 
     /**
@@ -15805,8 +16298,8 @@ namespace BloomBeasts {
     /**
      * Create attack animation overlays
      */
-    private createAttackAnimations(state: BattleDisplay): UINodeType | null {
-      // Attack animations are handled directly in the beast field rendering
+    private createAttackAnimations(): UINodeType | null {
+      // Attack animations are handled directly in the beast field rendering (reactive)
       // This is a placeholder for any additional animation effects
       return null;
     }
@@ -15913,7 +16406,7 @@ namespace BloomBeasts {
     /**
      * Show a played card popup for 2 seconds, then execute callback
      */
-    private showPlayedCard(card: any, onComplete: () => void): void {
+    private showPlayedCard(card: any, callback?: () => void): void {
       console.log('[BattleScreen] Showing played card popup:', card.name);
 
       // Clear any existing timeout
@@ -15929,7 +16422,7 @@ namespace BloomBeasts {
       this.playedCardTimeout = this.async.setTimeout(() => {
         this.playedCardDisplay = null;
         this.onRenderNeeded?.();
-        onComplete();
+        callback?.();
       }, 2000);
     }
 
@@ -17226,7 +17719,6 @@ namespace BloomBeasts {
         ui: this.UI,
         async: this.asyncMethods,
         battleDisplay: this.battleDisplayBinding,
-        message: this.battleMessageBinding,
         onAction: this.handleBattleAction.bind(this),
         onNavigate: this.navigate.bind(this),
         onRenderNeeded: this.triggerRender.bind(this)
@@ -18251,6 +18743,7 @@ namespace BloomBeasts {
         style: {
           width: '100%',
           height: '100%',
+          backgroundColor: 'blue',
         },
         children,
       });
@@ -18352,146 +18845,147 @@ namespace BloomBeasts {
   // ==================== bloombeasts\catalogs\buffAssets.ts ====================
 
   /**
-   * Auto-generated TypeScript catalog from buffAssets.json
-   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   * Buff Assets Catalog
+   * Source of truth for buff cards and assets
+   * Edit this file directly to add/modify assets
    */
 
 
   export const buffAssets: AssetCatalog = {
     version: "1.0.0",
     category: "buff",
-    "description": "Buff cards and assets",
-    "data": [
+    description: "Buff cards and assets",
+    data: [
       {
-        "id": "battle-fury",
-        "type": "buff",
-        "cardType": "Buff",
-        "data": {
-          "id": "battle-fury",
-          "name": "Battle Fury",
-          "type": "Buff",
-          "cost": 3,
-          "abilities": [
+        id: "battle-fury",
+        type: "buff",
+        cardType: "Buff",
+        data: {
+          id: "battle-fury",
+          name: "Battle Fury",
+          type: "Buff",
+          cost: 3,
+          abilities: [
             {
-              "name": "Battle Fury",
-              "trigger": "Passive",
-              "effects": [
+              name: "Battle Fury",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "ModifyStats",
-                  "target": "AllAllies",
-                  "stat": "Attack",
-                  "value": 2,
-                  "duration": "WhileOnField"
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.AllAllies,
+                  stat: StatType.Attack,
+                  value: 2,
+                  duration: EffectDuration.WhileOnField
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1514404306279605",
-            "path": "assets/images/cards_buff_battle-fury.png"
+            type: "image",
+            horizonAssetId: "1514404306279605",
+            path: "assets/images/cards_buff_battle-fury.png"
           }
         ]
       },
       {
-        "id": "mystic-shield",
-        "type": "buff",
-        "cardType": "Buff",
-        "data": {
-          "id": "mystic-shield",
-          "name": "Mystic Shield",
-          "type": "Buff",
-          "cost": 3,
-          "abilities": [
+        id: "mystic-shield",
+        type: "buff",
+        cardType: "Buff",
+        data: {
+          id: "mystic-shield",
+          name: "Mystic Shield",
+          type: "Buff",
+          cost: 3,
+          abilities: [
             {
-              "name": "Mystic Shield",
-              "trigger": "Passive",
-              "effects": [
+              name: "Mystic Shield",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "ModifyStats",
-                  "target": "AllAllies",
-                  "stat": "Health",
-                  "value": 2,
-                  "duration": "WhileOnField"
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.AllAllies,
+                  stat: StatType.Health,
+                  value: 2,
+                  duration: EffectDuration.WhileOnField
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "787965707330770",
-            "path": "assets/images/cards_buff_mystic-shield.png"
+            type: "image",
+            horizonAssetId: "787965707330770",
+            path: "assets/images/cards_buff_mystic-shield.png"
           }
         ]
       },
       {
-        "id": "natures-blessing",
-        "type": "buff",
-        "cardType": "Buff",
-        "affinity": "forest",
-        "data": {
-          "id": "natures-blessing",
-          "name": "Nature's Blessing",
-          "type": "Buff",
-          "affinity": "Forest",
-          "cost": 4,
-          "abilities": [
+        id: "natures-blessing",
+        type: "buff",
+        cardType: "Buff",
+        affinity: "forest",
+        data: {
+          id: "natures-blessing",
+          name: "Nature's Blessing",
+          type: "Buff",
+          affinity: "Forest",
+          cost: 4,
+          abilities: [
             {
-              "name": "Nature's Blessing",
-              "trigger": "OnOwnStartOfTurn",
-              "effects": [
+              name: "Nature's Blessing",
+              trigger: AbilityTrigger.OnOwnStartOfTurn,
+              effects: [
                 {
-                  "type": "Heal",
-                  "target": "AllAllies",
-                  "value": 1
+                  type: EffectType.Heal,
+                  target: AbilityTarget.AllAllies,
+                  value: 1
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "4100038783597004",
-            "path": "assets/images/cards_buff_natures-blessing.png"
+            type: "image",
+            horizonAssetId: "4100038783597004",
+            path: "assets/images/cards_buff_natures-blessing.png"
           }
         ]
       },
       {
-        "id": "swift-wind",
-        "type": "buff",
-        "cardType": "Buff",
-        "affinity": "sky",
-        "data": {
-          "id": "swift-wind",
-          "name": "Swift Wind",
-          "type": "Buff",
-          "affinity": "Sky",
-          "cost": 2,
-          "abilities": [
+        id: "swift-wind",
+        type: "buff",
+        cardType: "Buff",
+        affinity: "sky",
+        data: {
+          id: "swift-wind",
+          name: "Swift Wind",
+          type: "Buff",
+          affinity: "Sky",
+          cost: 2,
+          abilities: [
             {
-              "name": "Swift Wind",
-              "trigger": "OnOwnStartOfTurn",
-              "effects": [
+              name: "Swift Wind",
+              trigger: AbilityTrigger.OnOwnStartOfTurn,
+              effects: [
                 {
-                  "type": "GainResource",
-                  "target": "PlayerGardener",
-                  "resource": "Nectar",
-                  "value": 1
+                  type: EffectType.GainResource,
+                  target: AbilityTarget.PlayerGardener,
+                  resource: ResourceType.Nectar,
+                  value: 1
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "657351040536713",
-            "path": "assets/images/cards_buff_swift-wind.png"
+            type: "image",
+            horizonAssetId: "657351040536713",
+            path: "assets/images/cards_buff_swift-wind.png"
           }
         ]
       }
@@ -18508,596 +19002,596 @@ namespace BloomBeasts {
 
 
   export const commonAssets: AssetCatalog = {
-    "version": "1.0.0",
-    "category": "common",
-    "description": "Common UI elements, backgrounds, and shared assets",
-    "data": [
+    version: "1.0.0",
+    category: "common",
+    description: "Common UI elements, backgrounds, and shared assets",
+    data: [
       {
-        "id": "background",
-        "type": "ui",
-        "category": "background",
-        "name": "Main Background",
-        "description": "Main game background",
-        "assets": [
+        id: "background",
+        type: "ui",
+        category: "background",
+        name: "Main Background",
+        description: "Main game background",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1341821670869568",
-            "path": "assets/images/bg_background.png"
+            type: "image",
+            horizonAssetId: "1341821670869568",
+            path: "assets/images/bg_background.png"
           }
         ]
       },
       {
-        "id": "menu",
-        "type": "ui",
-        "category": "background",
-        "name": "Menu Background",
-        "description": "Menu screen background",
-        "assets": [
+        id: "menu",
+        type: "ui",
+        category: "background",
+        name: "Menu Background",
+        description: "Menu screen background",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1341821670869568",
-            "path": "assets/images/misc_menu.png"
+            type: "image",
+            horizonAssetId: "1341821670869568",
+            path: "assets/images/misc_menu.png"
           }
         ]
       },
       {
-        "id": "playboard",
-        "type": "ui",
-        "category": "background",
-        "name": "Playboard",
-        "description": "Battle playboard background",
-        "assets": [
+        id: "playboard",
+        type: "ui",
+        category: "background",
+        name: "Playboard",
+        description: "Battle playboard background",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "802255839066806",
-            "path": "assets/images/misc_playboard.png"
+            type: "image",
+            horizonAssetId: "802255839066806",
+            path: "assets/images/misc_playboard.png"
           }
         ]
       },
       {
-        "id": "cards-container",
-        "type": "ui",
-        "category": "container",
-        "name": "Cards Container",
-        "description": "Cards collection screen container",
-        "assets": [
+        id: "cards-container",
+        type: "ui",
+        category: "container",
+        name: "Cards Container",
+        description: "Cards collection screen container",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1360422829007789",
-            "path": "assets/images/misc_cards-container.png"
+            type: "image",
+            horizonAssetId: "1360422829007789",
+            path: "assets/images/misc_cards-container.png"
           }
         ]
       },
       {
-        "id": "mission-container",
-        "type": "ui",
-        "category": "container",
-        "name": "Mission Container",
-        "description": "Mission selection container",
-        "assets": [
+        id: "mission-container",
+        type: "ui",
+        category: "container",
+        name: "Mission Container",
+        description: "Mission selection container",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "828431839717203",
-            "path": "assets/images/misc_mission-container.png"
+            type: "image",
+            horizonAssetId: "828431839717203",
+            path: "assets/images/misc_mission-container.png"
           }
         ]
       },
       {
-        "id": "standard-button",
-        "type": "ui",
-        "category": "button",
-        "name": "Standard Button",
-        "description": "Default button style",
-        "assets": [
+        id: "standard-button",
+        type: "ui",
+        category: "button",
+        name: "Standard Button",
+        description: "Default button style",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "740500362349295",
-            "path": "assets/images/misc_standard-button.png"
+            type: "image",
+            horizonAssetId: "740500362349295",
+            path: "assets/images/misc_standard-button.png"
           }
         ]
       },
       {
-        "id": "green-button",
-        "type": "ui",
-        "category": "button",
-        "name": "Green Button",
-        "description": "Green variant button",
-        "assets": [
+        id: "green-button",
+        type: "ui",
+        category: "button",
+        name: "Green Button",
+        description: "Green variant button",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1454989832255109",
-            "path": "assets/images/misc_green-button.png"
+            type: "image",
+            horizonAssetId: "1454989832255109",
+            path: "assets/images/misc_green-button.png"
           }
         ]
       },
       {
-        "id": "red-button",
-        "type": "ui",
-        "category": "button",
-        "name": "Red Button",
-        "description": "Red variant button",
-        "assets": [
+        id: "red-button",
+        type: "ui",
+        category: "button",
+        name: "Red Button",
+        description: "Red variant button",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1365262285015644",
-            "path": "assets/images/misc_red-button.png"
+            type: "image",
+            horizonAssetId: "1365262285015644",
+            path: "assets/images/misc_red-button.png"
           }
         ]
       },
       {
-        "id": "long-green-button",
-        "type": "ui",
-        "category": "button",
-        "name": "Long Green Button",
-        "description": "Long green button variant",
-        "assets": [
+        id: "long-green-button",
+        type: "ui",
+        category: "button",
+        name: "Long Green Button",
+        description: "Long green button variant",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1842026620010613",
-            "path": "assets/images/misc_long-green-button.png"
+            type: "image",
+            horizonAssetId: "1842026620010613",
+            path: "assets/images/misc_long-green-button.png"
           }
         ]
       },
       {
-        "id": "side-menu",
-        "type": "ui",
-        "category": "container",
-        "name": "Side Menu",
-        "description": "Side menu panel",
-        "assets": [
+        id: "side-menu",
+        type: "ui",
+        category: "container",
+        name: "Side Menu",
+        description: "Side menu panel",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "794839683168713",
-            "path": "assets/images/misc_side-menu.png"
+            type: "image",
+            horizonAssetId: "794839683168713",
+            path: "assets/images/misc_side-menu.png"
           }
         ]
       },
       {
-        "id": "experience-bar",
-        "type": "ui",
-        "category": "other",
-        "name": "Experience Bar",
-        "description": "XP progress bar",
-        "assets": [
+        id: "experience-bar",
+        type: "ui",
+        category: "other",
+        name: "Experience Bar",
+        description: "XP progress bar",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1151343029773719",
-            "path": "assets/images/cards_experience-bar.png"
+            type: "image",
+            horizonAssetId: "1151343029773719",
+            path: "assets/images/cards_experience-bar.png"
           }
         ]
       },
       {
-        "id": "base-card",
-        "type": "ui",
-        "category": "frame",
-        "name": "Base Card Frame",
-        "description": "Default card frame template",
-        "assets": [
+        id: "base-card",
+        type: "ui",
+        category: "frame",
+        name: "Base Card Frame",
+        description: "Default card frame template",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "823441590335166",
-            "path": "assets/images/cards_base-card.png"
+            type: "image",
+            horizonAssetId: "823441590335166",
+            path: "assets/images/cards_base-card.png"
           }
         ]
       },
       {
-        "id": "magic-card",
-        "type": "ui",
-        "category": "frame",
-        "name": "Magic Card Frame",
-        "description": "Magic card frame template",
-        "assets": [
+        id: "magic-card",
+        type: "ui",
+        category: "frame",
+        name: "Magic Card Frame",
+        description: "Magic card frame template",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "802428729033291",
-            "path": "assets/images/cards_magic-card.png"
+            type: "image",
+            horizonAssetId: "802428729033291",
+            path: "assets/images/cards_magic-card.png"
           }
         ]
       },
       {
-        "id": "magic-card-playboard",
-        "type": "ui",
-        "category": "frame",
-        "name": "Magic Card Playboard",
-        "description": "Magic card on playboard",
-        "assets": [
+        id: "magic-card-playboard",
+        type: "ui",
+        category: "frame",
+        name: "Magic Card Playboard",
+        description: "Magic card on playboard",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2991234734402522",
-            "path": "assets/images/cards_magic-card-playboard.png"
+            type: "image",
+            horizonAssetId: "2991234734402522",
+            path: "assets/images/cards_magic-card-playboard.png"
           }
         ]
       },
       {
-        "id": "trap-card",
-        "type": "ui",
-        "category": "frame",
-        "name": "Trap Card Frame",
-        "description": "Trap card frame template",
-        "assets": [
+        id: "trap-card",
+        type: "ui",
+        category: "frame",
+        name: "Trap Card Frame",
+        description: "Trap card frame template",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2847974385407960",
-            "path": "assets/images/cards_trap-card.png"
+            type: "image",
+            horizonAssetId: "2847974385407960",
+            path: "assets/images/cards_trap-card.png"
           }
         ]
       },
       {
-        "id": "trap-card-playboard",
-        "type": "ui",
-        "category": "frame",
-        "name": "Trap Card Playboard",
-        "description": "Trap card on playboard",
-        "assets": [
+        id: "trap-card-playboard",
+        type: "ui",
+        category: "frame",
+        name: "Trap Card Playboard",
+        description: "Trap card on playboard",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1724877334843483",
-            "path": "assets/images/cards_trap-card-playboard.png"
+            type: "image",
+            horizonAssetId: "1724877334843483",
+            path: "assets/images/cards_trap-card-playboard.png"
           }
         ]
       },
       {
-        "id": "buff-card",
-        "type": "ui",
-        "category": "frame",
-        "name": "Buff Card Frame",
-        "description": "Buff card frame template",
-        "assets": [
+        id: "buff-card",
+        type: "ui",
+        category: "frame",
+        name: "Buff Card Frame",
+        description: "Buff card frame template",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1962518914567182",
-            "path": "assets/images/cards_buff-card.png"
+            type: "image",
+            horizonAssetId: "1962518914567182",
+            path: "assets/images/cards_buff-card.png"
           }
         ]
       },
       {
-        "id": "buff-card-playboard",
-        "type": "ui",
-        "category": "frame",
-        "name": "Buff Card Playboard",
-        "description": "Buff card on playboard",
-        "assets": [
+        id: "buff-card-playboard",
+        type: "ui",
+        category: "frame",
+        name: "Buff Card Playboard",
+        description: "Buff card on playboard",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2628573627486992",
-            "path": "assets/images/cards_buff-card-playboard.png"
+            type: "image",
+            horizonAssetId: "2628573627486992",
+            path: "assets/images/cards_buff-card-playboard.png"
           }
         ]
       },
       {
-        "id": "menu-frame-1",
-        "type": "ui",
-        "category": "frame",
-        "name": "Menu Frame 1",
-        "description": "Menu animation frame 1",
-        "assets": [
+        id: "menu-frame-1",
+        type: "ui",
+        category: "frame",
+        name: "Menu Frame 1",
+        description: "Menu animation frame 1",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1186506656766961",
-            "path": "assets/images/menu_frame-1.png"
+            type: "image",
+            horizonAssetId: "1186506656766961",
+            path: "assets/images/menu_frame-1.png"
           }
         ]
       },
       {
-        "id": "menu-frame-2",
-        "type": "ui",
-        "category": "frame",
-        "name": "Menu Frame 2",
-        "description": "Menu animation frame 2",
-        "assets": [
+        id: "menu-frame-2",
+        type: "ui",
+        category: "frame",
+        name: "Menu Frame 2",
+        description: "Menu animation frame 2",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "816845231314389",
-            "path": "assets/images/menu_frame-2.png"
+            type: "image",
+            horizonAssetId: "816845231314389",
+            path: "assets/images/menu_frame-2.png"
           }
         ]
       },
       {
-        "id": "menu-frame-3",
-        "type": "ui",
-        "category": "frame",
-        "name": "Menu Frame 3",
-        "description": "Menu animation frame 3",
-        "assets": [
+        id: "menu-frame-3",
+        type: "ui",
+        category: "frame",
+        name: "Menu Frame 3",
+        description: "Menu animation frame 3",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2012665279305528",
-            "path": "assets/images/menu_frame-3.png"
+            type: "image",
+            horizonAssetId: "2012665279305528",
+            path: "assets/images/menu_frame-3.png"
           }
         ]
       },
       {
-        "id": "menu-frame-4",
-        "type": "ui",
-        "category": "frame",
-        "name": "Menu Frame 4",
-        "description": "Menu animation frame 4",
-        "assets": [
+        id: "menu-frame-4",
+        type: "ui",
+        category: "frame",
+        name: "Menu Frame 4",
+        description: "Menu animation frame 4",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "803392912558689",
-            "path": "assets/images/menu_frame-4.png"
+            type: "image",
+            horizonAssetId: "803392912558689",
+            path: "assets/images/menu_frame-4.png"
           }
         ]
       },
       {
-        "id": "menu-frame-5",
-        "type": "ui",
-        "category": "frame",
-        "name": "Menu Frame 5",
-        "description": "Menu animation frame 5",
-        "assets": [
+        id: "menu-frame-5",
+        type: "ui",
+        category: "frame",
+        name: "Menu Frame 5",
+        description: "Menu animation frame 5",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1141897134114548",
-            "path": "assets/images/menu_frame-5.png"
+            type: "image",
+            horizonAssetId: "1141897134114548",
+            path: "assets/images/menu_frame-5.png"
           }
         ]
       },
       {
-        "id": "menu-frame-6",
-        "type": "ui",
-        "category": "frame",
-        "name": "Menu Frame 6",
-        "description": "Menu animation frame 6",
-        "assets": [
+        id: "menu-frame-6",
+        type: "ui",
+        category: "frame",
+        name: "Menu Frame 6",
+        description: "Menu animation frame 6",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1962288661350650",
-            "path": "assets/images/menu_frame-6.png"
+            type: "image",
+            horizonAssetId: "1962288661350650",
+            path: "assets/images/menu_frame-6.png"
           }
         ]
       },
       {
-        "id": "menu-frame-7",
-        "type": "ui",
-        "category": "frame",
-        "name": "Menu Frame 7",
-        "description": "Menu animation frame 7",
-        "assets": [
+        id: "menu-frame-7",
+        type: "ui",
+        category: "frame",
+        name: "Menu Frame 7",
+        description: "Menu animation frame 7",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "781356411339489",
-            "path": "assets/images/menu_frame-7.png"
+            type: "image",
+            horizonAssetId: "781356411339489",
+            path: "assets/images/menu_frame-7.png"
           }
         ]
       },
       {
-        "id": "menu-frame-8",
-        "type": "ui",
-        "category": "frame",
-        "name": "Menu Frame 8",
-        "description": "Menu animation frame 8",
-        "assets": [
+        id: "menu-frame-8",
+        type: "ui",
+        category: "frame",
+        name: "Menu Frame 8",
+        description: "Menu animation frame 8",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "844985438202497",
-            "path": "assets/images/menu_frame-8.png"
+            type: "image",
+            horizonAssetId: "844985438202497",
+            path: "assets/images/menu_frame-8.png"
           }
         ]
       },
       {
-        "id": "menu-frame-9",
-        "type": "ui",
-        "category": "frame",
-        "name": "Menu Frame 9",
-        "description": "Menu animation frame 9",
-        "assets": [
+        id: "menu-frame-9",
+        type: "ui",
+        category: "frame",
+        name: "Menu Frame 9",
+        description: "Menu animation frame 9",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1340487887747224",
-            "path": "assets/images/menu_frame-9.png"
+            type: "image",
+            horizonAssetId: "1340487887747224",
+            path: "assets/images/menu_frame-9.png"
           }
         ]
       },
       {
-        "id": "menu-frame-10",
-        "type": "ui",
-        "category": "frame",
-        "name": "Menu Frame 10",
-        "description": "Menu animation frame 10",
-        "assets": [
+        id: "menu-frame-10",
+        type: "ui",
+        category: "frame",
+        name: "Menu Frame 10",
+        description: "Menu animation frame 10",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1866001547625853",
-            "path": "assets/images/menu_frame-10.png"
+            type: "image",
+            horizonAssetId: "1866001547625853",
+            path: "assets/images/menu_frame-10.png"
           }
         ]
       },
       {
-        "id": "icon-ability",
-        "type": "ui",
-        "category": "icon",
-        "name": "Ability Icon",
-        "description": "Ability indicator icon",
-        "assets": [
+        id: "icon-ability",
+        type: "ui",
+        category: "icon",
+        name: "Ability Icon",
+        description: "Ability indicator icon",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1550821249252575",
-            "path": "assets/images/icon_ability.png"
+            type: "image",
+            horizonAssetId: "1550821249252575",
+            path: "assets/images/icon_ability.png"
           }
         ]
       },
       {
-        "id": "icon-attack",
-        "type": "ui",
-        "category": "icon",
-        "name": "Attack Icon",
-        "description": "Attack indicator icon",
-        "assets": [
+        id: "icon-attack",
+        type: "ui",
+        category: "icon",
+        name: "Attack Icon",
+        description: "Attack indicator icon",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "818969787355942",
-            "path": "assets/images/icon_attack.png"
+            type: "image",
+            horizonAssetId: "818969787355942",
+            path: "assets/images/icon_attack.png"
           }
         ]
       },
       {
-        "id": "lose-image",
-        "type": "ui",
-        "category": "other",
-        "name": "Lose Image",
-        "description": "Game over/lose screen image",
-        "assets": [
+        id: "lose-image",
+        type: "ui",
+        category: "other",
+        name: "Lose Image",
+        description: "Game over/lose screen image",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2155452308310801",
-            "path": "assets/images/misc_lose-image.png"
+            type: "image",
+            horizonAssetId: "2155452308310801",
+            path: "assets/images/misc_lose-image.png"
           }
         ]
       },
       {
-        "id": "boss-mission",
-        "type": "mission",
-        "affinity": "boss",
-        "missionNumber": 5,
-        "name": "The Bloom Master",
-        "description": "Final boss mission",
-        "assets": [
+        id: "boss-mission",
+        type: "mission",
+        affinity: "boss",
+        missionNumber: 5,
+        name: "The Bloom Master",
+        description: "Final boss mission",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1879466909654800",
-            "path": "assets/images/cards_boss-mission.png"
+            type: "image",
+            horizonAssetId: "1879466909654800",
+            path: "assets/images/cards_boss-mission.png"
           }
         ]
       },
       {
-        "id": "the-bloom-master",
-        "type": "ui",
-        "category": "other",
-        "name": "The Bloom Master",
-        "description": "Boss card image",
-        "assets": [
+        id: "the-bloom-master",
+        type: "ui",
+        category: "other",
+        name: "The Bloom Master",
+        description: "Boss card image",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1948729499041670",
-            "path": "assets/images/cards_the-bloom-master.png"
+            type: "image",
+            horizonAssetId: "1948729499041670",
+            path: "assets/images/cards_the-bloom-master.png"
           }
         ]
       },
       {
-        "id": "sfx-menu-button-select",
-        "type": "ui",
-        "category": "other",
-        "name": "Menu Button Select SFX",
-        "description": "Sound for menu button selection",
-        "assets": [
+        id: "sfx-menu-button-select",
+        type: "ui",
+        category: "other",
+        name: "Menu Button Select SFX",
+        description: "Sound for menu button selection",
+        assets: [
           {
-            "type": "audio",
-            "horizonAssetId": "3481449071995903",
-            "path": "assets/audio/sfx_menu-button-select.wav"
+            type: "audio",
+            horizonAssetId: "3481449071995903",
+            path: "assets/audio/sfx_menu-button-select.wav"
           }
         ]
       },
       {
-        "id": "sfx-play-card",
-        "type": "ui",
-        "category": "other",
-        "name": "Play Card SFX",
-        "description": "Sound for playing a card",
-        "assets": [
+        id: "sfx-play-card",
+        type: "ui",
+        category: "other",
+        name: "Play Card SFX",
+        description: "Sound for playing a card",
+        assets: [
           {
-            "type": "audio",
-            "horizonAssetId": "673115269189210",
-            "path": "assets/audio/sfx_play-card.wav"
+            type: "audio",
+            horizonAssetId: "673115269189210",
+            path: "assets/audio/sfx_play-card.wav"
           }
         ]
       },
       {
-        "id": "sfx-attack",
-        "type": "ui",
-        "category": "other",
-        "name": "Attack SFX",
-        "description": "Sound for attack action",
-        "assets": [
+        id: "sfx-attack",
+        type: "ui",
+        category: "other",
+        name: "Attack SFX",
+        description: "Sound for attack action",
+        assets: [
           {
-            "type": "audio",
-            "horizonAssetId": "1718962638781724",
-            "path": "assets/audio/sfx_attack.wav"
+            type: "audio",
+            horizonAssetId: "1718962638781724",
+            path: "assets/audio/sfx_attack.wav"
           }
         ]
       },
       {
-        "id": "sfx-trap-card-activated",
-        "type": "ui",
-        "category": "other",
-        "name": "Trap Activated SFX",
-        "description": "Sound for trap activation",
-        "assets": [
+        id: "sfx-trap-card-activated",
+        type: "ui",
+        category: "other",
+        name: "Trap Activated SFX",
+        description: "Sound for trap activation",
+        assets: [
           {
-            "type": "audio",
-            "horizonAssetId": "1180175093968172",
-            "path": "assets/audio/sfx_trap-card-activated.wav"
+            type: "audio",
+            horizonAssetId: "1180175093968172",
+            path: "assets/audio/sfx_trap-card-activated.wav"
           }
         ]
       },
       {
-        "id": "sfx-low-health",
-        "type": "ui",
-        "category": "other",
-        "name": "Low Health SFX",
-        "description": "Warning sound for low health",
-        "assets": [
+        id: "sfx-low-health",
+        type: "ui",
+        category: "other",
+        name: "Low Health SFX",
+        description: "Warning sound for low health",
+        assets: [
           {
-            "type": "audio",
-            "horizonAssetId": "828372796357589",
-            "path": "assets/audio/sfx_low-health.wav"
+            type: "audio",
+            horizonAssetId: "828372796357589",
+            path: "assets/audio/sfx_low-health.wav"
           }
         ]
       },
       {
-        "id": "sfx-win",
-        "type": "ui",
-        "category": "other",
-        "name": "Win SFX",
-        "description": "Victory sound effect",
-        "assets": [
+        id: "sfx-win",
+        type: "ui",
+        category: "other",
+        name: "Win SFX",
+        description: "Victory sound effect",
+        assets: [
           {
-            "type": "audio",
-            "horizonAssetId": "4241684452770634",
-            "path": "assets/audio/sfx_win.wav"
+            type: "audio",
+            horizonAssetId: "4241684452770634",
+            path: "assets/audio/sfx_win.wav"
           }
         ]
       },
       {
-        "id": "sfx-lose",
-        "type": "ui",
-        "category": "other",
-        "name": "Lose SFX",
-        "description": "Defeat sound effect",
-        "assets": [
+        id: "sfx-lose",
+        type: "ui",
+        category: "other",
+        name: "Lose SFX",
+        description: "Defeat sound effect",
+        assets: [
           {
-            "type": "audio",
-            "horizonAssetId": "1323050035978393",
-            "path": "assets/audio/sfx_lose.wav"
+            type: "audio",
+            horizonAssetId: "1323050035978393",
+            path: "assets/audio/sfx_lose.wav"
           }
         ]
       },
       {
-        "id": "music-background",
-        "type": "ui",
-        "category": "other",
-        "name": "Background Music",
-        "description": "Main background music",
-        "assets": [
+        id: "music-background",
+        type: "ui",
+        category: "other",
+        name: "Background Music",
+        description: "Main background music",
+        assets: [
           {
-            "type": "audio",
-            "horizonAssetId": "802288129374217",
-            "path": "assets/audio/music_background.mp3"
+            type: "audio",
+            horizonAssetId: "802288129374217",
+            path: "assets/audio/music_background.mp3"
           }
         ]
       },
       {
-        "id": "music-battle",
-        "type": "ui",
-        "category": "other",
-        "name": "Battle Music",
-        "description": "Battle scene music",
-        "assets": [
+        id: "music-battle",
+        type: "ui",
+        category: "other",
+        name: "Battle Music",
+        description: "Battle scene music",
+        assets: [
           {
-            "type": "audio",
-            "horizonAssetId": "668023946362739",
-            "path": "assets/audio/music_battle.mp3"
+            type: "audio",
+            horizonAssetId: "668023946362739",
+            path: "assets/audio/music_battle.mp3"
           }
         ]
       }
@@ -19107,93 +19601,92 @@ namespace BloomBeasts {
   // ==================== bloombeasts\catalogs\fireAssets.ts ====================
 
   /**
-   * Auto-generated TypeScript catalog from fireAssets.json
-   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   * Edit this file directly to add/modify assets
    */
 
 
   export const fireAssets: AssetCatalog = {
-    "version": "1.0.0",
-    "category": "fire",
-    "description": "Fire affinity cards and assets",
-    "data": [
+    version: "1.0.0",
+    category: "fire",
+    description: "Fire affinity cards and assets",
+    data: [
       {
-        "id": "blazefinch",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "fire",
-        "data": {
-          "id": "blazefinch",
-          "name": "Blazefinch",
-          "type": "Bloom",
-          "affinity": "Fire",
-          "cost": 1,
-          "baseAttack": 1,
-          "baseHealth": 2,
-          "abilities": [
+        id: "blazefinch",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "fire",
+        data: {
+          id: "blazefinch",
+          name: "Blazefinch",
+          type: "Bloom",
+          affinity: "Fire",
+          cost: 1,
+          baseAttack: 1,
+          baseHealth: 2,
+          abilities: [
             {
-              "name": "Quick Strike",
-              "trigger": "Passive",
-              "effects": [
+              name: "Quick Strike",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "RemoveSummoningSickness",
-                  "target": "Self"
+                  type: EffectType.RemoveSummoningSickness,
+                  target: AbilityTarget.Self
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 0,
-                "atk": 1
+                hp: 0,
+                atk: 1
               },
               "3": {
-                "hp": 0,
-                "atk": 3
+                hp: 0,
+                atk: 3
               },
               "4": {
-                "hp": 1,
-                "atk": 5
+                hp: 1,
+                atk: 5
               },
               "5": {
-                "hp": 1,
-                "atk": 6
+                hp: 1,
+                atk: 6
               },
               "6": {
-                "hp": 2,
-                "atk": 8
+                hp: 2,
+                atk: 8
               },
               "7": {
-                "hp": 2,
-                "atk": 9
+                hp: 2,
+                atk: 9
               },
               "8": {
-                "hp": 3,
-                "atk": 11
+                hp: 3,
+                atk: 11
               },
               "9": {
-                "hp": 3,
-                "atk": 13
+                hp: 3,
+                atk: 13
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Ember Strike",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Ember Strike",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "triple-damage",
-                        "condition": {
-                          "type": "IsDamaged"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "triple-damage",
+                        condition: {
+                          type: "IsDamaged"
                         }
                       }
                     ]
@@ -19201,47 +19694,47 @@ namespace BloomBeasts {
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Lightning Speed",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Lightning Speed",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "RemoveSummoningSickness",
-                        "target": "Self"
+                        type: EffectType.RemoveSummoningSickness,
+                        target: AbilityTarget.Self
                       },
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "attack-twice"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "attack-twice"
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Phoenix Form",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Phoenix Form",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "attack-twice"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "attack-twice"
                       }
                     ]
                   },
                   {
-                    "name": "Annihilation",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Annihilation",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "instant-destroy",
-                        "condition": {
-                          "type": "IsDamaged"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "instant-destroy",
+                        condition: {
+                          type: "IsDamaged"
                         }
                       }
                     ]
@@ -19251,145 +19744,145 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "3218250765004566",
-            "path": "assets/images/cards_fire_blazefinch.png"
+            type: "image",
+            horizonAssetId: "3218250765004566",
+            path: "assets/images/cards_fire_blazefinch.png"
           }
         ]
       },
       {
-        "id": "cinder-pup",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "fire",
-        "data": {
-          "id": "cinder-pup",
-          "name": "Cinder Pup",
-          "type": "Bloom",
-          "affinity": "Fire",
-          "cost": 2,
-          "baseAttack": 2,
-          "baseHealth": 3,
-          "abilities": [
+        id: "cinder-pup",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "fire",
+        data: {
+          id: "cinder-pup",
+          name: "Cinder Pup",
+          type: "Bloom",
+          affinity: "Fire",
+          cost: 2,
+          baseAttack: 2,
+          baseHealth: 3,
+          abilities: [
             {
-              "name": "Burning Passion",
-              "trigger": "OnAttack",
-              "effects": [
+              name: "Burning Passion",
+              trigger: AbilityTrigger.OnAttack,
+              effects: [
                 {
-                  "type": "ApplyCounter",
-                  "target": "Target",
-                  "counter": "Burn",
-                  "value": 1
+                  type: EffectType.ApplyCounter,
+                  target: AbilityTarget.Target,
+                  counter: "Burn",
+                  value: 1
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 1,
-                "atk": 1
+                hp: 1,
+                atk: 1
               },
               "3": {
-                "hp": 2,
-                "atk": 2
+                hp: 2,
+                atk: 2
               },
               "4": {
-                "hp": 3,
-                "atk": 3
+                hp: 3,
+                atk: 3
               },
               "5": {
-                "hp": 4,
-                "atk": 4
+                hp: 4,
+                atk: 4
               },
               "6": {
-                "hp": 5,
-                "atk": 5
+                hp: 5,
+                atk: 5
               },
               "7": {
-                "hp": 6,
-                "atk": 6
+                hp: 6,
+                atk: 6
               },
               "8": {
-                "hp": 7,
-                "atk": 7
+                hp: 7,
+                atk: 7
               },
               "9": {
-                "hp": 8,
-                "atk": 8
+                hp: 8,
+                atk: 8
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Inferno Bite",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Inferno Bite",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "ApplyCounter",
-                        "target": "Target",
-                        "counter": "Burn",
-                        "value": 2
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.Target,
+                        counter: "Burn",
+                        value: 2
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Flame Burst",
-                    "trigger": "Activated",
-                    "cost": {
-                      "type": "Discard",
-                      "value": 1
+                    name: "Flame Burst",
+                    trigger: AbilityTrigger.OnSummon,
+                    cost: {
+                      type: "Discard",
+                      value: 1
                     },
-                    "effects": [
+                    effects: [
                       {
-                        "type": "ApplyCounter",
-                        "target": "AllEnemies",
-                        "counter": "Burn",
-                        "value": 2
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.AllEnemies,
+                        counter: "Burn",
+                        value: 2
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Wildfire Aura",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Wildfire Aura",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "ApplyCounter",
-                        "target": "Target",
-                        "counter": "Burn",
-                        "value": 3
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.Target,
+                        counter: "Burn",
+                        value: 3
                       }
                     ]
                   },
                   {
-                    "name": "Apocalypse Flame",
-                    "trigger": "Activated",
-                    "effects": [
+                    name: "Apocalypse Flame",
+                    trigger: AbilityTrigger.OnSummon,
+                    effects: [
                       {
-                        "type": "ApplyCounter",
-                        "target": "AllEnemies",
-                        "counter": "Burn",
-                        "value": 3
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.AllEnemies,
+                        counter: "Burn",
+                        value: 3
                       },
                       {
-                        "type": "DealDamage",
-                        "target": "OpponentGardener",
-                        "value": 2
+                        type: EffectType.DealDamage,
+                        target: "OpponentGardener",
+                        value: 2
                       }
                     ]
                   }
@@ -19398,163 +19891,163 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "913214814369510",
-            "path": "assets/images/cards_fire_cinder-pup.png"
+            type: "image",
+            horizonAssetId: "913214814369510",
+            path: "assets/images/cards_fire_cinder-pup.png"
           }
         ]
       },
       {
-        "id": "charcoil",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "fire",
-        "data": {
-          "id": "charcoil",
-          "name": "Charcoil",
-          "type": "Bloom",
-          "affinity": "Fire",
-          "cost": 2,
-          "baseAttack": 3,
-          "baseHealth": 4,
-          "abilities": [
+        id: "charcoil",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "fire",
+        data: {
+          id: "charcoil",
+          name: "Charcoil",
+          type: "Bloom",
+          affinity: "Fire",
+          cost: 2,
+          baseAttack: 3,
+          baseHealth: 4,
+          abilities: [
             {
-              "name": "Flame Retaliation",
-              "trigger": "OnDamage",
-              "effects": [
+              name: "Flame Retaliation",
+              trigger: AbilityTrigger.OnDamage,
+              effects: [
                 {
-                  "type": "Retaliation",
-                  "target": "Attacker",
-                  "value": 1
+                  type: "Retaliation",
+                  target: AbilityTarget.Attacker,
+                  value: 1
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 1,
-                "atk": 1
+                hp: 1,
+                atk: 1
               },
               "3": {
-                "hp": 2,
-                "atk": 2
+                hp: 2,
+                atk: 2
               },
               "4": {
-                "hp": 4,
-                "atk": 3
+                hp: 4,
+                atk: 3
               },
               "5": {
-                "hp": 5,
-                "atk": 4
+                hp: 5,
+                atk: 4
               },
               "6": {
-                "hp": 6,
-                "atk": 5
+                hp: 6,
+                atk: 5
               },
               "7": {
-                "hp": 8,
-                "atk": 6
+                hp: 8,
+                atk: 6
               },
               "8": {
-                "hp": 9,
-                "atk": 7
+                hp: 9,
+                atk: 7
               },
               "9": {
-                "hp": 11,
-                "atk": 8
+                hp: 11,
+                atk: 8
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Burning Retaliation",
-                    "trigger": "OnDamage",
-                    "effects": [
+                    name: "Burning Retaliation",
+                    trigger: AbilityTrigger.OnDamage,
+                    effects: [
                       {
-                        "type": "Retaliation",
-                        "target": "Attacker",
-                        "value": 2
+                        type: "Retaliation",
+                        target: AbilityTarget.Attacker,
+                        value: 2
                       },
                       {
-                        "type": "ApplyCounter",
-                        "target": "Attacker",
-                        "counter": "Burn",
-                        "value": 1
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.Attacker,
+                        counter: "Burn",
+                        value: 1
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Smoke Screen",
-                    "trigger": "OnDamage",
-                    "effects": [
+                    name: "Smoke Screen",
+                    trigger: AbilityTrigger.OnDamage,
+                    effects: [
                       {
-                        "type": "Immunity",
-                        "target": "Self",
-                        "immuneTo": [
+                        type: "Immunity",
+                        target: AbilityTarget.Self,
+                        immuneTo: [
                           "Magic",
                           "Trap"
                         ],
-                        "duration": "WhileOnField"
+                        duration: EffectDuration.WhileOnField
                       },
                       {
-                        "type": "ApplyCounter",
-                        "target": "Target",
-                        "counter": "Soot",
-                        "value": 2
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.Target,
+                        counter: "Soot",
+                        value: 2
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Blazing Vengeance",
-                    "trigger": "OnDamage",
-                    "effects": [
+                    name: "Blazing Vengeance",
+                    trigger: AbilityTrigger.OnDamage,
+                    effects: [
                       {
-                        "type": "Immunity",
-                        "target": "Self",
-                        "immuneTo": [
+                        type: "Immunity",
+                        target: AbilityTarget.Self,
+                        immuneTo: [
                           "Magic",
                           "Trap"
                         ],
-                        "duration": "WhileOnField"
+                        duration: EffectDuration.WhileOnField
                       },
                       {
-                        "type": "ApplyCounter",
-                        "target": "Attacker",
-                        "counter": "Burn",
-                        "value": 3
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.Attacker,
+                        counter: "Burn",
+                        value: 3
                       }
                     ]
                   },
                   {
-                    "name": "Infernal Reflection",
-                    "trigger": "OnDamage",
-                    "effects": [
+                    name: "Infernal Reflection",
+                    trigger: AbilityTrigger.OnDamage,
+                    effects: [
                       {
-                        "type": "Retaliation",
-                        "target": "Attacker",
-                        "value": "reflected"
+                        type: "Retaliation",
+                        target: AbilityTarget.Attacker,
+                        value: "reflected"
                       },
                       {
-                        "type": "ApplyCounter",
-                        "target": "Attacker",
-                        "counter": "Burn",
-                        "value": 2
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.Attacker,
+                        counter: "Burn",
+                        value: 2
                       }
                     ]
                   }
@@ -19563,152 +20056,152 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "785856391096811",
-            "path": "assets/images/cards_fire_charcoil.png"
+            type: "image",
+            horizonAssetId: "785856391096811",
+            path: "assets/images/cards_fire_charcoil.png"
           }
         ]
       },
       {
-        "id": "magmite",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "fire",
-        "data": {
-          "id": "magmite",
-          "name": "Magmite",
-          "type": "Bloom",
-          "affinity": "Fire",
-          "cost": 3,
-          "baseAttack": 4,
-          "baseHealth": 6,
-          "abilities": [
+        id: "magmite",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "fire",
+        data: {
+          id: "magmite",
+          name: "Magmite",
+          type: "Bloom",
+          affinity: "Fire",
+          cost: 3,
+          baseAttack: 4,
+          baseHealth: 6,
+          abilities: [
             {
-              "name": "Hardened Shell",
-              "trigger": "Passive",
-              "effects": [
+              name: "Hardened Shell",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "DamageReduction",
-                  "target": "Self",
-                  "value": 1,
-                  "duration": "WhileOnField"
+                  type: EffectType.DamageReduction,
+                  target: AbilityTarget.Self,
+                  value: 1,
+                  duration: EffectDuration.WhileOnField
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 2,
-                "atk": 1
+                hp: 2,
+                atk: 1
               },
               "3": {
-                "hp": 3,
-                "atk": 2
+                hp: 3,
+                atk: 2
               },
               "4": {
-                "hp": 5,
-                "atk": 3
+                hp: 5,
+                atk: 3
               },
               "5": {
-                "hp": 7,
-                "atk": 4
+                hp: 7,
+                atk: 4
               },
               "6": {
-                "hp": 9,
-                "atk": 5
+                hp: 9,
+                atk: 5
               },
               "7": {
-                "hp": 11,
-                "atk": 6
+                hp: 11,
+                atk: 6
               },
               "8": {
-                "hp": 13,
-                "atk": 7
+                hp: 13,
+                atk: 7
               },
               "9": {
-                "hp": 15,
-                "atk": 9
+                hp: 15,
+                atk: 9
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Molten Armor",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Molten Armor",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "DamageReduction",
-                        "target": "Self",
-                        "value": 2,
-                        "duration": "WhileOnField"
+                        type: EffectType.DamageReduction,
+                        target: AbilityTarget.Self,
+                        value: 2,
+                        duration: EffectDuration.WhileOnField
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Eruption",
-                    "trigger": "OnDestroy",
-                    "effects": [
+                    name: "Eruption",
+                    trigger: AbilityTrigger.OnDestroy,
+                    effects: [
                       {
-                        "type": "DealDamage",
-                        "target": "OpponentGardener",
-                        "value": 5
+                        type: EffectType.DealDamage,
+                        target: "OpponentGardener",
+                        value: 5
                       },
                       {
-                        "type": "DealDamage",
-                        "target": "AllEnemies",
-                        "value": 2
+                        type: EffectType.DealDamage,
+                        target: AbilityTarget.AllEnemies,
+                        value: 2
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Obsidian Carapace",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Obsidian Carapace",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "DamageReduction",
-                        "target": "Self",
-                        "value": 3,
-                        "duration": "WhileOnField"
+                        type: EffectType.DamageReduction,
+                        target: AbilityTarget.Self,
+                        value: 3,
+                        duration: EffectDuration.WhileOnField
                       },
                       {
-                        "type": "Retaliation",
-                        "target": "Attacker",
-                        "value": 2
+                        type: "Retaliation",
+                        target: AbilityTarget.Attacker,
+                        value: 2
                       }
                     ]
                   },
                   {
-                    "name": "Cataclysm",
-                    "trigger": "OnDestroy",
-                    "effects": [
+                    name: "Cataclysm",
+                    trigger: AbilityTrigger.OnDestroy,
+                    effects: [
                       {
-                        "type": "DealDamage",
-                        "target": "OpponentGardener",
-                        "value": 8
+                        type: EffectType.DealDamage,
+                        target: "OpponentGardener",
+                        value: 8
                       },
                       {
-                        "type": "Destroy",
-                        "target": "AllEnemies",
-                        "condition": {
-                          "type": "HealthBelow",
-                          "value": 4,
-                          "comparison": "Less"
+                        type: "Destroy",
+                        target: AbilityTarget.AllEnemies,
+                        condition: {
+                          type: "HealthBelow",
+                          value: 4,
+                          comparison: "Less"
                         }
                       }
                     ]
@@ -19718,125 +20211,125 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "25339017082348952",
-            "path": "assets/images/cards_fire_magmite.png"
+            type: "image",
+            horizonAssetId: "25339017082348952",
+            path: "assets/images/cards_fire_magmite.png"
           }
         ]
       },
       {
-        "id": "volcanic-scar",
-        "type": "habitat",
-        "affinity": "fire",
-        "data": {
-          "id": "volcanic-scar",
-          "name": "Volcanic Scar",
-          "type": "Habitat",
-          "affinity": "Fire",
-          "cost": 1,
-          "abilities": [
+        id: "volcanic-scar",
+        type: "habitat",
+        affinity: "fire",
+        data: {
+          id: "volcanic-scar",
+          name: "Volcanic Scar",
+          type: "Habitat",
+          affinity: "Fire",
+          cost: 1,
+          abilities: [
             {
-              "name": "Volcanic Eruption",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Volcanic Eruption",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "DealDamage",
-                  "target": "AllUnits",
-                  "value": 1,
-                  "condition": {
-                    "type": "affinity-not-matches",
-                    "value": "Fire"
+                  type: EffectType.DealDamage,
+                  target: "AllUnits",
+                  value: 1,
+                  condition: {
+                    type: "affinity-not-matches",
+                    value: "Fire"
                   }
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1878791053043603",
-            "path": "assets/images/cards_fire_volcanic-scar.png"
+            type: "image",
+            horizonAssetId: "1878791053043603",
+            path: "assets/images/cards_fire_volcanic-scar.png"
           },
           {
-            "type": "image",
-            "horizonAssetId": "1762741407742835",
-            "path": "assets/images/cards_fire_habitat-card.png"
+            type: "image",
+            horizonAssetId: "1762741407742835",
+            path: "assets/images/cards_fire_habitat-card.png"
           },
           {
-            "type": "image",
-            "horizonAssetId": "1863280224222620",
-            "path": "assets/images/cards_fire_habitat-card-playboard.png"
+            type: "image",
+            horizonAssetId: "1863280224222620",
+            path: "assets/images/cards_fire_habitat-card-playboard.png"
           }
         ]
       },
       {
-        "id": "fire-mission",
-        "type": "mission",
-        "affinity": "fire",
-        "missionNumber": 1,
-        "name": "Fire Mission",
-        "description": "Fire affinity mission",
-        "assets": [
+        id: "fire-mission",
+        type: "mission",
+        affinity: "fire",
+        missionNumber: 1,
+        name: "Fire Mission",
+        description: "Fire affinity mission",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "795064546836933",
-            "path": "assets/images/cards_fire_fire-mission.png"
+            type: "image",
+            horizonAssetId: "795064546836933",
+            path: "assets/images/cards_fire_fire-mission.png"
           }
         ]
       },
       {
-        "id": "fire-chest-closed",
-        "type": "ui",
-        "category": "chest",
-        "name": "Fire Chest Closed",
-        "assets": [
+        id: "fire-chest-closed",
+        type: "ui",
+        category: "chest",
+        name: "Fire Chest Closed",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1168387145201364",
-            "path": "assets/images/chest_fire-chest-closed.png"
+            type: "image",
+            horizonAssetId: "1168387145201364",
+            path: "assets/images/chest_fire-chest-closed.png"
           }
         ]
       },
       {
-        "id": "fire-chest-opened",
-        "type": "ui",
-        "category": "chest",
-        "name": "Fire Chest Opened",
-        "assets": [
+        id: "fire-chest-opened",
+        type: "ui",
+        category: "chest",
+        name: "Fire Chest Opened",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "3716217982005558",
-            "path": "assets/images/chest_fire-chest-opened.png"
+            type: "image",
+            horizonAssetId: "3716217982005558",
+            path: "assets/images/chest_fire-chest-opened.png"
           }
         ]
       },
       {
-        "id": "fire-icon",
-        "type": "ui",
-        "category": "icon",
-        "name": "Fire Icon",
-        "assets": [
+        id: "fire-icon",
+        type: "ui",
+        category: "icon",
+        name: "Fire Icon",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2011015256402906",
-            "path": "assets/images/affinity_fire-icon.png"
+            type: "image",
+            horizonAssetId: "2011015256402906",
+            path: "assets/images/affinity_fire-icon.png"
           }
         ]
       },
       {
-        "id": "fire-habitat",
-        "type": "ui",
-        "category": "card-template",
-        "name": "Fire Habitat Card Template",
-        "description": "Template overlay for fire habitat cards",
-        "assets": [
+        id: "fire-habitat",
+        type: "ui",
+        category: "card-template",
+        name: "Fire Habitat Card Template",
+        description: "Template overlay for fire habitat cards",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1762741407742835",
-            "path": "assets/images/cards_fire_habitat-card.png"
+            type: "image",
+            horizonAssetId: "1762741407742835",
+            path: "assets/images/cards_fire_habitat-card.png"
           }
         ]
       }
@@ -19846,111 +20339,110 @@ namespace BloomBeasts {
   // ==================== bloombeasts\catalogs\forestAssets.ts ====================
 
   /**
-   * Auto-generated TypeScript catalog from forestAssets.json
-   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   * Edit this file directly to add/modify assets
    */
 
 
   export const forestAssets: AssetCatalog = {
-    "version": "1.0.0",
-    "category": "forest",
-    "description": "Forest affinity cards and assets",
-    "data": [
+    version: "1.0.0",
+    category: "forest",
+    description: "Forest affinity cards and assets",
+    data: [
       {
-        "id": "rootling",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "forest",
-        "data": {
-          "id": "rootling",
-          "name": "Rootling",
-          "displayName": "Rootling",
-          "type": "Bloom",
-          "affinity": "Forest",
-          "cost": 1,
-          "baseAttack": 1,
-          "baseHealth": 3,
-          "abilities": [
+        id: "rootling",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "forest",
+        data: {
+          id: "rootling",
+          name: "Rootling",
+          displayName: "Rootling",
+          type: "Bloom",
+          affinity: "Forest",
+          cost: 1,
+          baseAttack: 1,
+          baseHealth: 3,
+          abilities: [
             {
-              "name": "Deep Roots",
-              "trigger": "Passive",
-              "effects": [
+              name: "Deep Roots",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "CannotBeTargeted",
-                  "target": "Self",
-                  "by": [
+                  type: EffectType.CannotBeTargeted,
+                  target: AbilityTarget.Self,
+                  by: [
                     "magic"
                   ]
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 1,
-                "atk": 0
+                hp: 1,
+                atk: 0
               },
               "3": {
-                "hp": 2,
-                "atk": 1
+                hp: 2,
+                atk: 1
               },
               "4": {
-                "hp": 3,
-                "atk": 2
+                hp: 3,
+                atk: 2
               },
               "5": {
-                "hp": 4,
-                "atk": 3
+                hp: 4,
+                atk: 3
               },
               "6": {
-                "hp": 5,
-                "atk": 4
+                hp: 5,
+                atk: 4
               },
               "7": {
-                "hp": 6,
-                "atk": 5
+                hp: 6,
+                atk: 5
               },
               "8": {
-                "hp": 7,
-                "atk": 6
+                hp: 7,
+                atk: 6
               },
               "9": {
-                "hp": 8,
-                "atk": 7
+                hp: 8,
+                atk: 7
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Abundant Nourish",
-                    "trigger": "OnDestroy",
-                    "effects": [
+                    name: "Abundant Nourish",
+                    trigger: AbilityTrigger.OnDestroy,
+                    effects: [
                       {
-                        "type": "GainResource",
-                        "target": "PlayerGardener",
-                        "resource": "Nectar",
-                        "value": 2
+                        type: EffectType.GainResource,
+                        target: AbilityTarget.PlayerGardener,
+                        resource: ResourceType.Nectar,
+                        value: 2
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Ancient Roots",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Ancient Roots",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "CannotBeTargeted",
-                        "target": "Self",
-                        "by": [
+                        type: EffectType.CannotBeTargeted,
+                        target: AbilityTarget.Self,
+                        by: [
                           "magic",
                           "trap"
                         ]
@@ -19960,15 +20452,15 @@ namespace BloomBeasts {
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Eternal Roots",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Eternal Roots",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "CannotBeTargeted",
-                        "target": "Self",
-                        "by": [
+                        type: EffectType.CannotBeTargeted,
+                        target: AbilityTarget.Self,
+                        by: [
                           "magic",
                           "trap",
                           "abilities"
@@ -19977,19 +20469,19 @@ namespace BloomBeasts {
                     ]
                   },
                   {
-                    "name": "Harvest Feast",
-                    "trigger": "OnDestroy",
-                    "effects": [
+                    name: "Harvest Feast",
+                    trigger: AbilityTrigger.OnDestroy,
+                    effects: [
                       {
-                        "type": "GainResource",
-                        "target": "PlayerGardener",
-                        "resource": "Nectar",
-                        "value": 2
+                        type: EffectType.GainResource,
+                        target: AbilityTarget.PlayerGardener,
+                        resource: ResourceType.Nectar,
+                        value: 2
                       },
                       {
-                        "type": "DrawCards",
-                        "target": "PlayerGardener",
-                        "value": 1
+                        type: EffectType.DrawCards,
+                        target: AbilityTarget.PlayerGardener,
+                        value: 1
                       }
                     ]
                   }
@@ -19998,107 +20490,107 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1170317305016635",
-            "path": "assets/images/cards_forest_rootling.png",
-            "description": "Rootling card artwork"
+            type: "image",
+            horizonAssetId: "1170317305016635",
+            path: "assets/images/cards_forest_rootling.png",
+            description: "Rootling card artwork"
           }
         ]
       },
       {
-        "id": "leaf-sprite",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "forest",
-        "data": {
-          "id": "leaf-sprite",
-          "name": "Leaf Sprite",
-          "displayName": "Leaf Sprite",
-          "type": "Bloom",
-          "affinity": "Forest",
-          "cost": 1,
-          "baseAttack": 1,
-          "baseHealth": 2,
-          "abilities": [
+        id: "leaf-sprite",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "forest",
+        data: {
+          id: "leaf-sprite",
+          name: "Leaf Sprite",
+          displayName: "Leaf Sprite",
+          type: "Bloom",
+          affinity: "Forest",
+          cost: 1,
+          baseAttack: 1,
+          baseHealth: 2,
+          abilities: [
             {
-              "name": "Nimble",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Nimble",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "DrawCards",
-                  "target": "PlayerGardener",
-                  "value": 1
+                  type: EffectType.DrawCards,
+                  target: AbilityTarget.PlayerGardener,
+                  value: 1
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 0,
-                "atk": 1
+                hp: 0,
+                atk: 1
               },
               "3": {
-                "hp": 1,
-                "atk": 1
+                hp: 1,
+                atk: 1
               },
               "4": {
-                "hp": 1,
-                "atk": 2
+                hp: 1,
+                atk: 2
               },
               "5": {
-                "hp": 2,
-                "atk": 3
+                hp: 2,
+                atk: 3
               },
               "6": {
-                "hp": 3,
-                "atk": 4
+                hp: 3,
+                atk: 4
               },
               "7": {
-                "hp": 4,
-                "atk": 5
+                hp: 4,
+                atk: 5
               },
               "8": {
-                "hp": 5,
-                "atk": 6
+                hp: 5,
+                atk: 6
               },
               "9": {
-                "hp": 6,
-                "atk": 7
+                hp: 6,
+                atk: 7
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Swiftness",
-                    "trigger": "OnSummon",
-                    "effects": [
+                    name: "Swiftness",
+                    trigger: AbilityTrigger.OnSummon,
+                    effects: [
                       {
-                        "type": "DrawCards",
-                        "target": "PlayerGardener",
-                        "value": 2
+                        type: EffectType.DrawCards,
+                        target: AbilityTarget.PlayerGardener,
+                        value: 2
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Evasive",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Evasive",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "CannotBeTargeted",
-                        "target": "Self",
-                        "by": [
+                        type: EffectType.CannotBeTargeted,
+                        target: AbilityTarget.Self,
+                        by: [
                           "trap"
                         ]
                       }
@@ -20107,14 +20599,14 @@ namespace BloomBeasts {
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Sprint",
-                    "trigger": "OnSummon",
-                    "effects": [
+                    name: "Sprint",
+                    trigger: AbilityTrigger.OnSummon,
+                    effects: [
                       {
-                        "type": "RemoveSummoningSickness",
-                        "target": "Self"
+                        type: EffectType.RemoveSummoningSickness,
+                        target: AbilityTarget.Self
                       }
                     ]
                   }
@@ -20123,129 +20615,129 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1733091247346351",
-            "path": "assets/images/cards_forest_leaf-sprite.png",
-            "description": "Leaf Sprite card artwork"
+            type: "image",
+            horizonAssetId: "1733091247346351",
+            path: "assets/images/cards_forest_leaf-sprite.png",
+            description: "Leaf Sprite card artwork"
           }
         ]
       },
       {
-        "id": "mosslet",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "forest",
-        "data": {
-          "id": "mosslet",
-          "name": "Mosslet",
-          "displayName": "Mosslet",
-          "type": "Bloom",
-          "affinity": "Forest",
-          "cost": 2,
-          "baseAttack": 2,
-          "baseHealth": 2,
-          "abilities": [
+        id: "mosslet",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "forest",
+        data: {
+          id: "mosslet",
+          name: "Mosslet",
+          displayName: "Mosslet",
+          type: "Bloom",
+          affinity: "Forest",
+          cost: 2,
+          baseAttack: 2,
+          baseHealth: 2,
+          abilities: [
             {
-              "name": "Growth",
-              "trigger": "OnOwnEndOfTurn",
-              "effects": [
+              name: "Growth",
+              trigger: AbilityTrigger.OnOwnEndOfTurn,
+              effects: [
                 {
-                  "type": "ModifyStats",
-                  "target": "Self",
-                  "stat": "Both",
-                  "value": 1,
-                  "duration": "Permanent"
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.Self,
+                  stat: StatType.Both,
+                  value: 1,
+                  duration: EffectDuration.Permanent
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 1,
-                "atk": 0
+                hp: 1,
+                atk: 0
               },
               "3": {
-                "hp": 1,
-                "atk": 1
+                hp: 1,
+                atk: 1
               },
               "4": {
-                "hp": 2,
-                "atk": 2
+                hp: 2,
+                atk: 2
               },
               "5": {
-                "hp": 3,
-                "atk": 3
+                hp: 3,
+                atk: 3
               },
               "6": {
-                "hp": 4,
-                "atk": 4
+                hp: 4,
+                atk: 4
               },
               "7": {
-                "hp": 5,
-                "atk": 5
+                hp: 5,
+                atk: 5
               },
               "8": {
-                "hp": 6,
-                "atk": 6
+                hp: 6,
+                atk: 6
               },
               "9": {
-                "hp": 7,
-                "atk": 7
+                hp: 7,
+                atk: 7
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Rapid Growth",
-                    "trigger": "OnOwnEndOfTurn",
-                    "effects": [
+                    name: "Rapid Growth",
+                    trigger: AbilityTrigger.OnOwnEndOfTurn,
+                    effects: [
                       {
-                        "type": "ModifyStats",
-                        "target": "Self",
-                        "stat": "Both",
-                        "value": 2,
-                        "duration": "Permanent"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.Self,
+                        stat: StatType.Both,
+                        value: 2,
+                        duration: EffectDuration.Permanent
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Mossy Armor",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Mossy Armor",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "DamageReduction",
-                        "target": "Self",
-                        "value": 1,
-                        "duration": "WhileOnField"
+                        type: EffectType.DamageReduction,
+                        target: AbilityTarget.Self,
+                        value: 1,
+                        duration: EffectDuration.WhileOnField
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Overgrowth",
-                    "trigger": "OnOwnEndOfTurn",
-                    "effects": [
+                    name: "Overgrowth",
+                    trigger: AbilityTrigger.OnOwnEndOfTurn,
+                    effects: [
                       {
-                        "type": "ModifyStats",
-                        "target": "Self",
-                        "stat": "Both",
-                        "value": 3,
-                        "duration": "Permanent"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.Self,
+                        stat: StatType.Both,
+                        value: 3,
+                        duration: EffectDuration.Permanent
                       }
                     ]
                   }
@@ -20254,128 +20746,128 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1344114090714721",
-            "path": "assets/images/cards_forest_mosslet.png",
-            "description": "Mosslet card artwork"
+            type: "image",
+            horizonAssetId: "1344114090714721",
+            path: "assets/images/cards_forest_mosslet.png",
+            description: "Mosslet card artwork"
           }
         ]
       },
       {
-        "id": "mushroomancer",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "forest",
-        "data": {
-          "id": "mushroomancer",
-          "name": "Mushroomancer",
-          "displayName": "Mushroomancer",
-          "type": "Bloom",
-          "affinity": "Forest",
-          "cost": 3,
-          "baseAttack": 3,
-          "baseHealth": 4,
-          "abilities": [
+        id: "mushroomancer",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "forest",
+        data: {
+          id: "mushroomancer",
+          name: "Mushroomancer",
+          displayName: "Mushroomancer",
+          type: "Bloom",
+          affinity: "Forest",
+          cost: 3,
+          baseAttack: 3,
+          baseHealth: 4,
+          abilities: [
             {
-              "name": "Sporogenesis",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Sporogenesis",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "ApplyCounter",
-                  "target": "AllEnemies",
-                  "counter": "Spore",
-                  "value": 2
+                  type: EffectType.ApplyCounter,
+                  target: AbilityTarget.AllEnemies,
+                  counter: "Spore",
+                  value: 2
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 1,
-                "atk": 0
+                hp: 1,
+                atk: 0
               },
               "3": {
-                "hp": 2,
-                "atk": 1
+                hp: 2,
+                atk: 1
               },
               "4": {
-                "hp": 3,
-                "atk": 2
+                hp: 3,
+                atk: 2
               },
               "5": {
-                "hp": 4,
-                "atk": 3
+                hp: 4,
+                atk: 3
               },
               "6": {
-                "hp": 5,
-                "atk": 4
+                hp: 5,
+                atk: 4
               },
               "7": {
-                "hp": 6,
-                "atk": 5
+                hp: 6,
+                atk: 5
               },
               "8": {
-                "hp": 7,
-                "atk": 6
+                hp: 7,
+                atk: 6
               },
               "9": {
-                "hp": 8,
-                "atk": 7
+                hp: 8,
+                atk: 7
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Virulent Spores",
-                    "trigger": "OnSummon",
-                    "effects": [
+                    name: "Virulent Spores",
+                    trigger: AbilityTrigger.OnSummon,
+                    effects: [
                       {
-                        "type": "ApplyCounter",
-                        "target": "AllEnemies",
-                        "counter": "Spore",
-                        "value": 3
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.AllEnemies,
+                        counter: "Spore",
+                        value: 3
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Spore Burst",
-                    "trigger": "OnDestroy",
-                    "effects": [
+                    name: "Spore Burst",
+                    trigger: AbilityTrigger.OnDestroy,
+                    effects: [
                       {
-                        "type": "ApplyCounter",
-                        "target": "AllEnemies",
-                        "counter": "Spore",
-                        "value": 2
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.AllEnemies,
+                        counter: "Spore",
+                        value: 2
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Fungal Network",
-                    "trigger": "OnOwnEndOfTurn",
-                    "effects": [
+                    name: "Fungal Network",
+                    trigger: AbilityTrigger.OnOwnEndOfTurn,
+                    effects: [
                       {
-                        "type": "DealDamage",
-                        "target": "AllEnemies",
-                        "value": 1,
-                        "condition": {
-                          "type": "HasCounter",
-                          "value": "Spore"
+                        type: EffectType.DealDamage,
+                        target: AbilityTarget.AllEnemies,
+                        value: 1,
+                        condition: {
+                          type: ConditionType.HasCounter,
+                          value: "Spore"
                         }
                       }
                     ]
@@ -20385,132 +20877,132 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1393693032328550",
-            "path": "assets/images/cards_forest_mushroomancer.png",
-            "description": "Mushroomancer card artwork"
+            type: "image",
+            horizonAssetId: "1393693032328550",
+            path: "assets/images/cards_forest_mushroomancer.png",
+            description: "Mushroomancer card artwork"
           }
         ]
       },
       {
-        "id": "ancient-forest",
-        "type": "habitat",
-        "affinity": "forest",
-        "data": {
-          "id": "ancient-forest",
-          "name": "Ancient Forest",
-          "displayName": "Ancient Forest",
-          "type": "Habitat",
-          "affinity": "Forest",
-          "cost": 0,
-          "abilities": [
+        id: "ancient-forest",
+        type: "habitat",
+        affinity: "forest",
+        data: {
+          id: "ancient-forest",
+          name: "Ancient Forest",
+          displayName: "Ancient Forest",
+          type: "Habitat",
+          affinity: "Forest",
+          cost: 0,
+          abilities: [
             {
-              "name": "Forest Sanctuary",
-              "trigger": "Passive",
-              "effects": [
+              name: "Forest Sanctuary",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "ModifyStats",
-                  "target": "AllAllies",
-                  "stat": "Health",
-                  "value": 1,
-                  "duration": "WhileOnField"
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.AllAllies,
+                  stat: StatType.Health,
+                  value: 1,
+                  duration: EffectDuration.WhileOnField
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1625867191715184",
-            "path": "assets/images/cards_forest_ancient-forest.png",
-            "description": "Ancient Forest habitat card artwork"
+            type: "image",
+            horizonAssetId: "1625867191715184",
+            path: "assets/images/cards_forest_ancient-forest.png",
+            description: "Ancient Forest habitat card artwork"
           },
           {
-            "type": "image",
-            "horizonAssetId": "787776974149741",
-            "path": "assets/images/cards_forest_habitat-card.png",
-            "description": "Forest habitat card template"
+            type: "image",
+            horizonAssetId: "787776974149741",
+            path: "assets/images/cards_forest_habitat-card.png",
+            description: "Forest habitat card template"
           },
           {
-            "type": "image",
-            "horizonAssetId": "805969505504149",
-            "path": "assets/images/cards_forest_habitat-card-playboard.png",
-            "description": "Forest habitat card playboard"
+            type: "image",
+            horizonAssetId: "805969505504149",
+            path: "assets/images/cards_forest_habitat-card-playboard.png",
+            description: "Forest habitat card playboard"
           }
         ]
       },
       {
-        "id": "forest-mission",
-        "type": "mission",
-        "affinity": "forest",
-        "missionNumber": 2,
-        "name": "Forest Mission",
-        "description": "Forest affinity mission",
-        "assets": [
+        id: "forest-mission",
+        type: "mission",
+        affinity: "forest",
+        missionNumber: 2,
+        name: "Forest Mission",
+        description: "Forest affinity mission",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1351984712974001",
-            "path": "assets/images/cards_forest_forest-mission.png",
-            "description": "Forest mission card"
+            type: "image",
+            horizonAssetId: "1351984712974001",
+            path: "assets/images/cards_forest_forest-mission.png",
+            description: "Forest mission card"
           }
         ]
       },
       {
-        "id": "forest-chest-closed",
-        "type": "ui",
-        "category": "chest",
-        "name": "Forest Chest Closed",
-        "description": "Forest chest in closed state",
-        "assets": [
+        id: "forest-chest-closed",
+        type: "ui",
+        category: "chest",
+        name: "Forest Chest Closed",
+        description: "Forest chest in closed state",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "678586941962889",
-            "path": "assets/images/chest_forest-chest-closed.png"
+            type: "image",
+            horizonAssetId: "678586941962889",
+            path: "assets/images/chest_forest-chest-closed.png"
           }
         ]
       },
       {
-        "id": "forest-chest-opened",
-        "type": "ui",
-        "category": "chest",
-        "name": "Forest Chest Opened",
-        "description": "Forest chest in opened state",
-        "assets": [
+        id: "forest-chest-opened",
+        type: "ui",
+        category: "chest",
+        name: "Forest Chest Opened",
+        description: "Forest chest in opened state",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1859963367965524",
-            "path": "assets/images/chest_forest-chest-opened.png"
+            type: "image",
+            horizonAssetId: "1859963367965524",
+            path: "assets/images/chest_forest-chest-opened.png"
           }
         ]
       },
       {
-        "id": "forest-icon",
-        "type": "ui",
-        "category": "icon",
-        "name": "Forest Icon",
-        "description": "Forest affinity icon",
-        "assets": [
+        id: "forest-icon",
+        type: "ui",
+        category: "icon",
+        name: "Forest Icon",
+        description: "Forest affinity icon",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1869425844004279",
-            "path": "assets/images/affinity_forest-icon.png"
+            type: "image",
+            horizonAssetId: "1869425844004279",
+            path: "assets/images/affinity_forest-icon.png"
           }
         ]
       },
       {
-        "id": "forest-habitat",
-        "type": "ui",
-        "category": "card-template",
-        "name": "Forest Habitat Card Template",
-        "description": "Template overlay for forest habitat cards",
-        "assets": [
+        id: "forest-habitat",
+        type: "ui",
+        category: "card-template",
+        name: "Forest Habitat Card Template",
+        description: "Template overlay for forest habitat cards",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "787776974149741",
-            "path": "assets/images/cards_forest_habitat-card.png"
+            type: "image",
+            horizonAssetId: "787776974149741",
+            path: "assets/images/cards_forest_habitat-card.png"
           }
         ]
       }
@@ -20520,356 +21012,355 @@ namespace BloomBeasts {
   // ==================== bloombeasts\catalogs\magicAssets.ts ====================
 
   /**
-   * Auto-generated TypeScript catalog from magicAssets.json
-   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   * Edit this file directly to add/modify assets
    */
 
 
   export const magicAssets: AssetCatalog = {
-    "version": "1.0.0",
-    "category": "magic",
-    "description": "Magic cards and assets",
-    "data": [
+    version: "1.0.0",
+    category: "magic",
+    description: "Magic cards and assets",
+    data: [
       {
-        "id": "aether-swap",
-        "type": "magic",
-        "cardType": "Magic",
-        "data": {
-          "id": "aether-swap",
-          "name": "Aether Swap",
-          "type": "Magic",
-          "cost": 1,
-          "targetRequired": true,
-          "abilities": [
+        id: "aether-swap",
+        type: "magic",
+        cardType: "Magic",
+        data: {
+          id: "aether-swap",
+          name: "Aether Swap",
+          type: "Magic",
+          cost: 1,
+          targetRequired: true,
+          abilities: [
             {
-              "name": "Aether Swap",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Aether Swap",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "SwapPositions",
-                  "target": "Target"
+                  type: EffectType.SwapPositions,
+                  target: AbilityTarget.Target
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1846483789630405",
-            "path": "assets/images/cards_magic_aether-swap.png"
+            type: "image",
+            horizonAssetId: "1846483789630405",
+            path: "assets/images/cards_magic_aether-swap.png"
           }
         ]
       },
       {
-        "id": "cleansing-downpour",
-        "type": "magic",
-        "cardType": "Magic",
-        "data": {
-          "id": "cleansing-downpour",
-          "name": "Cleansing Downpour",
-          "type": "Magic",
-          "cost": 2,
-          "targetRequired": false,
-          "abilities": [
+        id: "cleansing-downpour",
+        type: "magic",
+        cardType: "Magic",
+        data: {
+          id: "cleansing-downpour",
+          name: "Cleansing Downpour",
+          type: "Magic",
+          cost: 2,
+          targetRequired: false,
+          abilities: [
             {
-              "name": "Cleansing Downpour",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Cleansing Downpour",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "RemoveCounter",
-                  "target": "AllUnits"
+                  type: EffectType.RemoveCounter,
+                  target: "AllUnits"
                 },
                 {
-                  "type": "DrawCards",
-                  "target": "PlayerGardener",
-                  "value": 1
+                  type: EffectType.DrawCards,
+                  target: "PlayerGardener",
+                  value: 1
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "710755475386192",
-            "path": "assets/images/cards_magic_cleansing-downpour.png"
+            type: "image",
+            horizonAssetId: "710755475386192",
+            path: "assets/images/cards_magic_cleansing-downpour.png"
           }
         ]
       },
       {
-        "id": "elemental-burst",
-        "type": "magic",
-        "cardType": "Magic",
-        "data": {
-          "id": "elemental-burst",
-          "name": "Elemental Burst",
-          "type": "Magic",
-          "cost": 3,
-          "targetRequired": false,
-          "abilities": [
+        id: "elemental-burst",
+        type: "magic",
+        cardType: "Magic",
+        data: {
+          id: "elemental-burst",
+          name: "Elemental Burst",
+          type: "Magic",
+          cost: 3,
+          targetRequired: false,
+          abilities: [
             {
-              "name": "Elemental Burst",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Elemental Burst",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "DealDamage",
-                  "target": "AllEnemies",
-                  "value": 2
+                  type: EffectType.DealDamage,
+                  target: AbilityTarget.AllEnemies,
+                  value: 2
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1585232092889726",
-            "path": "assets/images/cards_magic_elemental-burst.png"
+            type: "image",
+            horizonAssetId: "1585232092889726",
+            path: "assets/images/cards_magic_elemental-burst.png"
           }
         ]
       },
       {
-        "id": "lightning-strike",
-        "type": "magic",
-        "cardType": "Magic",
-        "data": {
-          "id": "lightning-strike",
-          "name": "Lightning Strike",
-          "type": "Magic",
-          "cost": 2,
-          "targetRequired": true,
-          "abilities": [
+        id: "lightning-strike",
+        type: "magic",
+        cardType: "Magic",
+        data: {
+          id: "lightning-strike",
+          name: "Lightning Strike",
+          type: "Magic",
+          cost: 2,
+          targetRequired: true,
+          abilities: [
             {
-              "name": "Lightning Strike",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Lightning Strike",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "DealDamage",
-                  "target": "Target",
-                  "value": 5,
-                  "piercing": true
+                  type: EffectType.DealDamage,
+                  target: AbilityTarget.Target,
+                  value: 5,
+                  piercing: true
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1155953239812167",
-            "path": "assets/images/cards_magic_lightning-strike.png"
+            type: "image",
+            horizonAssetId: "1155953239812167",
+            path: "assets/images/cards_magic_lightning-strike.png"
           }
         ]
       },
       {
-        "id": "nectar-block",
-        "type": "magic",
-        "cardType": "Magic",
-        "data": {
-          "id": "nectar-block",
-          "name": "Nectar Block",
-          "type": "Magic",
-          "cost": 0,
-          "targetRequired": false,
-          "abilities": [
+        id: "nectar-block",
+        type: "magic",
+        cardType: "Magic",
+        data: {
+          id: "nectar-block",
+          name: "Nectar Block",
+          type: "Magic",
+          cost: 0,
+          targetRequired: false,
+          abilities: [
             {
-              "name": "Nectar Block",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Nectar Block",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "GainResource",
-                  "target": "PlayerGardener",
-                  "resource": "Nectar",
-                  "value": 2,
-                  "duration": "ThisTurn"
+                  type: "GainResource",
+                  target: "PlayerGardener",
+                  resource: "Nectar",
+                  value: 2,
+                  duration: "ThisTurn"
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1092559439363693",
-            "path": "assets/images/cards_magic_nectar-block.png"
+            type: "image",
+            horizonAssetId: "1092559439363693",
+            path: "assets/images/cards_magic_nectar-block.png"
           }
         ]
       },
       {
-        "id": "nectar-drain",
-        "type": "magic",
-        "cardType": "Magic",
-        "data": {
-          "id": "nectar-drain",
-          "name": "Nectar Drain",
-          "type": "Magic",
-          "cost": 1,
-          "targetRequired": false,
-          "abilities": [
+        id: "nectar-drain",
+        type: "magic",
+        cardType: "Magic",
+        data: {
+          id: "nectar-drain",
+          name: "Nectar Drain",
+          type: "Magic",
+          cost: 1,
+          targetRequired: false,
+          abilities: [
             {
-              "name": "Nectar Drain",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Nectar Drain",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "GainResource",
-                  "target": "PlayerGardener",
-                  "resource": "Nectar",
-                  "value": 2,
-                  "duration": "ThisTurn"
+                  type: "GainResource",
+                  target: "PlayerGardener",
+                  resource: "Nectar",
+                  value: 2,
+                  duration: "ThisTurn"
                 },
                 {
-                  "type": "DrawCards",
-                  "target": "PlayerGardener",
-                  "value": 1
+                  type: EffectType.DrawCards,
+                  target: "PlayerGardener",
+                  value: 1
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1754732031852523",
-            "path": "assets/images/cards_magic_nectar-drain.png"
+            type: "image",
+            horizonAssetId: "1754732031852523",
+            path: "assets/images/cards_magic_nectar-drain.png"
           }
         ]
       },
       {
-        "id": "nectar-surge",
-        "type": "magic",
-        "cardType": "Magic",
-        "data": {
-          "id": "nectar-surge",
-          "name": "Nectar Surge",
-          "type": "Magic",
-          "cost": 1,
-          "targetRequired": false,
-          "abilities": [
+        id: "nectar-surge",
+        type: "magic",
+        cardType: "Magic",
+        data: {
+          id: "nectar-surge",
+          name: "Nectar Surge",
+          type: "Magic",
+          cost: 1,
+          targetRequired: false,
+          abilities: [
             {
-              "name": "Nectar Surge",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Nectar Surge",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "GainResource",
-                  "target": "PlayerGardener",
-                  "resource": "Nectar",
-                  "value": 3,
-                  "duration": "ThisTurn"
+                  type: "GainResource",
+                  target: "PlayerGardener",
+                  resource: "Nectar",
+                  value: 3,
+                  duration: "ThisTurn"
                 },
                 {
-                  "type": "DrawCards",
-                  "target": "PlayerGardener",
-                  "value": 1
+                  type: EffectType.DrawCards,
+                  target: "PlayerGardener",
+                  value: 1
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1379310950488534",
-            "path": "assets/images/cards_magic_nectar-surge.png"
+            type: "image",
+            horizonAssetId: "1379310950488534",
+            path: "assets/images/cards_magic_nectar-surge.png"
           }
         ]
       },
       {
-        "id": "overgrowth",
-        "type": "magic",
-        "cardType": "Magic",
-        "data": {
-          "id": "overgrowth",
-          "name": "Overgrowth",
-          "type": "Magic",
-          "cost": 3,
-          "targetRequired": false,
-          "abilities": [
+        id: "overgrowth",
+        type: "magic",
+        cardType: "Magic",
+        data: {
+          id: "overgrowth",
+          name: "Overgrowth",
+          type: "Magic",
+          cost: 3,
+          targetRequired: false,
+          abilities: [
             {
-              "name": "Overgrowth",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Overgrowth",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "ModifyStats",
-                  "target": "AllAllies",
-                  "stat": "Both",
-                  "value": 2,
-                  "duration": "Permanent"
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.AllAllies,
+                  stat: StatType.Both,
+                  value: 2,
+                  duration: EffectDuration.Permanent
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1489977038895297",
-            "path": "assets/images/cards_magic_overgrowth.png"
+            type: "image",
+            horizonAssetId: "1489977038895297",
+            path: "assets/images/cards_magic_overgrowth.png"
           }
         ]
       },
       {
-        "id": "power-up",
-        "type": "magic",
-        "cardType": "Magic",
-        "data": {
-          "id": "power-up",
-          "name": "Power Up",
-          "type": "Magic",
-          "cost": 2,
-          "targetRequired": true,
-          "abilities": [
+        id: "power-up",
+        type: "magic",
+        cardType: "Magic",
+        data: {
+          id: "power-up",
+          name: "Power Up",
+          type: "Magic",
+          cost: 2,
+          targetRequired: true,
+          abilities: [
             {
-              "name": "Power Up",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Power Up",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "ModifyStats",
-                  "target": "Target",
-                  "stat": "Both",
-                  "value": 3,
-                  "duration": "Permanent"
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.Target,
+                  stat: StatType.Both,
+                  value: 3,
+                  duration: EffectDuration.Permanent
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1140750044697552",
-            "path": "assets/images/cards_magic_power-up.png"
+            type: "image",
+            horizonAssetId: "1140750044697552",
+            path: "assets/images/cards_magic_power-up.png"
           }
         ]
       },
       {
-        "id": "purify",
-        "type": "magic",
-        "cardType": "Magic",
-        "data": {
-          "id": "purify",
-          "name": "Purify",
-          "type": "Magic",
-          "cost": 1,
-          "targetRequired": true,
-          "abilities": [
+        id: "purify",
+        type: "magic",
+        cardType: "Magic",
+        data: {
+          id: "purify",
+          name: "Purify",
+          type: "Magic",
+          cost: 1,
+          targetRequired: true,
+          abilities: [
             {
-              "name": "Purify",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Purify",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "RemoveCounter",
-                  "target": "Target"
+                  type: EffectType.RemoveCounter,
+                  target: AbilityTarget.Target
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "681285418362907",
-            "path": "assets/images/cards_magic_purify.png"
+            type: "image",
+            horizonAssetId: "681285418362907",
+            path: "assets/images/cards_magic_purify.png"
           }
         ]
       }
@@ -20879,166 +21370,165 @@ namespace BloomBeasts {
   // ==================== bloombeasts\catalogs\skyAssets.ts ====================
 
   /**
-   * Auto-generated TypeScript catalog from skyAssets.json
-   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   * Edit this file directly to add/modify assets
    */
 
 
   export const skyAssets: AssetCatalog = {
-    "version": "1.0.0",
-    "category": "sky",
-    "description": "Sky affinity cards and assets",
-    "data": [
+    version: "1.0.0",
+    category: "sky",
+    description: "Sky affinity cards and assets",
+    data: [
       {
-        "id": "aero-moth",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "sky",
-        "data": {
-          "id": "aero-moth",
-          "name": "Aero Moth",
-          "type": "Bloom",
-          "affinity": "Sky",
-          "cost": 2,
-          "baseAttack": 3,
-          "baseHealth": 3,
-          "abilities": [
+        id: "aero-moth",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "sky",
+        data: {
+          id: "aero-moth",
+          name: "Aero Moth",
+          type: "Bloom",
+          affinity: "Sky",
+          cost: 2,
+          baseAttack: 3,
+          baseHealth: 3,
+          abilities: [
             {
-              "name": "Wing Flutter",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Wing Flutter",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "DrawCards",
-                  "target": "PlayerGardener",
-                  "value": 1
+                  type: EffectType.DrawCards,
+                  target: AbilityTarget.PlayerGardener,
+                  value: 1
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 1,
-                "atk": 1
+                hp: 1,
+                atk: 1
               },
               "3": {
-                "hp": 2,
-                "atk": 2
+                hp: 2,
+                atk: 2
               },
               "4": {
-                "hp": 3,
-                "atk": 3
+                hp: 3,
+                atk: 3
               },
               "5": {
-                "hp": 4,
-                "atk": 4
+                hp: 4,
+                atk: 4
               },
               "6": {
-                "hp": 5,
-                "atk": 5
+                hp: 5,
+                atk: 5
               },
               "7": {
-                "hp": 6,
-                "atk": 6
+                hp: 6,
+                atk: 6
               },
               "8": {
-                "hp": 7,
-                "atk": 7
+                hp: 7,
+                atk: 7
               },
               "9": {
-                "hp": 8,
-                "atk": 8
+                hp: 8,
+                atk: 8
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Hypnotic Wings",
-                    "trigger": "OnSummon",
-                    "effects": [
+                    name: "Hypnotic Wings",
+                    trigger: AbilityTrigger.OnSummon,
+                    effects: [
                       {
-                        "type": "DrawCards",
-                        "target": "PlayerGardener",
-                        "value": 2
+                        type: EffectType.DrawCards,
+                        target: AbilityTarget.PlayerGardener,
+                        value: 2
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Hypnotic Wings",
-                    "trigger": "OnSummon",
-                    "effects": [
+                    name: "Hypnotic Wings",
+                    trigger: AbilityTrigger.OnSummon,
+                    effects: [
                       {
-                        "type": "DrawCards",
-                        "target": "PlayerGardener",
-                        "value": 2
+                        type: EffectType.DrawCards,
+                        target: AbilityTarget.PlayerGardener,
+                        value: 2
                       }
                     ]
                   },
                   {
-                    "name": "Cyclone",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Cyclone",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "SwapPositions",
-                        "target": "AllEnemies"
+                        type: "SwapPositions",
+                        target: AbilityTarget.AllEnemies
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Rainbow Cascade",
-                    "trigger": "OnSummon",
-                    "effects": [
+                    name: "Rainbow Cascade",
+                    trigger: AbilityTrigger.OnSummon,
+                    effects: [
                       {
-                        "type": "DrawCards",
-                        "target": "PlayerGardener",
-                        "value": 3
+                        type: EffectType.DrawCards,
+                        target: AbilityTarget.PlayerGardener,
+                        value: 3
                       },
                       {
-                        "type": "ModifyStats",
-                        "target": "AllAllies",
-                        "stat": "Attack",
-                        "value": 1,
-                        "duration": "Permanent"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.AllAllies,
+                        stat: StatType.Attack,
+                        value: 1,
+                        duration: EffectDuration.Permanent
                       },
                       {
-                        "type": "ModifyStats",
-                        "target": "AllAllies",
-                        "stat": "Health",
-                        "value": 1,
-                        "duration": "Permanent"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.AllAllies,
+                        stat: StatType.Health,
+                        value: 1,
+                        duration: EffectDuration.Permanent
                       }
                     ]
                   },
                   {
-                    "name": "Chaos Storm",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Chaos Storm",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "SwapPositions",
-                        "target": "AllEnemies"
+                        type: "SwapPositions",
+                        target: AbilityTarget.AllEnemies
                       },
                       {
-                        "type": "ReturnToHand",
-                        "target": "RandomEnemy",
-                        "value": 1
+                        type: EffectType.ReturnToHand,
+                        target: AbilityTarget.RandomEnemy,
+                        value: 1
                       },
                       {
-                        "type": "DrawCards",
-                        "target": "PlayerGardener",
-                        "value": 2
+                        type: EffectType.DrawCards,
+                        target: AbilityTarget.PlayerGardener,
+                        value: 2
                       }
                     ]
                   }
@@ -21047,108 +21537,108 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1857788838498496",
-            "path": "assets/images/cards_sky_aero-moth.png"
+            type: "image",
+            horizonAssetId: "1857788838498496",
+            path: "assets/images/cards_sky_aero-moth.png"
           }
         ]
       },
       {
-        "id": "cirrus-floof",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "sky",
-        "data": {
-          "id": "cirrus-floof",
-          "name": "Cirrus Floof",
-          "type": "Bloom",
-          "affinity": "Sky",
-          "cost": 2,
-          "baseAttack": 1,
-          "baseHealth": 6,
-          "abilities": [
+        id: "cirrus-floof",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "sky",
+        data: {
+          id: "cirrus-floof",
+          name: "Cirrus Floof",
+          type: "Bloom",
+          affinity: "Sky",
+          cost: 2,
+          baseAttack: 1,
+          baseHealth: 6,
+          abilities: [
             {
-              "name": "Lightness",
-              "trigger": "Passive",
-              "effects": [
+              name: "Lightness",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "CannotBeTargeted",
-                  "target": "Self",
-                  "by": [
+                  type: EffectType.CannotBeTargeted,
+                  target: AbilityTarget.Self,
+                  by: [
                     "high-cost-units"
                   ],
-                  "costThreshold": 3
+                  costThreshold: 3
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 3,
-                "atk": 0
+                hp: 3,
+                atk: 0
               },
               "3": {
-                "hp": 5,
-                "atk": 0
+                hp: 5,
+                atk: 0
               },
               "4": {
-                "hp": 7,
-                "atk": 1
+                hp: 7,
+                atk: 1
               },
               "5": {
-                "hp": 10,
-                "atk": 1
+                hp: 10,
+                atk: 1
               },
               "6": {
-                "hp": 12,
-                "atk": 2
+                hp: 12,
+                atk: 2
               },
               "7": {
-                "hp": 14,
-                "atk": 3
+                hp: 14,
+                atk: 3
               },
               "8": {
-                "hp": 17,
-                "atk": 3
+                hp: 17,
+                atk: 3
               },
               "9": {
-                "hp": 20,
-                "atk": 4
+                hp: 20,
+                atk: 4
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Storm Shield",
-                    "trigger": "OnOwnStartOfTurn",
-                    "effects": [
+                    name: "Storm Shield",
+                    trigger: AbilityTrigger.OnOwnStartOfTurn,
+                    effects: [
                       {
-                        "type": "TemporaryHP",
-                        "target": "AllAllies",
-                        "value": 2
+                        type: "TemporaryHP",
+                        target: AbilityTarget.AllAllies,
+                        value: 2
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Ethereal Form",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Ethereal Form",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "CannotBeTargeted",
-                        "target": "Self",
-                        "by": [
+                        type: EffectType.CannotBeTargeted,
+                        target: AbilityTarget.Self,
+                        by: [
                           "attacks"
                         ]
                       }
@@ -21157,42 +21647,42 @@ namespace BloomBeasts {
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Celestial Protector",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Celestial Protector",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "CannotBeTargeted",
-                        "target": "Self",
-                        "by": [
+                        type: EffectType.CannotBeTargeted,
+                        target: AbilityTarget.Self,
+                        by: [
                           "all"
                         ]
                       },
                       {
-                        "type": "DamageReduction",
-                        "target": "AllAllies",
-                        "value": 1,
-                        "duration": "WhileOnField"
+                        type: EffectType.DamageReduction,
+                        target: AbilityTarget.AllAllies,
+                        value: 1,
+                        duration: EffectDuration.WhileOnField
                       }
                     ]
                   },
                   {
-                    "name": "Divine Barrier",
-                    "trigger": "OnOwnStartOfTurn",
-                    "effects": [
+                    name: "Divine Barrier",
+                    trigger: AbilityTrigger.OnOwnStartOfTurn,
+                    effects: [
                       {
-                        "type": "TemporaryHP",
-                        "target": "AllAllies",
-                        "value": 3
+                        type: "TemporaryHP",
+                        target: AbilityTarget.AllAllies,
+                        value: 3
                       },
                       {
-                        "type": "Immunity",
-                        "target": "AllAllies",
-                        "immuneTo": [
+                        type: "Immunity",
+                        target: AbilityTarget.AllAllies,
+                        immuneTo: [
                           "NegativeEffects"
                         ],
-                        "duration": "ThisTurn"
+                        duration: EffectDuration.ThisTurn
                       }
                     ]
                   }
@@ -21201,153 +21691,153 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "849446287592530",
-            "path": "assets/images/cards_sky_cirrus-floof.png"
+            type: "image",
+            horizonAssetId: "849446287592530",
+            path: "assets/images/cards_sky_cirrus-floof.png"
           }
         ]
       },
       {
-        "id": "gale-glider",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "sky",
-        "data": {
-          "id": "gale-glider",
-          "name": "Gale Glider",
-          "type": "Bloom",
-          "affinity": "Sky",
-          "cost": 1,
-          "baseAttack": 2,
-          "baseHealth": 2,
-          "abilities": [
+        id: "gale-glider",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "sky",
+        data: {
+          id: "gale-glider",
+          name: "Gale Glider",
+          type: "Bloom",
+          affinity: "Sky",
+          cost: 1,
+          baseAttack: 2,
+          baseHealth: 2,
+          abilities: [
             {
-              "name": "First Wind",
-              "trigger": "Passive",
-              "effects": [
+              name: "First Wind",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "AttackModification",
-                  "target": "Self",
-                  "modification": "attack-first"
+                  type: EffectType.AttackModification,
+                  target: AbilityTarget.Self,
+                  modification: "attack-first"
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 0,
-                "atk": 2
+                hp: 0,
+                atk: 2
               },
               "3": {
-                "hp": 0,
-                "atk": 3
+                hp: 0,
+                atk: 3
               },
               "4": {
-                "hp": 1,
-                "atk": 5
+                hp: 1,
+                atk: 5
               },
               "5": {
-                "hp": 1,
-                "atk": 7
+                hp: 1,
+                atk: 7
               },
               "6": {
-                "hp": 2,
-                "atk": 9
+                hp: 2,
+                atk: 9
               },
               "7": {
-                "hp": 2,
-                "atk": 10
+                hp: 2,
+                atk: 10
               },
               "8": {
-                "hp": 3,
-                "atk": 12
+                hp: 3,
+                atk: 12
               },
               "9": {
-                "hp": 3,
-                "atk": 14
+                hp: 3,
+                atk: 14
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Wind Dance",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Wind Dance",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "MoveUnit",
-                        "target": "Self",
-                        "destination": "any-slot"
+                        type: "MoveUnit",
+                        target: AbilityTarget.Self,
+                        destination: "any-slot"
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Storm Blade",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Storm Blade",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "attack-first"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "attack-first"
                       },
                       {
-                        "type": "ModifyStats",
-                        "target": "Self",
-                        "stat": "Attack",
-                        "value": 2,
-                        "duration": "NextAttack"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.Self,
+                        stat: StatType.Attack,
+                        value: 2,
+                        duration: "NextAttack"
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Tempest Strike",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Tempest Strike",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "attack-first"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "attack-first"
                       },
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "triple-damage"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "triple-damage"
                       },
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "cannot-counterattack"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "cannot-counterattack"
                       }
                     ]
                   },
                   {
-                    "name": "Hurricane Assault",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Hurricane Assault",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "attack-twice"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "attack-twice"
                       },
                       {
-                        "type": "MoveUnit",
-                        "target": "Self",
-                        "destination": "any-slot"
+                        type: "MoveUnit",
+                        target: AbilityTarget.Self,
+                        destination: "any-slot"
                       }
                     ]
                   }
@@ -21356,166 +21846,143 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1854780382097596",
-            "path": "assets/images/cards_sky_gale-glider.png"
+            type: "image",
+            horizonAssetId: "1854780382097596",
+            path: "assets/images/cards_sky_gale-glider.png"
           }
         ]
       },
       {
-        "id": "star-bloom",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "sky",
-        "data": {
-          "id": "star-bloom",
-          "name": "Star Bloom",
-          "type": "Bloom",
-          "affinity": "Sky",
-          "cost": 3,
-          "baseAttack": 4,
-          "baseHealth": 5,
-          "abilities": [
+        id: "star-bloom",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "sky",
+        data: {
+          id: "star-bloom",
+          name: "Star Bloom",
+          type: "Bloom",
+          affinity: "Sky",
+          cost: 3,
+          baseAttack: 4,
+          baseHealth: 5,
+          abilities: [
             {
-              "name": "Aura",
-              "trigger": "Passive",
-              "effects": [
+              name: "Aura",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "ModifyStats",
-                  "target": "AllAllies",
-                  "stat": "Attack",
-                  "value": 1,
-                  "duration": "WhileOnField"
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.AllAllies,
+                  stat: StatType.Attack,
+                  value: 1,
+                  duration: EffectDuration.WhileOnField
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 1,
-                "atk": 1
+                hp: 1,
+                atk: 1
               },
               "3": {
-                "hp": 2,
-                "atk": 2
+                hp: 2,
+                atk: 2
               },
               "4": {
-                "hp": 4,
-                "atk": 3
+                hp: 4,
+                atk: 3
               },
               "5": {
-                "hp": 6,
-                "atk": 4
+                hp: 6,
+                atk: 4
               },
               "6": {
-                "hp": 8,
-                "atk": 5
+                hp: 8,
+                atk: 5
               },
               "7": {
-                "hp": 10,
-                "atk": 6
+                hp: 10,
+                atk: 6
               },
               "8": {
-                "hp": 12,
-                "atk": 7
+                hp: 12,
+                atk: 7
               },
               "9": {
-                "hp": 14,
-                "atk": 9
+                hp: 14,
+                atk: 9
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Radiant Aura",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Radiant Aura",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "ModifyStats",
-                        "target": "AllAllies",
-                        "stat": "Attack",
-                        "value": 2,
-                        "duration": "WhileOnField"
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                "abilities": [
-                  {
-                    "name": "Cosmic Guidance",
-                    "trigger": "Activated",
-                    "maxUsesPerTurn": 1,
-                    "effects": [
-                      {
-                        "type": "SearchDeck",
-                        "target": "PlayerGardener",
-                        "searchFor": "any",
-                        "quantity": 1
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.AllAllies,
+                        stat: StatType.Attack,
+                        value: 2,
+                        duration: EffectDuration.WhileOnField
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Astral Dominance",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Astral Dominance",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "ModifyStats",
-                        "target": "AllAllies",
-                        "stat": "Attack",
-                        "value": 3,
-                        "duration": "WhileOnField"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.AllAllies,
+                        stat: StatType.Attack,
+                        value: 3,
+                        duration: EffectDuration.WhileOnField
                       },
                       {
-                        "type": "ModifyStats",
-                        "target": "AllAllies",
-                        "stat": "Health",
-                        "value": 2,
-                        "duration": "WhileOnField"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.AllAllies,
+                        stat: StatType.Health,
+                        value: 2,
+                        duration: EffectDuration.WhileOnField
                       }
                     ]
                   },
                   {
-                    "name": "Universal Harmony",
-                    "trigger": "Activated",
-                    "effects": [
+                    name: "Universal Harmony",
+                    trigger: AbilityTrigger.OnSummon,
+                    effects: [
                       {
-                        "type": "DrawCards",
-                        "target": "PlayerGardener",
-                        "value": 3
+                        type: EffectType.DrawCards,
+                        target: AbilityTarget.PlayerGardener,
+                        value: 3
                       },
                       {
-                        "type": "SearchDeck",
-                        "target": "PlayerGardener",
-                        "searchFor": "any",
-                        "quantity": 2
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.AllAllies,
+                        stat: StatType.Attack,
+                        value: 2,
+                        duration: EffectDuration.Permanent
                       },
                       {
-                        "type": "ModifyStats",
-                        "target": "AllAllies",
-                        "stat": "Attack",
-                        "value": 2,
-                        "duration": "Permanent"
-                      },
-                      {
-                        "type": "ModifyStats",
-                        "target": "AllAllies",
-                        "stat": "Health",
-                        "value": 2,
-                        "duration": "Permanent"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.AllAllies,
+                        stat: StatType.Health,
+                        value: 2,
+                        duration: EffectDuration.Permanent
                       }
                     ]
                   }
@@ -21524,122 +21991,122 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "737222956003560",
-            "path": "assets/images/cards_sky_star-bloom.png"
+            type: "image",
+            horizonAssetId: "737222956003560",
+            path: "assets/images/cards_sky_star-bloom.png"
           }
         ]
       },
       {
-        "id": "clear-zenith",
-        "type": "habitat",
-        "affinity": "sky",
-        "data": {
-          "id": "clear-zenith",
-          "name": "Clear Zenith",
-          "type": "Habitat",
-          "affinity": "Sky",
-          "cost": 1,
-          "titleColor": "#000000",
-          "abilities": [
+        id: "clear-zenith",
+        type: "habitat",
+        affinity: "sky",
+        data: {
+          id: "clear-zenith",
+          name: "Clear Zenith",
+          type: "Habitat",
+          affinity: "Sky",
+          cost: 1,
+          titleColor: "#000000",
+          abilities: [
             {
-              "name": "Sky Vision",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Sky Vision",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "DrawCards",
-                  "target": "PlayerGardener",
-                  "value": 1
+                  type: EffectType.DrawCards,
+                  target: AbilityTarget.PlayerGardener,
+                  value: 1
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1941325056416004",
-            "path": "assets/images/cards_sky_clear-zenith.png"
+            type: "image",
+            horizonAssetId: "1941325056416004",
+            path: "assets/images/cards_sky_clear-zenith.png"
           },
           {
-            "type": "image",
-            "horizonAssetId": "1140855177628973",
-            "path": "assets/images/cards_sky_habitat-card.png"
+            type: "image",
+            horizonAssetId: "1140855177628973",
+            path: "assets/images/cards_sky_habitat-card.png"
           },
           {
-            "type": "image",
-            "horizonAssetId": "674037762415336",
-            "path": "assets/images/cards_sky_habitat-card-playboard.png"
+            type: "image",
+            horizonAssetId: "674037762415336",
+            path: "assets/images/cards_sky_habitat-card-playboard.png"
           }
         ]
       },
       {
-        "id": "sky-mission",
-        "type": "mission",
-        "affinity": "sky",
-        "missionNumber": 4,
-        "name": "Sky Mission",
-        "description": "Sky affinity mission",
-        "assets": [
+        id: "sky-mission",
+        type: "mission",
+        affinity: "sky",
+        missionNumber: 4,
+        name: "Sky Mission",
+        description: "Sky affinity mission",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1076415204381099",
-            "path": "assets/images/cards_sky_sky-mission.png"
+            type: "image",
+            horizonAssetId: "1076415204381099",
+            path: "assets/images/cards_sky_sky-mission.png"
           }
         ]
       },
       {
-        "id": "sky-chest-closed",
-        "type": "ui",
-        "category": "chest",
-        "name": "Sky Chest Closed",
-        "assets": [
+        id: "sky-chest-closed",
+        type: "ui",
+        category: "chest",
+        name: "Sky Chest Closed",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1988442925266143",
-            "path": "assets/images/chest_sky-chest-closed.png"
+            type: "image",
+            horizonAssetId: "1988442925266143",
+            path: "assets/images/chest_sky-chest-closed.png"
           }
         ]
       },
       {
-        "id": "sky-chest-opened",
-        "type": "ui",
-        "category": "chest",
-        "name": "Sky Chest Opened",
-        "assets": [
+        id: "sky-chest-opened",
+        type: "ui",
+        category: "chest",
+        name: "Sky Chest Opened",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "766596743048030",
-            "path": "assets/images/chest_sky-chest-opened.png"
+            type: "image",
+            horizonAssetId: "766596743048030",
+            path: "assets/images/chest_sky-chest-opened.png"
           }
         ]
       },
       {
-        "id": "sky-icon",
-        "type": "ui",
-        "category": "icon",
-        "name": "Sky Icon",
-        "assets": [
+        id: "sky-icon",
+        type: "ui",
+        category: "icon",
+        name: "Sky Icon",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2078365889573892",
-            "path": "assets/images/affinity_sky-icon.png"
+            type: "image",
+            horizonAssetId: "2078365889573892",
+            path: "assets/images/affinity_sky-icon.png"
           }
         ]
       },
       {
-        "id": "sky-habitat",
-        "type": "ui",
-        "category": "card-template",
-        "name": "Sky Habitat Card Template",
-        "description": "Template overlay for sky habitat cards",
-        "assets": [
+        id: "sky-habitat",
+        type: "ui",
+        category: "card-template",
+        name: "Sky Habitat Card Template",
+        description: "Template overlay for sky habitat cards",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1140855177628973",
-            "path": "assets/images/cards_sky_habitat-card.png"
+            type: "image",
+            horizonAssetId: "1140855177628973",
+            path: "assets/images/cards_sky_habitat-card.png"
           }
         ]
       }
@@ -21649,295 +22116,294 @@ namespace BloomBeasts {
   // ==================== bloombeasts\catalogs\trapAssets.ts ====================
 
   /**
-   * Auto-generated TypeScript catalog from trapAssets.json
-   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   * Edit this file directly to add/modify assets
    */
 
 
   export const trapAssets: AssetCatalog = {
-    "version": "1.0.0",
-    "category": "trap",
-    "description": "Trap cards and assets",
-    "data": [
+    version: "1.0.0",
+    category: "trap",
+    description: "Trap cards and assets",
+    data: [
       {
-        "id": "bear-trap",
-        "type": "trap",
-        "cardType": "Trap",
-        "data": {
-          "id": "bear-trap",
-          "name": "Bear Trap",
-          "type": "Trap",
-          "cost": 1,
-          "activation": {
-            "trigger": "OnAttack"
+        id: "bear-trap",
+        type: "trap",
+        cardType: "Trap",
+        data: {
+          id: "bear-trap",
+          name: "Bear Trap",
+          type: "Trap",
+          cost: 1,
+          activation: {
+            trigger: TrapTrigger.OnAttack
           },
-          "abilities": [
+          abilities: [
             {
-              "name": "Bear Trap",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Bear Trap",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "DealDamage",
-                  "target": "Attacker",
-                  "value": 3
+                  type: EffectType.DealDamage,
+                  target: AbilityTarget.Attacker,
+                  value: 3
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1518992622460625",
-            "path": "assets/images/cards_trap_bear-trap.png"
+            type: "image",
+            horizonAssetId: "1518992622460625",
+            path: "assets/images/cards_trap_bear-trap.png"
           }
         ]
       },
       {
-        "id": "emergency-bloom",
-        "type": "trap",
-        "cardType": "Trap",
-        "data": {
-          "id": "emergency-bloom",
-          "name": "Emergency Bloom",
-          "type": "Trap",
-          "cost": 1,
-          "activation": {
-            "trigger": "OnDestroy"
+        id: "emergency-bloom",
+        type: "trap",
+        cardType: "Trap",
+        data: {
+          id: "emergency-bloom",
+          name: "Emergency Bloom",
+          type: "Trap",
+          cost: 1,
+          activation: {
+            trigger: TrapTrigger.OnDestroy
           },
-          "abilities": [
+          abilities: [
             {
-              "name": "Emergency Bloom",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Emergency Bloom",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "DrawCards",
-                  "target": "PlayerGardener",
-                  "value": 2
+                  type: EffectType.DrawCards,
+                  target: AbilityTarget.PlayerGardener,
+                  value: 2
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2247657455738264",
-            "path": "assets/images/cards_trap_emergency-bloom.png"
+            type: "image",
+            horizonAssetId: "2247657455738264",
+            path: "assets/images/cards_trap_emergency-bloom.png"
           }
         ]
       },
       {
-        "id": "habitat-lock",
-        "type": "trap",
-        "cardType": "Trap",
-        "data": {
-          "id": "habitat-lock",
-          "name": "Habitat Lock",
-          "type": "Trap",
-          "cost": 1,
-          "activation": {
-            "trigger": "OnHabitatPlay"
+        id: "habitat-lock",
+        type: "trap",
+        cardType: "Trap",
+        data: {
+          id: "habitat-lock",
+          name: "Habitat Lock",
+          type: "Trap",
+          cost: 1,
+          activation: {
+            trigger: TrapTrigger.OnHabitatPlay
           },
-          "abilities": [
+          abilities: [
             {
-              "name": "Habitat Lock",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Habitat Lock",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "NullifyEffect",
-                  "target": "Target"
+                  type: EffectType.NullifyEffect,
+                  target: AbilityTarget.Target
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "609610328807674",
-            "path": "assets/images/cards_trap_habitat-lock.png"
+            type: "image",
+            horizonAssetId: "609610328807674",
+            path: "assets/images/cards_trap_habitat-lock.png"
           }
         ]
       },
       {
-        "id": "habitat-shield",
-        "type": "trap",
-        "cardType": "Trap",
-        "data": {
-          "id": "habitat-shield",
-          "name": "Habitat Shield",
-          "type": "Trap",
-          "cost": 2,
-          "activation": {
-            "trigger": "OnHabitatPlay"
+        id: "habitat-shield",
+        type: "trap",
+        cardType: "Trap",
+        data: {
+          id: "habitat-shield",
+          name: "Habitat Shield",
+          type: "Trap",
+          cost: 2,
+          activation: {
+            trigger: TrapTrigger.OnHabitatPlay
           },
-          "abilities": [
+          abilities: [
             {
-              "name": "Habitat Shield",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Habitat Shield",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "NullifyEffect",
-                  "target": "Target"
+                  type: EffectType.NullifyEffect,
+                  target: AbilityTarget.Target
                 },
                 {
-                  "type": "DrawCards",
-                  "target": "PlayerGardener",
-                  "value": 1
+                  type: EffectType.DrawCards,
+                  target: AbilityTarget.PlayerGardener,
+                  value: 1
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1362245262078336",
-            "path": "assets/images/cards_trap_habitat-shield.png"
+            type: "image",
+            horizonAssetId: "1362245262078336",
+            path: "assets/images/cards_trap_habitat-shield.png"
           }
         ]
       },
       {
-        "id": "magic-shield",
-        "type": "trap",
-        "cardType": "Trap",
-        "data": {
-          "id": "magic-shield",
-          "name": "Magic Shield",
-          "type": "Trap",
-          "cost": 1,
-          "activation": {
-            "trigger": "OnMagicPlay"
+        id: "magic-shield",
+        type: "trap",
+        cardType: "Trap",
+        data: {
+          id: "magic-shield",
+          name: "Magic Shield",
+          type: "Trap",
+          cost: 1,
+          activation: {
+            trigger: TrapTrigger.OnMagicPlay
           },
-          "abilities": [
+          abilities: [
             {
-              "name": "Magic Shield",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Magic Shield",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "NullifyEffect",
-                  "target": "Target"
+                  type: EffectType.NullifyEffect,
+                  target: AbilityTarget.Target
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1239098601311749",
-            "path": "assets/images/cards_trap_magic-sheild.png"
+            type: "image",
+            horizonAssetId: "1239098601311749",
+            path: "assets/images/cards_trap_magic-sheild.png"
           }
         ]
       },
       {
-        "id": "thorn-snare",
-        "type": "trap",
-        "cardType": "Trap",
-        "data": {
-          "id": "thorn-snare",
-          "name": "Thorn Snare",
-          "type": "Trap",
-          "cost": 2,
-          "activation": {
-            "trigger": "OnAttack"
+        id: "thorn-snare",
+        type: "trap",
+        cardType: "Trap",
+        data: {
+          id: "thorn-snare",
+          name: "Thorn Snare",
+          type: "Trap",
+          cost: 2,
+          activation: {
+            trigger: TrapTrigger.OnAttack
           },
-          "abilities": [
+          abilities: [
             {
-              "name": "Thorn Snare",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Thorn Snare",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "PreventAttack",
-                  "target": "Attacker",
-                  "duration": "Instant"
+                  type: EffectType.PreventAttack,
+                  target: AbilityTarget.Attacker,
+                  duration: EffectDuration.Instant
                 },
                 {
-                  "type": "DealDamage",
-                  "target": "Attacker",
-                  "value": 2
+                  type: EffectType.DealDamage,
+                  target: AbilityTarget.Attacker,
+                  value: 2
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "4210265565909373",
-            "path": "assets/images/cards_trap_thorn-snare.png"
+            type: "image",
+            horizonAssetId: "4210265565909373",
+            path: "assets/images/cards_trap_thorn-snare.png"
           }
         ]
       },
       {
-        "id": "vaporize",
-        "type": "trap",
-        "cardType": "Trap",
-        "data": {
-          "id": "vaporize",
-          "name": "Vaporize",
-          "type": "Trap",
-          "cost": 2,
-          "activation": {
-            "trigger": "OnBloomPlay",
-            "condition": {
-              "type": "CostBelow",
-              "value": 4
+        id: "vaporize",
+        type: "trap",
+        cardType: "Trap",
+        data: {
+          id: "vaporize",
+          name: "Vaporize",
+          type: "Trap",
+          cost: 2,
+          activation: {
+            trigger: TrapTrigger.OnBloomPlay,
+            condition: {
+              type: "CostBelow",
+              value: 4
             }
           },
-          "abilities": [
+          abilities: [
             {
-              "name": "Vaporize",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "Vaporize",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "Destroy",
-                  "target": "Target"
+                  type: EffectType.Destroy,
+                  target: AbilityTarget.Target
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1903759173890506",
-            "path": "assets/images/cards_trap_vaporize.png"
+            type: "image",
+            horizonAssetId: "1903759173890506",
+            path: "assets/images/cards_trap_vaporize.png"
           }
         ]
       },
       {
-        "id": "xp-harvest",
-        "type": "trap",
-        "cardType": "Trap",
-        "data": {
-          "id": "xp-harvest",
-          "name": "XP Harvest",
-          "type": "Trap",
-          "cost": 1,
-          "activation": {
-            "trigger": "OnDestroy"
+        id: "xp-harvest",
+        type: "trap",
+        cardType: "Trap",
+        data: {
+          id: "xp-harvest",
+          name: "XP Harvest",
+          type: "Trap",
+          cost: 1,
+          activation: {
+            trigger: TrapTrigger.OnDestroy
           },
-          "abilities": [
+          abilities: [
             {
-              "name": "XP Harvest",
-              "trigger": "OnSummon",
-              "effects": [
+              name: "XP Harvest",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
                 {
-                  "type": "RemoveCounter",
-                  "target": "Attacker",
-                  "counter": "XP"
+                  type: EffectType.RemoveCounter,
+                  target: AbilityTarget.Attacker,
+                  counter: "XP"
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "807213335392971",
-            "path": "assets/images/cards_trap_xpharvest.png"
+            type: "image",
+            horizonAssetId: "807213335392971",
+            path: "assets/images/cards_trap_xpharvest.png"
           }
         ]
       }
@@ -21947,103 +22413,102 @@ namespace BloomBeasts {
   // ==================== bloombeasts\catalogs\waterAssets.ts ====================
 
   /**
-   * Auto-generated TypeScript catalog from waterAssets.json
-   * DO NOT EDIT MANUALLY - Run npm run generate:catalogs to regenerate
+   * Edit this file directly to add/modify assets
    */
 
 
   export const waterAssets: AssetCatalog = {
-    "version": "1.0.0",
-    "category": "water",
-    "description": "Water affinity cards and assets",
-    "data": [
+    version: "1.0.0",
+    category: "water",
+    description: "Water affinity cards and assets",
+    data: [
       {
-        "id": "aqua-pebble",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "water",
-        "data": {
-          "id": "aqua-pebble",
-          "name": "Aqua Pebble",
-          "type": "Bloom",
-          "affinity": "Water",
-          "cost": 1,
-          "baseAttack": 1,
-          "baseHealth": 4,
-          "abilities": [
+        id: "aqua-pebble",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "water",
+        data: {
+          id: "aqua-pebble",
+          name: "Aqua Pebble",
+          type: "Bloom",
+          affinity: "Water",
+          cost: 1,
+          baseAttack: 1,
+          baseHealth: 4,
+          abilities: [
             {
-              "name": "Tide Flow",
-              "trigger": "OnAllySummon",
-              "effects": [
+              name: "Tide Flow",
+              trigger: "OnAllySummon",
+              effects: [
                 {
-                  "type": "ModifyStats",
-                  "target": "Self",
-                  "stat": "Attack",
-                  "value": 1,
-                  "duration": "EndOfTurn",
-                  "condition": {
-                    "type": "AffinityMatches",
-                    "value": "Water"
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.Self,
+                  stat: StatType.Attack,
+                  value: 1,
+                  duration: EffectDuration.EndOfTurn,
+                  condition: {
+                    type: "AffinityMatches",
+                    value: "Water"
                   }
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 1,
-                "atk": 0
+                hp: 1,
+                atk: 0
               },
               "3": {
-                "hp": 3,
-                "atk": 0
+                hp: 3,
+                atk: 0
               },
               "4": {
-                "hp": 4,
-                "atk": 1
+                hp: 4,
+                atk: 1
               },
               "5": {
-                "hp": 6,
-                "atk": 2
+                hp: 6,
+                atk: 2
               },
               "6": {
-                "hp": 7,
-                "atk": 3
+                hp: 7,
+                atk: 3
               },
               "7": {
-                "hp": 9,
-                "atk": 4
+                hp: 9,
+                atk: 4
               },
               "8": {
-                "hp": 10,
-                "atk": 5
+                hp: 10,
+                atk: 5
               },
               "9": {
-                "hp": 12,
-                "atk": 6
+                hp: 12,
+                atk: 6
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Tidal Surge",
-                    "trigger": "OnAllySummon",
-                    "effects": [
+                    name: "Tidal Surge",
+                    trigger: "OnAllySummon",
+                    effects: [
                       {
-                        "type": "ModifyStats",
-                        "target": "Self",
-                        "stat": "Attack",
-                        "value": 2,
-                        "duration": "EndOfTurn",
-                        "condition": {
-                          "type": "AffinityMatches",
-                          "value": "Water"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.Self,
+                        stat: StatType.Attack,
+                        value: 2,
+                        duration: EffectDuration.EndOfTurn,
+                        condition: {
+                          type: "AffinityMatches",
+                          value: "Water"
                         }
                       }
                     ]
@@ -22051,47 +22516,47 @@ namespace BloomBeasts {
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Rejuvenation",
-                    "trigger": "OnOwnEndOfTurn",
-                    "effects": [
+                    name: "Rejuvenation",
+                    trigger: AbilityTrigger.OnOwnEndOfTurn,
+                    effects: [
                       {
-                        "type": "Heal",
-                        "target": "AllAllies",
-                        "value": 2
+                        type: EffectType.Heal,
+                        target: AbilityTarget.AllAllies,
+                        value: 2
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Tsunami Force",
-                    "trigger": "OnAllySummon",
-                    "effects": [
+                    name: "Tsunami Force",
+                    trigger: "OnAllySummon",
+                    effects: [
                       {
-                        "type": "ModifyStats",
-                        "target": "Self",
-                        "stat": "Attack",
-                        "value": 3,
-                        "duration": "Permanent",
-                        "condition": {
-                          "type": "AffinityMatches",
-                          "value": "Water"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.Self,
+                        stat: StatType.Attack,
+                        value: 3,
+                        duration: EffectDuration.Permanent,
+                        condition: {
+                          type: "AffinityMatches",
+                          value: "Water"
                         }
                       }
                     ]
                   },
                   {
-                    "name": "Fountain of Life",
-                    "trigger": "OnOwnEndOfTurn",
-                    "effects": [
+                    name: "Fountain of Life",
+                    trigger: AbilityTrigger.OnOwnEndOfTurn,
+                    effects: [
                       {
-                        "type": "Heal",
-                        "target": "AllAllies",
-                        "value": "Full"
+                        type: EffectType.Heal,
+                        target: AbilityTarget.AllAllies,
+                        value: "Full"
                       }
                     ]
                   }
@@ -22100,109 +22565,109 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2542562209453452",
-            "path": "assets/images/cards_water_aqua-pebble.png"
+            type: "image",
+            horizonAssetId: "2542562209453452",
+            path: "assets/images/cards_water_aqua-pebble.png"
           }
         ]
       },
       {
-        "id": "bubblefin",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "water",
-        "data": {
-          "id": "bubblefin",
-          "name": "Bubblefin",
-          "type": "Bloom",
-          "affinity": "Water",
-          "cost": 2,
-          "baseAttack": 2,
-          "baseHealth": 5,
-          "abilities": [
+        id: "bubblefin",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "water",
+        data: {
+          id: "bubblefin",
+          name: "Bubblefin",
+          type: "Bloom",
+          affinity: "Water",
+          cost: 2,
+          baseAttack: 2,
+          baseHealth: 5,
+          abilities: [
             {
-              "name": "Emerge",
-              "trigger": "Passive",
-              "effects": [
+              name: "Emerge",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "CannotBeTargeted",
-                  "target": "Self",
-                  "by": [
+                  type: EffectType.CannotBeTargeted,
+                  target: AbilityTarget.Self,
+                  by: [
                     "trap"
                   ]
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 2,
-                "atk": 0
+                hp: 2,
+                atk: 0
               },
               "3": {
-                "hp": 4,
-                "atk": 0
+                hp: 4,
+                atk: 0
               },
               "4": {
-                "hp": 6,
-                "atk": 1
+                hp: 6,
+                atk: 1
               },
               "5": {
-                "hp": 8,
-                "atk": 2
+                hp: 8,
+                atk: 2
               },
               "6": {
-                "hp": 10,
-                "atk": 3
+                hp: 10,
+                atk: 3
               },
               "7": {
-                "hp": 12,
-                "atk": 4
+                hp: 12,
+                atk: 4
               },
               "8": {
-                "hp": 14,
-                "atk": 5
+                hp: 14,
+                atk: 5
               },
               "9": {
-                "hp": 16,
-                "atk": 6
+                hp: 16,
+                atk: 6
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Tidal Shield",
-                    "trigger": "OnDamage",
-                    "effects": [
+                    name: "Tidal Shield",
+                    trigger: AbilityTrigger.OnDamage,
+                    effects: [
                       {
-                        "type": "ModifyStats",
-                        "target": "Attacker",
-                        "stat": "Attack",
-                        "value": -2,
-                        "duration": "EndOfTurn"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.Attacker,
+                        stat: StatType.Attack,
+                        value: -2,
+                        duration: EffectDuration.EndOfTurn
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Deep Dive",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Deep Dive",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "CannotBeTargeted",
-                        "target": "Self",
-                        "by": [
+                        type: EffectType.CannotBeTargeted,
+                        target: AbilityTarget.Self,
+                        by: [
                           "trap",
                           "magic"
                         ]
@@ -22212,15 +22677,15 @@ namespace BloomBeasts {
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Ocean Sanctuary",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Ocean Sanctuary",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "CannotBeTargeted",
-                        "target": "Self",
-                        "by": [
+                        type: EffectType.CannotBeTargeted,
+                        target: AbilityTarget.Self,
+                        by: [
                           "magic",
                           "trap",
                           "abilities"
@@ -22229,20 +22694,20 @@ namespace BloomBeasts {
                     ]
                   },
                   {
-                    "name": "Crushing Depths",
-                    "trigger": "OnDamage",
-                    "effects": [
+                    name: "Crushing Depths",
+                    trigger: AbilityTrigger.OnDamage,
+                    effects: [
                       {
-                        "type": "ModifyStats",
-                        "target": "Attacker",
-                        "stat": "Attack",
-                        "value": -3,
-                        "duration": "Permanent"
+                        type: EffectType.ModifyStats,
+                        target: AbilityTarget.Attacker,
+                        stat: StatType.Attack,
+                        value: -3,
+                        duration: EffectDuration.Permanent
                       },
                       {
-                        "type": "Heal",
-                        "target": "Self",
-                        "value": 2
+                        type: EffectType.Heal,
+                        target: AbilityTarget.Self,
+                        value: 2
                       }
                     ]
                   }
@@ -22251,158 +22716,158 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2957682524429594",
-            "path": "assets/images/cards_water_bubblefin.png"
+            type: "image",
+            horizonAssetId: "2957682524429594",
+            path: "assets/images/cards_water_bubblefin.png"
           }
         ]
       },
       {
-        "id": "dewdrop-drake",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "water",
-        "data": {
-          "id": "dewdrop-drake",
-          "name": "Dewdrop Drake",
-          "type": "Bloom",
-          "affinity": "Water",
-          "cost": 3,
-          "baseAttack": 3,
-          "baseHealth": 6,
-          "abilities": [
+        id: "dewdrop-drake",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "water",
+        data: {
+          id: "dewdrop-drake",
+          name: "Dewdrop Drake",
+          type: "Bloom",
+          affinity: "Water",
+          cost: 3,
+          baseAttack: 3,
+          baseHealth: 6,
+          abilities: [
             {
-              "name": "Mist Screen",
-              "trigger": "Passive",
-              "effects": [
+              name: "Mist Screen",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "AttackModification",
-                  "target": "Self",
-                  "modification": "attack-first",
-                  "condition": {
-                    "type": "UnitsOnField",
-                    "value": 1,
-                    "comparison": "Equal"
+                  type: EffectType.AttackModification,
+                  target: AbilityTarget.Self,
+                  modification: "attack-first",
+                  condition: {
+                    type: "UnitsOnField",
+                    value: 1,
+                    comparison: "Equal"
                   }
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 1,
-                "atk": 1
+                hp: 1,
+                atk: 1
               },
               "3": {
-                "hp": 2,
-                "atk": 2
+                hp: 2,
+                atk: 2
               },
               "4": {
-                "hp": 4,
-                "atk": 3
+                hp: 4,
+                atk: 3
               },
               "5": {
-                "hp": 6,
-                "atk": 4
+                hp: 6,
+                atk: 4
               },
               "6": {
-                "hp": 8,
-                "atk": 5
+                hp: 8,
+                atk: 5
               },
               "7": {
-                "hp": 10,
-                "atk": 6
+                hp: 10,
+                atk: 6
               },
               "8": {
-                "hp": 12,
-                "atk": 7
+                hp: 12,
+                atk: 7
               },
               "9": {
-                "hp": 14,
-                "atk": 8
+                hp: 14,
+                atk: 8
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Deluge",
-                    "trigger": "OnAttack",
-                    "cost": {
-                      "type": "Nectar",
-                      "value": 1
+                    name: "Deluge",
+                    trigger: AbilityTrigger.OnAttack,
+                    cost: {
+                      type: ResourceType.Nectar,
+                      value: 1
                     },
-                    "effects": [
+                    effects: [
                       {
-                        "type": "DealDamage",
-                        "target": "OpponentGardener",
-                        "value": 3
+                        type: EffectType.DealDamage,
+                        target: AbilityTarget.OpponentGardener,
+                        value: 3
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Fog Veil",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Fog Veil",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "attack-first"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "attack-first"
                       },
                       {
-                        "type": "DamageReduction",
-                        "target": "Self",
-                        "value": 1,
-                        "duration": "WhileOnField"
+                        type: EffectType.DamageReduction,
+                        target: AbilityTarget.Self,
+                        value: 1,
+                        duration: EffectDuration.WhileOnField
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Storm Guardian",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Storm Guardian",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "AttackModification",
-                        "target": "Self",
-                        "modification": "attack-first"
+                        type: EffectType.AttackModification,
+                        target: AbilityTarget.Self,
+                        modification: "attack-first"
                       },
                       {
-                        "type": "DamageReduction",
-                        "target": "Self",
-                        "value": 2,
-                        "duration": "WhileOnField"
+                        type: EffectType.DamageReduction,
+                        target: AbilityTarget.Self,
+                        value: 2,
+                        duration: EffectDuration.WhileOnField
                       }
                     ]
                   },
                   {
-                    "name": "Maelstrom",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Maelstrom",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "DealDamage",
-                        "target": "OpponentGardener",
-                        "value": 5
+                        type: EffectType.DealDamage,
+                        target: AbilityTarget.OpponentGardener,
+                        value: 5
                       },
                       {
-                        "type": "ApplyCounter",
-                        "target": "RandomEnemy",
-                        "counter": "Freeze",
-                        "value": 1
+                        type: EffectType.ApplyCounter,
+                        target: AbilityTarget.RandomEnemy,
+                        counter: "Freeze",
+                        value: 1
                       }
                     ]
                   }
@@ -22411,158 +22876,158 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1232407695362881",
-            "path": "assets/images/cards_water_dewdrop-drake.png"
+            type: "image",
+            horizonAssetId: "1232407695362881",
+            path: "assets/images/cards_water_dewdrop-drake.png"
           }
         ]
       },
       {
-        "id": "kelp-cub",
-        "type": "beast",
-        "cardType": "Bloom",
-        "affinity": "water",
-        "data": {
-          "id": "kelp-cub",
-          "name": "Kelp Cub",
-          "type": "Bloom",
-          "affinity": "Water",
-          "cost": 2,
-          "baseAttack": 3,
-          "baseHealth": 3,
-          "abilities": [
+        id: "kelp-cub",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "water",
+        data: {
+          id: "kelp-cub",
+          name: "Kelp Cub",
+          type: "Bloom",
+          affinity: "Water",
+          cost: 2,
+          baseAttack: 3,
+          baseHealth: 3,
+          abilities: [
             {
-              "name": "Entangle",
-              "trigger": "OnAttack",
-              "effects": [
+              name: "Entangle",
+              trigger: AbilityTrigger.OnAttack,
+              effects: [
                 {
-                  "type": "PreventAttack",
-                  "target": "Target",
-                  "duration": "StartOfNextTurn"
+                  type: "PreventAttack",
+                  target: AbilityTarget.Target,
+                  duration: "StartOfNextTurn"
                 }
               ]
             }
           ],
-          "levelingConfig": {
-            "statGains": {
+          levelingConfig: {
+            statGains: {
               "1": {
-                "hp": 0,
-                "atk": 0
+                hp: 0,
+                atk: 0
               },
               "2": {
-                "hp": 1,
-                "atk": 1
+                hp: 1,
+                atk: 1
               },
               "3": {
-                "hp": 2,
-                "atk": 2
+                hp: 2,
+                atk: 2
               },
               "4": {
-                "hp": 3,
-                "atk": 3
+                hp: 3,
+                atk: 3
               },
               "5": {
-                "hp": 4,
-                "atk": 4
+                hp: 4,
+                atk: 4
               },
               "6": {
-                "hp": 5,
-                "atk": 5
+                hp: 5,
+                atk: 5
               },
               "7": {
-                "hp": 6,
-                "atk": 6
+                hp: 6,
+                atk: 6
               },
               "8": {
-                "hp": 7,
-                "atk": 7
+                hp: 7,
+                atk: 7
               },
               "9": {
-                "hp": 8,
-                "atk": 8
+                hp: 8,
+                atk: 8
               }
             },
-            "abilityUpgrades": {
+            abilityUpgrades: {
               "4": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Binding Vines",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Binding Vines",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "PreventAttack",
-                        "target": "Target",
-                        "duration": "StartOfNextTurn"
+                        type: "PreventAttack",
+                        target: AbilityTarget.Target,
+                        duration: "StartOfNextTurn"
                       },
                       {
-                        "type": "PreventAbilities",
-                        "target": "Target",
-                        "duration": "StartOfNextTurn"
+                        type: "PreventAbilities",
+                        target: AbilityTarget.Target,
+                        duration: "StartOfNextTurn"
                       }
                     ]
                   }
                 ]
               },
               "7": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Deep Anchor",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Deep Anchor",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "Immunity",
-                        "target": "Self",
-                        "immuneTo": [
+                        type: "Immunity",
+                        target: AbilityTarget.Self,
+                        immuneTo: [
                           "Magic",
                           "Trap",
                           "Abilities"
                         ],
-                        "duration": "WhileOnField"
+                        duration: EffectDuration.WhileOnField
                       }
                     ]
                   }
                 ]
               },
               "9": {
-                "abilities": [
+                abilities: [
                   {
-                    "name": "Strangling Grasp",
-                    "trigger": "OnAttack",
-                    "effects": [
+                    name: "Strangling Grasp",
+                    trigger: AbilityTrigger.OnAttack,
+                    effects: [
                       {
-                        "type": "PreventAttack",
-                        "target": "Target",
-                        "duration": "Permanent"
+                        type: "PreventAttack",
+                        target: AbilityTarget.Target,
+                        duration: EffectDuration.Permanent
                       },
                       {
-                        "type": "PreventAbilities",
-                        "target": "Target",
-                        "duration": "Permanent"
+                        type: "PreventAbilities",
+                        target: AbilityTarget.Target,
+                        duration: EffectDuration.Permanent
                       }
                     ]
                   },
                   {
-                    "name": "Immovable Force",
-                    "trigger": "Passive",
-                    "effects": [
+                    name: "Immovable Force",
+                    trigger: AbilityTrigger.WhileOnField,
+                    effects: [
                       {
-                        "type": "Immunity",
-                        "target": "Self",
-                        "immuneTo": [
+                        type: "Immunity",
+                        target: AbilityTarget.Self,
+                        immuneTo: [
                           "Damage",
                           "Targeting",
                           "NegativeEffects"
                         ],
-                        "duration": "WhileOnField"
+                        duration: EffectDuration.WhileOnField
                       },
                       {
-                        "type": "Retaliation",
-                        "target": "Self",
-                        "value": 0,
-                        "applyCounter": "Entangle",
-                        "counterValue": 1
+                        type: "Retaliation",
+                        target: AbilityTarget.Self,
+                        value: 0,
+                        applyCounter: "Entangle",
+                        counterValue: 1
                       }
                     ]
                   }
@@ -22571,127 +23036,127 @@ namespace BloomBeasts {
             }
           }
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "2278603722605464",
-            "path": "assets/images/cards_water_kelp-cub.png"
+            type: "image",
+            horizonAssetId: "2278603722605464",
+            path: "assets/images/cards_water_kelp-cub.png"
           }
         ]
       },
       {
-        "id": "deep-sea-grotto",
-        "type": "habitat",
-        "affinity": "water",
-        "data": {
-          "id": "deep-sea-grotto",
-          "name": "Deep Sea Grotto",
-          "type": "Habitat",
-          "affinity": "Water",
-          "cost": 1,
-          "abilities": [
+        id: "deep-sea-grotto",
+        type: "habitat",
+        affinity: "water",
+        data: {
+          id: "deep-sea-grotto",
+          name: "Deep Sea Grotto",
+          type: "Habitat",
+          affinity: "Water",
+          cost: 1,
+          abilities: [
             {
-              "name": "Aquatic Empowerment",
-              "trigger": "Passive",
-              "effects": [
+              name: "Aquatic Empowerment",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
                 {
-                  "type": "ModifyStats",
-                  "target": "AllAllies",
-                  "stat": "Attack",
-                  "value": 1,
-                  "duration": "WhileOnField",
-                  "condition": {
-                    "type": "AffinityMatches",
-                    "value": "Water"
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.AllAllies,
+                  stat: StatType.Attack,
+                  value: 1,
+                  duration: EffectDuration.WhileOnField,
+                  condition: {
+                    type: "AffinityMatches",
+                    value: "Water"
                   }
                 }
               ]
             }
           ]
         },
-        "assets": [
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "594002380404766",
-            "path": "assets/images/cards_water_deep-sea-grotto.png"
+            type: "image",
+            horizonAssetId: "594002380404766",
+            path: "assets/images/cards_water_deep-sea-grotto.png"
           },
           {
-            "type": "image",
-            "horizonAssetId": "797144049734620",
-            "path": "assets/images/cards_water_habitat-card.png"
+            type: "image",
+            horizonAssetId: "797144049734620",
+            path: "assets/images/cards_water_habitat-card.png"
           },
           {
-            "type": "image",
-            "horizonAssetId": "805465575687502",
-            "path": "assets/images/cards_water_habitat-card-playboard.png"
+            type: "image",
+            horizonAssetId: "805465575687502",
+            path: "assets/images/cards_water_habitat-card-playboard.png"
           }
         ]
       },
       {
-        "id": "water-mission",
-        "type": "mission",
-        "affinity": "water",
-        "missionNumber": 3,
-        "name": "Water Mission",
-        "description": "Water affinity mission",
-        "assets": [
+        id: "water-mission",
+        type: "mission",
+        affinity: "water",
+        missionNumber: 3,
+        name: "Water Mission",
+        description: "Water affinity mission",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1204438218330106",
-            "path": "assets/images/cards_water_water-mission.png"
+            type: "image",
+            horizonAssetId: "1204438218330106",
+            path: "assets/images/cards_water_water-mission.png"
           }
         ]
       },
       {
-        "id": "water-chest-closed",
-        "type": "ui",
-        "category": "chest",
-        "name": "Water Chest Closed",
-        "assets": [
+        id: "water-chest-closed",
+        type: "ui",
+        category: "chest",
+        name: "Water Chest Closed",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "1502977104283894",
-            "path": "assets/images/chest_water-chest-closed.png"
+            type: "image",
+            horizonAssetId: "1502977104283894",
+            path: "assets/images/chest_water-chest-closed.png"
           }
         ]
       },
       {
-        "id": "water-chest-opened",
-        "type": "ui",
-        "category": "chest",
-        "name": "Water Chest Opened",
-        "assets": [
+        id: "water-chest-opened",
+        type: "ui",
+        category: "chest",
+        name: "Water Chest Opened",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "817919940747617",
-            "path": "assets/images/chest_water-chest-opened.png"
+            type: "image",
+            horizonAssetId: "817919940747617",
+            path: "assets/images/chest_water-chest-opened.png"
           }
         ]
       },
       {
-        "id": "water-icon",
-        "type": "ui",
-        "category": "icon",
-        "name": "Water Icon",
-        "assets": [
+        id: "water-icon",
+        type: "ui",
+        category: "icon",
+        name: "Water Icon",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "803389222302576",
-            "path": "assets/images/affinity_water-icon.png"
+            type: "image",
+            horizonAssetId: "803389222302576",
+            path: "assets/images/affinity_water-icon.png"
           }
         ]
       },
       {
-        "id": "water-habitat",
-        "type": "ui",
-        "category": "card-template",
-        "name": "Water Habitat Card Template",
-        "description": "Template overlay for water habitat cards",
-        "assets": [
+        id: "water-habitat",
+        type: "ui",
+        category: "card-template",
+        name: "Water Habitat Card Template",
+        description: "Template overlay for water habitat cards",
+        assets: [
           {
-            "type": "image",
-            "horizonAssetId": "797144049734620",
-            "path": "assets/images/cards_water_habitat-card.png"
+            type: "image",
+            horizonAssetId: "797144049734620",
+            path: "assets/images/cards_water_habitat-card.png"
           }
         ]
       }

@@ -53,12 +53,8 @@ export function validateStructuredAbility(ability: StructuredAbility): void {
   if (ability.trigger) {
     expect([
       'OnSummon', 'OnAllySummon', 'OnAttack', 'OnDamage', 'OnDestroy',
-      'OnPlayer1StartOfTurn', 'OnPlayer1EndOfTurn',
-      'OnPlayer2StartOfTurn', 'OnPlayer2EndOfTurn',
-      'OnAnyStartOfTurn', 'OnAnyEndOfTurn',
       'OnOwnStartOfTurn', 'OnOwnEndOfTurn',
-      'OnOpponentStartOfTurn', 'OnOpponentEndOfTurn',
-      'Passive', 'Activated'
+      'WhileOnField'
     ]).toContain(ability.trigger);
   }
 }
