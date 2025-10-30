@@ -2,7 +2,7 @@
  * Habitat zone rendering (center of board)
  */
 
-import { BattleDisplay } from 'bloombeasts/gameManager';
+import { BattleDisplay } from '../../../gameManager';
 import { UINodeType } from '../ScreenUtils';
 import type { BattleComponentWithCallbacks } from './types';
 import { habitatShiftCardDimensions, battleBoardAssetPositions } from './types';

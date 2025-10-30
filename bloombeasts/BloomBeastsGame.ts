@@ -364,7 +364,6 @@ export class BloomBeastsGame {
   private isInitializing: boolean = true;  // Prevent renders during initialization
   private currentScreen: string = 'loading';  // Current active screen
   private currentBattleId: string | null = null;
-  private selectedBeastIndex: number | null = null;
 
   // UI State bindings
   private playerDataBinding: BindingInterface<PlayerData | null>;
@@ -425,7 +424,6 @@ export class BloomBeastsGame {
       if (currentState && !currentState.isComplete) {
         const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
           currentState,
-          this.selectedBeastIndex,
           null
         );
         if (updatedDisplay) {
@@ -488,7 +486,8 @@ export class BloomBeastsGame {
       battleDisplay: this.battleDisplayBinding,
       onAction: this.handleBattleAction.bind(this),
       onNavigate: this.navigate.bind(this),
-      onRenderNeeded: this.triggerRender.bind(this)
+      onRenderNeeded: this.triggerRender.bind(this),
+      onShowCardDetail: this.showCardDetailPopup.bind(this)
     });
 
     this.settingsScreen = new SettingsScreen({
@@ -839,6 +838,10 @@ export class BloomBeastsGame {
       affinity: m.mission.affinity,
       beastId: m.mission.beastId,
     }));
+
+    // Debug: Log first 3 missions
+    console.log('[BloomBeastsGame] First 3 display missions:', displayMissions.slice(0, 3).map(m => ({id: m.id, isAvailable: m.isAvailable})));
+
     this.missionsBinding.set(displayMissions);
   }
 
@@ -912,18 +915,19 @@ export class BloomBeastsGame {
    */
   private showForfeitConfirmation(): void {
     this.forfeitPopupBinding.set({
-      title: 'Forfeit Battle?',
-      message: 'Are you sure you want to give up? You will lose this battle.',
+      title: 'Are you sure?',
+      message: 'You will lose this battle.',
+      useContainer: true, // Use mission-container background
       buttons: [
         {
-          text: 'Forfeit',
+          text: 'Yes',
           onClick: () => {
             this.handleForfeit();
           },
           color: '#DC2626', // Red color
         },
         {
-          text: 'Cancel',
+          text: 'No',
           onClick: () => {
             this.forfeitPopupBinding.set(null);
           },
@@ -931,6 +935,36 @@ export class BloomBeastsGame {
         },
       ],
     });
+  }
+
+  /**
+   * Show card detail popup for a duration, then close and execute callback
+   */
+  private showCardDetailPopup(card: any, durationMs: number, callback?: () => void): void {
+    console.log('[BloomBeastsGame] Showing card detail popup:', card.name, 'for', durationMs, 'ms');
+
+    // Set the card detail popup
+    this.cardDetailPopupValue = {
+      cardDetail: {
+        card: card,
+        stats: null,
+      },
+      onButtonClick: () => {
+        // Close button clicked
+        this.cardDetailPopupValue = null;
+        this.cardDetailPopupBinding.set(null);
+      }
+    };
+    this.cardDetailPopupBinding.set(this.cardDetailPopupValue);
+    this.triggerRender();
+
+    // After duration, close the popup and execute callback
+    this.asyncMethods.setTimeout(() => {
+      this.cardDetailPopupValue = null;
+      this.cardDetailPopupBinding.set(null);
+      this.triggerRender();
+      callback?.();
+    }, durationMs);
   }
 
   /**
@@ -1020,9 +1054,6 @@ export class BloomBeastsGame {
     Logger.info(`Mission selected: ${missionId}`);
     if (!this.playerData) return;
 
-    // Reset battle state
-    this.selectedBeastIndex = null;
-
     // Play menu button sound
     this.playSfx('sfx-menu-button-select');
 
@@ -1061,7 +1092,6 @@ export class BloomBeastsGame {
         // Create battle display from battle state
         const battleDisplay = this.battleDisplayManager.createBattleDisplay(
           battleState,
-          null, // No selected beast initially
           null  // No attack animation
         );
         // console.log('[BloomBeastsGame] battleDisplay:', battleDisplay);
@@ -1159,66 +1189,54 @@ export class BloomBeastsGame {
       return;
     }
 
-    // Handle beast selection (UI-only action, doesn't go to battleUI)
-    if (action.startsWith('view-field-card-player-')) {
-      const index = parseInt(action.substring('view-field-card-player-'.length), 10);
+    // Beast and opponent clicks are now just for viewing details (no selection)
+    if (action.startsWith('view-field-card-player-') || action.startsWith('view-field-card-opponent-')) {
+      // Just return - card details will be shown by the UI layer if needed
+      return;
+    }
 
-      // Toggle selection: if already selected, deselect; otherwise select
-      if (this.selectedBeastIndex === index) {
-        this.selectedBeastIndex = null;
-      } else {
-        this.selectedBeastIndex = index;
-      }
+    // Play sound effects and show animations based on action type
+    if (action === 'auto-attack-all') {
+      // Handle auto-attack with animations
+      this.playSfx('sfx-attack');
 
-      // Update display with new selection
-      const currentState = this.battleUI.getCurrentBattle();
-      if (currentState) {
+      // Process action with animation callback
+      await this.battleUI.processPlayerAction(action, {
+        onAttackAnimation: async (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => {
+          if (targetType === 'beast' && targetIndex !== undefined) {
+            await this.showAttackAnimation('player', attackerIndex, 'opponent', targetIndex);
+          } else {
+            await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
+          }
+        }
+      });
+
+      // Get updated state and render
+      const updatedState = this.battleUI.getCurrentBattle();
+      if (updatedState) {
+        if (updatedState.isComplete) {
+          await this.handleBattleComplete(updatedState);
+          return;
+        }
+
         const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
-          currentState,
-          this.selectedBeastIndex,
+          updatedState,
           null
         );
         if (updatedDisplay) {
           this.battleDisplayBinding.set(updatedDisplay);
+          this.triggerRender();
         }
-        this.triggerRender();
       }
       return;
-    }
-
-    // Handle opponent beast clicks - attack if you have a beast selected
-    if (action.startsWith('view-field-card-opponent-')) {
-      const targetIndex = parseInt(action.substring('view-field-card-opponent-'.length), 10);
-
-      // If you have a beast selected, attack the opponent beast
-      if (this.selectedBeastIndex !== null) {
-        const attackAction = `attack-beast-${this.selectedBeastIndex}-${targetIndex}`;
-
-        // Show attack animation
-        await this.showAttackAnimation('player', this.selectedBeastIndex, 'opponent', targetIndex);
-
-        // Clear selection
-        this.selectedBeastIndex = null;
-
-        // Don't return - continue to process the attack below
-        action = attackAction;
-      } else {
-        // No beast selected - just show detail view
-        return;
-      }
-    }
-
-    // Play sound effects and show animations based on action type
-    if (action.startsWith('attack-beast-')) {
+    } else if (action.startsWith('attack-beast-')) {
       this.playSfx('sfx-attack');
       // Animation already shown above
-      this.selectedBeastIndex = null; // Clear selection after attacking
     } else if (action.startsWith('attack-player-')) {
       this.playSfx('sfx-attack');
       // Extract attacker index and show animation for direct health attack
       const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
       await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
-      this.selectedBeastIndex = null; // Clear selection after attacking
     } else if (action.startsWith('play-card-')) {
       this.playSfx('sfx-play-card');
     } else if (action.startsWith('activate-trap-')) {
@@ -1242,7 +1260,6 @@ export class BloomBeastsGame {
       // Create updated battle display with fresh state
       const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
         updatedState,
-        this.selectedBeastIndex,
         null  // No attack animation
       );
 
@@ -1570,7 +1587,6 @@ export class BloomBeastsGame {
     // Show animation (attacker glows green, target glows red)
     const displayWithAnimation = this.battleDisplayManager.createBattleDisplay(
       currentState,
-      this.selectedBeastIndex,
       {
         attackerPlayer,
         attackerIndex,
@@ -1590,7 +1606,6 @@ export class BloomBeastsGame {
     // Clear animation
     const displayWithoutAnimation = this.battleDisplayManager.createBattleDisplay(
       currentState,
-      null, // Clear selection after attack
       null  // No animation
     );
 

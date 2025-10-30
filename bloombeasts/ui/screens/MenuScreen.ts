@@ -50,6 +50,7 @@ export class MenuScreen {
   // Callbacks
   private onButtonClick?: (buttonId: string) => void;
   private onNavigate?: (screen: string) => void;
+  private onRenderNeeded?: () => void;
 
   constructor(props: MenuScreenProps) {
     this.ui = props.ui;
@@ -57,6 +58,7 @@ export class MenuScreen {
     this.playerDataBinding = props.playerDataBinding;
     this.onButtonClick = props.onButtonClick;
     this.onNavigate = props.onNavigate;
+    this.onRenderNeeded = props.onRenderNeeded;
 
     // Initialize bindings using injected UI implementation
     this.displayedText = new this.ui.Binding('');
@@ -70,6 +72,10 @@ export class MenuScreen {
     this.frameInterval = this.async.setInterval(() => {
       frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
       this.menuFrameAnimation.set(this.menuFrameIds[frameIndex]);
+      // Trigger a render when the frame changes
+      if (this.onRenderNeeded) {
+        this.onRenderNeeded();
+      }
     }, 200);
   }
 
@@ -156,7 +162,6 @@ export class MenuScreen {
           source: this.ui.Binding.derive(
             [this.ui.assetsLoadedBinding],
             (assetsLoaded: boolean) => {
-              console.log('[MenuScreen] BACKGROUND assetsLoaded:', assetsLoaded);
               return assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null;
             }
           ),
@@ -189,19 +194,15 @@ export class MenuScreen {
                       return null;
                     }
 
-                    console.log('[MenuScreen] assetIdToImageSource exists?', !!this.ui.assetIdToImageSource);
-                    const imageSource = this.ui.assetIdToImageSource?.(menuFrameAnimation);
-                    // console.log('[MenuScreen] ImageSource result:', imageSource);
-
-                    return imageSource;
+                    return this.ui.assetIdToImageSource?.(menuFrameAnimation);
                   },
                 ),
                 style: {
                   position: 'absolute',
-                  left: 150,
-                  top: 40,
-                  width: 750,
-                  height: 700,
+                  left: 250,
+                  top: 4,
+                  width: 675,
+                  height: 630,
                 },
               }),
           ],

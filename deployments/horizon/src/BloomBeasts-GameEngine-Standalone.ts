@@ -10,8 +10,8 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-30T08:42:34.083Z
- * Files: 95
+ * Generated: 2025-10-30T10:53:47.944Z
+ * Files: 96
  *
  * @version 1.0.0
  * @license MIT
@@ -4297,7 +4297,6 @@ namespace BloomBeasts {
     turnTimeRemaining: number;
     objectives: ObjectiveDisplay[];
     habitatZone: any | null; // Current habitat card
-    selectedBeastIndex: number | null; // Track selected beast for attacking
     attackAnimation?: { // Attack animation state
       attackerPlayer: 'player' | 'opponent';
       attackerIndex: number;
@@ -4528,7 +4527,6 @@ namespace BloomBeasts {
      */
     createBattleDisplay(
       battleState: any,
-      selectedBeastIndex: number | null,
       attackAnimation?: {
         attackerPlayer: 'player' | 'opponent';
         attackerIndex: number;
@@ -4568,7 +4566,6 @@ namespace BloomBeasts {
         turnTimeRemaining: TURN_TIME_LIMIT,
         objectives: this.getObjectiveDisplay(battleState),
         habitatZone: battleState.gameState.habitatZone,
-        selectedBeastIndex: selectedBeastIndex,
         attackAnimation: attackAnimation,
       };
 
@@ -7724,15 +7721,21 @@ namespace BloomBeasts {
         const completionCount = this.completedMissions.get(mission.id) || 0;
         mission.timesCompleted = completionCount;
 
-        // Unlock mission if it has been completed before
+        console.log(`[MissionManager] Restoring ${mission.id}: unlocked=${mission.unlocked}, completionCount=${completionCount}`);
+
+        // If mission has been completed before, unlock it and the next mission
         if (completionCount > 0) {
           mission.unlocked = true;
 
-          // Also unlock the next mission
+          // Also unlock the next mission when this one is completed
           if (index + 1 < missions.length) {
             missions[index + 1].unlocked = true;
           }
         }
+        // Otherwise, keep the mission's original unlocked state from the definition
+        // (e.g., mission-01 has unlocked: true in its definition)
+
+        console.log(`[MissionManager] After restore ${mission.id}: unlocked=${mission.unlocked}`);
       });
     }
 
@@ -9638,6 +9641,9 @@ namespace BloomBeasts {
         // Extract beast index (e.g., 'use-ability-0' -> 0)
         const beastIndex = parseInt(action.substring('use-ability-'.length), 10);
         result = this.useAbility(beastIndex);
+      } else if (action === 'auto-attack-all') {
+        // New auto-attack action: each beast attacks the opposite lane
+        result = await this.autoAttackAll(data?.onAttackAnimation);
       } else if (action.startsWith('attack-beast-')) {
         // Extract attacker and target indices (e.g., 'attack-beast-0-1' -> attacker=0, target=1)
         const parts = action.substring('attack-beast-'.length).split('-');
@@ -9716,6 +9722,73 @@ namespace BloomBeasts {
           this.opponentActionCallback('trap-activated');
         }
       });
+    }
+
+    /**
+     * Auto-attack all: Each beast attacks the opposite lane
+     * If no opposing beast, attack the opponent's health directly
+     */
+    private async autoAttackAll(onAttackAnimation?: (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => Promise<void>): Promise<any> {
+      if (!this.currentBattle || !this.currentBattle.gameState) {
+        return { success: false, message: 'No active battle' };
+      }
+
+      const player = this.currentBattle.gameState.players[0];
+      const opponent = this.currentBattle.gameState.players[1];
+
+      let anyAttackSucceeded = false;
+      const results: any[] = [];
+
+      // Loop through all 3 field positions
+      for (let i = 0; i < 3; i++) {
+        const attackerBeast = player.field[i];
+
+        // Skip if no beast at this position
+        if (!attackerBeast) {
+          continue;
+        }
+
+        // Skip if beast has summoning sickness
+        if (attackerBeast.summoningSickness) {
+          Logger.debug(`Beast at position ${i} has summoning sickness, skipping`);
+          continue;
+        }
+
+        const opposingBeast = opponent.field[i];
+
+        if (opposingBeast) {
+          // Attack the opposing beast
+          if (onAttackAnimation) {
+            await onAttackAnimation(i, 'beast', i);
+          }
+          const result = this.attackBeast(i, i);
+          results.push(result);
+          if (result.success) {
+            anyAttackSucceeded = true;
+          }
+        } else {
+          // No opposing beast, attack player directly
+          if (onAttackAnimation) {
+            await onAttackAnimation(i, 'health');
+          }
+          const result = this.attackPlayer(i);
+          results.push(result);
+          if (result.success) {
+            anyAttackSucceeded = true;
+          }
+        }
+
+        // Check for battle end after each attack
+        if (this.checkBattleEnd()) {
+          break;
+        }
+      }
+
+      return {
+        success: anyAttackSucceeded,
+        results: results,
+        message: anyAttackSucceeded ? 'Auto-attack completed' : 'No attacks could be performed'
+      };
     }
 
     /**
@@ -10559,14 +10632,10 @@ namespace BloomBeasts {
      * Get Horizon asset ID for a given asset
      */
     getHorizonAssetId(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
-      console.log(`[AssetCatalogManager.getHorizonAssetId] Looking up: "${assetId}", type: ${assetType}`);
       const asset = this.getAsset(assetId);
-      console.log(`[AssetCatalogManager.getHorizonAssetId] getAsset returned:`, asset ? `found (${asset.id})` : 'null');
-
       if (!asset) return undefined;
 
       const assetRef = asset.assets.find(a => a.type === assetType);
-      console.log(`[AssetCatalogManager.getHorizonAssetId] Asset reference:`, assetRef ? `found (horizonId: ${assetRef.horizonAssetId})` : 'not found');
       return assetRef?.horizonAssetId;
     }
 
@@ -11786,6 +11855,7 @@ namespace BloomBeasts {
     // Callbacks
     private onButtonClick?: (buttonId: string) => void;
     private onNavigate?: (screen: string) => void;
+    private onRenderNeeded?: () => void;
 
     constructor(props: MenuScreenProps) {
       this.ui = props.ui;
@@ -11793,6 +11863,7 @@ namespace BloomBeasts {
       this.playerDataBinding = props.playerDataBinding;
       this.onButtonClick = props.onButtonClick;
       this.onNavigate = props.onNavigate;
+      this.onRenderNeeded = props.onRenderNeeded;
 
       // Initialize bindings using injected UI implementation
       this.displayedText = new this.ui.Binding('');
@@ -11806,6 +11877,10 @@ namespace BloomBeasts {
       this.frameInterval = this.async.setInterval(() => {
         frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
         this.menuFrameAnimation.set(this.menuFrameIds[frameIndex]);
+        // Trigger a render when the frame changes
+        if (this.onRenderNeeded) {
+          this.onRenderNeeded();
+        }
       }, 200);
     }
 
@@ -11892,7 +11967,6 @@ namespace BloomBeasts {
             source: this.ui.Binding.derive(
               [this.ui.assetsLoadedBinding],
               (assetsLoaded: boolean) => {
-                console.log('[MenuScreen] BACKGROUND assetsLoaded:', assetsLoaded);
                 return assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null;
               }
             ),
@@ -11925,19 +11999,15 @@ namespace BloomBeasts {
                         return null;
                       }
 
-                      console.log('[MenuScreen] assetIdToImageSource exists?', !!this.ui.assetIdToImageSource);
-                      const imageSource = this.ui.assetIdToImageSource?.(menuFrameAnimation);
-                      // console.log('[MenuScreen] ImageSource result:', imageSource);
-
-                      return imageSource;
+                      return this.ui.assetIdToImageSource?.(menuFrameAnimation);
                     },
                   ),
                   style: {
                     position: 'absolute',
-                    left: 150,
-                    top: 40,
-                    width: 750,
-                    height: 700,
+                    left: 250,
+                    top: 4,
+                    width: 675,
+                    height: 630,
                   },
                 }),
             ],
@@ -13568,7 +13638,14 @@ namespace BloomBeasts {
       const pageStart = offset * missionsPerPage;
       const missionIndex = pageStart + slotIndex;
       const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-      return (mission && !mission.isAvailable) ? 1 : 0;
+      const lockOpacity = (mission && !mission.isAvailable) ? 1 : 0;
+
+      // Debug log for first 3 slots
+      if (slotIndex < 3 && mission) {
+        console.log(`[MissionRenderer] Slot ${slotIndex} (${mission.id}): isAvailable=${mission.isAvailable}, lockOpacity=${lockOpacity}`);
+      }
+
+      return lockOpacity;
     });
 
     const checkmarkOpacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
@@ -14014,6 +14091,202 @@ namespace BloomBeasts {
     }
   }
 
+  // ==================== bloombeasts\engine\utils\combatHelpers.ts ====================
+
+  /**
+   * Combat Helper Utilities
+   */
+
+
+  /**
+   * Calculate damage after applying modifiers
+   */
+  export function calculateDamage(
+    baseDamage: number,
+    attacker: BloomBeastInstance,
+    defender: BloomBeastInstance
+  ): number {
+    let damage = baseDamage;
+
+    // Check for damage amplification on attacker
+    const ampEffect = attacker.statusEffects?.find(e => e.type === 'damage-amp');
+    if (ampEffect) {
+      damage = Math.floor(damage * (ampEffect.value || 1));
+    }
+
+    // Check for damage reduction on defender
+    const reduction = defender.statusEffects?.find(e => e.type === 'damage-reduction');
+    if (reduction) {
+      damage = Math.max(0, damage - (reduction.value || 0));
+    }
+
+    return damage;
+  }
+
+  /**
+   * Check if a beast can attack
+   */
+  export function canAttack(beast: BloomBeastInstance): boolean {
+    // Check summoning sickness
+    if (beast.summoningSickness) {
+      return false;
+    }
+
+    // Check freeze status
+    const frozen = beast.counters.find(c => c.type === 'Freeze');
+    if (frozen && frozen.amount > 0) {
+      return false;
+    }
+
+    // Check entangle status
+    const entangled = beast.counters.find(c => c.type === 'Entangle');
+    if (entangled && entangled.amount > 0) {
+      return false;
+    }
+
+    // Check attack prevention effects
+    const preventAttack = beast.statusEffects?.find(e => e.type === 'prevent-attack');
+    if (preventAttack) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Get valid attack targets for a beast
+   */
+  export function getValidTargets(
+    attacker: BloomBeastInstance,
+    gameState: GameState,
+    attackerPlayer: number
+  ): BloomBeastInstance[] {
+    const opponentPlayer = attackerPlayer === 0 ? 1 : 0;
+    const opponent = gameState.players[opponentPlayer];
+
+    const targets: BloomBeastInstance[] = [];
+
+    // Check for taunt effects
+    const allOpponentBeasts = getAllBeasts(opponent.field);
+    const taunters = allOpponentBeasts.filter(b =>
+      b.statusEffects?.some(e => e.type === 'taunt')
+    );
+
+    if (taunters.length > 0) {
+      return taunters;
+    }
+
+    // Otherwise all alive opponent beasts are valid targets
+    return getAliveBeasts(opponent.field);
+  }
+
+  /**
+   * Check if a beast has a specific ability effect
+   */
+  export function hasAbilityEffect(
+    beast: BloomBeastInstance,
+    effectType: string
+  ): boolean {
+    return beast.statusEffects?.some(e => e.type === effectType) || false;
+  }
+
+  /**
+   * Apply a status effect to a beast
+   */
+  export function applyStatusEffect(
+    beast: BloomBeastInstance,
+    effect: AbilityEffect
+  ): void {
+    if (!beast.statusEffects) {
+      beast.statusEffects = [];
+    }
+
+    // Check for immunity
+    if (hasAbilityEffect(beast, 'immunity')) {
+      Logger.debug(`${beast.cardId} is immune to status effects`);
+      return;
+    }
+
+    beast.statusEffects.push({
+      type: effect.type,
+      value: (effect as any).value,
+      duration: (effect as any).duration,
+      turnsRemaining: getEffectDuration((effect as any).duration),
+    });
+  }
+
+  /**
+   * Get effect duration in turns
+   */
+  function getEffectDuration(duration: string): number {
+    switch (duration) {
+      case 'end-of-turn':
+        return 1;
+      case 'start-of-next-turn':
+        return 1;
+      case 'next-attack':
+        return -1; // Special handling needed
+      case 'permanent':
+        return 999;
+      case 'while-on-field':
+        return 999;
+      default:
+        return 1;
+    }
+  }
+
+  /**
+   * Remove expired status effects
+   */
+  export function cleanupStatusEffects(beast: BloomBeastInstance): void {
+    if (!beast.statusEffects) return;
+
+    beast.statusEffects = beast.statusEffects.filter(effect => {
+      if (effect.turnsRemaining === undefined) return true;
+      return effect.turnsRemaining > 0;
+    });
+  }
+
+  /**
+   * Decrease status effect durations
+   */
+  export function tickStatusEffects(beast: BloomBeastInstance): void {
+    if (!beast.statusEffects) return;
+
+    beast.statusEffects.forEach(effect => {
+      if (effect.turnsRemaining !== undefined && effect.turnsRemaining > 0) {
+        effect.turnsRemaining--;
+      }
+    });
+  }
+
+  /**
+   * Check if a position is adjacent
+   */
+  export function isAdjacent(pos1: number, pos2: number): boolean {
+    return Math.abs(pos1 - pos2) === 1;
+  }
+
+  /**
+   * Get adjacent positions
+   */
+  export function getAdjacentPositions(position: number): number[] {
+    const adjacent: number[] = [];
+    if (position > 0) adjacent.push(position - 1);
+    if (position < FIELD_SIZE - 1) adjacent.push(position + 1);
+    return adjacent;
+  }
+
+  /**
+   * Check if player has lost (no beasts on field and no cards in hand)
+   */
+  export function hasPlayerLost(player: Player): boolean {
+    const hasFieldBeasts = getAliveBeasts(player.field).length > 0;
+    const hasPlayableCards = player.hand.length > 0 || player.deck.length > 0;
+
+    return !hasFieldBeasts && !hasPlayableCards;
+  }
+
   // ==================== bloombeasts\ui\screens\battle\types.ts ====================
 
   /**
@@ -14098,8 +14371,6 @@ namespace BloomBeasts {
    */
   export interface BattleComponentWithCallbacks extends BattleComponentProps {
     onAction?: (action: string) => void;
-    targetingCardIndex: number | null;
-    targetingCard: any | null;
     showPlayedCard?: (card: any, callback?: () => void) => void;
     onCardDetailSelected?: (card: any) => void;
   }
@@ -14112,13 +14383,11 @@ namespace BloomBeasts {
     handScrollOffset: any; // Binding for scroll offset
     showHandValue: boolean; // Current show/hide value
     handScrollOffsetValue: number; // Current scroll value
-    targetingCardIndex: number | null;
-    targetingCard: any | null;
+    getBattleDisplayValue: () => any | null; // Function to get current battle display value for onClick handlers
     onAction?: (action: string) => void;
     onShowHandChange?: (newValue: boolean) => void;
     onScrollOffsetChange?: (newValue: number) => void;
     onRenderNeeded?: () => void;
-    onEnterTargetingMode?: (cardIndex: number, card: any) => void;
     showPlayedCard?: (card: any, callback?: () => void) => void;
   }
 
@@ -14127,7 +14396,8 @@ namespace BloomBeasts {
    */
   export interface BattleSideMenuProps extends BattleComponentProps {
     endTurnButtonText: any; // Binding for button text
-    isPlayerTurnValue: boolean; // Current turn state
+    getIsPlayerTurn: () => boolean; // Function to get current turn state
+    getHasAttackableBeasts: () => boolean; // Function to check if player has beasts that can attack
     onAction?: (action: string) => void;
     onStopTurnTimer?: () => void;
   }
@@ -14196,16 +14466,12 @@ namespace BloomBeasts {
     private ui: BattleComponentWithCallbacks['ui'];
     private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
     private onAction?: (action: string) => void;
-    private targetingCardIndex: number | null;
-    private targetingCard: any | null;
     private showPlayedCard?: (card: any, callback?: () => void) => void;
 
     constructor(props: BattleComponentWithCallbacks) {
       this.ui = props.ui;
       this.battleDisplay = props.battleDisplay;
       this.onAction = props.onAction;
-      this.targetingCardIndex = props.targetingCardIndex;
-      this.targetingCard = props.targetingCard;
       this.showPlayedCard = props.showPlayedCard;
     }
 
@@ -14409,22 +14675,8 @@ namespace BloomBeasts {
             // Beast card - static structure with reactive properties
             this.ui.Pressable({
               onClick: () => {
-                // Check if we're in targeting mode
-                if (this.targetingCardIndex !== null && player === 'opponent') {
-                  const cardIndex = this.targetingCardIndex;
-                  const card = this.targetingCard;
-
-                  if (card && (card.type === 'Magic' || card.type === 'Buff')) {
-                    this.showPlayedCard?.(card, () => {
-                      this.onAction?.(`play-card-${cardIndex}-target-${index}`);
-                    });
-                  } else {
-                    this.onAction?.(`play-card-${cardIndex}-target-${index}`);
-                  }
-                } else {
-                  // Normal behavior (view card or select for attack)
-                  this.onAction?.(`view-field-card-${player}-${index}`);
-                }
+                // View card details only (selection removed)
+                this.onAction?.(`view-field-card-${player}-${index}`);
               },
               style: {
                 width: standardCardDimensions.width,
@@ -14432,42 +14684,6 @@ namespace BloomBeasts {
                 position: 'relative',
               },
               children: this.createBeastCardStructure(player, index),
-            }),
-
-            // Targeting highlight (green for valid targets)
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                top: -5,
-                left: -5,
-                right: -5,
-                bottom: -5,
-                borderWidth: 3,
-                borderColor: '#00ff00',
-                borderRadius: 8,
-                display: player === 'opponent' && this.targetingCardIndex !== null ? 'flex' : 'none',
-              },
-            }),
-
-            // Selection highlight - derive directly from battleDisplay
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                top: -5,
-                left: -5,
-                right: -5,
-                bottom: -5,
-                borderWidth: 5,
-                borderColor: '#FFD700',
-                borderRadius: 12,
-                display: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay | null) => {
-                    const isSelected = player === 'player' && state?.selectedBeastIndex === index;
-                    return isSelected ? 'flex' : 'none';
-                  }
-                ),
-              },
             }),
 
             // Attack animation overlay - derive directly from battleDisplay
@@ -14822,18 +15038,6 @@ namespace BloomBeasts {
               bottom: 0,
             },
             children: [
-              // Habitat card playboard template
-              this.ui.Image({
-                source: this.ui.Binding.derive(
-                  [this.ui.assetsLoadedBinding],
-                  (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('habitat-playboard') : null
-                ),
-                style: {
-                  width: habitatShiftCardDimensions.width,
-                  height: habitatShiftCardDimensions.height,
-                },
-              }),
-
               // Habitat artwork image wrapper - always exists, image source is reactive
               this.ui.View({
                 style: {
@@ -14953,34 +15157,32 @@ namespace BloomBeasts {
   export class PlayerHand {
     private ui: PlayerHandProps['ui'];
     private battleDisplay: PlayerHandProps['battleDisplay'];
+    private getBattleDisplayValue: () => any | null;
     private showHand: PlayerHandProps['showHand'];
     private handScrollOffset: PlayerHandProps['handScrollOffset'];
     private showHandValue: boolean;
     private handScrollOffsetValue: number;
-    private targetingCardIndex: number | null;
-    private targetingCard: any | null;
     private onAction?: (action: string) => void;
     private onShowHandChange?: (newValue: boolean) => void;
     private onScrollOffsetChange?: (newValue: number) => void;
     private onRenderNeeded?: () => void;
-    private onEnterTargetingMode?: (cardIndex: number, card: any) => void;
     private showPlayedCard?: (card: any, callback?: () => void) => void;
 
     constructor(props: PlayerHandProps) {
       this.ui = props.ui;
       this.battleDisplay = props.battleDisplay;
+      this.getBattleDisplayValue = props.getBattleDisplayValue;
       this.showHand = props.showHand;
       this.handScrollOffset = props.handScrollOffset;
       this.showHandValue = props.showHandValue;
       this.handScrollOffsetValue = props.handScrollOffsetValue;
-      this.targetingCardIndex = props.targetingCardIndex;
-      this.targetingCard = props.targetingCard;
       this.onAction = props.onAction;
       this.onShowHandChange = props.onShowHandChange;
       this.onScrollOffsetChange = props.onScrollOffsetChange;
       this.onRenderNeeded = props.onRenderNeeded;
-      this.onEnterTargetingMode = props.onEnterTargetingMode;
       this.showPlayedCard = props.showPlayedCard;
+
+      console.log('[PlayerHand] Constructor - onAction:', this.onAction ? 'DEFINED' : 'UNDEFINED');
     }
 
     /**
@@ -15255,29 +15457,34 @@ namespace BloomBeasts {
               },
               children: this.ui.Pressable({
                 onClick: () => {
+                  console.log('[PlayerHand] onClick fired! slotIndex:', slotIndex);
                   const actualIndex = this.handScrollOffsetValue * cardsPerPage + slotIndex;
-                  // Get current card state
-                  const display = this.battleDisplay;
-                  if (display && typeof display === 'object' && 'playerHand' in display) {
-                    const card = (display as any).playerHand?.[actualIndex];
+                  // Get current card state from cached value
+                  const display = this.getBattleDisplayValue();
+                  console.log('[PlayerHand] display:', display ? 'EXISTS' : 'NULL', 'actualIndex:', actualIndex);
+                  if (display && display.playerHand) {
+                    console.log('[PlayerHand] playerHand length:', display.playerHand.length);
+                    const card = display.playerHand[actualIndex];
+                    console.log('[PlayerHand] card at', actualIndex, ':', card);
                     if (card) {
-                      console.log(`[PlayerHand] Card clicked: ${actualIndex}, card: ${card.name}`);
+                      console.log(`[PlayerHand] Card clicked: ${actualIndex}, card: ${card.name}, onAction:`, this.onAction ? 'DEFINED' : 'UNDEFINED');
 
-                      // Check if card requires a target
-                      if (card.targetRequired) {
-                        console.log('[PlayerHand] Entering targeting mode for card:', card.name);
-                        this.onEnterTargetingMode?.(actualIndex, card);
-                      } else {
-                        // Show card popup for magic/buff cards, then play
-                        if (card.type === 'Magic' || card.type === 'Buff') {
-                          this.showPlayedCard?.(card, () => {
-                            this.onAction?.(`play-card-${actualIndex}`);
-                          });
-                        } else {
+                      // Show card popup for magic/buff cards, then play
+                      if (card.type === 'Magic' || card.type === 'Buff') {
+                        console.log('[PlayerHand] Showing card popup for', card.type);
+                        this.showPlayedCard?.(card, () => {
+                          console.log('[PlayerHand] Popup closed, calling onAction');
                           this.onAction?.(`play-card-${actualIndex}`);
-                        }
+                        });
+                      } else {
+                        console.log('[PlayerHand] Calling onAction directly');
+                        this.onAction?.(`play-card-${actualIndex}`);
                       }
+                    } else {
+                      console.log('[PlayerHand] No card at index', actualIndex);
                     }
+                  } else {
+                    console.log('[PlayerHand] No display or playerHand');
                   }
                 },
                 style: {
@@ -15320,12 +15527,12 @@ namespace BloomBeasts {
           left: 40,
           top: this.ui.Binding.derive(
             [this.showHand],
-            (showFull: boolean) => gameDimensions.panelHeight - (showFull ? 300 : 60)
+            (showFull: boolean) => showFull ? (gameDimensions.panelHeight - 300) : 640
           ),
           width: overlayWidth,
           height: this.ui.Binding.derive(
             [this.showHand],
-            (showFull: boolean) => showFull ? 300 : 60
+            (showFull: boolean) => showFull ? 300 : 80
           ),
           backgroundColor: 'rgba(0, 0, 0, 0.8)',
           borderWidth: 3,
@@ -15338,7 +15545,10 @@ namespace BloomBeasts {
           // Toggle button
           this.ui.Pressable({
             onClick: () => {
+              console.log('[PlayerHand] Toggle button clicked, current showHandValue:', this.showHandValue);
               const newShowHand = !this.showHandValue;
+              console.log('[PlayerHand] Setting showHandValue to:', newShowHand);
+              this.showHandValue = newShowHand;
               this.onShowHandChange?.(newShowHand);
               this.onAction?.('toggle-hand');
             },
@@ -15483,106 +15693,57 @@ namespace BloomBeasts {
     }
 
     /**
-     * Create player and opponent info displays - Fully reactive
+     * Create player and opponent info displays - Centered at top with two columns
      */
     createInfoDisplays(): UINodeType {
-      const opponentHealthPos = battleBoardAssetPositions.playerOne.health;
-      const playerHealthPos = battleBoardAssetPositions.playerTwo.health;
-      const opponentInfoPos = battleBoardAssetPositions.playOneInfoPosition;
-      const playerInfoPos = battleBoardAssetPositions.playTwoInfoPosition;
+      const boxWidth = 400;
+      const boxHeight = 100;
+      const centerX = 640; // Center of 1280px wide screen
+      const topY = 10;
 
       return this.ui.View({
         style: {
           position: 'absolute',
-          width: '100%',
-          height: '100%',
+          left: centerX - boxWidth / 2,
+          top: topY,
+          width: boxWidth,
+          height: boxHeight,
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          borderRadius: 10,
+          borderWidth: 2,
+          borderColor: 'rgba(74, 142, 194, 0.8)',
+          flexDirection: 'row',
+          padding: 10,
         },
         children: [
-          // Opponent health
+          // Opponent column (left)
           this.ui.View({
             style: {
-              position: 'absolute',
-              left: opponentHealthPos.x - 40,
-              top: opponentHealthPos.y - 15,
-              width: 80,
-              height: 30,
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => {
-                  if (!state) return 'transparent';
-                  const isTarget = state.attackAnimation?.targetPlayer === 'health' &&
-                                  state.attackAnimation?.attackerPlayer === 'player';
-                  return isTarget ? 'rgba(255, 0, 0, 0.4)' : 'transparent';
-                }
-              ),
-              borderRadius: 4,
-            },
-            children: this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => state ? `${state.opponentHealth}/${state.opponentMaxHealth}` : '20/20'
-              ),
-              style: {
-                fontSize: 20,
-                fontWeight: 'bold',
-                color: '#fff',
-                textAlign: 'center',
-              },
-            }),
-          }),
-
-          // Player health
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              left: playerHealthPos.x - 40,
-              top: playerHealthPos.y - 15,
-              width: 80,
-              height: 30,
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => {
-                  if (!state) return 'transparent';
-                  const isTarget = state.attackAnimation?.targetPlayer === 'health' &&
-                                  state.attackAnimation?.attackerPlayer === 'opponent';
-                  return isTarget ? 'rgba(255, 0, 0, 0.4)' : 'transparent';
-                }
-              ),
-              borderRadius: 4,
-            },
-            children: this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => state ? `${state.playerHealth}/${state.playerMaxHealth}` : '20/20'
-              ),
-              style: {
-                fontSize: 20,
-                fontWeight: 'bold',
-                color: '#fff',
-                textAlign: 'center',
-              },
-            }),
-          }),
-
-          // Opponent info
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              left: opponentInfoPos.x,
-              top: opponentInfoPos.y,
+              flex: 1,
+              paddingRight: 5,
+              borderRightWidth: 1,
+              borderRightColor: 'rgba(255, 255, 255, 0.3)',
             },
             children: [
               this.ui.Text({
                 text: new this.ui.Binding('Opponent'),
                 style: {
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: 'bold',
-                  color: '#fff',
+                  color: '#ff6b6b',
                   marginBottom: 5,
+                  textAlign: 'center',
+                },
+              }),
+              this.ui.Text({
+                text: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay) => state ? `❤️ ${state.opponentHealth}/${state.opponentMaxHealth}` : '❤️ 20/20'
+                ),
+                style: {
+                  fontSize: 16,
+                  color: '#fff',
+                  marginBottom: 3,
                 },
               }),
               this.ui.Text({
@@ -15591,9 +15752,9 @@ namespace BloomBeasts {
                   (state: BattleDisplay) => state ? `${nectarEmoji} ${state.opponentNectar}/10` : `${nectarEmoji} 0/10`
                 ),
                 style: {
-                  fontSize: 18,
+                  fontSize: 16,
                   color: '#fff',
-                  marginBottom: 5,
+                  marginBottom: 3,
                 },
               }),
               this.ui.Text({
@@ -15602,28 +15763,39 @@ namespace BloomBeasts {
                   (state: BattleDisplay) => state ? `${deckEmoji} ${state.opponentDeckCount}/30` : `${deckEmoji} 30/30`
                 ),
                 style: {
-                  fontSize: 18,
+                  fontSize: 16,
                   color: '#fff',
                 },
               }),
             ],
           }),
 
-          // Player info
+          // Player column (right)
           this.ui.View({
             style: {
-              position: 'absolute',
-              left: playerInfoPos.x,
-              top: playerInfoPos.y,
+              flex: 1,
+              paddingLeft: 5,
             },
             children: [
               this.ui.Text({
                 text: new this.ui.Binding('Player'),
                 style: {
-                  fontSize: 20,
+                  fontSize: 18,
                   fontWeight: 'bold',
-                  color: '#fff',
+                  color: '#4a8ec2',
                   marginBottom: 5,
+                  textAlign: 'center',
+                },
+              }),
+              this.ui.Text({
+                text: this.ui.Binding.derive(
+                  [this.battleDisplay],
+                  (state: BattleDisplay) => state ? `❤️ ${state.playerHealth}/${state.playerMaxHealth}` : '❤️ 20/20'
+                ),
+                style: {
+                  fontSize: 16,
+                  color: '#fff',
+                  marginBottom: 3,
                 },
               }),
               this.ui.Text({
@@ -15632,9 +15804,9 @@ namespace BloomBeasts {
                   (state: BattleDisplay) => state ? `${nectarEmoji} ${state.playerNectar}/10` : `${nectarEmoji} 0/10`
                 ),
                 style: {
-                  fontSize: 18,
+                  fontSize: 16,
                   color: '#fff',
-                  marginBottom: 5,
+                  marginBottom: 3,
                 },
               }),
               this.ui.Text({
@@ -15643,7 +15815,7 @@ namespace BloomBeasts {
                   (state: BattleDisplay) => state ? `${deckEmoji} ${state.playerDeckCount}/30` : `${deckEmoji} 30/30`
                 ),
                 style: {
-                  fontSize: 18,
+                  fontSize: 16,
                   color: '#fff',
                 },
               }),
@@ -15665,7 +15837,8 @@ namespace BloomBeasts {
     private ui: BattleSideMenuProps['ui'];
     private battleDisplay: BattleSideMenuProps['battleDisplay'];
     private endTurnButtonText: BattleSideMenuProps['endTurnButtonText'];
-    private isPlayerTurnValue: boolean;
+    private getIsPlayerTurn: () => boolean;
+    private getHasAttackableBeasts: () => boolean;
     private onAction?: (action: string) => void;
     private onStopTurnTimer?: () => void;
 
@@ -15673,9 +15846,12 @@ namespace BloomBeasts {
       this.ui = props.ui;
       this.battleDisplay = props.battleDisplay;
       this.endTurnButtonText = props.endTurnButtonText;
-      this.isPlayerTurnValue = props.isPlayerTurnValue;
+      this.getIsPlayerTurn = props.getIsPlayerTurn;
+      this.getHasAttackableBeasts = props.getHasAttackableBeasts;
       this.onAction = props.onAction;
       this.onStopTurnTimer = props.onStopTurnTimer;
+
+      console.log('[BattleSideMenu] Constructor - onAction:', this.onAction ? 'DEFINED' : 'UNDEFINED');
     }
 
     /**
@@ -15805,11 +15981,112 @@ namespace BloomBeasts {
             ],
           }),
 
+          // Attack button (red) - positioned above End Turn button
+          this.ui.Pressable({
+            onClick: () => {
+              console.log('[BattleSideMenu] Attack button onClick fired!');
+              const currentIsPlayerTurn = this.getIsPlayerTurn();
+              const hasAttackable = this.getHasAttackableBeasts();
+              console.log('[BattleSideMenu] Attack button clicked, isPlayerTurn:', currentIsPlayerTurn, 'hasAttackable:', hasAttackable);
+
+              if (currentIsPlayerTurn && hasAttackable) {
+                console.log('[BattleSideMenu] Calling onAction with auto-attack-all');
+                this.onAction?.('auto-attack-all');
+                // Auto end turn after attacking
+                console.log('[BattleSideMenu] Auto ending turn after attack');
+                this.onStopTurnTimer?.();
+                this.onAction?.('end-turn');
+              } else {
+                console.log('[BattleSideMenu] Attack button cannot be used - turn:', currentIsPlayerTurn, 'attackable:', hasAttackable);
+              }
+            },
+            disabled: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => {
+              // Disabled if state not ready
+              if (!state) return true;
+
+              // Disabled if not player turn
+              const notPlayerTurn = state.turnPlayer !== 'player';
+              if (notPlayerTurn) return true;
+
+              // Check if player has any attackable beasts (using proper canAttack check)
+              let hasAttackable = false;
+              if (state.playerField && Array.isArray(state.playerField)) {
+                for (const beast of state.playerField) {
+                  if (beast && canAttack(beast)) {
+                    hasAttackable = true;
+                    break;
+                  }
+                }
+              }
+
+              // Disabled if no attackable beasts
+              return !hasAttackable;
+            }),
+            style: {
+              position: 'absolute',
+              left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
+              top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y - sideMenuButtonDimensions.height - 10,
+              width: sideMenuButtonDimensions.width,
+              height: sideMenuButtonDimensions.height,
+              opacity: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => {
+                if (!state || state.turnPlayer !== 'player') return 0.3;
+
+                // Check if has attackable beasts
+                let hasAttackable = false;
+                if (state.playerField && Array.isArray(state.playerField)) {
+                  for (const beast of state.playerField) {
+                    if (beast && canAttack(beast)) {
+                      hasAttackable = true;
+                      break;
+                    }
+                  }
+                }
+
+                return hasAttackable ? 1 : 0.3;
+              }),
+            },
+            children: [
+              // Red button background
+              this.ui.Image({
+                source: this.ui.Binding.derive(
+                  [this.ui.assetsLoadedBinding],
+                  (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('red-button') : null
+                ),
+                style: {
+                  position: 'absolute',
+                  width: sideMenuButtonDimensions.width,
+                  height: sideMenuButtonDimensions.height,
+                },
+              }),
+              // Button text centered over image
+              this.ui.View({
+                style: {
+                  position: 'absolute',
+                  width: sideMenuButtonDimensions.width,
+                  height: sideMenuButtonDimensions.height,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                },
+                children: this.ui.Text({
+                  text: 'Attack',
+                  style: {
+                    fontSize: DIMENSIONS.fontSize.md,
+                    fontWeight: 'bold',
+                    color: '#fff',
+                    textAlign: 'center',
+                  },
+                }),
+              }),
+            ],
+          }),
+
           // End Turn button with timer - uses derived bindings for reactive updates
           this.ui.Pressable({
             onClick: () => {
-              const currentIsPlayerTurn = this.isPlayerTurnValue;
+              console.log('[BattleSideMenu] End Turn button onClick fired!');
+              const currentIsPlayerTurn = this.getIsPlayerTurn();
               console.log('[BattleSideMenu] End Turn button clicked, isPlayerTurn:', currentIsPlayerTurn);
+              console.log('[BattleSideMenu] onAction defined?', this.onAction ? 'YES' : 'NO');
               if (currentIsPlayerTurn) {
                 this.onStopTurnTimer?.();
                 console.log('[BattleSideMenu] Calling onAction with end-turn');
@@ -15818,7 +16095,9 @@ namespace BloomBeasts {
                 console.log('[BattleSideMenu] End Turn clicked but not player turn');
               }
             },
-            disabled: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => state?.turnPlayer !== 'player'),
+            disabled: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => {
+              return state?.turnPlayer !== 'player';
+            }),
             style: {
               position: 'absolute',
               left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
@@ -15901,6 +16180,7 @@ namespace BloomBeasts {
     onAction?: (action: string) => void;
     onNavigate?: (screen: string) => void;
     onRenderNeeded?: () => void;
+    onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
   }
 
   /**
@@ -15920,10 +16200,6 @@ namespace BloomBeasts {
     private isPlayerTurn: any;
     private endTurnButtonText: any; // Binding for button text that updates reactively
 
-    // Targeting state for cards that require targets
-    private targetingCardIndex: number | null = null;
-    private targetingCard: any | null = null;
-
     // Temporary card display (for showing played cards)
     private playedCardDisplay: any | null = null;
     private playedCardTimeout: number | null = null;
@@ -15934,6 +16210,8 @@ namespace BloomBeasts {
     // Track binding values separately (as per Horizon docs - no .get() method)
     private timerValue = 60;
     private isPlayerTurnValue = false;
+    private battleDisplayValue: any | null = null;
+    private hasAttackableBeasts = false;
     private showHandValue = true;
     private handScrollOffsetValue = 0;
     private selectedCardDetailValue: any = null;
@@ -15950,6 +16228,7 @@ namespace BloomBeasts {
     private onAction?: (action: string) => void;
     private onNavigate?: (screen: string) => void;
     private onRenderNeeded?: () => void;
+    private onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
 
     // Battle components (modular)
     private backgroundComponent!: BattleBackground;
@@ -15964,6 +16243,8 @@ namespace BloomBeasts {
     constructor(props: BattleScreenProps) {
       this.ui = props.ui;
       this.async = props.async;
+
+      console.log('[BattleScreen] Constructor called, onAction:', props.onAction ? 'DEFINED' : 'UNDEFINED');
 
       // Initialize bindings after ui is set
       this.showHandValue = true;
@@ -15981,9 +16262,15 @@ namespace BloomBeasts {
       // Store required battleDisplay binding
       this.battleDisplay = props.battleDisplay;
 
-      this.onAction = props.onAction;
+      // Wrap onAction to add logging
+      this.onAction = props.onAction ? (action: string) => {
+        console.log('[BattleScreen] onAction called with:', action);
+        props.onAction!(action);
+      } : undefined;
+
       this.onNavigate = props.onNavigate;
       this.onRenderNeeded = props.onRenderNeeded;
+      this.onShowCardDetail = props.onShowCardDetail;
 
       // Initialize player turn tracking with derived bindings
       // Create derived binding for isPlayerTurn
@@ -15991,6 +16278,20 @@ namespace BloomBeasts {
         [this.battleDisplay],
         (state: BattleDisplay | null) => {
           const newIsPlayerTurn = state?.turnPlayer === 'player';
+
+          // Cache battle display value for onClick handlers
+          this.battleDisplayValue = state;
+
+          // Check if player has any beasts that can attack (using proper canAttack check)
+          this.hasAttackableBeasts = false;
+          if (state && state.playerField) {
+            for (const beast of state.playerField) {
+              if (beast && canAttack(beast)) {
+                this.hasAttackableBeasts = true;
+                break;
+              }
+            }
+          }
 
           // Start/stop timer based on turn changes
           if (this.isPlayerTurnValue !== newIsPlayerTurn) {
@@ -16021,8 +16322,6 @@ namespace BloomBeasts {
       this.beastFieldComponent = new BeastField({
         ui: this.ui,
         battleDisplay: this.battleDisplay,
-        targetingCardIndex: this.targetingCardIndex,
-        targetingCard: this.targetingCard,
         onAction: this.onAction,
         showPlayedCard: this.showPlayedCard.bind(this),
       });
@@ -16030,8 +16329,6 @@ namespace BloomBeasts {
       this.trapZoneComponent = new TrapZone({
         ui: this.ui,
         battleDisplay: this.battleDisplay,
-        targetingCardIndex: null,
-        targetingCard: null,
         onCardDetailSelected: (card) => {
           this.selectedCardDetailValue = card;
           this.selectedCardDetail.set(card);
@@ -16041,8 +16338,6 @@ namespace BloomBeasts {
       this.buffZoneComponent = new BuffZone({
         ui: this.ui,
         battleDisplay: this.battleDisplay,
-        targetingCardIndex: null,
-        targetingCard: null,
         onCardDetailSelected: (card) => {
           this.selectedCardDetailValue = card;
           this.selectedCardDetail.set(card);
@@ -16052,8 +16347,6 @@ namespace BloomBeasts {
       this.habitatZoneComponent = new HabitatZone({
         ui: this.ui,
         battleDisplay: this.battleDisplay,
-        targetingCardIndex: null,
-        targetingCard: null,
         onCardDetailSelected: (card) => {
           const habitatWithType = { ...card, type: 'Habitat' };
           this.selectedCardDetailValue = habitatWithType;
@@ -16068,8 +16361,7 @@ namespace BloomBeasts {
         handScrollOffset: this.handScrollOffset,
         showHandValue: this.showHandValue,
         handScrollOffsetValue: this.handScrollOffsetValue,
-        targetingCardIndex: this.targetingCardIndex,
-        targetingCard: this.targetingCard,
+        getBattleDisplayValue: () => this.battleDisplayValue,
         onAction: this.onAction,
         onShowHandChange: (newValue) => {
           this.showHandValue = newValue;
@@ -16079,11 +16371,7 @@ namespace BloomBeasts {
           this.handScrollOffsetValue = newValue;
           this.handScrollOffset.set(newValue);
         },
-        onEnterTargetingMode: (cardIndex, card) => {
-          this.targetingCardIndex = cardIndex;
-          this.targetingCard = card;
-          this.onRenderNeeded?.();
-        },
+        onRenderNeeded: this.onRenderNeeded,
         showPlayedCard: this.showPlayedCard.bind(this),
       });
 
@@ -16096,7 +16384,8 @@ namespace BloomBeasts {
         ui: this.ui,
         battleDisplay: this.battleDisplay,
         endTurnButtonText: this.endTurnButtonText,
-        isPlayerTurnValue: this.isPlayerTurnValue,
+        getIsPlayerTurn: () => this.isPlayerTurnValue,
+        getHasAttackableBeasts: () => this.hasAttackableBeasts,
         onAction: this.onAction,
         onStopTurnTimer: () => this.stopTurnTimer(),
       });
@@ -16308,42 +16597,31 @@ namespace BloomBeasts {
      * Start the turn timer
      */
     private startTurnTimer(): void {
-      console.log('[BattleScreen] ========== startTurnTimer() called ==========');
-      console.log('[BattleScreen] Current timerInterval:', this.timerInterval);
-
       // Don't start if already running
       if (this.timerInterval !== null) {
-        console.log('[BattleScreen] Timer already running, skipping start');
         return;
       }
 
-      console.log('[BattleScreen] Starting timer from 60');
       this.timerValue = 60;
       this.turnTimer.set(60);
       this.updateEndTurnButtonText(); // Initialize button text
       this.onRenderNeeded?.(); // Trigger re-render
 
-      console.log('[BattleScreen] Creating setInterval with 1000ms delay');
       this.timerInterval = this.async.setInterval(() => {
         const current = this.timerValue;
-        console.log('[BattleScreen] ⏰ Timer tick:', current);
 
         if (current <= 0) {
-          console.log('[BattleScreen] Timer reached 0, ending turn');
+          console.log('[BattleScreen] Timer reached 0, auto-ending turn');
           this.stopTurnTimer();
           this.onAction?.('end-turn');
         } else {
           this.timerValue = current - 1;
           this.turnTimer.set(this.timerValue);
-          console.log('[BattleScreen] Timer updated to:', this.timerValue);
           // Update button text and trigger re-render
           this.updateEndTurnButtonText();
           this.onRenderNeeded?.();
         }
       }, 1000);
-
-      console.log('[BattleScreen] setInterval created, timerInterval ID:', this.timerInterval);
-      console.log('[BattleScreen] ========== startTurnTimer() complete ==========');
     }
 
     /**
@@ -16409,21 +16687,13 @@ namespace BloomBeasts {
     private showPlayedCard(card: any, callback?: () => void): void {
       console.log('[BattleScreen] Showing played card popup:', card.name);
 
-      // Clear any existing timeout
-      if (this.playedCardTimeout) {
-        this.async.clearTimeout(this.playedCardTimeout);
-      }
-
-      // Set the played card
-      this.playedCardDisplay = card;
-      this.onRenderNeeded?.();
-
-      // After 2 seconds, hide the popup and execute the action
-      this.playedCardTimeout = this.async.setTimeout(() => {
-        this.playedCardDisplay = null;
-        this.onRenderNeeded?.();
+      // Use the onShowCardDetail callback if available
+      if (this.onShowCardDetail) {
+        this.onShowCardDetail(card, 2000, callback);
+      } else {
+        console.warn('[BattleScreen] onShowCardDetail not defined, executing callback immediately');
         callback?.();
-      }, 2000);
+      }
     }
 
     public cleanup(): void {
@@ -17597,7 +17867,6 @@ namespace BloomBeasts {
     private isInitializing: boolean = true;  // Prevent renders during initialization
     private currentScreen: string = 'loading';  // Current active screen
     private currentBattleId: string | null = null;
-    private selectedBeastIndex: number | null = null;
 
     // UI State bindings
     private playerDataBinding: BindingInterface<PlayerData | null>;
@@ -17658,7 +17927,6 @@ namespace BloomBeasts {
         if (currentState && !currentState.isComplete) {
           const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
             currentState,
-            this.selectedBeastIndex,
             null
           );
           if (updatedDisplay) {
@@ -17721,7 +17989,8 @@ namespace BloomBeasts {
         battleDisplay: this.battleDisplayBinding,
         onAction: this.handleBattleAction.bind(this),
         onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this)
+        onRenderNeeded: this.triggerRender.bind(this),
+        onShowCardDetail: this.showCardDetailPopup.bind(this)
       });
 
       this.settingsScreen = new SettingsScreen({
@@ -18072,6 +18341,10 @@ namespace BloomBeasts {
         affinity: m.mission.affinity,
         beastId: m.mission.beastId,
       }));
+
+      // Debug: Log first 3 missions
+      console.log('[BloomBeastsGame] First 3 display missions:', displayMissions.slice(0, 3).map(m => ({id: m.id, isAvailable: m.isAvailable})));
+
       this.missionsBinding.set(displayMissions);
     }
 
@@ -18167,6 +18440,36 @@ namespace BloomBeasts {
     }
 
     /**
+     * Show card detail popup for a duration, then close and execute callback
+     */
+    private showCardDetailPopup(card: any, durationMs: number, callback?: () => void): void {
+      console.log('[BloomBeastsGame] Showing card detail popup:', card.name, 'for', durationMs, 'ms');
+
+      // Set the card detail popup
+      this.cardDetailPopupValue = {
+        cardDetail: {
+          card: card,
+          stats: null,
+        },
+        onButtonClick: () => {
+          // Close button clicked
+          this.cardDetailPopupValue = null;
+          this.cardDetailPopupBinding.set(null);
+        }
+      };
+      this.cardDetailPopupBinding.set(this.cardDetailPopupValue);
+      this.triggerRender();
+
+      // After duration, close the popup and execute callback
+      this.asyncMethods.setTimeout(() => {
+        this.cardDetailPopupValue = null;
+        this.cardDetailPopupBinding.set(null);
+        this.triggerRender();
+        callback?.();
+      }, durationMs);
+    }
+
+    /**
      * Handle forfeit - player gives up
      */
     private handleForfeit(): void {
@@ -18253,9 +18556,6 @@ namespace BloomBeasts {
       Logger.info(`Mission selected: ${missionId}`);
       if (!this.playerData) return;
 
-      // Reset battle state
-      this.selectedBeastIndex = null;
-
       // Play menu button sound
       this.playSfx('sfx-menu-button-select');
 
@@ -18294,7 +18594,6 @@ namespace BloomBeasts {
           // Create battle display from battle state
           const battleDisplay = this.battleDisplayManager.createBattleDisplay(
             battleState,
-            null, // No selected beast initially
             null  // No attack animation
           );
           // console.log('[BloomBeastsGame] battleDisplay:', battleDisplay);
@@ -18392,66 +18691,54 @@ namespace BloomBeasts {
         return;
       }
 
-      // Handle beast selection (UI-only action, doesn't go to battleUI)
-      if (action.startsWith('view-field-card-player-')) {
-        const index = parseInt(action.substring('view-field-card-player-'.length), 10);
+      // Beast and opponent clicks are now just for viewing details (no selection)
+      if (action.startsWith('view-field-card-player-') || action.startsWith('view-field-card-opponent-')) {
+        // Just return - card details will be shown by the UI layer if needed
+        return;
+      }
 
-        // Toggle selection: if already selected, deselect; otherwise select
-        if (this.selectedBeastIndex === index) {
-          this.selectedBeastIndex = null;
-        } else {
-          this.selectedBeastIndex = index;
-        }
+      // Play sound effects and show animations based on action type
+      if (action === 'auto-attack-all') {
+        // Handle auto-attack with animations
+        this.playSfx('sfx-attack');
 
-        // Update display with new selection
-        const currentState = this.battleUI.getCurrentBattle();
-        if (currentState) {
+        // Process action with animation callback
+        await this.battleUI.processPlayerAction(action, {
+          onAttackAnimation: async (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => {
+            if (targetType === 'beast' && targetIndex !== undefined) {
+              await this.showAttackAnimation('player', attackerIndex, 'opponent', targetIndex);
+            } else {
+              await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
+            }
+          }
+        });
+
+        // Get updated state and render
+        const updatedState = this.battleUI.getCurrentBattle();
+        if (updatedState) {
+          if (updatedState.isComplete) {
+            await this.handleBattleComplete(updatedState);
+            return;
+          }
+
           const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
-            currentState,
-            this.selectedBeastIndex,
+            updatedState,
             null
           );
           if (updatedDisplay) {
             this.battleDisplayBinding.set(updatedDisplay);
+            this.triggerRender();
           }
-          this.triggerRender();
         }
         return;
-      }
-
-      // Handle opponent beast clicks - attack if you have a beast selected
-      if (action.startsWith('view-field-card-opponent-')) {
-        const targetIndex = parseInt(action.substring('view-field-card-opponent-'.length), 10);
-
-        // If you have a beast selected, attack the opponent beast
-        if (this.selectedBeastIndex !== null) {
-          const attackAction = `attack-beast-${this.selectedBeastIndex}-${targetIndex}`;
-
-          // Show attack animation
-          await this.showAttackAnimation('player', this.selectedBeastIndex, 'opponent', targetIndex);
-
-          // Clear selection
-          this.selectedBeastIndex = null;
-
-          // Don't return - continue to process the attack below
-          action = attackAction;
-        } else {
-          // No beast selected - just show detail view
-          return;
-        }
-      }
-
-      // Play sound effects and show animations based on action type
-      if (action.startsWith('attack-beast-')) {
+      } else if (action.startsWith('attack-beast-')) {
         this.playSfx('sfx-attack');
         // Animation already shown above
-        this.selectedBeastIndex = null; // Clear selection after attacking
       } else if (action.startsWith('attack-player-')) {
         this.playSfx('sfx-attack');
         // Extract attacker index and show animation for direct health attack
         const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
         await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
-        this.selectedBeastIndex = null; // Clear selection after attacking
       } else if (action.startsWith('play-card-')) {
         this.playSfx('sfx-play-card');
       } else if (action.startsWith('activate-trap-')) {
@@ -18475,7 +18762,6 @@ namespace BloomBeasts {
         // Create updated battle display with fresh state
         const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
           updatedState,
-          this.selectedBeastIndex,
           null  // No attack animation
         );
 
@@ -18803,7 +19089,6 @@ namespace BloomBeasts {
       // Show animation (attacker glows green, target glows red)
       const displayWithAnimation = this.battleDisplayManager.createBattleDisplay(
         currentState,
-        this.selectedBeastIndex,
         {
           attackerPlayer,
           attackerIndex,
@@ -18823,7 +19108,6 @@ namespace BloomBeasts {
       // Clear animation
       const displayWithoutAnimation = this.battleDisplayManager.createBattleDisplay(
         currentState,
-        null, // Clear selection after attack
         null  // No animation
       );
 

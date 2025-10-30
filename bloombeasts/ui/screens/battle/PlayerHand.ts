@@ -5,39 +5,37 @@
 import type { PlayerHandProps } from './types';
 import { standardCardDimensions, gameDimensions } from './types';
 import { UINodeType } from '../ScreenUtils';
-import { BattleDisplay } from 'bloombeasts/gameManager';
+import { BattleDisplay } from '../../../gameManager';
 
 export class PlayerHand {
   private ui: PlayerHandProps['ui'];
   private battleDisplay: PlayerHandProps['battleDisplay'];
+  private getBattleDisplayValue: () => any | null;
   private showHand: PlayerHandProps['showHand'];
   private handScrollOffset: PlayerHandProps['handScrollOffset'];
   private showHandValue: boolean;
   private handScrollOffsetValue: number;
-  private targetingCardIndex: number | null;
-  private targetingCard: any | null;
   private onAction?: (action: string) => void;
   private onShowHandChange?: (newValue: boolean) => void;
   private onScrollOffsetChange?: (newValue: number) => void;
   private onRenderNeeded?: () => void;
-  private onEnterTargetingMode?: (cardIndex: number, card: any) => void;
   private showPlayedCard?: (card: any, callback?: () => void) => void;
 
   constructor(props: PlayerHandProps) {
     this.ui = props.ui;
     this.battleDisplay = props.battleDisplay;
+    this.getBattleDisplayValue = props.getBattleDisplayValue;
     this.showHand = props.showHand;
     this.handScrollOffset = props.handScrollOffset;
     this.showHandValue = props.showHandValue;
     this.handScrollOffsetValue = props.handScrollOffsetValue;
-    this.targetingCardIndex = props.targetingCardIndex;
-    this.targetingCard = props.targetingCard;
     this.onAction = props.onAction;
     this.onShowHandChange = props.onShowHandChange;
     this.onScrollOffsetChange = props.onScrollOffsetChange;
     this.onRenderNeeded = props.onRenderNeeded;
-    this.onEnterTargetingMode = props.onEnterTargetingMode;
     this.showPlayedCard = props.showPlayedCard;
+
+    console.log('[PlayerHand] Constructor - onAction:', this.onAction ? 'DEFINED' : 'UNDEFINED');
   }
 
   /**
@@ -312,29 +310,34 @@ export class PlayerHand {
             },
             children: this.ui.Pressable({
               onClick: () => {
+                console.log('[PlayerHand] onClick fired! slotIndex:', slotIndex);
                 const actualIndex = this.handScrollOffsetValue * cardsPerPage + slotIndex;
-                // Get current card state
-                const display = this.battleDisplay;
-                if (display && typeof display === 'object' && 'playerHand' in display) {
-                  const card = (display as any).playerHand?.[actualIndex];
+                // Get current card state from cached value
+                const display = this.getBattleDisplayValue();
+                console.log('[PlayerHand] display:', display ? 'EXISTS' : 'NULL', 'actualIndex:', actualIndex);
+                if (display && display.playerHand) {
+                  console.log('[PlayerHand] playerHand length:', display.playerHand.length);
+                  const card = display.playerHand[actualIndex];
+                  console.log('[PlayerHand] card at', actualIndex, ':', card);
                   if (card) {
-                    console.log(`[PlayerHand] Card clicked: ${actualIndex}, card: ${card.name}`);
+                    console.log(`[PlayerHand] Card clicked: ${actualIndex}, card: ${card.name}, onAction:`, this.onAction ? 'DEFINED' : 'UNDEFINED');
 
-                    // Check if card requires a target
-                    if (card.targetRequired) {
-                      console.log('[PlayerHand] Entering targeting mode for card:', card.name);
-                      this.onEnterTargetingMode?.(actualIndex, card);
-                    } else {
-                      // Show card popup for magic/buff cards, then play
-                      if (card.type === 'Magic' || card.type === 'Buff') {
-                        this.showPlayedCard?.(card, () => {
-                          this.onAction?.(`play-card-${actualIndex}`);
-                        });
-                      } else {
+                    // Show card popup for magic/buff cards, then play
+                    if (card.type === 'Magic' || card.type === 'Buff') {
+                      console.log('[PlayerHand] Showing card popup for', card.type);
+                      this.showPlayedCard?.(card, () => {
+                        console.log('[PlayerHand] Popup closed, calling onAction');
                         this.onAction?.(`play-card-${actualIndex}`);
-                      }
+                      });
+                    } else {
+                      console.log('[PlayerHand] Calling onAction directly');
+                      this.onAction?.(`play-card-${actualIndex}`);
                     }
+                  } else {
+                    console.log('[PlayerHand] No card at index', actualIndex);
                   }
+                } else {
+                  console.log('[PlayerHand] No display or playerHand');
                 }
               },
               style: {
@@ -377,12 +380,12 @@ export class PlayerHand {
         left: 40,
         top: this.ui.Binding.derive(
           [this.showHand],
-          (showFull: boolean) => gameDimensions.panelHeight - (showFull ? 300 : 60)
+          (showFull: boolean) => showFull ? (gameDimensions.panelHeight - 300) : 640
         ),
         width: overlayWidth,
         height: this.ui.Binding.derive(
           [this.showHand],
-          (showFull: boolean) => showFull ? 300 : 60
+          (showFull: boolean) => showFull ? 300 : 80
         ),
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         borderWidth: 3,
@@ -395,7 +398,10 @@ export class PlayerHand {
         // Toggle button
         this.ui.Pressable({
           onClick: () => {
+            console.log('[PlayerHand] Toggle button clicked, current showHandValue:', this.showHandValue);
             const newShowHand = !this.showHandValue;
+            console.log('[PlayerHand] Setting showHandValue to:', newShowHand);
+            this.showHandValue = newShowHand;
             this.onShowHandChange?.(newShowHand);
             this.onAction?.('toggle-hand');
           },

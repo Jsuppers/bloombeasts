@@ -182,7 +182,14 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-    return (mission && !mission.isAvailable) ? 1 : 0;
+    const lockOpacity = (mission && !mission.isAvailable) ? 1 : 0;
+
+    // Debug log for first 3 slots
+    if (slotIndex < 3 && mission) {
+      console.log(`[MissionRenderer] Slot ${slotIndex} (${mission.id}): isAvailable=${mission.isAvailable}, lockOpacity=${lockOpacity}`);
+    }
+
+    return lockOpacity;
   });
 
   const checkmarkOpacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {

@@ -82,8 +82,6 @@ export interface BattleComponentProps {
  */
 export interface BattleComponentWithCallbacks extends BattleComponentProps {
   onAction?: (action: string) => void;
-  targetingCardIndex: number | null;
-  targetingCard: any | null;
   showPlayedCard?: (card: any, callback?: () => void) => void;
   onCardDetailSelected?: (card: any) => void;
 }
@@ -96,13 +94,11 @@ export interface PlayerHandProps extends BattleComponentProps {
   handScrollOffset: any; // Binding for scroll offset
   showHandValue: boolean; // Current show/hide value
   handScrollOffsetValue: number; // Current scroll value
-  targetingCardIndex: number | null;
-  targetingCard: any | null;
+  getBattleDisplayValue: () => any | null; // Function to get current battle display value for onClick handlers
   onAction?: (action: string) => void;
   onShowHandChange?: (newValue: boolean) => void;
   onScrollOffsetChange?: (newValue: number) => void;
   onRenderNeeded?: () => void;
-  onEnterTargetingMode?: (cardIndex: number, card: any) => void;
   showPlayedCard?: (card: any, callback?: () => void) => void;
 }
 
@@ -111,7 +107,8 @@ export interface PlayerHandProps extends BattleComponentProps {
  */
 export interface BattleSideMenuProps extends BattleComponentProps {
   endTurnButtonText: any; // Binding for button text
-  isPlayerTurnValue: boolean; // Current turn state
+  getIsPlayerTurn: () => boolean; // Function to get current turn state
+  getHasAttackableBeasts: () => boolean; // Function to check if player has beasts that can attack
   onAction?: (action: string) => void;
   onStopTurnTimer?: () => void;
 }

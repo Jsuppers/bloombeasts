@@ -51,9 +51,6 @@ export class UIRenderer {
     private currentRoot: UINode | null = null;
     private hasActiveAnimations: boolean = false;
 
-    // Debug flag - set to false to disable all debug logging
-    private static DEBUG_ENABLED = false;
-
     constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
         this.canvas = canvas;
         this.ctx = ctx;
@@ -123,7 +120,7 @@ export class UIRenderer {
 
         // Debug: Log node type
         if (node.type === 'image') {
-            UIRenderer.DEBUG_ENABLED && console.log('🖼️ renderNode: Found image node!', node);
+            console.log('🖼️ renderNode: Found image node!', node);
         }
 
         switch (node.type) {
@@ -152,36 +149,22 @@ export class UIRenderer {
         const style = this.resolveStyle(node.props.style || {});
         const box = this.calculateLayout(style, parentBox);
 
-        UIRenderer.DEBUG_ENABLED && console.log('renderView - box:', box, 'style.backgroundColor:', style.backgroundColor);
 
-        // Handle opacity
-        const opacity = style.opacity !== undefined ? Number(this.resolveAndTrack(style.opacity)) : 1;
-
-        // Skip rendering entirely if opacity is 0
-        if (opacity === 0) {
-            return box;
-        }
-
-        // Save current globalAlpha and apply opacity
-        const previousAlpha = this.ctx.globalAlpha;
-        this.ctx.globalAlpha = previousAlpha * opacity;
+        console.log('renderView - box:', box, 'style.backgroundColor:', style.backgroundColor);
 
         // Draw background
         if (style.backgroundColor) {
             this.ctx.fillStyle = style.backgroundColor;
             this.ctx.fillRect(box.x, box.y, box.width, box.height);
-            UIRenderer.DEBUG_ENABLED && console.log('Drew background at', box);
+            console.log('Drew background at', box);
         }
 
         // Draw borders
         this.drawBorders(box, style);
 
         // Render children
-        UIRenderer.DEBUG_ENABLED && console.log('Rendering children for View, children:', node.children);
+        console.log('Rendering children for View, children:', node.children);
         this.renderChildren(node.children, box, style);
-
-        // Restore globalAlpha
-        this.ctx.globalAlpha = previousAlpha;
 
         return box;
     }
@@ -194,7 +177,7 @@ export class UIRenderer {
         const text = this.resolveAndTrack<string>(node.props.text);
         // Debug log for timer text
         if (text && (text.includes('(') || text.includes('Enemy Turn'))) {
-            UIRenderer.DEBUG_ENABLED && console.log('[UIRenderer] Rendering timer text:', text);
+            console.log('[UIRenderer] Rendering timer text:', text);
         }
         const box = this.calculateLayout(style, parentBox);
 
@@ -263,14 +246,14 @@ export class UIRenderer {
 
         if (currentImageId) {
             const img = this.imageCache.get(currentImageId);
-            UIRenderer.DEBUG_ENABLED && console.log('[UIRenderer] Looking for image:', currentImageId, 'Found:', !!img, 'Complete:', img?.complete);
+            console.log('[UIRenderer] Looking for image:', currentImageId, 'Found:', !!img, 'Complete:', img?.complete);
 
             if (img && img.complete) {
                 // Draw the image
                 this.ctx.drawImage(img, box.x, box.y, box.width, box.height);
             } else {
                 // Draw placeholder if image not loaded
-                UIRenderer.DEBUG_ENABLED && console.log('[UIRenderer] Drawing placeholder for:', currentImageId);
+                console.log('[UIRenderer] Drawing placeholder for:', currentImageId);
                 this.ctx.fillStyle = '#333';
                 this.ctx.fillRect(box.x, box.y, box.width, box.height);
                 this.ctx.fillStyle = '#666';
@@ -296,7 +279,7 @@ export class UIRenderer {
         const box = this.calculateLayout(style, parentBox);
         const disabled = this.resolveAndTrack<boolean>(node.props.disabled || false);
 
-        UIRenderer.DEBUG_ENABLED && console.log('🔘 Pressable:', {
+        console.log('🔘 Pressable:', {
             box,
             disabled,
             hasOnClick: !!node.props.onClick,
@@ -305,7 +288,7 @@ export class UIRenderer {
 
         // Register click region
         if (!disabled) {
-            UIRenderer.DEBUG_ENABLED && console.log('✅ Click region registered:', box);
+            console.log('✅ Click region registered:', box);
             this.clickRegions.push({
                 box,
                 onClick: node.props.onClick,
@@ -367,7 +350,7 @@ export class UIRenderer {
      * Render children nodes
      */
     private renderChildren(children: any, parentBox: LayoutBox, parentStyle: ResolvedStyle): LayoutBox {
-        UIRenderer.DEBUG_ENABLED && console.log('renderChildren called with:', { children, isBinding: children instanceof ValueBindingBase, isArray: Array.isArray(children) });
+        console.log('renderChildren called with:', { children, isBinding: children instanceof ValueBindingBase, isArray: Array.isArray(children) });
 
         // Resolve children if it's a binding
         let childArray: UINode[] = [];
@@ -376,7 +359,7 @@ export class UIRenderer {
             // Track the binding for re-render on change
             this.trackBinding(children);
             const value = children.get();
-            UIRenderer.DEBUG_ENABLED && console.log('Children is a binding, resolved value:', value);
+            console.log('Children is a binding, resolved value:', value);
             childArray = Array.isArray(value) ? value : (value ? [value] : []);
         } else if (Array.isArray(children)) {
             childArray = children;
@@ -396,17 +379,17 @@ export class UIRenderer {
         // Filter out null/undefined children
         childArray = childArray.filter(child => child != null);
 
-        UIRenderer.DEBUG_ENABLED && console.log('Filtered child array:', childArray, 'length:', childArray.length);
+        console.log('Filtered child array:', childArray, 'length:', childArray.length);
 
         if (childArray.length === 0) {
-            UIRenderer.DEBUG_ENABLED && console.log('No children to render, returning parentBox');
+            console.log('No children to render, returning parentBox');
             return parentBox;
         }
 
         const flexDirection = parentStyle.flexDirection || 'column';
         const isRow = flexDirection === 'row' || flexDirection === 'row-reverse';
 
-        UIRenderer.DEBUG_ENABLED && console.log('renderChildren - flexbox layout:', { isRow, childCount: childArray.length });
+        console.log('renderChildren - flexbox layout:', { isRow, childCount: childArray.length });
 
         // TWO-PASS LAYOUT:
         // Pass 1: Calculate sizes for all children
@@ -480,7 +463,7 @@ export class UIRenderer {
         const totalSharers = totalFlex + nonFixedNonFlexCount;
         const spacePerSharer = totalSharers > 0 ? remainingSpace / totalSharers : 0;
 
-        UIRenderer.DEBUG_ENABLED && console.log('Flexbox calc:', {
+        console.log('Flexbox calc:', {
             availableSpace,
             totalFixedSize,
             remainingSpace,
@@ -534,7 +517,7 @@ export class UIRenderer {
                 height: Math.max(0, childHeight),
             };
 
-            UIRenderer.DEBUG_ENABLED && console.log(`Child ${index}:`, { flex: sizeInfo.flex, isFixedSize: sizeInfo.isFixedSize, isAbsolute: sizeInfo.isAbsolute, childParentBox });
+            console.log(`Child ${index}:`, { flex: sizeInfo.flex, isFixedSize: sizeInfo.isFixedSize, isAbsolute: sizeInfo.isAbsolute, childParentBox });
 
             const childBox = this.renderNode(child, childParentBox);
 
@@ -596,7 +579,7 @@ export class UIRenderer {
             height: finalHeight,
         };
 
-        UIRenderer.DEBUG_ENABLED && console.log('calculateLayout:', {
+        console.log('calculateLayout:', {
             styleWidth: style.width,
             styleHeight: style.height,
             styleFlex: style.flex,
@@ -789,7 +772,7 @@ export class UIRenderer {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        UIRenderer.DEBUG_ENABLED && console.log(`👆 Canvas clicked at (${x.toFixed(0)}, ${y.toFixed(0)}), ${this.clickRegions.length} regions`);
+        console.log(`👆 Canvas clicked at (${x.toFixed(0)}, ${y.toFixed(0)}), ${this.clickRegions.length} regions`);
 
         // Find clicked region (reverse order for z-index)
         let foundRegion = false;
@@ -798,23 +781,23 @@ export class UIRenderer {
             const inBox = this.isPointInBox(x, y, region.box);
 
             if (inBox) {
-                UIRenderer.DEBUG_ENABLED && console.log(`🎯 Hit region ${i}:`, region.box);
+                console.log(`🎯 Hit region ${i}:`, region.box);
                 foundRegion = true;
                 if (region.onClick) {
-                    UIRenderer.DEBUG_ENABLED && console.log('🖱️ Calling onClick handler');
+                    console.log('🖱️ Calling onClick handler');
                     // Calculate relative position within the box (0 to 1)
                     const relativeX = (x - region.box.x) / region.box.width;
                     const relativeY = (y - region.box.y) / region.box.height;
                     region.onClick(relativeX, relativeY);
                 } else {
-                    UIRenderer.DEBUG_ENABLED && console.log('⚠️ Region has no onClick handler');
+                    console.log('⚠️ Region has no onClick handler');
                 }
                 break;
             }
         }
 
         if (!foundRegion) {
-            UIRenderer.DEBUG_ENABLED && console.log('❌ No click region found at this position');
+            console.log('❌ No click region found at this position');
         }
     }
 

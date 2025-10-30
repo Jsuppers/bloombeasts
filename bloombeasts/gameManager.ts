@@ -76,7 +76,6 @@ export interface BattleDisplay {
   turnTimeRemaining: number;
   objectives: ObjectiveDisplay[];
   habitatZone: any | null; // Current habitat card
-  selectedBeastIndex: number | null; // Track selected beast for attacking
   attackAnimation?: { // Attack animation state
     attackerPlayer: 'player' | 'opponent';
     attackerIndex: number;

@@ -161,14 +161,10 @@ export class AssetCatalogManager {
    * Get Horizon asset ID for a given asset
    */
   getHorizonAssetId(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
-    console.log(`[AssetCatalogManager.getHorizonAssetId] Looking up: "${assetId}", type: ${assetType}`);
     const asset = this.getAsset(assetId);
-    console.log(`[AssetCatalogManager.getHorizonAssetId] getAsset returned:`, asset ? `found (${asset.id})` : 'null');
-
     if (!asset) return undefined;
 
     const assetRef = asset.assets.find(a => a.type === assetType);
-    console.log(`[AssetCatalogManager.getHorizonAssetId] Asset reference:`, assetRef ? `found (horizonId: ${assetRef.horizonAssetId})` : 'not found');
     return assetRef?.horizonAssetId;
   }
 

@@ -2,7 +2,7 @@
  * Trap zone rendering - 3 slots per player
  */
 
-import { BattleDisplay } from 'bloombeasts/gameManager';
+import { BattleDisplay } from '../../../gameManager';
 import { UINodeType } from '../ScreenUtils';
 import type { BattleComponentWithCallbacks } from './types';
 import { trapCardDimensions, battleBoardAssetPositions } from './types';

@@ -128,9 +128,30 @@
         .modal-btn:hover {
             transform: scale(1.05);
         }
+
+        /* Debug button */
+        #debug-btn {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            padding: 8px 16px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            z-index: 2000;
+            font-size: 12px;
+        }
+
+        #debug-btn:hover {
+            background: rgba(255, 0, 0, 1);
+        }
     </style>
 </head>
 <body>
+    <button id="debug-btn" onclick="localStorage.removeItem('bloombeasts_playerData'); location.reload();">Clear Save Data</button>
+
     <div id="game-container">
         <canvas id="game-canvas" width="1280" height="720"></canvas>
 

@@ -5,22 +5,18 @@
 import type { BattleComponentWithCallbacks } from './types';
 import { standardCardDimensions, battleBoardAssetPositions } from './types';
 import { UINodeType } from '../ScreenUtils';
-import { BattleDisplay } from 'bloombeasts/gameManager';
+import { BattleDisplay } from '../../../gameManager';
 
 export class BeastField {
   private ui: BattleComponentWithCallbacks['ui'];
   private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
   private onAction?: (action: string) => void;
-  private targetingCardIndex: number | null;
-  private targetingCard: any | null;
   private showPlayedCard?: (card: any, callback?: () => void) => void;
 
   constructor(props: BattleComponentWithCallbacks) {
     this.ui = props.ui;
     this.battleDisplay = props.battleDisplay;
     this.onAction = props.onAction;
-    this.targetingCardIndex = props.targetingCardIndex;
-    this.targetingCard = props.targetingCard;
     this.showPlayedCard = props.showPlayedCard;
   }
 
@@ -224,22 +220,8 @@ export class BeastField {
           // Beast card - static structure with reactive properties
           this.ui.Pressable({
             onClick: () => {
-              // Check if we're in targeting mode
-              if (this.targetingCardIndex !== null && player === 'opponent') {
-                const cardIndex = this.targetingCardIndex;
-                const card = this.targetingCard;
-
-                if (card && (card.type === 'Magic' || card.type === 'Buff')) {
-                  this.showPlayedCard?.(card, () => {
-                    this.onAction?.(`play-card-${cardIndex}-target-${index}`);
-                  });
-                } else {
-                  this.onAction?.(`play-card-${cardIndex}-target-${index}`);
-                }
-              } else {
-                // Normal behavior (view card or select for attack)
-                this.onAction?.(`view-field-card-${player}-${index}`);
-              }
+              // View card details only (selection removed)
+              this.onAction?.(`view-field-card-${player}-${index}`);
             },
             style: {
               width: standardCardDimensions.width,
@@ -247,42 +229,6 @@ export class BeastField {
               position: 'relative',
             },
             children: this.createBeastCardStructure(player, index),
-          }),
-
-          // Targeting highlight (green for valid targets)
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              top: -5,
-              left: -5,
-              right: -5,
-              bottom: -5,
-              borderWidth: 3,
-              borderColor: '#00ff00',
-              borderRadius: 8,
-              display: player === 'opponent' && this.targetingCardIndex !== null ? 'flex' : 'none',
-            },
-          }),
-
-          // Selection highlight - derive directly from battleDisplay
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              top: -5,
-              left: -5,
-              right: -5,
-              bottom: -5,
-              borderWidth: 5,
-              borderColor: '#FFD700',
-              borderRadius: 12,
-              display: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay | null) => {
-                  const isSelected = player === 'player' && state?.selectedBeastIndex === index;
-                  return isSelected ? 'flex' : 'none';
-                }
-              ),
-            },
           }),
 
           // Attack animation overlay - derive directly from battleDisplay

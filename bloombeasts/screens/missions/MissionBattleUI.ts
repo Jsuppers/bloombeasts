@@ -193,6 +193,9 @@ export class MissionBattleUI {
       // Extract beast index (e.g., 'use-ability-0' -> 0)
       const beastIndex = parseInt(action.substring('use-ability-'.length), 10);
       result = this.useAbility(beastIndex);
+    } else if (action === 'auto-attack-all') {
+      // New auto-attack action: each beast attacks the opposite lane
+      result = await this.autoAttackAll(data?.onAttackAnimation);
     } else if (action.startsWith('attack-beast-')) {
       // Extract attacker and target indices (e.g., 'attack-beast-0-1' -> attacker=0, target=1)
       const parts = action.substring('attack-beast-'.length).split('-');
@@ -271,6 +274,73 @@ export class MissionBattleUI {
         this.opponentActionCallback('trap-activated');
       }
     });
+  }
+
+  /**
+   * Auto-attack all: Each beast attacks the opposite lane
+   * If no opposing beast, attack the opponent's health directly
+   */
+  private async autoAttackAll(onAttackAnimation?: (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => Promise<void>): Promise<any> {
+    if (!this.currentBattle || !this.currentBattle.gameState) {
+      return { success: false, message: 'No active battle' };
+    }
+
+    const player = this.currentBattle.gameState.players[0];
+    const opponent = this.currentBattle.gameState.players[1];
+
+    let anyAttackSucceeded = false;
+    const results: any[] = [];
+
+    // Loop through all 3 field positions
+    for (let i = 0; i < 3; i++) {
+      const attackerBeast = player.field[i];
+
+      // Skip if no beast at this position
+      if (!attackerBeast) {
+        continue;
+      }
+
+      // Skip if beast has summoning sickness
+      if (attackerBeast.summoningSickness) {
+        Logger.debug(`Beast at position ${i} has summoning sickness, skipping`);
+        continue;
+      }
+
+      const opposingBeast = opponent.field[i];
+
+      if (opposingBeast) {
+        // Attack the opposing beast
+        if (onAttackAnimation) {
+          await onAttackAnimation(i, 'beast', i);
+        }
+        const result = this.attackBeast(i, i);
+        results.push(result);
+        if (result.success) {
+          anyAttackSucceeded = true;
+        }
+      } else {
+        // No opposing beast, attack player directly
+        if (onAttackAnimation) {
+          await onAttackAnimation(i, 'health');
+        }
+        const result = this.attackPlayer(i);
+        results.push(result);
+        if (result.success) {
+          anyAttackSucceeded = true;
+        }
+      }
+
+      // Check for battle end after each attack
+      if (this.checkBattleEnd()) {
+        break;
+      }
+    }
+
+    return {
+      success: anyAttackSucceeded,
+      results: results,
+      message: anyAttackSucceeded ? 'Auto-attack completed' : 'No attacks could be performed'
+    };
   }
 
   /**

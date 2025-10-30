@@ -88,8 +88,8 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     sfxLose: { type: hz.PropTypes.Entity },
   };
 
-  panelWidth = 1280;
-  panelHeight = 720;
+  protected readonly panelWidth = 1280;
+  protected readonly panelHeight = 720;
 
   // Properties inherited from UIComponent (declared for TypeScript)
   public props: any;
@@ -245,7 +245,6 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
          * NOTE: This should ONLY be called from bindings that check assetsLoadedBinding first!
          */
         const assetIdToImageSource = (assetId: string): any => {
-
           // Check cache first
           if (imageSourceCache.has(assetId)) {
             return imageSourceCache.get(assetId);
@@ -488,7 +487,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     // Return both the game UI tree AND the preload block
     // The preload block is hidden but forces Horizon to load all assets
     return View({
-      style: { width: this.panelWidth, height: this.panelHeight },
+      style: { width: '100%', height: '100%' },
       children: [
         this.game.uiTree,  // Main game UI
         preloadBlock        // Hidden preload block (critical for asset loading!)

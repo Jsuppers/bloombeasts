@@ -2,7 +2,7 @@
  * Buff zone rendering - 2 slots per player
  */
 
-import { BattleDisplay } from 'bloombeasts/gameManager';
+import { BattleDisplay } from '../../../gameManager';
 import type { BattleComponentWithCallbacks } from './types';
 import { buffCardDimensions, battleBoardAssetPositions } from './types';
 import { UINodeType } from '../ScreenUtils';

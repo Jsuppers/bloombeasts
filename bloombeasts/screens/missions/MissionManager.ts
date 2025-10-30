@@ -379,15 +379,21 @@ export class MissionManager {
       const completionCount = this.completedMissions.get(mission.id) || 0;
       mission.timesCompleted = completionCount;
 
-      // Unlock mission if it has been completed before
+      console.log(`[MissionManager] Restoring ${mission.id}: unlocked=${mission.unlocked}, completionCount=${completionCount}`);
+
+      // If mission has been completed before, unlock it and the next mission
       if (completionCount > 0) {
         mission.unlocked = true;
 
-        // Also unlock the next mission
+        // Also unlock the next mission when this one is completed
         if (index + 1 < missions.length) {
           missions[index + 1].unlocked = true;
         }
       }
+      // Otherwise, keep the mission's original unlocked state from the definition
+      // (e.g., mission-01 has unlocked: true in its definition)
+
+      console.log(`[MissionManager] After restore ${mission.id}: unlocked=${mission.unlocked}`);
     });
   }
 

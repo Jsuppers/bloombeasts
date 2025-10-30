@@ -18,7 +18,6 @@ export class BattleDisplayManager {
    */
   createBattleDisplay(
     battleState: any,
-    selectedBeastIndex: number | null,
     attackAnimation?: {
       attackerPlayer: 'player' | 'opponent';
       attackerIndex: number;
@@ -58,7 +57,6 @@ export class BattleDisplayManager {
       turnTimeRemaining: TURN_TIME_LIMIT,
       objectives: this.getObjectiveDisplay(battleState),
       habitatZone: battleState.gameState.habitatZone,
-      selectedBeastIndex: selectedBeastIndex,
       attackAnimation: attackAnimation,
     };
 
