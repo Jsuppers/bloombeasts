@@ -40,7 +40,6 @@ export class HabitatZone {
         // Clickable wrapper for entire habitat card
         this.ui.Pressable({
           onClick: () => {
-            console.log('[HabitatZone] Habitat card clicked, showing detail');
             // Get current habitat at click time
             const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay);
             if (state && typeof state === 'object' && 'habitatZone' in state) {

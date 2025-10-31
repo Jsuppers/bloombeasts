@@ -28,8 +28,6 @@ export class BattleSideMenu {
     this.onAction = props.onAction;
     this.onStopTurnTimer = props.onStopTurnTimer;
     this.playSfx = props.playSfx;
-
-    console.log('[BattleSideMenu] Constructor - onAction:', this.onAction ? 'DEFINED' : 'UNDEFINED');
   }
 
   /**
@@ -59,7 +57,6 @@ export class BattleSideMenu {
           ui: this.ui,
           label: 'Forfeit',
           onClick: () => {
-            console.log('[BattleSideMenu] Forfeit button clicked');
             this.onAction?.('btn-forfeit');
           },
           color: 'default',
@@ -106,20 +103,14 @@ export class BattleSideMenu {
           ui: this.ui,
           label: 'Attack',
           onClick: () => {
-            console.log('[BattleSideMenu] Attack button onClick fired!');
             const currentIsPlayerTurn = this.getIsPlayerTurn();
             const hasAttackable = this.getHasAttackableBeasts();
-            console.log('[BattleSideMenu] Attack button clicked, isPlayerTurn:', currentIsPlayerTurn, 'hasAttackable:', hasAttackable);
 
             if (currentIsPlayerTurn && hasAttackable) {
-              console.log('[BattleSideMenu] Calling onAction with auto-attack-all');
               this.onAction?.('auto-attack-all');
               // Auto end turn after attacking
-              console.log('[BattleSideMenu] Auto ending turn after attack');
               this.onStopTurnTimer?.();
               this.onAction?.('end-turn');
-            } else {
-              console.log('[BattleSideMenu] Attack button cannot be used - turn:', currentIsPlayerTurn, 'attackable:', hasAttackable);
             }
           },
           // Use complete bindings (avoids .derive() on derived bindings)
@@ -201,16 +192,10 @@ export class BattleSideMenu {
             state?.turnPlayer === 'player' ? 'End Turn' : 'Enemy Turn'
           ),
           onClick: () => {
-            console.log('[BattleSideMenu] End Turn button onClick fired!');
             const currentIsPlayerTurn = this.getIsPlayerTurn();
-            console.log('[BattleSideMenu] End Turn button clicked, isPlayerTurn:', currentIsPlayerTurn);
-            console.log('[BattleSideMenu] onAction defined?', this.onAction ? 'YES' : 'NO');
             if (currentIsPlayerTurn) {
               this.onStopTurnTimer?.();
-              console.log('[BattleSideMenu] Calling onAction with end-turn');
               this.onAction?.('end-turn');
-            } else {
-              console.log('[BattleSideMenu] End Turn clicked but not player turn');
             }
           },
           // Use complete bindings (avoids .derive() on derived bindings)

@@ -67,7 +67,6 @@ export class CardsScreen {
         slotIndex,
         cardsPerPage,
         onClick: (cardId: string) => {
-          console.log('[CardsScreen] Card clicked:', cardId);
           this.handleCardClick(cardId);
         },
         showDeckIndicator: true,
@@ -94,7 +93,6 @@ export class CardsScreen {
         ...(this.ui.UINode ? [this.ui.UINode.if(
           this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
             const cards = pd?.cards?.collected || [];
-            console.log('[CardsScreen] Empty state check - cards.length:', cards.length);
             return cards.length === 0 ? true : false;
           }),
           this.ui.View({
@@ -148,7 +146,6 @@ export class CardsScreen {
           // Check bounds before scrolling
           const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
           const currentOffset = currentState.cards?.scrollOffset ?? 0;
-          console.log('[CardsScreen] Up button clicked, currentOffset:', currentOffset);
           if (currentOffset > 0) {
             // Update UIState binding
             this.ui.bindingManager.setBinding(BindingType.UIState, {
@@ -158,7 +155,6 @@ export class CardsScreen {
                 scrollOffset: currentOffset - 1
               }
             });
-            console.log('[CardsScreen] Scrolled up to offset:', currentOffset - 1);
             // Trigger re-render for web
             if (this.onRenderNeeded) {
               this.onRenderNeeded();
@@ -184,7 +180,6 @@ export class CardsScreen {
           const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
           const totalPages = Math.ceil(cards.length / cardsPerPage);
           const currentOffset = currentState.cards?.scrollOffset ?? 0;
-          console.log('[CardsScreen] Down button clicked, currentOffset:', currentOffset, 'totalPages:', totalPages);
           if (currentOffset < totalPages - 1) {
             this.ui.bindingManager.setBinding(BindingType.UIState, {
               ...currentState,
@@ -193,7 +188,6 @@ export class CardsScreen {
                 scrollOffset: currentOffset + 1
               }
             });
-            console.log('[CardsScreen] Scrolled down to offset:', currentOffset + 1);
             // Trigger re-render for web
             if (this.onRenderNeeded) {
               this.onRenderNeeded();
@@ -293,7 +287,6 @@ export class CardsScreen {
    * Handle card click - show popup with Add/Remove options
    */
   private handleCardClick(cardId: string): void {
-    console.log('[CardsScreen] handleCardClick called with cardId:', cardId);
     const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
     this.ui.bindingManager.setBinding(BindingType.UIState, {
       ...currentState,

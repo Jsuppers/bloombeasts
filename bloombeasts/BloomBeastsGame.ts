@@ -513,26 +513,18 @@ export class BloomBeastsGame {
    * Call this after construction to load data and show initial screen
    */
   async initialize(): Promise<void> {
-    console.log('[BloomBeastsGame] Initializing...');
-
     // Load saved game data (initializes starting cards if needed)
     await this.loadGameData();
 
     // Update bindings from loaded data
-    console.log('[BloomBeastsGame] About to call updateBindingsFromGameState...');
     await this.updateBindingsFromGameState();
-    console.log('[BloomBeastsGame] updateBindingsFromGameState completed');
 
     // Trigger initial render
-    console.log('[BloomBeastsGame] About to trigger render...');
     this.triggerRender();
 
     // Start menu music
-    console.log('[BloomBeastsGame] Starting menu music...');
     this.playMusic('music-background', true);
-    console.log('[BloomBeastsGame] Navigating to menu...');
     this.navigate('menu');
-    console.log('[BloomBeastsGame] Initialize complete!');
   }
 
   /**
@@ -653,7 +645,6 @@ export class BloomBeastsGame {
    * Toggle music on/off
    */
   private toggleMusic(enabled: boolean): void {
-    console.log('[BloomBeastsGame] toggleMusic called:', { enabled, currentMusic: this.currentMusic });
     if (!this.playerData?.settings) return;
     this.playerData.settings.musicEnabled = enabled;
 
@@ -664,15 +655,11 @@ export class BloomBeastsGame {
       // Resume music - force replay even if it's the same track
       const musicToResume = this.currentMusic;
       const volume = this.playerData.settings.musicVolume / 100;
-      console.log('[BloomBeastsGame] Resuming music:', { musicToResume, volume, platformHasPlaySound: !!this.platform.playSound });
       this.platform.playSound?.(musicToResume, true, volume);
     } else if (!enabled) {
       // Stop music playback but keep track of current music for resume
       // Don't call stopMusic() as it clears this.currentMusic
-      console.log('[BloomBeastsGame] Stopping music, keeping currentMusic:', this.currentMusic);
       this.platform.stopSound?.();
-    } else {
-      console.log('[BloomBeastsGame] Music enabled but no currentMusic set');
     }
   }
 
@@ -771,9 +758,6 @@ export class BloomBeastsGame {
       beastId: m.mission.beastId,
     }));
 
-    // Debug: Log first 3 missions
-    console.log('[BloomBeastsGame] First 3 display missions:', displayMissions.slice(0, 3).map(m => ({id: m.id, isAvailable: m.isAvailable})));
-
     this.UI.bindingManager.setBinding(BindingType.Missions, displayMissions);
   }
 
@@ -835,7 +819,6 @@ export class BloomBeastsGame {
         this.navigate('settings');
         break;
       case 'shop':
-        // console.log('Shop coming soon!');
         break;
       case 'btn-back':
         this.navigate('menu');
@@ -845,7 +828,6 @@ export class BloomBeastsGame {
         this.showForfeitConfirmation();
         break;
       default:
-        // console.log('Unhandled button:', buttonId);
     }
   }
 
@@ -880,8 +862,6 @@ export class BloomBeastsGame {
    * Show card detail popup for a duration, then close and execute callback
    */
   private showCardDetailPopup(card: any, durationMs: number, callback?: () => void): void {
-    console.log('[BloomBeastsGame] Showing card detail popup:', card.name, 'for', durationMs, 'ms');
-
     // Set the card detail popup
     this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, {
       cardDetail: {
@@ -931,7 +911,6 @@ export class BloomBeastsGame {
    * Handle card selection
    */
   private async handleCardSelect(cardId: string): Promise<void> {
-    // console.log('[BloomBeastsGame] Card selected:', cardId);
     if (!this.playerData) return;
 
     // Play menu button sound
@@ -1016,13 +995,10 @@ export class BloomBeastsGame {
     const success = this.missionUI.startMission(missionId);
 
     if (success) {
-      // console.log('[BloomBeastsGame] Mission started successfully');
       // Initialize battle with player's deck cards and name
       const battleState = this.battleUI.initializeBattle(playerDeckCards, this.playerData.name);
-      // console.log('[BloomBeastsGame] battleState:', battleState);
 
       if (battleState) {
-        // console.log('[BloomBeastsGame] Battle state is valid, initializing...');
         this.currentBattleId = missionId;
         this.battleStartTime = Date.now();  // Track start time for leaderboard
 
@@ -1031,22 +1007,18 @@ export class BloomBeastsGame {
           battleState,
           null  // No attack animation
         );
-        // console.log('[BloomBeastsGame] battleDisplay:', battleDisplay);
 
         // Update battle display binding
         if (battleDisplay) {
-          // console.log('[BloomBeastsGame] Setting battle display binding...');
           this.UI.bindingManager.setBinding(BindingType.BattleDisplay, battleDisplay);
         } else {
           console.error('[BloomBeastsGame] battleDisplay is null!');
         }
 
         // Navigate to battle screen
-        // console.log('[BloomBeastsGame] Navigating to battle screen');
         this.UI.bindingManager.setBinding(BindingType.CurrentScreen, 'battle');
 
         // Trigger re-render to show battle screen
-        // console.log('[BloomBeastsGame] Triggering re-render');
         this.triggerRender();
 
         // Play battle music
@@ -1065,9 +1037,7 @@ export class BloomBeastsGame {
    * Handle settings changes
    */
   private handleSettingsChange(settingId: string, value: any): void {
-    console.log('[BloomBeastsGame] Settings changed:', settingId, value);
     if (!this.playerData) return;
-    console.log('[BloomBeastsGame] Current soundSettings before change:', this.playerData.settings);
 
     // Play button sound for toggles (not sliders)
     if (settingId === 'musicEnabled' || settingId === 'sfxEnabled') {
@@ -1077,24 +1047,18 @@ export class BloomBeastsGame {
     // Apply settings via sound manager
     switch (settingId) {
       case 'musicVolume':
-        console.log('[BloomBeastsGame] Matched case: musicVolume');
         this.setMusicVolume(value);
         break;
       case 'sfxVolume':
-        console.log('[BloomBeastsGame] Matched case: sfxVolume');
         this.setSfxVolume(value);
         break;
       case 'musicEnabled':
-        console.log('[BloomBeastsGame] Matched case: musicEnabled');
         this.toggleMusic(value);
         break;
       case 'sfxEnabled':
-        console.log('[BloomBeastsGame] Matched case: sfxEnabled');
         this.toggleSfx(value);
         break;
     }
-
-    console.log('[BloomBeastsGame] Current soundSettings after change:', this.playerData.settings);
 
     // Save settings and update binding
     this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
@@ -1115,14 +1079,12 @@ export class BloomBeastsGame {
 
     // Check if already at max level
     if (currentLevel >= 6) {
-      console.log('[BloomBeastsGame] Boost already at max level:', boostId);
       return;
     }
 
     // Get cost for next level based on current level
     const costs = UPGRADE_COSTS[boostId];
     if (!costs) {
-      console.log('[BloomBeastsGame] Unknown boost ID:', boostId);
       return;
     }
 
@@ -1130,7 +1092,6 @@ export class BloomBeastsGame {
 
     // Check if player has enough coins
     if (this.playerData.coins < cost) {
-      console.log('[BloomBeastsGame] Not enough coins:', this.playerData.coins, 'need:', cost);
       return;
     }
 
@@ -1149,8 +1110,6 @@ export class BloomBeastsGame {
 
     // Increment boost level
     this.playerData.boosts[boostId] = currentLevel + 1;
-
-    console.log('[BloomBeastsGame] Upgraded boost:', boostId, 'to level', this.playerData.boosts[boostId], 'for', cost, 'coins');
 
     // Play upgrade sound (special sound for rooster)
     if (boostId === ROOSTER.id) {
@@ -1263,7 +1222,6 @@ export class BloomBeastsGame {
 
       // Update battle display binding - this should trigger UI refresh
       if (updatedDisplay) {
-        // console.log('[BloomBeastsGame] Updating battle display with health:', {
         //   playerHealth: updatedDisplay.playerHealth,
         //   opponentHealth: updatedDisplay.opponentHealth
         // });
@@ -1277,7 +1235,6 @@ export class BloomBeastsGame {
    * Handle battle completion (victory or defeat)
    */
   private async handleBattleComplete(battleState: any): Promise<void> {
-    // console.log('[BloomBeastsGame] Handling battle completion...');
     if (!this.playerData) return;
 
     // Capture playerData in local const for TypeScript null safety in callbacks
@@ -1293,14 +1250,12 @@ export class BloomBeastsGame {
     const battleId = this.currentBattleId; // Save before clearing
     this.currentBattleId = null;
 
-    // console.log('[BloomBeastsGame] Battle complete, checking rewards:', {
     //   hasRewards: !!battleState.rewards,
     //   rewards: battleState.rewards
     // });
 
     if (battleState.rewards) {
       // Victory!
-      // console.log('[BloomBeastsGame] Mission victory!', battleState.rewards);
 
       // Apply boost multipliers to rewards
       const coinBoostLevel = playerData.boosts?.[COIN_BOOST.id] || 0;
@@ -1399,13 +1354,11 @@ export class BloomBeastsGame {
       await this.saveGameData();
 
       // Show mission complete popup
-      // console.log('[BloomBeastsGame] Setting victory popup...');
       const popupData = {
         mission: battleState.mission,
         rewards: battleState.rewards,
         chestOpened: false,
         onClaimRewards: () => {
-          // console.log('[BloomBeastsGame] Claim rewards clicked');
           // Chest animation could go here
           const current = this.UI.bindingManager.getSnapshot(BindingType.MissionCompletePopup);
           if (current) {
@@ -1414,12 +1367,10 @@ export class BloomBeastsGame {
               chestOpened: true
             };
             this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, updatedData);
-            // console.log('[BloomBeastsGame] Chest opened, triggering render');
             this.triggerRender();
           }
         },
         onContinue: () => {
-          // console.log('[BloomBeastsGame] Victory continue clicked');
           // Clear battle display and close popup
           this.UI.bindingManager.setBinding(BindingType.BattleDisplay, null);
           this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, null);
@@ -1430,12 +1381,9 @@ export class BloomBeastsGame {
 
       // Set both tracked value and binding
       this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, popupData);
-      // console.log('[BloomBeastsGame] Victory popup set');
       this.triggerRender();
-      // console.log('[BloomBeastsGame] Render triggered after victory popup');
     } else {
       // Defeat
-      // console.log('[BloomBeastsGame] Mission failed!');
 
       // Reset battle start time
       this.battleStartTime = null;
@@ -1456,11 +1404,8 @@ export class BloomBeastsGame {
         },
         playSfx: this.playSfx.bind(this)
       };
-      // console.log('[BloomBeastsGame] Setting mission failed popup:', failedPopupProps);
       this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, failedPopupProps);
-      // console.log('[BloomBeastsGame] After set, mission failed popup set');
       this.triggerRender();
-      // console.log('[BloomBeastsGame] Render triggered after mission failed');
     }
 
     // Resume background music
@@ -1518,7 +1463,6 @@ export class BloomBeastsGame {
   private submitLeaderboardScore(type: 'experience' | 'cluckNorris', score: number): void {
     if (!this.platform.sendNetworkEvent) {
       // Network events not supported on this platform
-      console.log('[BloomBeastsGame] Network events not supported, skipping leaderboard submission');
       return;
     }
 
@@ -1537,7 +1481,6 @@ export class BloomBeastsGame {
       };
 
       this.platform.sendNetworkEvent('leaderboard_score_submit', eventData);
-      console.log('[BloomBeastsGame] Submitted leaderboard score:', eventData);
     } catch (error) {
       console.error('[BloomBeastsGame] Failed to submit leaderboard score:', error);
     }

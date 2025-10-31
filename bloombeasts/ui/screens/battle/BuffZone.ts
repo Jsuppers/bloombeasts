@@ -51,7 +51,6 @@ export class BuffZone {
           // Clickable wrapper for buff card
           this.ui.Pressable({
             onClick: () => {
-              console.log(`[BuffZone] Buff card clicked: ${player}-${index}, showing detail`);
               // Get current buff at click time
               const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay);
               if (state && typeof state === 'object' && 'playerBuffZone' in state) {

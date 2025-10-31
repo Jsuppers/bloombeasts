@@ -102,7 +102,6 @@ export class BattleScreen {
   constructor(props: BattleScreenProps) {
     this.ui = props.ui;
     this.async = props.async;
-    console.log('[BattleScreen] Constructor called, onAction:', props.onAction ? 'DEFINED' : 'UNDEFINED');
 
     // Initialize local value trackers
     this.showHandValue = true;
@@ -113,7 +112,6 @@ export class BattleScreen {
 
     // Wrap onAction to add logging
     this.onAction = props.onAction ? (action: string) => {
-      console.log('[BattleScreen] onAction called with:', action);
       props.onAction!(action);
     } : undefined;
 
@@ -250,7 +248,6 @@ export class BattleScreen {
    * Create the complete battle UI
    */
   createUI(): UINodeType {
-    // console.log('[BattleScreen] createUI called');
     this.isRendering = true;
     this.needsRerender = false;
 
@@ -465,7 +462,6 @@ export class BattleScreen {
       return;
     }
 
-    console.log('[BattleScreen] Starting timer for player turn');
     this.onRenderNeeded?.(); // Trigger re-render
 
     this.timerInterval = this.async.setInterval(() => {
@@ -473,7 +469,6 @@ export class BattleScreen {
       if (this.isPlayerTurnValue) {
         const current = this.playerTimerValue;
         if (current <= 0) {
-          console.log('[BattleScreen] Player timer reached 0, player loses');
           this.stopTurnTimer();
           // Trigger loss - forfeit the battle
           this.onAction?.('forfeit');
@@ -485,7 +480,6 @@ export class BattleScreen {
       } else {
         const current = this.opponentTimerValue;
         if (current <= 0) {
-          console.log('[BattleScreen] Opponent timer reached 0, opponent loses');
           this.stopTurnTimer();
           // Opponent loses - this should trigger victory
           // For now, just end their turn
@@ -515,7 +509,6 @@ export class BattleScreen {
   private updateEndTurnButtonText(): void {
     // endTurnButtonText is now a derived binding, so it updates automatically
     // This method is kept for compatibility but doesn't need to do anything
-    console.log('[BattleScreen] updateEndTurnButtonText called (no-op, using derived binding)');
   }
 
   /**
@@ -524,7 +517,6 @@ export class BattleScreen {
   private finishRender(): void {
     this.isRendering = false;
     if (this.needsRerender) {
-      console.log('[BattleScreen] Re-render needed after current render');
       this.needsRerender = false;
       // Use setTimeout to break out of the current call stack
       this.async.setTimeout(() => this.onRenderNeeded?.(), 0);
@@ -560,7 +552,6 @@ export class BattleScreen {
    * Show a played card popup for 2 seconds, then execute callback
    */
   private showPlayedCard(card: any, callback?: () => void): void {
-    console.log('[BattleScreen] Showing played card popup:', card.name);
 
     // Use the onShowCardDetail callback if available
     if (this.onShowCardDetail) {

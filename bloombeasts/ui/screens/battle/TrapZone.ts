@@ -53,7 +53,6 @@ export class TrapZone {
             onClick: () => {
               // Only allow player to view their own trap cards
               if (player === 'player') {
-                console.log('[TrapZone] Player trap clicked, showing detail');
                 // Get current trap at click time
                 const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay) as BattleDisplay | null;
                 if (state) {

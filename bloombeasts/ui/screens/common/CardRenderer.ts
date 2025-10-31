@@ -91,11 +91,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
 
   // Debug logging for cards without descriptions
   if ((!abilityText || abilityText.trim() === '') && card.type !== 'Bloom') {
-    console.log(`[CardRenderer] ❌ No description for ${card.name} (${card.type}, id: ${card.id})`);
-    console.log(`  Abilities:`, card.abilities);
-    console.log(`  Generated abilityText: "${abilityText}"`);
   } else if (card.type !== 'Bloom') {
-    console.log(`[CardRenderer] ✅ ${card.name} (${card.type}): "${abilityText}"`);
   }
 
   const imageSourceKey = card.type === 'Bloom' ? beastImageKey : cardImageKey;
@@ -623,13 +619,11 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   if (onClick) {
     return ui.Pressable({
       onClick: () => {
-        console.log('[CardRenderer] Pressable clicked');
         // Get current state to determine which card was clicked
         const currentState = ui.bindingManager.getSnapshot(BindingType.UIState);
         const playerData = ui.bindingManager.getSnapshot(BindingType.PlayerData);
         const card = getCard(currentState, playerData);
         if (card?.id) {
-          console.log('[CardRenderer] Calling onClick with cardId:', card.id);
           onClick(card.id);
         }
       },

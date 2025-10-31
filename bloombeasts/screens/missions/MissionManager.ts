@@ -215,10 +215,12 @@ export class MissionManager {
       bonusRewards: [],
     };
 
-    // Roll for bonus XP
+    // Roll for bonus XP (applies to both player and beasts)
     if (rewardConfig.bonusXPChance && Math.random() < rewardConfig.bonusXPChance) {
-      result.xpGained += rewardConfig.bonusXPAmount || 0;
-      result.bonusRewards?.push(`Bonus XP: +${rewardConfig.bonusXPAmount}`);
+      const bonusAmount = rewardConfig.bonusXPAmount || 0;
+      result.xpGained += bonusAmount;
+      result.beastXP += bonusAmount;
+      result.bonusRewards?.push(`Bonus XP: +${bonusAmount}`);
     }
 
     // Generate card rewards
@@ -381,7 +383,6 @@ export class MissionManager {
       const completionCount = this.completedMissions.get(mission.id) || 0;
       mission.timesCompleted = completionCount;
 
-      console.log(`[MissionManager] Restoring ${mission.id}: unlocked=${mission.unlocked}, completionCount=${completionCount}`);
 
       // If mission has been completed before, unlock it and the next mission
       if (completionCount > 0) {
@@ -395,7 +396,6 @@ export class MissionManager {
       // Otherwise, keep the mission's original unlocked state from the definition
       // (e.g., mission-01 has unlocked: true in its definition)
 
-      console.log(`[MissionManager] After restore ${mission.id}: unlocked=${mission.unlocked}`);
     });
   }
 

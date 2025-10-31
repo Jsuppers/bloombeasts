@@ -38,7 +38,6 @@ export class SettingsScreen {
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
     this.playSfx = props.playSfx;
-    console.log('[SettingsScreen] constructor, onRenderNeeded:', this.onRenderNeeded ? 'defined' : 'undefined');
   }
 
   createUI(): UINodeType {
@@ -252,13 +251,10 @@ export class SettingsScreen {
         // Toggle button
         this.ui.Pressable({
           onClick: () => {
-            console.log(`[SettingsScreen] Toggle clicked - settingKey: ${settingKey}, settingId: ${settingId}`);
             if (this.onSettingChange) {
               const currentSettings = this.settingsValue;
-              console.log(`[SettingsScreen] Current settings:`, currentSettings);
               const currentValue = currentSettings[settingKey];
               const newValue = !currentValue;
-              console.log(`[SettingsScreen] Toggle value: ${currentValue} -> ${newValue}`);
 
               // Just call the callback - let the parent handle updating the binding
               // The binding update will trigger a re-render automatically

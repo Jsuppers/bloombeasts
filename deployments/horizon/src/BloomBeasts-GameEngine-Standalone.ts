@@ -10,7 +10,7 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-31T18:31:52.950Z
+ * Generated: 2025-10-31T18:50:54.252Z
  * Files: 104
  *
  * @version 1.0.0
@@ -2098,7 +2098,6 @@ namespace BloomBeasts {
     debug(message: string, ...data: any[]): void {
       if (this.config.level <= LogLevel.DEBUG) {
         const formatted = this.format('DEBUG', message);
-        console.log(formatted, ...data);
       }
     }
 
@@ -2110,7 +2109,6 @@ namespace BloomBeasts {
     info(message: string, ...data: any[]): void {
       if (this.config.level <= LogLevel.INFO) {
         const formatted = this.format('INFO', message);
-        console.log(formatted, ...data);
       }
     }
 
@@ -2157,7 +2155,6 @@ namespace BloomBeasts {
     group(label: string, collapsed: boolean = false): void {
       if (this.config.level <= LogLevel.INFO) {
         const formatted = this.format('GROUP', `>>> ${label}`);
-        console.log(formatted);
       }
     }
 
@@ -2167,7 +2164,6 @@ namespace BloomBeasts {
     groupEnd(): void {
       if (this.config.level <= LogLevel.INFO) {
         const formatted = this.format('GROUP', `<<<`);
-        console.log(formatted);
       }
     }
 
@@ -2178,7 +2174,6 @@ namespace BloomBeasts {
     table(data: any): void {
       if (this.config.level <= LogLevel.INFO) {
         const formatted = this.format('TABLE', JSON.stringify(data, null, 2));
-        console.log(formatted);
       }
     }
 
@@ -2190,7 +2185,6 @@ namespace BloomBeasts {
       if (this.config.level <= LogLevel.DEBUG) {
         this.timers.set(label, Date.now());
         const formatted = this.format('TIMER', `${label}: started`);
-        console.log(formatted);
       }
     }
 
@@ -2205,7 +2199,6 @@ namespace BloomBeasts {
           const duration = Date.now() - startTime;
           this.timers.delete(label);
           const formatted = this.format('TIMER', `${label}: ${duration}ms`);
-          console.log(formatted);
         }
       }
     }
@@ -4923,7 +4916,6 @@ namespace BloomBeasts {
         },
       }));
 
-      console.log(`[BindingManager] Initialized ${this.bindings.size} bindings`);
     }
 
     derive<T>(bindingTypes: BindingType[], deriveFn: (...values: any[]) => T): any {
@@ -5568,11 +5560,7 @@ namespace BloomBeasts {
 
     // Debug logging for cards without descriptions
     if ((!abilityText || abilityText.trim() === '') && card.type !== 'Bloom') {
-      console.log(`[CardRenderer] ❌ No description for ${card.name} (${card.type}, id: ${card.id})`);
-      console.log(`  Abilities:`, card.abilities);
-      console.log(`  Generated abilityText: "${abilityText}"`);
     } else if (card.type !== 'Bloom') {
-      console.log(`[CardRenderer] ✅ ${card.name} (${card.type}): "${abilityText}"`);
     }
 
     const imageSourceKey = card.type === 'Bloom' ? beastImageKey : cardImageKey;
@@ -6100,13 +6088,11 @@ namespace BloomBeasts {
     if (onClick) {
       return ui.Pressable({
         onClick: () => {
-          console.log('[CardRenderer] Pressable clicked');
           // Get current state to determine which card was clicked
           const currentState = ui.bindingManager.getSnapshot(BindingType.UIState);
           const playerData = ui.bindingManager.getSnapshot(BindingType.PlayerData);
           const card = getCard(currentState, playerData);
           if (card?.id) {
-            console.log('[CardRenderer] Calling onClick with cardId:', card.id);
             onClick(card.id);
           }
         },
@@ -6510,7 +6496,6 @@ namespace BloomBeasts {
           slotIndex,
           cardsPerPage,
           onClick: (cardId: string) => {
-            console.log('[CardsScreen] Card clicked:', cardId);
             this.handleCardClick(cardId);
           },
           showDeckIndicator: true,
@@ -6537,7 +6522,6 @@ namespace BloomBeasts {
           ...(this.ui.UINode ? [this.ui.UINode.if(
             this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
               const cards = pd?.cards?.collected || [];
-              console.log('[CardsScreen] Empty state check - cards.length:', cards.length);
               return cards.length === 0 ? true : false;
             }),
             this.ui.View({
@@ -6591,7 +6575,6 @@ namespace BloomBeasts {
             // Check bounds before scrolling
             const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
             const currentOffset = currentState.cards?.scrollOffset ?? 0;
-            console.log('[CardsScreen] Up button clicked, currentOffset:', currentOffset);
             if (currentOffset > 0) {
               // Update UIState binding
               this.ui.bindingManager.setBinding(BindingType.UIState, {
@@ -6601,7 +6584,6 @@ namespace BloomBeasts {
                   scrollOffset: currentOffset - 1
                 }
               });
-              console.log('[CardsScreen] Scrolled up to offset:', currentOffset - 1);
               // Trigger re-render for web
               if (this.onRenderNeeded) {
                 this.onRenderNeeded();
@@ -6627,7 +6609,6 @@ namespace BloomBeasts {
             const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
             const totalPages = Math.ceil(cards.length / cardsPerPage);
             const currentOffset = currentState.cards?.scrollOffset ?? 0;
-            console.log('[CardsScreen] Down button clicked, currentOffset:', currentOffset, 'totalPages:', totalPages);
             if (currentOffset < totalPages - 1) {
               this.ui.bindingManager.setBinding(BindingType.UIState, {
                 ...currentState,
@@ -6636,7 +6617,6 @@ namespace BloomBeasts {
                   scrollOffset: currentOffset + 1
                 }
               });
-              console.log('[CardsScreen] Scrolled down to offset:', currentOffset + 1);
               // Trigger re-render for web
               if (this.onRenderNeeded) {
                 this.onRenderNeeded();
@@ -6736,7 +6716,6 @@ namespace BloomBeasts {
      * Handle card click - show popup with Add/Remove options
      */
     private handleCardClick(cardId: string): void {
-      console.log('[CardsScreen] handleCardClick called with cardId:', cardId);
       const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
       this.ui.bindingManager.setBinding(BindingType.UIState, {
         ...currentState,
@@ -6926,9 +6905,7 @@ namespace BloomBeasts {
 
       return this.ui.Pressable({
         onClick: () => {
-          console.log('[UpgradeScreen] Upgrade item clicked:', upgrade.id);
           const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-          console.log('[UpgradeScreen] Current UIState:', currentState);
           // Update UIState binding
           this.ui.bindingManager.setBinding(BindingType.UIState, {
             ...currentState,
@@ -6937,7 +6914,6 @@ namespace BloomBeasts {
               selectedUpgradeId: upgrade.id
             }
           });
-          console.log('[UpgradeScreen] Updated UIState with selectedUpgradeId:', upgrade.id);
         },
         style: {
           width: containerSize,
@@ -7066,7 +7042,6 @@ namespace BloomBeasts {
           ...(this.ui.UINode ? [this.ui.UINode.if(
             this.ui.bindingManager.derive([BindingType.UIState], (state: any) => {
               const shouldShow = (state.upgrade?.selectedUpgradeId ?? null) !== null;
-              console.log('[UpgradeScreen] Popup condition evaluated:', shouldShow, 'selectedUpgradeId:', state.upgrade?.selectedUpgradeId);
               return shouldShow;
             }),
             this.createUpgradePopup()
@@ -7119,29 +7094,21 @@ namespace BloomBeasts {
             color: 'green',
             disabled: this.ui.bindingManager.derive([BindingType.PlayerData, BindingType.UIState], (pd: any, state: any) => {
               const upgradeId = state.upgrade?.selectedUpgradeId ?? null;
-              console.log('[UpgradeScreen] Disabled check - upgradeId:', upgradeId);
               if (!upgradeId) {
-                console.log('[UpgradeScreen] Disabled: no upgradeId');
                 return true;
               }
               const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
-              console.log('[UpgradeScreen] Found upgrade:', upgrade?.name);
               if (!upgrade) {
-                console.log('[UpgradeScreen] Disabled: upgrade not found');
                 return true;
               }
               const currentLevel = pd?.boosts?.[upgradeId] || 0;
-              console.log('[UpgradeScreen] Current level:', currentLevel);
               if (currentLevel >= 6) {
-                console.log('[UpgradeScreen] Disabled: max level reached');
                 return true;
               }
 
               const nextLevelCost = upgrade.costs[currentLevel];
               const coins = pd?.coins ?? 0;
-              console.log('[UpgradeScreen] Cost check - coins:', coins, 'nextLevelCost:', nextLevelCost);
               const isDisabled = coins < nextLevelCost;
-              console.log('[UpgradeScreen] Button disabled:', isDisabled);
               return isDisabled;
             }),
           },
@@ -7288,7 +7255,6 @@ namespace BloomBeasts {
 
       // Debug log for first 3 slots
       if (slotIndex < 3 && mission) {
-        console.log(`[MissionRenderer] Slot ${slotIndex} (${mission.id}): isAvailable=${mission.isAvailable}, lockOpacity=${lockOpacity}`);
       }
 
       return lockOpacity;
@@ -8344,7 +8310,6 @@ namespace BloomBeasts {
               onClick: () => {
                 // Only allow player to view their own trap cards
                 if (player === 'player') {
-                  console.log('[TrapZone] Player trap clicked, showing detail');
                   // Get current trap at click time
                   const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay) as BattleDisplay | null;
                   if (state) {
@@ -8430,7 +8395,6 @@ namespace BloomBeasts {
             // Clickable wrapper for buff card
             this.ui.Pressable({
               onClick: () => {
-                console.log(`[BuffZone] Buff card clicked: ${player}-${index}, showing detail`);
                 // Get current buff at click time
                 const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay);
                 if (state && typeof state === 'object' && 'playerBuffZone' in state) {
@@ -8544,7 +8508,6 @@ namespace BloomBeasts {
           // Clickable wrapper for entire habitat card
           this.ui.Pressable({
             onClick: () => {
-              console.log('[HabitatZone] Habitat card clicked, showing detail');
               // Get current habitat at click time
               const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay);
               if (state && typeof state === 'object' && 'habitatZone' in state) {
@@ -8919,35 +8882,25 @@ namespace BloomBeasts {
               },
               children: this.ui.Pressable({
                 onClick: () => {
-                  console.log('[PlayerHand] onClick fired! slotIndex:', slotIndex);
                   const scrollOffset = this.ui.bindingManager.getSnapshot(BindingType.UIState).battle?.handScrollOffset ?? 0;
                   const actualIndex = scrollOffset * cardsPerPage + slotIndex;
                   // Get current card state from cached value
                   const display = this.getBattleDisplayValue();
-                  console.log('[PlayerHand] display:', display ? 'EXISTS' : 'NULL', 'actualIndex:', actualIndex);
                   if (display && display.playerHand) {
-                    console.log('[PlayerHand] playerHand length:', display.playerHand.length);
                     const card = display.playerHand[actualIndex];
-                    console.log('[PlayerHand] card at', actualIndex, ':', card);
                     if (card) {
-                      console.log(`[PlayerHand] Card clicked: ${actualIndex}, card: ${card.name}, onAction:`, this.onAction ? 'DEFINED' : 'UNDEFINED');
 
                       // Show card popup for magic/buff cards, then play
                       if (card.type === 'Magic' || card.type === 'Buff') {
-                        console.log('[PlayerHand] Showing card popup for', card.type);
                         this.showPlayedCard?.(card, () => {
-                          console.log('[PlayerHand] Popup closed, calling onAction');
                           this.onAction?.(`play-card-${actualIndex}`);
                         });
                       } else {
-                        console.log('[PlayerHand] Calling onAction directly');
                         this.onAction?.(`play-card-${actualIndex}`);
                       }
                     } else {
-                      console.log('[PlayerHand] No card at index', actualIndex);
                     }
                   } else {
-                    console.log('[PlayerHand] No display or playerHand');
                   }
                 },
                 style: {
@@ -9374,8 +9327,6 @@ namespace BloomBeasts {
       this.onAction = props.onAction;
       this.onStopTurnTimer = props.onStopTurnTimer;
       this.playSfx = props.playSfx;
-
-      console.log('[BattleSideMenu] Constructor - onAction:', this.onAction ? 'DEFINED' : 'UNDEFINED');
     }
 
     /**
@@ -9405,7 +9356,6 @@ namespace BloomBeasts {
             ui: this.ui,
             label: 'Forfeit',
             onClick: () => {
-              console.log('[BattleSideMenu] Forfeit button clicked');
               this.onAction?.('btn-forfeit');
             },
             color: 'default',
@@ -9452,20 +9402,14 @@ namespace BloomBeasts {
             ui: this.ui,
             label: 'Attack',
             onClick: () => {
-              console.log('[BattleSideMenu] Attack button onClick fired!');
               const currentIsPlayerTurn = this.getIsPlayerTurn();
               const hasAttackable = this.getHasAttackableBeasts();
-              console.log('[BattleSideMenu] Attack button clicked, isPlayerTurn:', currentIsPlayerTurn, 'hasAttackable:', hasAttackable);
 
               if (currentIsPlayerTurn && hasAttackable) {
-                console.log('[BattleSideMenu] Calling onAction with auto-attack-all');
                 this.onAction?.('auto-attack-all');
                 // Auto end turn after attacking
-                console.log('[BattleSideMenu] Auto ending turn after attack');
                 this.onStopTurnTimer?.();
                 this.onAction?.('end-turn');
-              } else {
-                console.log('[BattleSideMenu] Attack button cannot be used - turn:', currentIsPlayerTurn, 'attackable:', hasAttackable);
               }
             },
             // Use complete bindings (avoids .derive() on derived bindings)
@@ -9547,16 +9491,10 @@ namespace BloomBeasts {
               state?.turnPlayer === 'player' ? 'End Turn' : 'Enemy Turn'
             ),
             onClick: () => {
-              console.log('[BattleSideMenu] End Turn button onClick fired!');
               const currentIsPlayerTurn = this.getIsPlayerTurn();
-              console.log('[BattleSideMenu] End Turn button clicked, isPlayerTurn:', currentIsPlayerTurn);
-              console.log('[BattleSideMenu] onAction defined?', this.onAction ? 'YES' : 'NO');
               if (currentIsPlayerTurn) {
                 this.onStopTurnTimer?.();
-                console.log('[BattleSideMenu] Calling onAction with end-turn');
                 this.onAction?.('end-turn');
-              } else {
-                console.log('[BattleSideMenu] End Turn clicked but not player turn');
               }
             },
             // Use complete bindings (avoids .derive() on derived bindings)
@@ -9685,7 +9623,6 @@ namespace BloomBeasts {
     constructor(props: BattleScreenProps) {
       this.ui = props.ui;
       this.async = props.async;
-      console.log('[BattleScreen] Constructor called, onAction:', props.onAction ? 'DEFINED' : 'UNDEFINED');
 
       // Initialize local value trackers
       this.showHandValue = true;
@@ -9696,7 +9633,6 @@ namespace BloomBeasts {
 
       // Wrap onAction to add logging
       this.onAction = props.onAction ? (action: string) => {
-        console.log('[BattleScreen] onAction called with:', action);
         props.onAction!(action);
       } : undefined;
 
@@ -9833,7 +9769,6 @@ namespace BloomBeasts {
      * Create the complete battle UI
      */
     createUI(): UINodeType {
-      // console.log('[BattleScreen] createUI called');
       this.isRendering = true;
       this.needsRerender = false;
 
@@ -10048,7 +9983,6 @@ namespace BloomBeasts {
         return;
       }
 
-      console.log('[BattleScreen] Starting timer for player turn');
       this.onRenderNeeded?.(); // Trigger re-render
 
       this.timerInterval = this.async.setInterval(() => {
@@ -10056,7 +9990,6 @@ namespace BloomBeasts {
         if (this.isPlayerTurnValue) {
           const current = this.playerTimerValue;
           if (current <= 0) {
-            console.log('[BattleScreen] Player timer reached 0, player loses');
             this.stopTurnTimer();
             // Trigger loss - forfeit the battle
             this.onAction?.('forfeit');
@@ -10068,7 +10001,6 @@ namespace BloomBeasts {
         } else {
           const current = this.opponentTimerValue;
           if (current <= 0) {
-            console.log('[BattleScreen] Opponent timer reached 0, opponent loses');
             this.stopTurnTimer();
             // Opponent loses - this should trigger victory
             // For now, just end their turn
@@ -10098,7 +10030,6 @@ namespace BloomBeasts {
     private updateEndTurnButtonText(): void {
       // endTurnButtonText is now a derived binding, so it updates automatically
       // This method is kept for compatibility but doesn't need to do anything
-      console.log('[BattleScreen] updateEndTurnButtonText called (no-op, using derived binding)');
     }
 
     /**
@@ -10107,7 +10038,6 @@ namespace BloomBeasts {
     private finishRender(): void {
       this.isRendering = false;
       if (this.needsRerender) {
-        console.log('[BattleScreen] Re-render needed after current render');
         this.needsRerender = false;
         // Use setTimeout to break out of the current call stack
         this.async.setTimeout(() => this.onRenderNeeded?.(), 0);
@@ -10143,7 +10073,6 @@ namespace BloomBeasts {
      * Show a played card popup for 2 seconds, then execute callback
      */
     private showPlayedCard(card: any, callback?: () => void): void {
-      console.log('[BattleScreen] Showing played card popup:', card.name);
 
       // Use the onShowCardDetail callback if available
       if (this.onShowCardDetail) {
@@ -10220,7 +10149,6 @@ namespace BloomBeasts {
       this.onNavigate = props.onNavigate;
       this.onRenderNeeded = props.onRenderNeeded;
       this.playSfx = props.playSfx;
-      console.log('[SettingsScreen] constructor, onRenderNeeded:', this.onRenderNeeded ? 'defined' : 'undefined');
     }
 
     createUI(): UINodeType {
@@ -10434,13 +10362,10 @@ namespace BloomBeasts {
           // Toggle button
           this.ui.Pressable({
             onClick: () => {
-              console.log(`[SettingsScreen] Toggle clicked - settingKey: ${settingKey}, settingId: ${settingId}`);
               if (this.onSettingChange) {
                 const currentSettings = this.settingsValue;
-                console.log(`[SettingsScreen] Current settings:`, currentSettings);
                 const currentValue = currentSettings[settingKey];
                 const newValue = !currentValue;
-                console.log(`[SettingsScreen] Toggle value: ${currentValue} -> ${newValue}`);
 
                 // Just call the callback - let the parent handle updating the binding
                 // The binding update will trigger a re-render automatically
@@ -10865,10 +10790,8 @@ namespace BloomBeasts {
         if (!props) return;
 
         if (!props.rewards || props.chestOpened) {
-          console.log('[MissionCompletePopup] Calling onContinue');
           props.onContinue?.();
         } else {
-          console.log('[MissionCompletePopup] Calling onClaimRewards');
           props.onClaimRewards?.();
         }
       },
@@ -14354,7 +14277,6 @@ namespace BloomBeasts {
         const completionCount = this.completedMissions.get(mission.id) || 0;
         mission.timesCompleted = completionCount;
 
-        console.log(`[MissionManager] Restoring ${mission.id}: unlocked=${mission.unlocked}, completionCount=${completionCount}`);
 
         // If mission has been completed before, unlock it and the next mission
         if (completionCount > 0) {
@@ -14368,7 +14290,6 @@ namespace BloomBeasts {
         // Otherwise, keep the mission's original unlocked state from the definition
         // (e.g., mission-01 has unlocked: true in its definition)
 
-        console.log(`[MissionManager] After restore ${mission.id}: unlocked=${mission.unlocked}`);
       });
     }
 
@@ -17718,26 +17639,18 @@ namespace BloomBeasts {
      * Call this after construction to load data and show initial screen
      */
     async initialize(): Promise<void> {
-      console.log('[BloomBeastsGame] Initializing...');
-
       // Load saved game data (initializes starting cards if needed)
       await this.loadGameData();
 
       // Update bindings from loaded data
-      console.log('[BloomBeastsGame] About to call updateBindingsFromGameState...');
       await this.updateBindingsFromGameState();
-      console.log('[BloomBeastsGame] updateBindingsFromGameState completed');
 
       // Trigger initial render
-      console.log('[BloomBeastsGame] About to trigger render...');
       this.triggerRender();
 
       // Start menu music
-      console.log('[BloomBeastsGame] Starting menu music...');
       this.playMusic('music-background', true);
-      console.log('[BloomBeastsGame] Navigating to menu...');
       this.navigate('menu');
-      console.log('[BloomBeastsGame] Initialize complete!');
     }
 
     /**
@@ -17858,7 +17771,6 @@ namespace BloomBeasts {
      * Toggle music on/off
      */
     private toggleMusic(enabled: boolean): void {
-      console.log('[BloomBeastsGame] toggleMusic called:', { enabled, currentMusic: this.currentMusic });
       if (!this.playerData?.settings) return;
       this.playerData.settings.musicEnabled = enabled;
 
@@ -17869,15 +17781,11 @@ namespace BloomBeasts {
         // Resume music - force replay even if it's the same track
         const musicToResume = this.currentMusic;
         const volume = this.playerData.settings.musicVolume / 100;
-        console.log('[BloomBeastsGame] Resuming music:', { musicToResume, volume, platformHasPlaySound: !!this.platform.playSound });
         this.platform.playSound?.(musicToResume, true, volume);
       } else if (!enabled) {
         // Stop music playback but keep track of current music for resume
         // Don't call stopMusic() as it clears this.currentMusic
-        console.log('[BloomBeastsGame] Stopping music, keeping currentMusic:', this.currentMusic);
         this.platform.stopSound?.();
-      } else {
-        console.log('[BloomBeastsGame] Music enabled but no currentMusic set');
       }
     }
 
@@ -17976,9 +17884,6 @@ namespace BloomBeasts {
         beastId: m.mission.beastId,
       }));
 
-      // Debug: Log first 3 missions
-      console.log('[BloomBeastsGame] First 3 display missions:', displayMissions.slice(0, 3).map(m => ({id: m.id, isAvailable: m.isAvailable})));
-
       this.UI.bindingManager.setBinding(BindingType.Missions, displayMissions);
     }
 
@@ -18015,8 +17920,6 @@ namespace BloomBeasts {
      * Handle button clicks
      */
     private async handleButtonClick(buttonId: string): Promise<void> {
-      // console.log('[BloomBeastsGame] Button clicked:', buttonId);
-
       // Play button sound
       this.playSfx('sfx-menu-button-select');
 
@@ -18042,7 +17945,6 @@ namespace BloomBeasts {
           this.navigate('settings');
           break;
         case 'shop':
-          // console.log('Shop coming soon!');
           break;
         case 'btn-back':
           this.navigate('menu');
@@ -18052,7 +17954,6 @@ namespace BloomBeasts {
           this.showForfeitConfirmation();
           break;
         default:
-          // console.log('Unhandled button:', buttonId);
       }
     }
 
@@ -18087,8 +17988,6 @@ namespace BloomBeasts {
      * Show card detail popup for a duration, then close and execute callback
      */
     private showCardDetailPopup(card: any, durationMs: number, callback?: () => void): void {
-      console.log('[BloomBeastsGame] Showing card detail popup:', card.name, 'for', durationMs, 'ms');
-
       // Set the card detail popup
       this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, {
         cardDetail: {
@@ -18138,7 +18037,6 @@ namespace BloomBeasts {
      * Handle card selection
      */
     private async handleCardSelect(cardId: string): Promise<void> {
-      // console.log('[BloomBeastsGame] Card selected:', cardId);
       if (!this.playerData) return;
 
       // Play menu button sound
@@ -18223,13 +18121,10 @@ namespace BloomBeasts {
       const success = this.missionUI.startMission(missionId);
 
       if (success) {
-        // console.log('[BloomBeastsGame] Mission started successfully');
         // Initialize battle with player's deck cards and name
         const battleState = this.battleUI.initializeBattle(playerDeckCards, this.playerData.name);
-        // console.log('[BloomBeastsGame] battleState:', battleState);
 
         if (battleState) {
-          // console.log('[BloomBeastsGame] Battle state is valid, initializing...');
           this.currentBattleId = missionId;
           this.battleStartTime = Date.now();  // Track start time for leaderboard
 
@@ -18238,22 +18133,18 @@ namespace BloomBeasts {
             battleState,
             null  // No attack animation
           );
-          // console.log('[BloomBeastsGame] battleDisplay:', battleDisplay);
 
           // Update battle display binding
           if (battleDisplay) {
-            // console.log('[BloomBeastsGame] Setting battle display binding...');
             this.UI.bindingManager.setBinding(BindingType.BattleDisplay, battleDisplay);
           } else {
             console.error('[BloomBeastsGame] battleDisplay is null!');
           }
 
           // Navigate to battle screen
-          // console.log('[BloomBeastsGame] Navigating to battle screen');
           this.UI.bindingManager.setBinding(BindingType.CurrentScreen, 'battle');
 
           // Trigger re-render to show battle screen
-          // console.log('[BloomBeastsGame] Triggering re-render');
           this.triggerRender();
 
           // Play battle music
@@ -18272,9 +18163,7 @@ namespace BloomBeasts {
      * Handle settings changes
      */
     private handleSettingsChange(settingId: string, value: any): void {
-      console.log('[BloomBeastsGame] Settings changed:', settingId, value);
       if (!this.playerData) return;
-      console.log('[BloomBeastsGame] Current soundSettings before change:', this.playerData.settings);
 
       // Play button sound for toggles (not sliders)
       if (settingId === 'musicEnabled' || settingId === 'sfxEnabled') {
@@ -18284,24 +18173,18 @@ namespace BloomBeasts {
       // Apply settings via sound manager
       switch (settingId) {
         case 'musicVolume':
-          console.log('[BloomBeastsGame] Matched case: musicVolume');
           this.setMusicVolume(value);
           break;
         case 'sfxVolume':
-          console.log('[BloomBeastsGame] Matched case: sfxVolume');
           this.setSfxVolume(value);
           break;
         case 'musicEnabled':
-          console.log('[BloomBeastsGame] Matched case: musicEnabled');
           this.toggleMusic(value);
           break;
         case 'sfxEnabled':
-          console.log('[BloomBeastsGame] Matched case: sfxEnabled');
           this.toggleSfx(value);
           break;
       }
-
-      console.log('[BloomBeastsGame] Current soundSettings after change:', this.playerData.settings);
 
       // Save settings and update binding
       this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
@@ -18322,14 +18205,12 @@ namespace BloomBeasts {
 
       // Check if already at max level
       if (currentLevel >= 6) {
-        console.log('[BloomBeastsGame] Boost already at max level:', boostId);
         return;
       }
 
       // Get cost for next level based on current level
       const costs = UPGRADE_COSTS[boostId];
       if (!costs) {
-        console.log('[BloomBeastsGame] Unknown boost ID:', boostId);
         return;
       }
 
@@ -18337,7 +18218,6 @@ namespace BloomBeasts {
 
       // Check if player has enough coins
       if (this.playerData.coins < cost) {
-        console.log('[BloomBeastsGame] Not enough coins:', this.playerData.coins, 'need:', cost);
         return;
       }
 
@@ -18356,8 +18236,6 @@ namespace BloomBeasts {
 
       // Increment boost level
       this.playerData.boosts[boostId] = currentLevel + 1;
-
-      console.log('[BloomBeastsGame] Upgraded boost:', boostId, 'to level', this.playerData.boosts[boostId], 'for', cost, 'coins');
 
       // Play upgrade sound (special sound for rooster)
       if (boostId === ROOSTER.id) {
@@ -18470,7 +18348,6 @@ namespace BloomBeasts {
 
         // Update battle display binding - this should trigger UI refresh
         if (updatedDisplay) {
-          // console.log('[BloomBeastsGame] Updating battle display with health:', {
           //   playerHealth: updatedDisplay.playerHealth,
           //   opponentHealth: updatedDisplay.opponentHealth
           // });
@@ -18484,7 +18361,6 @@ namespace BloomBeasts {
      * Handle battle completion (victory or defeat)
      */
     private async handleBattleComplete(battleState: any): Promise<void> {
-      // console.log('[BloomBeastsGame] Handling battle completion...');
       if (!this.playerData) return;
 
       // Capture playerData in local const for TypeScript null safety in callbacks
@@ -18500,14 +18376,12 @@ namespace BloomBeasts {
       const battleId = this.currentBattleId; // Save before clearing
       this.currentBattleId = null;
 
-      // console.log('[BloomBeastsGame] Battle complete, checking rewards:', {
       //   hasRewards: !!battleState.rewards,
       //   rewards: battleState.rewards
       // });
 
       if (battleState.rewards) {
         // Victory!
-        // console.log('[BloomBeastsGame] Mission victory!', battleState.rewards);
 
         // Apply boost multipliers to rewards
         const coinBoostLevel = playerData.boosts?.[COIN_BOOST.id] || 0;
@@ -18606,13 +18480,11 @@ namespace BloomBeasts {
         await this.saveGameData();
 
         // Show mission complete popup
-        // console.log('[BloomBeastsGame] Setting victory popup...');
         const popupData = {
           mission: battleState.mission,
           rewards: battleState.rewards,
           chestOpened: false,
           onClaimRewards: () => {
-            // console.log('[BloomBeastsGame] Claim rewards clicked');
             // Chest animation could go here
             const current = this.UI.bindingManager.getSnapshot(BindingType.MissionCompletePopup);
             if (current) {
@@ -18621,12 +18493,10 @@ namespace BloomBeasts {
                 chestOpened: true
               };
               this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, updatedData);
-              // console.log('[BloomBeastsGame] Chest opened, triggering render');
               this.triggerRender();
             }
           },
           onContinue: () => {
-            // console.log('[BloomBeastsGame] Victory continue clicked');
             // Clear battle display and close popup
             this.UI.bindingManager.setBinding(BindingType.BattleDisplay, null);
             this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, null);
@@ -18637,12 +18507,9 @@ namespace BloomBeasts {
 
         // Set both tracked value and binding
         this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, popupData);
-        // console.log('[BloomBeastsGame] Victory popup set');
         this.triggerRender();
-        // console.log('[BloomBeastsGame] Render triggered after victory popup');
       } else {
         // Defeat
-        // console.log('[BloomBeastsGame] Mission failed!');
 
         // Reset battle start time
         this.battleStartTime = null;
@@ -18663,11 +18530,8 @@ namespace BloomBeasts {
           },
           playSfx: this.playSfx.bind(this)
         };
-        // console.log('[BloomBeastsGame] Setting mission failed popup:', failedPopupProps);
         this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, failedPopupProps);
-        // console.log('[BloomBeastsGame] After set, mission failed popup set');
         this.triggerRender();
-        // console.log('[BloomBeastsGame] Render triggered after mission failed');
       }
 
       // Resume background music
@@ -18725,7 +18589,6 @@ namespace BloomBeasts {
     private submitLeaderboardScore(type: 'experience' | 'cluckNorris', score: number): void {
       if (!this.platform.sendNetworkEvent) {
         // Network events not supported on this platform
-        console.log('[BloomBeastsGame] Network events not supported, skipping leaderboard submission');
         return;
       }
 
@@ -18744,7 +18607,6 @@ namespace BloomBeasts {
         };
 
         this.platform.sendNetworkEvent('leaderboard_score_submit', eventData);
-        console.log('[BloomBeastsGame] Submitted leaderboard score:', eventData);
       } catch (error) {
         console.error('[BloomBeastsGame] Failed to submit leaderboard score:', error);
       }
@@ -19061,12 +18923,10 @@ namespace BloomBeasts {
      */
     loadCatalog(catalog: AssetCatalog): void {
       const catalogKey = catalog.category;
-      console.log(`[AssetCatalogManager] Loading catalog: ${catalogKey}`);
       this.catalogs.set(catalogKey, catalog);
 
       // Index all assets by ID for quick lookup
       catalog.data.forEach(entry => {
-        console.log(`[AssetCatalogManager]   Indexing entry: ${entry.id}`);
         this.assetIndex.set(entry.id, entry);
 
         // Create reverse mappings
@@ -19077,10 +18937,6 @@ namespace BloomBeasts {
           }
         });
       });
-
-      console.log(`[AssetCatalogManager] ✅ Loaded ${catalog.category} catalog with ${catalog.data.length} entries`);
-      console.log(`[AssetCatalogManager]   Total assets indexed: ${this.assetIndex.size}`);
-      console.log(`[AssetCatalogManager]   Total catalogs: ${this.catalogs.size}`);
     }
 
     /**

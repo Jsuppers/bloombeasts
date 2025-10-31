@@ -313,35 +313,25 @@ export class PlayerHand {
             },
             children: this.ui.Pressable({
               onClick: () => {
-                console.log('[PlayerHand] onClick fired! slotIndex:', slotIndex);
                 const scrollOffset = this.ui.bindingManager.getSnapshot(BindingType.UIState).battle?.handScrollOffset ?? 0;
                 const actualIndex = scrollOffset * cardsPerPage + slotIndex;
                 // Get current card state from cached value
                 const display = this.getBattleDisplayValue();
-                console.log('[PlayerHand] display:', display ? 'EXISTS' : 'NULL', 'actualIndex:', actualIndex);
                 if (display && display.playerHand) {
-                  console.log('[PlayerHand] playerHand length:', display.playerHand.length);
                   const card = display.playerHand[actualIndex];
-                  console.log('[PlayerHand] card at', actualIndex, ':', card);
                   if (card) {
-                    console.log(`[PlayerHand] Card clicked: ${actualIndex}, card: ${card.name}, onAction:`, this.onAction ? 'DEFINED' : 'UNDEFINED');
 
                     // Show card popup for magic/buff cards, then play
                     if (card.type === 'Magic' || card.type === 'Buff') {
-                      console.log('[PlayerHand] Showing card popup for', card.type);
                       this.showPlayedCard?.(card, () => {
-                        console.log('[PlayerHand] Popup closed, calling onAction');
                         this.onAction?.(`play-card-${actualIndex}`);
                       });
                     } else {
-                      console.log('[PlayerHand] Calling onAction directly');
                       this.onAction?.(`play-card-${actualIndex}`);
                     }
                   } else {
-                    console.log('[PlayerHand] No card at index', actualIndex);
                   }
                 } else {
-                  console.log('[PlayerHand] No display or playerHand');
                 }
               },
               style: {

@@ -61,23 +61,14 @@ export class StartMenuUI {
    * Render the start menu UI
    */
   public async render(): Promise<void> {
-    console.log('===========================================');
-    console.log('       BLOOM BEASTS - Main Menu           ');
-    console.log('===========================================');
-    console.log('');
 
     this.menuOptions.forEach((option, index) => {
       const selector = index === this.selectedIndex ? '>' : ' ';
       const status = option.enabled ? '' : ' (Disabled)';
-      console.log(`${selector} ${option.label}${status}`);
       if (option.description && index === this.selectedIndex) {
-        console.log(`   ${option.description}`);
       }
     });
 
-    console.log('');
-    console.log('Use arrow keys to navigate, Enter to select');
-    console.log('===========================================');
   }
 
   /**

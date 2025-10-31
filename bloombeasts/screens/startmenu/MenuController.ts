@@ -11,14 +11,12 @@ export class MenuController {
   private currentState: 'menu' | 'game' | 'inventory' | 'settings' = 'menu';
 
   constructor() {
-    console.log('Menu Controller initialized');
   }
 
   /**
    * Start a new game
    */
   public async startGame(mode: GameMode = { type: 'single-player', difficulty: 'normal' }): Promise<void> {
-    console.log(`Starting ${mode.type} game with ${mode.difficulty} difficulty...`);
     this.currentState = 'game';
 
     // Note: Game engine integration point for future menu-initiated games
@@ -28,14 +26,12 @@ export class MenuController {
     // await gameEngine.initialize();
     // await gameEngine.startMatch(mode);
 
-    console.log('Game started! (Placeholder - Game engine not yet integrated)');
   }
 
   /**
    * Open the inventory screen
    */
   public async openInventory(): Promise<void> {
-    console.log('Opening inventory...');
     this.currentState = 'inventory';
 
     // Note: Inventory integration point - Cards system exists (screens/cards/)
@@ -43,14 +39,12 @@ export class MenuController {
     // const inventory = new InventoryView();
     // await inventory.display();
 
-    console.log('Inventory opened! (Placeholder - Inventory system not yet integrated)');
   }
 
   /**
    * Open the settings menu
    */
   public async openSettings(): Promise<void> {
-    console.log('Opening settings...');
     this.currentState = 'settings';
 
     // Note: Settings menu integration point
@@ -58,15 +52,12 @@ export class MenuController {
     // const settings = new SettingsMenu();
     // await settings.display();
 
-    console.log('Settings opened! (Placeholder - Settings not yet implemented)');
   }
 
   /**
    * Quit the game
    */
   public quitGame(): void {
-    console.log('Thanks for playing Bloom Beasts!');
-    console.log('Goodbye!');
 
     // Note: Save system integration point
     // Future: Implement SaveManager to persist game state before exit
@@ -78,7 +69,6 @@ export class MenuController {
    * Return to main menu
    */
   public returnToMenu(): void {
-    console.log('Returning to main menu...');
     this.currentState = 'menu';
   }
 
@@ -93,7 +83,6 @@ export class MenuController {
    * Load saved game
    */
   public async loadSavedGame(): Promise<boolean> {
-    console.log('Loading saved game...');
 
     // Note: Save game loading integration point
     // Future: Implement SaveManager.load() to restore player progress
@@ -103,7 +92,6 @@ export class MenuController {
     //   return true;
     // }
 
-    console.log('No saved game found (Placeholder)');
     return false;
   }
 }

@@ -120,7 +120,6 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
 
     // Debug log for first 3 slots
     if (slotIndex < 3 && mission) {
-      console.log(`[MissionRenderer] Slot ${slotIndex} (${mission.id}): isAvailable=${mission.isAvailable}, lockOpacity=${lockOpacity}`);
     }
 
     return lockOpacity;

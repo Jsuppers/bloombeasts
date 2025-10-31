@@ -154,10 +154,8 @@ export function createMissionCompletePopup(ui: UIMethodMappings, bindingManager:
       if (!props) return;
 
       if (!props.rewards || props.chestOpened) {
-        console.log('[MissionCompletePopup] Calling onContinue');
         props.onContinue?.();
       } else {
-        console.log('[MissionCompletePopup] Calling onClaimRewards');
         props.onClaimRewards?.();
       }
     },

@@ -162,7 +162,6 @@ export class BindingManager implements BindingManagerInterface {
       },
     }));
 
-    console.log(`[BindingManager] Initialized ${this.bindings.size} bindings`);
   }
 
   derive<T>(bindingTypes: BindingType[], deriveFn: (...values: any[]) => T): any {

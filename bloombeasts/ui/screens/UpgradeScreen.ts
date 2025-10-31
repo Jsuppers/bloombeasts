@@ -41,9 +41,7 @@ export class UpgradeScreen {
 
     return this.ui.Pressable({
       onClick: () => {
-        console.log('[UpgradeScreen] Upgrade item clicked:', upgrade.id);
         const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-        console.log('[UpgradeScreen] Current UIState:', currentState);
         // Update UIState binding
         this.ui.bindingManager.setBinding(BindingType.UIState, {
           ...currentState,
@@ -52,7 +50,6 @@ export class UpgradeScreen {
             selectedUpgradeId: upgrade.id
           }
         });
-        console.log('[UpgradeScreen] Updated UIState with selectedUpgradeId:', upgrade.id);
       },
       style: {
         width: containerSize,
@@ -181,7 +178,6 @@ export class UpgradeScreen {
         ...(this.ui.UINode ? [this.ui.UINode.if(
           this.ui.bindingManager.derive([BindingType.UIState], (state: any) => {
             const shouldShow = (state.upgrade?.selectedUpgradeId ?? null) !== null;
-            console.log('[UpgradeScreen] Popup condition evaluated:', shouldShow, 'selectedUpgradeId:', state.upgrade?.selectedUpgradeId);
             return shouldShow;
           }),
           this.createUpgradePopup()
