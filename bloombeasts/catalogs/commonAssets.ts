@@ -152,6 +152,20 @@ export const commonAssets: AssetCatalog = {
       ]
     },
     {
+      id: "player-stats-container",
+      type: "ui",
+      category: "container",
+      name: "Player Stats Container",
+      description: "Container for player stats display",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "PLACEHOLDER_ID",
+          path: "assets/images/ui_container_player-stats.png"
+        }
+      ]
+    },
+    {
       id: "experience-bar",
       type: "ui",
       category: "other",
@@ -174,7 +188,7 @@ export const commonAssets: AssetCatalog = {
       assets: [
         {
           type: "image",
-          horizonAssetId: "823441590335166",
+          horizonAssetId: "1559448588566044",
           path: "assets/images/cards_base-card.png"
         }
       ]
@@ -188,7 +202,7 @@ export const commonAssets: AssetCatalog = {
       assets: [
         {
           type: "image",
-          horizonAssetId: "802428729033291",
+          horizonAssetId: "2581420452257174",
           path: "assets/images/cards_magic-card.png"
         }
       ]
@@ -216,7 +230,7 @@ export const commonAssets: AssetCatalog = {
       assets: [
         {
           type: "image",
-          horizonAssetId: "2847974385407960",
+          horizonAssetId: "3122347641277336",
           path: "assets/images/cards_trap-card.png"
         }
       ]
@@ -244,7 +258,7 @@ export const commonAssets: AssetCatalog = {
       assets: [
         {
           type: "image",
-          horizonAssetId: "1962518914567182",
+          horizonAssetId: "3182045765293902",
           path: "assets/images/cards_buff-card.png"
         }
       ]
@@ -417,6 +431,34 @@ export const commonAssets: AssetCatalog = {
         }
       ]
     },
+    {
+      id: "icon-coin",
+      type: "ui",
+      category: "icon",
+      name: "Coin Icon",
+      description: "Coin currency icon",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "PLACEHOLDER_ID",
+          path: "assets/images/icon_coin.png"
+        }
+      ]
+    },
+    {
+      id: "icon-serum",
+      type: "ui",
+      category: "icon",
+      name: "Serum Icon",
+      description: "Serum item icon",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "PLACEHOLDER_ID",
+          path: "assets/images/icon_serum.png"
+        }
+      ]
+    },
     // Counter icons removed - counter system deprecated
     {
       id: "lose-image",
@@ -527,6 +569,34 @@ export const commonAssets: AssetCatalog = {
           type: "audio",
           horizonAssetId: "1323050035978393",
           path: "assets/audio/sfx_lose.wav"
+        }
+      ]
+    },
+    {
+      id: "sfx-upgrade",
+      type: "ui",
+      category: "other",
+      name: "Upgrade SFX",
+      description: "Sound for purchasing upgrades",
+      assets: [
+        {
+          type: "audio",
+          horizonAssetId: "PLACEHOLDER_ID",
+          path: "assets/audio/sfx_upgrade.wav"
+        }
+      ]
+    },
+    {
+      id: "sfx-upgrade-rooster",
+      type: "ui",
+      category: "other",
+      name: "Upgrade Rooster SFX",
+      description: "Sound for purchasing rooster upgrade",
+      assets: [
+        {
+          type: "audio",
+          horizonAssetId: "PLACEHOLDER_ID",
+          path: "assets/audio/sfx_upgrade_rooster.wav"
         }
       ]
     },

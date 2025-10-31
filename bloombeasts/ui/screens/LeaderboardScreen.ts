@@ -105,7 +105,7 @@ export class LeaderboardScreen {
             height: 50,
             justifyContent: 'center',
             alignItems: 'center',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            // backgroundColor: 'rgba(0, 0, 0, 0.5)',
             borderRadius: 10,
           },
           children: this.ui.Text({
@@ -114,7 +114,7 @@ export class LeaderboardScreen {
               fontSize: DIMENSIONS.fontSize.xl,
               fontWeight: 'bold',
               color: COLORS.primary,
-              textAlign: 'center',
+              // textAlign: 'center',
             },
           }),
         }),
@@ -126,7 +126,7 @@ export class LeaderboardScreen {
             left: 25,
             width: panelWidth - 50,
             height: panelHeight - 80,
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            // backgroundColor: 'rgba(0, 0, 0, 0.5)',
             borderRadius: 10,
             padding: 15,
           },
@@ -192,7 +192,7 @@ export class LeaderboardScreen {
             ),
             // Speed Leaderboard (right)
             this.createLeaderboardPanel(
-              '⚡ Fastest Cluck Norris',
+              '🐔 Fastest Cluck Norris',
               'speed',
               460
             ),

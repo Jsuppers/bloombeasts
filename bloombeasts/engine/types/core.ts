@@ -97,35 +97,19 @@ export interface BuffCard extends Card {
 }
 
 /**
- * Ability upgrade at a specific level
- */
-export interface AbilityUpgrade {
-  abilities?: Ability[];  // Additional abilities to add at this level
-}
-
-/**
- * Custom leveling configuration for a Bloom Beast
- */
-export interface LevelingConfig {
-  /** Custom XP requirements per level (overrides defaults) */
-  xpRequirements?: Partial<Record<2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, number>>;
-  /** Custom stat gains per level (overrides defaults) - cumulative values */
-  statGains?: Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, { hp: number; atk: number }>;
-  /** Ability upgrades at specific levels (4, 7, 9) */
-  abilityUpgrades?: Partial<Record<4 | 7 | 9, AbilityUpgrade>>;
-}
-
-/**
  * Bloom Beast card
+ *
+ * All cards use standard leveling progression:
+ * - Standard XP requirements (10, 20, 40, 80, 160, 320, 640, 1280)
+ * - Standard stat boosts (+0-8 HP, +0-6 ATK over 9 levels)
+ * - Abilities remain constant across all levels
  */
 export interface BloomBeastCard extends Card {
   type: 'Bloom';
   affinity: Affinity;
   baseAttack: number;
   baseHealth: number;
-  abilities: Ability[];  // Array of passive abilities (triggered automatically)
-  /** Optional custom leveling configuration */
-  levelingConfig?: LevelingConfig;
+  abilities: Ability[];  // Array of passive abilities (constant across all levels)
   // Note: Card definitions are blueprints. All cards (Bloom, Magic, Trap, Habitat, Buff)
   // start at level 1 with 0 XP when added to player's collection as CardInstance objects.
   // Level and XP tracking is handled by the CardInstance interface, not the card definitions.

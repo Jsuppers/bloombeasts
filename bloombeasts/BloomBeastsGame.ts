@@ -810,8 +810,6 @@ export class BloomBeastsGame {
    * Handle button clicks
    */
   private async handleButtonClick(buttonId: string): Promise<void> {
-    // console.log('[BloomBeastsGame] Button clicked:', buttonId);
-
     // Play button sound
     this.playSfx('sfx-menu-button-select');
 
@@ -1154,8 +1152,12 @@ export class BloomBeastsGame {
 
     console.log('[BloomBeastsGame] Upgraded boost:', boostId, 'to level', this.playerData.boosts[boostId], 'for', cost, 'coins');
 
-    // Play success sound
-    this.playSfx('sfx-menu-button-select');
+    // Play upgrade sound (special sound for rooster)
+    if (boostId === ROOSTER.id) {
+      this.playSfx('sfx-upgrade-rooster');
+    } else {
+      this.playSfx('sfx-upgrade');
+    }
 
     // Save and update
     this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
@@ -1561,39 +1563,26 @@ export class BloomBeastsGame {
     ];
 
     // Add popups (these already use UINode.if)
+    // Mission Complete Popup - static structure with derived content
     if (this.UI.UINode) {
       children.push(
         this.UI.UINode.if(
           this.UI.bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
             return props !== null;
           }),
-          createMissionCompletePopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.MissionCompletePopup) || {
-            mission: {
-              id: 'fallback-mission',
-              name: 'Loading...',
-              affinity: 'Forest'
-            },
-            rewards: null,
-            chestOpened: false,
-            onContinue: () => {},
-            playSfx: this.playSfx.bind(this)
-          })
+          createMissionCompletePopup(this.UI, this.UI.bindingManager)
         )
       );
     }
 
+    // Forfeit Popup - static structure with derived content
     if (this.UI.UINode) {
       children.push(
         this.UI.UINode.if(
           this.UI.bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
             return props !== null;
           }),
-          createButtonPopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.ForfeitPopup) || {
-            title: '',
-            message: '',
-            buttons: [],
-            playSfx: this.playSfx.bind(this)
-          })
+          createButtonPopup(this.UI, this.UI.bindingManager)
         )
       );
     }
@@ -1639,7 +1628,9 @@ export class BloomBeastsGame {
         View({
           style: {
             width: '100%',
-            height: '100%',
+            height: 'auto',
+            maxWidth: '100%',
+            maxHeight: '100%',
             position: 'relative',
             aspectRatio: `${gameDimensions.panelWidth}/${gameDimensions.panelHeight}`
           },

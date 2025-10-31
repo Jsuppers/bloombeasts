@@ -9,8 +9,10 @@ import type { AsyncMethods } from '../types/bindings';
 import type { BattleDisplay } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createCardDetailPopup } from './common/CardDetailPopup';
+import { createPopup, type PopupButton } from '../common/Popup';
 import { canAttack } from '../../engine/utils/combatHelpers';
 import { BindingType, UIState } from '../types/BindingManager';
+import type { ButtonColor } from '../common/Button';
 
 // Import modular battle components
 import {
@@ -264,51 +266,55 @@ export class BattleScreen {
         overflow: 'hidden',
       },
       children: [
+        // Stretched background layer
+        this.backgroundComponent.createBackground(),
+
+        // Game content container - all content scales to fit screen
         this.ui.View({
           style: {
+            position: 'absolute',
             width: '100%',
             height: '100%',
-            position: 'relative',
-            aspectRatio: `${gameDimensions.panelWidth}/${gameDimensions.panelHeight}`
+            top: 0,
+            left: 0,
           },
           children: [
-            // Layer 1: Background image (full screen)
-            this.backgroundComponent.createBackground(),
+              // Layer 2: Playboard overlay
+              this.backgroundComponent.createPlayboard(),
 
-            // Layer 2: Playboard overlay
-            this.backgroundComponent.createPlayboard(),
+              // Layer 3: Battle zones (beasts, traps, buffs, habitat)
+              ...this.beastFieldComponent.createBeastField('player'),
+              ...this.beastFieldComponent.createBeastField('opponent'),
+              ...this.trapZoneComponent.createTrapZone('player'),
+              ...this.trapZoneComponent.createTrapZone('opponent'),
+              ...this.buffZoneComponent.createBuffZone('player'),
+              ...this.buffZoneComponent.createBuffZone('opponent'),
+              this.habitatZoneComponent.createHabitatZone(),
 
-            // Layer 3: Battle zones (beasts, traps, buffs, habitat)
-            ...this.beastFieldComponent.createBeastField('player'),
-            ...this.beastFieldComponent.createBeastField('opponent'),
-            ...this.trapZoneComponent.createTrapZone('player'),
-            ...this.trapZoneComponent.createTrapZone('opponent'),
-            ...this.buffZoneComponent.createBuffZone('player'),
-            ...this.buffZoneComponent.createBuffZone('opponent'),
-            this.habitatZoneComponent.createHabitatZone(),
+              // Layer 4: Player/Opponent info displays
+              this.infoDisplaysComponent.createInfoDisplays(),
 
-            // Layer 4: Player/Opponent info displays
-            this.infoDisplaysComponent.createInfoDisplays(),
+              // Layer 5: Side menu with controls
+              this.sideMenuComponent.createBattleSideMenu(),
 
-            // Layer 5: Side menu with controls
-            this.sideMenuComponent.createBattleSideMenu(),
+              // Layer 6: Player hand overlay (always rendered, bindings control visibility)
+              this.playerHandComponent.createPlayerHand(),
 
-            // Layer 6: Player hand overlay (always rendered, bindings control visibility)
-            this.playerHandComponent.createPlayerHand(),
+              // Layer 7: Card detail popup (from battleDisplay) - conditionally visible
+              this.createCardPopupLayer(),
 
-            // Layer 7: Card detail popup (from battleDisplay) - conditionally visible
-            this.createCardPopupLayer(),
+              // Layer 7.25: Selected card detail popup (from clicking buff/trap cards) - conditionally visible
+              this.createSelectedCardDetailLayer(),
 
-            // Layer 7.25: Selected card detail popup (from clicking buff/trap cards) - conditionally visible
-            this.createSelectedCardDetailLayer(),
+              // Layer 7.5: Played card popup (temporary 2-second display) - conditionally visible
+              this.createPlayedCardPopupLayer(),
 
-            // Layer 7.5: Played card popup (temporary 2-second display) - conditionally visible
-            this.createPlayedCardPopupLayer(),
-
-            // Layer 8: Attack animation overlays
-            this.createAttackAnimations(),
-        ],
+              // Layer 8: Attack animation overlays
+              this.createAttackAnimations(),
+          ],
         }),
+
+        // Note: Forfeit popup is handled at the root level in BloomBeastsGame
       ],
     });
   }
@@ -405,6 +411,11 @@ export class BattleScreen {
     // TODO: Make playedCardDisplay reactive and implement properly
     return this.ui.View({ style: { display: 'none' } });
   }
+
+  /**
+   * Forfeit popup is now handled at the root level in BloomBeastsGame.ts
+   * This method has been removed to avoid duplicate popups
+   */
 
   /**
    * Create card popup overlay

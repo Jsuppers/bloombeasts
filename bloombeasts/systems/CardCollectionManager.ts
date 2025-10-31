@@ -47,22 +47,8 @@ export class CardCollectionManager {
       };
     }
 
-    const level = getCardLevel(cardInstance.currentXP, cardDef);
-    let abilities = [...cardDef.abilities];
-
-    // Apply ability upgrades based on level (use the most recent complete set)
-    if (cardDef.levelingConfig?.abilityUpgrades) {
-      const upgrades = cardDef.levelingConfig.abilityUpgrades;
-
-      // Check upgrade levels in reverse order (9, 7, 4) to get the most recent applicable upgrade
-      if (level >= 9 && upgrades[9]) {
-        abilities = upgrades[9].abilities || abilities;
-      } else if (level >= 7 && upgrades[7]) {
-        abilities = upgrades[7].abilities || abilities;
-      } else if (level >= 4 && upgrades[4]) {
-        abilities = upgrades[4].abilities || abilities;
-      }
-    }
+    // Abilities remain constant across all levels
+    const abilities = [...cardDef.abilities];
 
     return { abilities };
   }
@@ -93,7 +79,7 @@ export class CardCollectionManager {
 
         // For Bloom cards, apply level-based upgrades
         if (cardDef.type === 'Bloom') {
-          const level = getCardLevel(cardInstance.currentXP, cardDef as BloomBeastCard);
+          const level = getCardLevel(cardInstance.currentXP);
           const abilities = this.getAbilitiesForLevel(cardInstance);
 
           // Convert to BloomBeastCard format for battle
@@ -108,7 +94,6 @@ export class CardCollectionManager {
             baseHealth: cardDef.baseHealth || 0,
             abilities: abilities.abilities,
             level: level, // Include computed level for beast instance (added to Card interface)
-            levelingConfig: {} as any, // Not used in battle
           };
 
           deckCards.push(bloomCard);

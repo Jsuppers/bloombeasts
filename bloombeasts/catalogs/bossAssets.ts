@@ -46,21 +46,7 @@ export const bossAssets: AssetCatalog = {
               }
             ]
           }
-        ],
-        levelingConfig: {
-          statGains: {
-            "1": { hp: 0, atk: 0 },
-            "2": { hp: 0, atk: 0 },
-            "3": { hp: 0, atk: 0 },
-            "4": { hp: 0, atk: 0 },
-            "5": { hp: 0, atk: 0 },
-            "6": { hp: 0, atk: 0 },
-            "7": { hp: 0, atk: 0 },
-            "8": { hp: 0, atk: 0 },
-            "9": { hp: 0, atk: 0 }
-          },
-          abilityUpgrades: {}
-        }
+        ]
       },
       assets: [
         {

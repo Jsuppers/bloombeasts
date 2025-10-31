@@ -4,7 +4,7 @@
  */
 
 import { COLORS } from '../../styles/colors';
-import { DIMENSIONS } from '../../styles/dimensions';
+import { DIMENSIONS, GAPS } from '../../styles/dimensions';
 import { sideMenuPositions } from '../../constants/positions';
 import type { MenuStats } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
@@ -101,7 +101,7 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
                     top: buttonRelativeY,
                     flexDirection: 'column',
                 },
-                children: config.buttons.map(button =>
+                children: config.buttons.map((button, index) =>
                     createButton({
                         ui,
                         label: button.label,
@@ -109,8 +109,8 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
                         disabled: button.disabled,
                         playSfx: config.playSfx,
                         style: {
-                            position: 'relative',
-                            top: button.yOffset !== undefined ? button.yOffset : 0,
+                            // Use marginBottom for spacing between buttons (except last button)
+                            marginBottom: index < config.buttons!.length - 1 ? GAPS.buttons : 0,
                         },
                     })
                 ),
@@ -205,7 +205,7 @@ function createPlayerInfo(
     // Single binding for level and XP text
     const levelXPTextBinding = ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
         const statsVal = extractStats(data);
-        if (!statsVal) return 'Level 1\n0/100';
+        if (!statsVal) return 'lvl 1. 0/100';
 
         const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
         const currentLevel = statsVal.playerLevel;
@@ -215,7 +215,7 @@ function createPlayerInfo(
         const currentXP = totalXP - xpForCurrentLevel;
         const xpNeeded = xpForNextLevel - xpForCurrentLevel;
 
-        return `Level ${currentLevel}\n${currentXP}/${xpNeeded}`;
+        return `lvl ${currentLevel}. ${currentXP}/${xpNeeded}`;
     });
 
     return ui.View({
@@ -249,11 +249,9 @@ function createPlayerInfo(
                 },
                 children: ui.Text({
                     text: levelXPTextBinding,
-                    numberOfLines: 2,
                     style: {
                         fontSize: DIMENSIONS.fontSize.xs,
                         color: COLORS.textSecondary,
-                        lineHeight: 12,
                     },
                 }),
             }),

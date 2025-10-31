@@ -66,12 +66,9 @@ export class CardsScreen {
         mode: 'slot',
         slotIndex,
         cardsPerPage,
-        onClick: () => {
-          const state = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-          const cardId = state.cards?.selectedCardId;
-          if (cardId) {
-            this.handleCardClick(cardId);
-          }
+        onClick: (cardId: string) => {
+          console.log('[CardsScreen] Card clicked:', cardId);
+          this.handleCardClick(cardId);
         },
         showDeckIndicator: true,
       }),
@@ -150,17 +147,31 @@ export class CardsScreen {
         onClick: () => {
           // Check bounds before scrolling
           const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-          if (currentState.cards?.scrollOffset > 0) {
+          const currentOffset = currentState.cards?.scrollOffset ?? 0;
+          console.log('[CardsScreen] Up button clicked, currentOffset:', currentOffset);
+          if (currentOffset > 0) {
             // Update UIState binding
             this.ui.bindingManager.setBinding(BindingType.UIState, {
               ...currentState,
               cards: {
                 ...currentState.cards,
-                scrollOffset: currentState.cards?.scrollOffset - 1
+                scrollOffset: currentOffset - 1
               }
             });
+            console.log('[CardsScreen] Scrolled up to offset:', currentOffset - 1);
+            // Trigger re-render for web
+            if (this.onRenderNeeded) {
+              this.onRenderNeeded();
+            }
           }
         },
+        disabled: this.ui.bindingManager.derive(
+          [BindingType.UIState],
+          (uiState: UIState) => {
+            const offset = uiState.cards?.scrollOffset ?? 0;
+            return offset <= 0;
+          }
+        ) as any,
         yOffset: 0,
       },
       {
@@ -168,28 +179,35 @@ export class CardsScreen {
         onClick: () => {
           // Reactive disabled state prevents invalid scrolling, so just increment
           const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-          const cards = currentState.playerData?.cards?.collected || [];
+          const playerData = this.ui.bindingManager.getSnapshot(BindingType.PlayerData);
+          const cards = playerData?.cards?.collected || [];
           const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
           const totalPages = Math.ceil(cards.length / cardsPerPage);
-          if (currentState.cards?.scrollOffset < totalPages - 1) {
+          const currentOffset = currentState.cards?.scrollOffset ?? 0;
+          console.log('[CardsScreen] Down button clicked, currentOffset:', currentOffset, 'totalPages:', totalPages);
+          if (currentOffset < totalPages - 1) {
             this.ui.bindingManager.setBinding(BindingType.UIState, {
               ...currentState,
               cards: {
                 ...currentState.cards,
-                scrollOffset: currentState.cards?.scrollOffset + 1
+                scrollOffset: currentOffset + 1
               }
             });
+            console.log('[CardsScreen] Scrolled down to offset:', currentOffset + 1);
+            // Trigger re-render for web
+            if (this.onRenderNeeded) {
+              this.onRenderNeeded();
+            }
           }
         },
         disabled: this.ui.bindingManager.derive(
-          [BindingType.UIState],
-          ( uiState: UIState) => {
-            const pd = this.ui.bindingManager.getSnapshot(BindingType.PlayerData);
+          [BindingType.UIState, BindingType.PlayerData],
+          (uiState: UIState, pd: any) => {
             const offset = uiState.cards?.scrollOffset ?? 0;
             const cards = pd?.cards?.collected || [];
             const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
             const totalPages = Math.ceil(cards.length / cardsPerPage);
-            return offset >= totalPages - 1 ? true : false;
+            return offset >= totalPages - 1;
           }
         ) as any,
         yOffset: sideMenuButtonDimensions.height + GAPS.buttons,

@@ -15,7 +15,36 @@ export const mission02: Mission = {
   affinity: 'Forest',
   beastId: 'Mushroomancer',
 
-  opponentDeck: () => buildForestDeck(),
+  opponentDeck: () => {
+    // Get the catalog manager to access cards
+    const game = (globalThis as any).bloomBeastsGame;
+    if (!game?.catalogManager) {
+      console.error('[mission02] Catalog manager not available');
+      return { name: 'Mushroomancer Deck', affinity: 'Forest', cards: [], totalCards: 0 };
+    }
+
+    // Simple beginner deck: 3 Mushroomancers only
+    const mushroomancerCard = game.catalogManager.getCard('mushroomancer');
+    if (!mushroomancerCard) {
+      console.error('[mission02] Mushroomancer card not found');
+      return { name: 'Mushroomancer Deck', affinity: 'Forest', cards: [], totalCards: 0 };
+    }
+
+    const cards = [];
+    for (let i = 1; i <= 3; i++) {
+      cards.push({
+        ...mushroomancerCard,
+        instanceId: `mushroomancer-${i}`,
+      });
+    }
+
+    return {
+      name: 'Mushroomancer Pack',
+      affinity: 'Forest' as const,
+      cards,
+      totalCards: cards.length,
+    };
+  },
 
   rewards: {
     guaranteedXP: 60,
@@ -29,6 +58,11 @@ export const mission02: Mission = {
         dropChance: 0.9,
       },
     ],
+    coinRewards: {
+      minAmount: 75,
+      maxAmount: 175,
+      dropChance: 1.0,
+    },
   },
 
   timesCompleted: 0,

@@ -15,9 +15,7 @@ import type {
   TrapCard,
   AnyCard,
   Affinity,
-  CardType,
-  CounterType,
-  LevelingConfig
+  CardType
 } from './engine/types/core';
 
 import type {

@@ -41,7 +41,9 @@ export class UpgradeScreen {
 
     return this.ui.Pressable({
       onClick: () => {
+        console.log('[UpgradeScreen] Upgrade item clicked:', upgrade.id);
         const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+        console.log('[UpgradeScreen] Current UIState:', currentState);
         // Update UIState binding
         this.ui.bindingManager.setBinding(BindingType.UIState, {
           ...currentState,
@@ -50,6 +52,7 @@ export class UpgradeScreen {
             selectedUpgradeId: upgrade.id
           }
         });
+        console.log('[UpgradeScreen] Updated UIState with selectedUpgradeId:', upgrade.id);
       },
       style: {
         width: containerSize,
@@ -80,31 +83,22 @@ export class UpgradeScreen {
             left: imageOffset.left,
           },
         }),
-        // Upgrade level indicator (single number display)
-        this.ui.View({
+        // Upgrade level indicator (text at center bottom)
+        this.ui.Text({
+          text: this.ui.bindingManager.playerDataBinding.binding.derive((pd: any) => {
+            const level = pd?.boosts?.[upgrade.id] || 0;
+            return `Level ${level}`;
+          }),
           style: {
             position: 'absolute',
             bottom: 8,
-            left: 8,
-            width: 30,
-            height: 30,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            borderRadius: 15,
-            justifyContent: 'center',
-            alignItems: 'center',
+            left: 0,
+            width: containerSize,
+            fontSize: 14,
+            fontWeight: 'bold',
+            color: '#fff',
+            textAlign: 'center',
           },
-          children: this.ui.Text({
-            text: this.ui.bindingManager.playerDataBinding.binding.derive((pd: any) => {
-              const level = pd?.boosts?.[upgrade.id] || 0;
-              return level > 0 ? `Lv${level}` : '';
-            }),
-            style: {
-              fontSize: 14,
-              fontWeight: 'bold',
-              color: '#fff',
-              textAlign: 'center',
-            },
-          }),
         }),
       ],
     });
@@ -185,17 +179,12 @@ export class UpgradeScreen {
         }),
         // Upgrade popup (conditionally rendered) - derive from UIState
         ...(this.ui.UINode ? [this.ui.UINode.if(
-          this.ui.bindingManager.derive([BindingType.UIState], (state: any) => (state.upgrade?.selectedUpgradeId ?? null) !== null),
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              top: 0,
-              left: 0,
-            },
-            children: this.createUpgradePopup(),
-          })
+          this.ui.bindingManager.derive([BindingType.UIState], (state: any) => {
+            const shouldShow = (state.upgrade?.selectedUpgradeId ?? null) !== null;
+            console.log('[UpgradeScreen] Popup condition evaluated:', shouldShow, 'selectedUpgradeId:', state.upgrade?.selectedUpgradeId);
+            return shouldShow;
+          }),
+          this.createUpgradePopup()
         )] : []),
       ],
     });
@@ -245,15 +234,22 @@ export class UpgradeScreen {
           color: 'green',
           disabled: this.ui.bindingManager.derive([BindingType.PlayerData, BindingType.UIState], (pd: any, state: any) => {
             const upgradeId = state.upgrade?.selectedUpgradeId ?? null;
-            if (!upgradeId) return true;
+            if (!upgradeId) {
+              return true;
+            }
             const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
-            if (!upgrade) return true;
+            if (!upgrade) {
+              return true;
+            }
             const currentLevel = pd?.boosts?.[upgradeId] || 0;
-            if (currentLevel >= 6) return true;
+            if (currentLevel >= 6) {
+              return true;
+            }
 
             const nextLevelCost = upgrade.costs[currentLevel];
             const coins = pd?.coins ?? 0;
-            return coins < nextLevelCost;
+            const isDisabled = coins < nextLevelCost;
+            return isDisabled;
           }),
         },
         {

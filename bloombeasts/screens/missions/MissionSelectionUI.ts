@@ -50,28 +50,30 @@ export class MissionSelectionUI {
    * Check if a mission can be played
    */
   private isMissionPlayable(mission: Mission): boolean {
+    // Check if mission has been completed before - if so, it's always playable (for replay)
+    const completionCount = this.missionManager.getCompletedCount(mission.id);
+    if (completionCount > 0) {
+      return true;
+    }
+
     // First mission is always unlocked
     if (mission.unlocked) {
       return true;
     }
 
-    // Check if mission is unlocked by checking actual completion counts
-    const completionCount = this.missionManager.getCompletedCount(mission.id);
-    if (completionCount === 0) {
-      // Check if previous mission is completed
-      const allMissions = getAvailableMissions(99); // Get all missions
-      const missionIndex = allMissions.findIndex(m => m.id === mission.id);
+    // For uncompleted missions, check if previous mission is completed
+    const allMissions = getAvailableMissions(99); // Get all missions
+    const missionIndex = allMissions.findIndex(m => m.id === mission.id);
 
-      if (missionIndex > 0) {
-        const previousMission = allMissions[missionIndex - 1];
-        const previousCompletionCount = this.missionManager.getCompletedCount(previousMission.id);
-        if (previousCompletionCount === 0) {
-          return false;
-        }
+    if (missionIndex > 0) {
+      const previousMission = allMissions[missionIndex - 1];
+      const previousCompletionCount = this.missionManager.getCompletedCount(previousMission.id);
+      if (previousCompletionCount === 0) {
+        return false;
       }
     }
 
-    // Check level requirements
+    // Check level requirements for uncompleted missions
     const levelDifference = Math.abs(this.currentPlayerLevel - mission.level);
     return levelDifference <= 3; // Allow missions within 3 levels
   }

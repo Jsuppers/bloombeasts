@@ -155,21 +155,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         })
       ] : []),
 
-      // Layer 4: Experience bar (for Bloom cards with level)
-      ...(card.type === 'Bloom' && card.level ? [
-        ui.Image({
-          source: ui.assetIdToImageSource?.(expBarKey) || null,
-          style: {
-            width: 120,
-            height: 20,
-            position: 'absolute',
-            top: positions.experienceBar.y,
-            left: positions.experienceBar.x,
-          },
-        })
-      ] : []),
-
-      // Layer 5: Text overlays
+      // Layer 4: Text overlays
       // Card name
       ui.Text({
         text: card.name || '',
@@ -231,10 +217,10 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         })
       ] : []),
 
-      // Level (for all cards)
+      // Level and Experience (for all cards with level)
       ...(card.level !== undefined ? [
         ui.Text({
-          text: `Level ${card.level}`,
+          text: `lvl ${card.level}. ${card.experience || 0}/${card.experienceRequired || 0}`,
           style: {
             position: 'absolute',
             top: positions.level.y,
@@ -320,7 +306,7 @@ export interface ReactiveCardRendererProps {
   slotIndex?: number;
   cardsPerPage?: number;
 
-  onClick?: () => void;
+  onClick?: (cardId: string) => void;
   showDeckIndicator?: boolean;
 }
 
@@ -426,7 +412,12 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
 
   const cardLevelBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
     const card = getCard(uiState, playerData);
-    return card && card.level !== undefined ? `Level ${card.level}` : '';
+    if (!card || card.level === undefined) return '';
+
+    // For all cards, show level and experience
+    const exp = card.experience || 0;
+    const expRequired = card.experienceRequired || 0;
+    return `lvl ${card.level}. ${exp}/${expRequired}`;
   });
 
   const abilityTextBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
@@ -520,23 +511,7 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
       },
     }),
 
-    // Layer 5: Experience bar
-    ui.Image({
-      source: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-        const card = getCard(uiState, playerData);
-        if (!card || card.type !== 'Bloom' || card.level === undefined) return null;
-        return ui.assetIdToImageSource?.('experience-bar');
-      }),
-      style: {
-        width: 120,
-        height: 20,
-        position: 'absolute',
-        top: positions.experienceBar.y,
-        left: positions.experienceBar.x,
-      },
-    }),
-
-    // Layer 6: Text overlays
+    // Layer 5: Text overlays
     // Card name
     ui.Text({
       text: cardNameBinding,
@@ -649,7 +624,14 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     return ui.Pressable({
       onClick: () => {
         console.log('[CardRenderer] Pressable clicked');
-        onClick();
+        // Get current state to determine which card was clicked
+        const currentState = ui.bindingManager.getSnapshot(BindingType.UIState);
+        const playerData = ui.bindingManager.getSnapshot(BindingType.PlayerData);
+        const card = getCard(currentState, playerData);
+        if (card?.id) {
+          console.log('[CardRenderer] Calling onClick with cardId:', card.id);
+          onClick(card.id);
+        }
       },
       style: {
         width: cardWidth,

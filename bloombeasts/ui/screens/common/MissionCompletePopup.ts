@@ -13,12 +13,14 @@ import {
 import { UINodeType } from '../ScreenUtils';
 import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 import { createPopup, type PopupButton } from '../../common/Popup';
+import { BindingType } from '../../types/BindingManager';
+import type { BindingManager } from '../../types/BindingManager';
 
 export interface MissionCompletePopupProps {
   mission: {
     id: string;
     name: string;
-    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky';
+    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
   };
   rewards: {
     xpGained: number;
@@ -42,12 +44,65 @@ export interface MissionCompletePopupProps {
 
 /**
  * Unified Mission Complete Popup using common Popup component
+ * Derives content from MissionCompletePopup binding
  */
-export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionCompletePopupProps): UINodeType {
-  const { mission, rewards, chestOpened, onClaimRewards, onContinue, playSfx } = props;
-  const isFailed = !rewards;
+export function createMissionCompletePopup(ui: UIMethodMappings, bindingManager: any): UINodeType {
+  // Get the playSfx function from current binding state
+  const currentProps = bindingManager.getSnapshot(BindingType.MissionCompletePopup);
+  const playSfx = currentProps?.playSfx;
 
-  // Create content for the popup
+  // Derive chest image source
+  const chestImageSource = bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+    if (!props) return null;
+    if (!props.rewards) {
+      return ui.assetIdToImageSource?.('lose-image') || null;
+    }
+    const affinity = props.mission.affinity === 'Boss' ? 'Fire' : (props.mission.affinity || 'Forest');
+    const state = props.chestOpened ? 'opened' : 'closed';
+    return ui.assetIdToImageSource?.(`${affinity}-chest-${state}`.toLowerCase()) || null;
+  });
+
+  // Derive info text
+  const infoText = bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+    if (!props) return '';
+    if (!props.rewards) {
+      return 'Better luck next time!\n\nKeep training your beasts\nand try again.';
+    }
+    if (props.chestOpened) {
+      // Show detailed rewards
+      const lines: string[] = [];
+      if (props.rewards.coinsReceived) {
+        lines.push(`🪙 ${props.rewards.coinsReceived} Coins`);
+      }
+      if (props.rewards.bonusRewards && props.rewards.bonusRewards.length > 0) {
+        lines.push(...props.rewards.bonusRewards);
+      }
+      if (props.rewards.cardsReceived && props.rewards.cardsReceived.length > 0) {
+        lines.push('', 'Cards Received:');
+        props.rewards.cardsReceived.forEach((card: any) => {
+          lines.push(`• ${card.name}`);
+        });
+      }
+      return lines.join('\n');
+    } else {
+      // Show basic info
+      const minutes = Math.floor(props.rewards.completionTimeSeconds / 60);
+      const seconds = props.rewards.completionTimeSeconds % 60;
+      const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+      const lines = [
+        `Time: ${timeString}`,
+        '',
+        `Player XP: +${props.rewards.xpGained}`,
+        `Beast XP: +${props.rewards.beastXP}`
+      ];
+      if (props.rewards.coinsReceived) {
+        lines.push(`Coins: +${props.rewards.coinsReceived}`);
+      }
+      return lines.join('\n');
+    }
+  });
+
+  // Create content
   const content: UINodeType[] = [
     // Chest or lose image
     ui.View({
@@ -58,25 +113,13 @@ export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionC
         marginTop: 10,
         marginBottom: 20,
       },
-      children: isFailed
-        ? ui.Image({
-            source: ui.assetIdToImageSource?.('lose-image') || null,
-            style: {
-              width: chestImageMissionCompleteDimensions.width,
-              height: chestImageMissionCompleteDimensions.height,
-            },
-          })
-        : ui.Image({
-            source: ui.assetIdToImageSource?.(
-              chestOpened
-                ? `${mission.affinity || 'Forest'}-chest-opened`.toLowerCase()
-                : `${mission.affinity || 'Forest'}-chest-closed`.toLowerCase()
-            ) || null,
-            style: {
-              width: chestImageMissionCompleteDimensions.width,
-              height: chestImageMissionCompleteDimensions.height,
-            },
-          }),
+      children: ui.Image({
+        source: chestImageSource as any,
+        style: {
+          width: chestImageMissionCompleteDimensions.width,
+          height: chestImageMissionCompleteDimensions.height,
+        },
+      }),
     }),
 
     // Info text
@@ -86,25 +129,36 @@ export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionC
         paddingLeft: 20,
         paddingRight: 20,
       },
-      children: isFailed
-        ? createFailedInfo(ui)
-        : chestOpened
-        ? createDetailedRewards(ui, rewards)
-        : createBasicInfo(ui, rewards),
+      children: ui.Text({
+        text: infoText as any,
+        numberOfLines: 15,
+        style: {
+          fontSize: DIMENSIONS.fontSize.md,
+          color: COLORS.textPrimary,
+          textAlign: 'center',
+          lineHeight: 20,
+        },
+      }),
     }),
   ];
 
-  // Create button
+  // Create button with derived label
   const popupButton: PopupButton = {
-    label: isFailed ? 'CONTINUE' : chestOpened ? 'CONTINUE' : 'CLAIM REWARDS',
+    label: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+      if (!props) return 'CONTINUE';
+      if (!props.rewards || props.chestOpened) return 'CONTINUE';
+      return 'CLAIM REWARDS';
+    }) as any,
     onClick: () => {
-      console.log('[MissionCompletePopup] Button clicked, isFailed:', isFailed, 'chestOpened:', chestOpened);
-      if (isFailed || chestOpened) {
+      const props = bindingManager.getSnapshot(BindingType.MissionCompletePopup);
+      if (!props) return;
+
+      if (!props.rewards || props.chestOpened) {
         console.log('[MissionCompletePopup] Calling onContinue');
-        onContinue?.();
+        props.onContinue?.();
       } else {
         console.log('[MissionCompletePopup] Calling onClaimRewards');
-        onClaimRewards?.();
+        props.onClaimRewards?.();
       }
     },
     type: 'long',
@@ -113,11 +167,15 @@ export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionC
 
   return createPopup({
     ui,
-    title: isFailed ? 'MISSION FAILED' : 'MISSION COMPLETE!',
-    titleColor: isFailed ? '#FF4444' : '#FFD700',
+    title: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+      return props?.rewards === null ? 'MISSION FAILED' : 'MISSION COMPLETE!';
+    }) as any,
+    titleColor: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+      return props?.rewards === null ? '#FF4444' : '#FFD700';
+    }) as any,
     content,
     buttons: [popupButton],
-    playSfx,
+    playSfx, // Direct function reference, not a binding
     width: missionCompleteCardDimensions.width,
     height: missionCompleteCardDimensions.height,
   });

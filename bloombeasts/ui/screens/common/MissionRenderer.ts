@@ -65,8 +65,11 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
     // Format difficulty nicely (capitalize first letter)
     const formattedDifficulty = mission.difficulty.charAt(0).toUpperCase() + mission.difficulty.slice(1);
 
+    // Add completion indicator if mission is completed
+    const completionIndicator = mission.isCompleted ? '✓ ' : '';
+
     // Combine all text with line breaks
-    return `${mission.name}\nLevel ${mission.level} - ${formattedDifficulty}\n\n${mission.description}`;
+    return `${completionIndicator}${mission.name}\nLevel ${mission.level} - ${formattedDifficulty}\n\n${mission.description}`;
   });
 
   const missionImageBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {

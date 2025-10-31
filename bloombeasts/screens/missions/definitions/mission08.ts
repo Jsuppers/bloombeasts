@@ -35,6 +35,11 @@ export const mission08: Mission = {
         dropChance: 0.4,
       },
     ],
+    coinRewards: {
+      minAmount: 225,
+      maxAmount: 325,
+      dropChance: 1.0,
+    },
   },
 
   timesCompleted: 0,

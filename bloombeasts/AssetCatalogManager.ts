@@ -78,12 +78,10 @@ export class AssetCatalogManager {
    */
   loadCatalog(catalog: AssetCatalog): void {
     const catalogKey = catalog.category;
-    console.log(`[AssetCatalogManager] Loading catalog: ${catalogKey}`);
     this.catalogs.set(catalogKey, catalog);
 
     // Index all assets by ID for quick lookup
     catalog.data.forEach(entry => {
-      console.log(`[AssetCatalogManager]   Indexing entry: ${entry.id}`);
       this.assetIndex.set(entry.id, entry);
 
       // Create reverse mappings
@@ -94,10 +92,6 @@ export class AssetCatalogManager {
         }
       });
     });
-
-    console.log(`[AssetCatalogManager] ✅ Loaded ${catalog.category} catalog with ${catalog.data.length} entries`);
-    console.log(`[AssetCatalogManager]   Total assets indexed: ${this.assetIndex.size}`);
-    console.log(`[AssetCatalogManager]   Total catalogs: ${this.catalogs.size}`);
   }
 
   /**

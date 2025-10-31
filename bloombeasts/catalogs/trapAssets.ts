@@ -3,7 +3,7 @@
  */
 
 import type { AssetCatalog } from '../AssetCatalogManager';
-import { AbilityTrigger, AbilityTarget, EffectType, StatType, EffectDuration } from '../engine/types/abilities';
+import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration } from '../engine/types/abilities';
 import { TrapTrigger } from '../engine/types/core';
 
 export const trapAssets: AssetCatalog = {

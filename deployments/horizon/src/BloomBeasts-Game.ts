@@ -93,6 +93,8 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     sfxLowHealth: { type: hz.PropTypes.Entity },
     sfxWin: { type: hz.PropTypes.Entity },
     sfxLose: { type: hz.PropTypes.Entity },
+    sfxUpgrade: { type: hz.PropTypes.Entity },
+    sfxUpgradeRooster: { type: hz.PropTypes.Entity },
   };
 
   protected readonly panelWidth = 1280;
@@ -559,6 +561,8 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     'sfx-low-health': { propName: 'sfxLowHealth', type: 'sfx' },
     'sfx-win': { propName: 'sfxWin', type: 'sfx' },
     'sfx-lose': { propName: 'sfxLose', type: 'sfx' },
+    'sfx-upgrade': { propName: 'sfxUpgrade', type: 'sfx' },
+    'sfx-upgrade-rooster': { propName: 'sfxUpgradeRooster', type: 'sfx' },
   };
 
   /**

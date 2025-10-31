@@ -10,7 +10,7 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-31T16:07:24.656Z
+ * Generated: 2025-10-31T18:31:52.950Z
  * Files: 104
  *
  * @version 1.0.0
@@ -548,35 +548,19 @@ namespace BloomBeasts {
   }
 
   /**
-   * Ability upgrade at a specific level
-   */
-  export interface AbilityUpgrade {
-    abilities?: Ability[];  // Additional abilities to add at this level
-  }
-
-  /**
-   * Custom leveling configuration for a Bloom Beast
-   */
-  export interface LevelingConfig {
-    /** Custom XP requirements per level (overrides defaults) */
-    xpRequirements?: Partial<Record<2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, number>>;
-    /** Custom stat gains per level (overrides defaults) - cumulative values */
-    statGains?: Record<1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9, { hp: number; atk: number }>;
-    /** Ability upgrades at specific levels (4, 7, 9) */
-    abilityUpgrades?: Partial<Record<4 | 7 | 9, AbilityUpgrade>>;
-  }
-
-  /**
    * Bloom Beast card
+   *
+   * All cards use standard leveling progression:
+   * - Standard XP requirements (10, 20, 40, 80, 160, 320, 640, 1280)
+   * - Standard stat boosts (+0-8 HP, +0-6 ATK over 9 levels)
+   * - Abilities remain constant across all levels
    */
   export interface BloomBeastCard extends Card {
     type: 'Bloom';
     affinity: Affinity;
     baseAttack: number;
     baseHealth: number;
-    abilities: Ability[];  // Array of passive abilities (triggered automatically)
-    /** Optional custom leveling configuration */
-    levelingConfig?: LevelingConfig;
+    abilities: Ability[];  // Array of passive abilities (constant across all levels)
     // Note: Card definitions are blueprints. All cards (Bloom, Magic, Trap, Habitat, Buff)
     // start at level 1 with 0 XP when added to player's collection as CardInstance objects.
     // Level and XP tracking is handled by the CardInstance interface, not the card definitions.
@@ -2696,15 +2680,14 @@ namespace BloomBeasts {
     addXP(
       beast: BloomBeastInstance,
       amount: number,
-      source: XPSource,
-      card?: BloomBeastCard
+      source: XPSource
     ): BloomBeastInstance {
       const updatedBeast = { ...beast };
       updatedBeast.currentXP += amount;
 
       // Check if level up is possible
-      if (this.canLevelUp(updatedBeast, card)) {
-        return this.levelUp(updatedBeast, card);
+      if (this.canLevelUp(updatedBeast)) {
+        return this.levelUp(updatedBeast);
       }
 
       return updatedBeast;
@@ -2713,44 +2696,35 @@ namespace BloomBeasts {
     /**
      * Add XP from combat victory
      */
-  addCombatXP(beast: BloomBeastInstance, card?: BloomBeastCard): BloomBeastInstance {
-      return this.addXP(beast, 1, 'Combat', card);
+  addCombatXP(beast: BloomBeastInstance): BloomBeastInstance {
+      return this.addXP(beast, 1, 'Combat');
     }
 
     /**
      * Add XP from nectar sacrifice
      */
-  addNectarXP(beast: BloomBeastInstance, nectarSpent: number, card?: BloomBeastCard): BloomBeastInstance {
+  addNectarXP(beast: BloomBeastInstance, nectarSpent: number): BloomBeastInstance {
       const xpGained = nectarSpent / NECTAR_XP_COST;
-      return this.addXP(beast, xpGained, 'NectarSacrifice', card);
+      return this.addXP(beast, xpGained, 'NectarSacrifice');
     }
 
     /**
-     * Get XP requirement for a specific level, considering custom config
+     * Get XP requirement for a specific level (uses standard progression)
      */
-    private getXPRequirementForLevel(level: Level, card?: BloomBeastCard): number {
-      // Level 1 doesn't require XP
-      if (level === 1) {
-        return 0;
-      }
-      // Check custom XP requirements for levels 2-9
-      const customXP = card?.levelingConfig?.xpRequirements?.[level as 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9];
-      if (customXP !== undefined) {
-        return customXP;
-      }
+    private getXPRequirementForLevel(level: Level): number {
       return XP_REQUIREMENTS[level];
     }
 
     /**
      * Check if a beast can level up
      */
-  canLevelUp(beast: BloomBeastInstance, card?: BloomBeastCard): boolean {
+  canLevelUp(beast: BloomBeastInstance): boolean {
       if (beast.currentLevel >= MAX_LEVEL) {
         return false;
       }
 
       const nextLevel = (beast.currentLevel + 1) as Level;
-      const xpRequired = this.getXPRequirementForLevel(nextLevel, card);
+      const xpRequired = this.getXPRequirementForLevel(nextLevel);
 
       return beast.currentXP >= xpRequired;
     }
@@ -2758,54 +2732,42 @@ namespace BloomBeasts {
     /**
      * Level up a beast
      */
-  levelUp(beast: BloomBeastInstance, card?: BloomBeastCard): BloomBeastInstance {
-      if (!this.canLevelUp(beast, card)) {
+  levelUp(beast: BloomBeastInstance): BloomBeastInstance {
+      if (!this.canLevelUp(beast)) {
         return beast;
       }
 
       const updatedBeast = { ...beast };
       const nextLevel = (updatedBeast.currentLevel + 1) as Level;
-      const xpRequired = this.getXPRequirementForLevel(nextLevel, card);
+      const xpRequired = this.getXPRequirementForLevel(nextLevel);
 
       // Remove XP counters and increase level
       updatedBeast.currentXP -= xpRequired;
       updatedBeast.currentLevel = nextLevel;
 
       // Apply stat gains
-      const statGain = this.getStatGain(updatedBeast.currentLevel, card);
+      const statGain = this.getStatGain(updatedBeast.currentLevel);
       updatedBeast.currentAttack += statGain.attackGain;
       updatedBeast.currentHealth += statGain.healthGain;
       updatedBeast.maxHealth += statGain.healthGain;
 
       // Check for level up again (in case there's excess XP)
-      if (this.canLevelUp(updatedBeast, card)) {
-        return this.levelUp(updatedBeast, card);
+      if (this.canLevelUp(updatedBeast)) {
+        return this.levelUp(updatedBeast);
       }
 
       return updatedBeast;
     }
 
     /**
-     * Get stat gains for leveling from previous level to current level
+     * Get stat gains for leveling from previous level to current level (uses standard progression)
      */
   getStatGain(
-      newLevel: Level,
-      card?: BloomBeastCard
+      newLevel: Level
     ): { attackGain: number; healthGain: number } {
       const previousLevel = (newLevel - 1) as Level;
 
-      // Check for custom stat gains
-      const customCurrent = card?.levelingConfig?.statGains?.[newLevel];
-      const customPrevious = card?.levelingConfig?.statGains?.[previousLevel];
-
-      if (customCurrent && customPrevious) {
-        return {
-          attackGain: customCurrent.atk - customPrevious.atk,
-          healthGain: customCurrent.hp - customPrevious.hp,
-        };
-      }
-
-      // Use default progression
+      // Use standard progression
       const currentStats = STAT_PROGRESSION[newLevel];
       const previousStats = STAT_PROGRESSION[previousLevel];
 
@@ -2816,19 +2778,10 @@ namespace BloomBeasts {
     }
 
     /**
-     * Get total stat bonus at a given level
+     * Get total stat bonus at a given level (uses standard progression)
      */
-  getTotalStatBonus(level: Level, card?: BloomBeastCard): { hp: number; atk: number } {
-      // Check for custom stat gains
-      const customStats = card?.levelingConfig?.statGains?.[level];
-      if (customStats) {
-        return {
-          hp: customStats.hp,
-          atk: customStats.atk,
-        };
-      }
-
-      // Use default progression
+  getTotalStatBonus(level: Level): { hp: number; atk: number } {
+      // Use standard progression
       const stats = STAT_PROGRESSION[level];
       return {
         hp: stats.cumulativeHP,
@@ -2843,7 +2796,7 @@ namespace BloomBeasts {
       baseCard: BloomBeastCard,
       level: Level
     ): { attack: number; health: number } {
-      const bonus = this.getTotalStatBonus(level, baseCard);
+      const bonus = this.getTotalStatBonus(level);
       return {
         attack: baseCard.baseAttack + bonus.atk,
         health: baseCard.baseHealth + bonus.hp,
@@ -2881,49 +2834,29 @@ namespace BloomBeasts {
     /**
      * Get XP requirement for next level
      */
-  getXPRequirement(currentLevel: Level, card?: BloomBeastCard): number | null {
+  getXPRequirement(currentLevel: Level): number | null {
       if (currentLevel >= MAX_LEVEL) {
         return null;
       }
 
       const nextLevel = (currentLevel + 1) as Level;
-      return this.getXPRequirementForLevel(nextLevel, card);
+      return this.getXPRequirementForLevel(nextLevel);
     }
 
     /**
-     * Get current abilities for a beast based on its level
+     * Get current abilities for a beast (always returns base abilities - no level-based changes)
      */
   getCurrentAbilities(card: BloomBeastCard, level: Level) {
-      // Start with base abilities
-      let abilities = [...card.abilities];
-
-      // Check for ability upgrades at level milestones
-      // Use the most recent complete ability set for the current level
-      const upgrades = card.levelingConfig?.abilityUpgrades;
-      if (upgrades) {
-        // Check each upgrade level in reverse order (9, 7, 4) to find the most recent applicable upgrade
-        const upgradeLevels: Array<4 | 7 | 9> = [9, 7, 4];
-        for (const lvl of upgradeLevels) {
-          if (level >= lvl && upgrades[lvl]) {
-            const upgrade = upgrades[lvl];
-            if (upgrade && upgrade.abilities) {
-              // Use this upgrade's abilities as the complete set
-              abilities = [...upgrade.abilities];
-              break;  // Found the most recent upgrade, stop looking
-            }
-          }
-        }
-      }
-
-      return { abilities };
+      // Cards keep their base abilities at all levels
+      return { abilities: [...card.abilities] };
     }
 
     /**
-     * Check if a beast has an ability upgrade at the current level
+     * Check if a beast has an ability upgrade at the current level (always false now)
      */
   hasAbilityUpgrade(card: BloomBeastCard, level: Level): boolean {
-      if (level !== 4 && level !== 7 && level !== 9) return false;
-      return card.levelingConfig?.abilityUpgrades?.[level as 4 | 7 | 9] !== undefined;
+      // No ability upgrades in simplified system
+      return false;
     }
   }
 
@@ -3224,11 +3157,57 @@ namespace BloomBeasts {
    * Get a specific starter deck by type
    */
   export function getStarterDeck(type: DeckType): DeckList {
+    // TESTING: Use quick win deck for fast testing
+    return quickWinDeck(type);
+
     // TESTING: Use testing deck with 1 of each card
-    return getTestingDeck(type);
+    // return getTestingDeck(type);
 
     // ORIGINAL: Starter deck with multiple copies
     // return buildDeck(type);
+  }
+
+  /**
+   * Get a quick win deck with just a few low-level beasts for fast testing
+   * This creates a minimal deck for quick victories in testing
+   */
+  export function quickWinDeck(type: DeckType): DeckList {
+    if (!_deckBuilderCatalogManager) {
+      console.error('[deckBuilder] catalogManager not initialized');
+      return { name: '', affinity: type, cards: [], totalCards: 0 };
+    }
+
+    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
+    const allCards: AnyCard[] = [];
+
+    // Add just a few level 1 beasts (3 total - easy to draw and summon quickly)
+    const beastEntry = deckConfig.beasts[0]; // Get the first beast type
+    if (beastEntry) {
+      for (let i = 1; i <= 3; i++) {
+        allCards.push({
+          ...beastEntry.card,
+          instanceId: `${beastEntry.card.id}-${i}`,
+        } as unknown as AnyCard);
+      }
+    }
+
+    // Add 27 Nectar Blocks for fast summoning
+    const nectarBlock = _deckBuilderCatalogManager.getCard('nectar-block');
+    if (nectarBlock) {
+      for (let i = 1; i <= 27; i++) {
+        allCards.push({
+          ...nectarBlock,
+          instanceId: `nectar-block-${i}`,
+        } as unknown as AnyCard);
+      }
+    }
+
+    return {
+      name: `${deckConfig.name} (Quick Win)`,
+      affinity: type,
+      cards: allCards,
+      totalCards: allCards.length,
+    };
   }
 
   /**
@@ -3918,24 +3897,9 @@ namespace BloomBeasts {
   /**
    * Calculate card level from current XP
    * Works for all card types (Bloom, Magic, Trap, Habitat, Buff)
+   * Uses standard XP thresholds for all cards
    */
-  export function getCardLevel(currentXP: number, card?: BloomBeastCard): number {
-    // For Bloom beasts with custom XP requirements, use those
-    if (card?.levelingConfig?.xpRequirements) {
-      const customXP = card.levelingConfig.xpRequirements;
-      let cumulativeXP = 0;
-
-      for (let level = 2; level <= 9; level++) {
-        const levelKey = level as 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-        cumulativeXP += customXP[levelKey] || CARD_XP_THRESHOLDS[level] - CARD_XP_THRESHOLDS[level - 1];
-
-        if (currentXP < cumulativeXP) {
-          return level - 1;
-        }
-      }
-      return 9; // Max level
-    }
-
+  export function getCardLevel(currentXP: number): number {
     // Standard XP thresholds
     for (let level = 9; level >= 1; level--) {
       if (currentXP >= CARD_XP_THRESHOLDS[level - 1]) {
@@ -3946,20 +3910,12 @@ namespace BloomBeasts {
   }
 
   /**
-   * Calculate XP required for next level
+   * Calculate XP required for next level (uses standard progression)
    */
-  export function getXPRequired(currentLevel: number, currentXP: number, card?: BloomBeastCard): number {
+  export function getXPRequired(currentLevel: number, currentXP: number): number {
     if (currentLevel >= 9) return 0; // Max level
 
     const nextLevel = currentLevel + 1;
-
-    // For Bloom beasts with custom XP requirements
-    if (card?.levelingConfig?.xpRequirements) {
-      const customXP = card.levelingConfig.xpRequirements;
-      const levelKey = nextLevel as 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-      const nextLevelXP = CARD_XP_THRESHOLDS[nextLevel - 1];
-      return nextLevelXP - currentXP;
-    }
 
     // Standard XP requirements
     const nextLevelXP = CARD_XP_THRESHOLDS[nextLevel - 1];
@@ -4038,8 +3994,8 @@ namespace BloomBeasts {
       };
     }
 
-    const level = getCardLevel(instance.currentXP, cardDef as BloomBeastCard);
-    const xpRequired = getXPRequired(level, instance.currentXP, cardDef as BloomBeastCard);
+    const level = getCardLevel(instance.currentXP);
+    const xpRequired = getXPRequired(level, instance.currentXP);
 
     const displayData: CardDisplayData = {
       id: instance.id,
@@ -4053,48 +4009,16 @@ namespace BloomBeasts {
       experienceRequired: xpRequired,
     };
 
-    // Add type-specific data
+    // Add type-specific data (base stats only - level bonuses applied in battle)
     if (cardDef.type === 'Bloom' && 'baseAttack' in cardDef) {
       const bloomCard = cardDef as BloomBeastCard;
-
-      // Apply levelingConfig stat gains if they exist
-      let baseAttack = bloomCard.baseAttack;
-      let baseHealth = bloomCard.baseHealth;
-
-      if (bloomCard.levelingConfig?.statGains) {
-        const statGain = bloomCard.levelingConfig.statGains[level as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9];
-        if (statGain) {
-          baseAttack = statGain.atk;
-          baseHealth = statGain.hp;
-        }
-      }
-
-      displayData.baseAttack = baseAttack;
-      displayData.baseHealth = baseHealth;
+      displayData.baseAttack = bloomCard.baseAttack;
+      displayData.baseHealth = bloomCard.baseHealth;
     }
 
-    // Add abilities (with level-based upgrades for Bloom cards)
+    // Add abilities (abilities remain constant across all levels)
     if ('abilities' in cardDef) {
-      let abilities = cardDef.abilities as any[];
-
-      // Apply ability upgrades for Bloom cards based on level
-      if (cardDef.type === 'Bloom' && 'levelingConfig' in cardDef) {
-        const bloomCard = cardDef as BloomBeastCard;
-        const upgrades = bloomCard.levelingConfig?.abilityUpgrades;
-
-        if (upgrades) {
-          // Check upgrade levels in reverse order (9, 7, 4) to get the most recent applicable upgrade
-          if (level >= 9 && upgrades[9]) {
-            abilities = upgrades[9].abilities || abilities;
-          } else if (level >= 7 && upgrades[7]) {
-            abilities = upgrades[7].abilities || abilities;
-          } else if (level >= 4 && upgrades[4]) {
-            abilities = upgrades[4].abilities || abilities;
-          }
-        }
-      }
-
-      displayData.abilities = abilities;
+      displayData.abilities = cardDef.abilities as any[];
     }
 
     // Generate description from abilities using getCardDescription
@@ -4521,6 +4445,8 @@ namespace BloomBeasts {
     trapTwo: SimplePosition;
     trapThree: SimplePosition;
     health: SimplePosition;
+    nectar: SimplePosition;
+    deckCount: SimplePosition;
   }
 
   interface CardTextInfo extends SimplePosition {
@@ -5161,7 +5087,7 @@ namespace BloomBeasts {
                       top: buttonRelativeY,
                       flexDirection: 'column',
                   },
-                  children: config.buttons.map(button =>
+                  children: config.buttons.map((button, index) =>
                       createButton({
                           ui,
                           label: button.label,
@@ -5169,8 +5095,8 @@ namespace BloomBeasts {
                           disabled: button.disabled,
                           playSfx: config.playSfx,
                           style: {
-                              position: 'relative',
-                              top: button.yOffset !== undefined ? button.yOffset : 0,
+                              // Use marginBottom for spacing between buttons (except last button)
+                              marginBottom: index < config.buttons!.length - 1 ? GAPS.buttons : 0,
                           },
                       })
                   ),
@@ -5265,7 +5191,7 @@ namespace BloomBeasts {
       // Single binding for level and XP text
       const levelXPTextBinding = ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
           const statsVal = extractStats(data);
-          if (!statsVal) return 'Level 1\n0/100';
+          if (!statsVal) return 'lvl 1. 0/100';
 
           const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
           const currentLevel = statsVal.playerLevel;
@@ -5275,7 +5201,7 @@ namespace BloomBeasts {
           const currentXP = totalXP - xpForCurrentLevel;
           const xpNeeded = xpForNextLevel - xpForCurrentLevel;
 
-          return `Level ${currentLevel}\n${currentXP}/${xpNeeded}`;
+          return `lvl ${currentLevel}. ${currentXP}/${xpNeeded}`;
       });
 
       return ui.View({
@@ -5309,11 +5235,9 @@ namespace BloomBeasts {
                   },
                   children: ui.Text({
                       text: levelXPTextBinding,
-                      numberOfLines: 2,
                       style: {
                           fontSize: DIMENSIONS.fontSize.xs,
                           color: COLORS.textSecondary,
-                          lineHeight: 12,
                       },
                   }),
               }),
@@ -5708,21 +5632,7 @@ namespace BloomBeasts {
           })
         ] : []),
 
-        // Layer 4: Experience bar (for Bloom cards with level)
-        ...(card.type === 'Bloom' && card.level ? [
-          ui.Image({
-            source: ui.assetIdToImageSource?.(expBarKey) || null,
-            style: {
-              width: 120,
-              height: 20,
-              position: 'absolute',
-              top: positions.experienceBar.y,
-              left: positions.experienceBar.x,
-            },
-          })
-        ] : []),
-
-        // Layer 5: Text overlays
+        // Layer 4: Text overlays
         // Card name
         ui.Text({
           text: card.name || '',
@@ -5784,10 +5694,10 @@ namespace BloomBeasts {
           })
         ] : []),
 
-        // Level (for all cards)
+        // Level and Experience (for all cards with level)
         ...(card.level !== undefined ? [
           ui.Text({
-            text: `Level ${card.level}`,
+            text: `lvl ${card.level}. ${card.experience || 0}/${card.experienceRequired || 0}`,
             style: {
               position: 'absolute',
               top: positions.level.y,
@@ -5873,7 +5783,7 @@ namespace BloomBeasts {
     slotIndex?: number;
     cardsPerPage?: number;
 
-    onClick?: () => void;
+    onClick?: (cardId: string) => void;
     showDeckIndicator?: boolean;
   }
 
@@ -5979,7 +5889,12 @@ namespace BloomBeasts {
 
     const cardLevelBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
       const card = getCard(uiState, playerData);
-      return card && card.level !== undefined ? `Level ${card.level}` : '';
+      if (!card || card.level === undefined) return '';
+
+      // For all cards, show level and experience
+      const exp = card.experience || 0;
+      const expRequired = card.experienceRequired || 0;
+      return `lvl ${card.level}. ${exp}/${expRequired}`;
     });
 
     const abilityTextBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
@@ -6073,23 +5988,7 @@ namespace BloomBeasts {
         },
       }),
 
-      // Layer 5: Experience bar
-      ui.Image({
-        source: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-          const card = getCard(uiState, playerData);
-          if (!card || card.type !== 'Bloom' || card.level === undefined) return null;
-          return ui.assetIdToImageSource?.('experience-bar');
-        }),
-        style: {
-          width: 120,
-          height: 20,
-          position: 'absolute',
-          top: positions.experienceBar.y,
-          left: positions.experienceBar.x,
-        },
-      }),
-
-      // Layer 6: Text overlays
+      // Layer 5: Text overlays
       // Card name
       ui.Text({
         text: cardNameBinding,
@@ -6202,7 +6101,14 @@ namespace BloomBeasts {
       return ui.Pressable({
         onClick: () => {
           console.log('[CardRenderer] Pressable clicked');
-          onClick();
+          // Get current state to determine which card was clicked
+          const currentState = ui.bindingManager.getSnapshot(BindingType.UIState);
+          const playerData = ui.bindingManager.getSnapshot(BindingType.PlayerData);
+          const card = getCard(currentState, playerData);
+          if (card?.id) {
+            console.log('[CardRenderer] Calling onClick with cardId:', card.id);
+            onClick(card.id);
+          }
         },
         style: {
           width: cardWidth,
@@ -6603,12 +6509,9 @@ namespace BloomBeasts {
           mode: 'slot',
           slotIndex,
           cardsPerPage,
-          onClick: () => {
-            const state = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-            const cardId = state.cards?.selectedCardId;
-            if (cardId) {
-              this.handleCardClick(cardId);
-            }
+          onClick: (cardId: string) => {
+            console.log('[CardsScreen] Card clicked:', cardId);
+            this.handleCardClick(cardId);
           },
           showDeckIndicator: true,
         }),
@@ -6687,17 +6590,31 @@ namespace BloomBeasts {
           onClick: () => {
             // Check bounds before scrolling
             const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-            if (currentState.cards?.scrollOffset > 0) {
+            const currentOffset = currentState.cards?.scrollOffset ?? 0;
+            console.log('[CardsScreen] Up button clicked, currentOffset:', currentOffset);
+            if (currentOffset > 0) {
               // Update UIState binding
               this.ui.bindingManager.setBinding(BindingType.UIState, {
                 ...currentState,
                 cards: {
                   ...currentState.cards,
-                  scrollOffset: currentState.cards?.scrollOffset - 1
+                  scrollOffset: currentOffset - 1
                 }
               });
+              console.log('[CardsScreen] Scrolled up to offset:', currentOffset - 1);
+              // Trigger re-render for web
+              if (this.onRenderNeeded) {
+                this.onRenderNeeded();
+              }
             }
           },
+          disabled: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (uiState: UIState) => {
+              const offset = uiState.cards?.scrollOffset ?? 0;
+              return offset <= 0;
+            }
+          ) as any,
           yOffset: 0,
         },
         {
@@ -6705,28 +6622,35 @@ namespace BloomBeasts {
           onClick: () => {
             // Reactive disabled state prevents invalid scrolling, so just increment
             const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-            const cards = currentState.playerData?.cards?.collected || [];
+            const playerData = this.ui.bindingManager.getSnapshot(BindingType.PlayerData);
+            const cards = playerData?.cards?.collected || [];
             const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
             const totalPages = Math.ceil(cards.length / cardsPerPage);
-            if (currentState.cards?.scrollOffset < totalPages - 1) {
+            const currentOffset = currentState.cards?.scrollOffset ?? 0;
+            console.log('[CardsScreen] Down button clicked, currentOffset:', currentOffset, 'totalPages:', totalPages);
+            if (currentOffset < totalPages - 1) {
               this.ui.bindingManager.setBinding(BindingType.UIState, {
                 ...currentState,
                 cards: {
                   ...currentState.cards,
-                  scrollOffset: currentState.cards?.scrollOffset + 1
+                  scrollOffset: currentOffset + 1
                 }
               });
+              console.log('[CardsScreen] Scrolled down to offset:', currentOffset + 1);
+              // Trigger re-render for web
+              if (this.onRenderNeeded) {
+                this.onRenderNeeded();
+              }
             }
           },
           disabled: this.ui.bindingManager.derive(
-            [BindingType.UIState],
-            ( uiState: UIState) => {
-              const pd = this.ui.bindingManager.getSnapshot(BindingType.PlayerData);
+            [BindingType.UIState, BindingType.PlayerData],
+            (uiState: UIState, pd: any) => {
               const offset = uiState.cards?.scrollOffset ?? 0;
               const cards = pd?.cards?.collected || [];
               const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
               const totalPages = Math.ceil(cards.length / cardsPerPage);
-              return offset >= totalPages - 1 ? true : false;
+              return offset >= totalPages - 1;
             }
           ) as any,
           yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
@@ -7002,7 +6926,9 @@ namespace BloomBeasts {
 
       return this.ui.Pressable({
         onClick: () => {
+          console.log('[UpgradeScreen] Upgrade item clicked:', upgrade.id);
           const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+          console.log('[UpgradeScreen] Current UIState:', currentState);
           // Update UIState binding
           this.ui.bindingManager.setBinding(BindingType.UIState, {
             ...currentState,
@@ -7011,6 +6937,7 @@ namespace BloomBeasts {
               selectedUpgradeId: upgrade.id
             }
           });
+          console.log('[UpgradeScreen] Updated UIState with selectedUpgradeId:', upgrade.id);
         },
         style: {
           width: containerSize,
@@ -7041,31 +6968,22 @@ namespace BloomBeasts {
               left: imageOffset.left,
             },
           }),
-          // Upgrade level indicator (single number display)
-          this.ui.View({
+          // Upgrade level indicator (text at center bottom)
+          this.ui.Text({
+            text: this.ui.bindingManager.playerDataBinding.binding.derive((pd: any) => {
+              const level = pd?.boosts?.[upgrade.id] || 0;
+              return `Level ${level}`;
+            }),
             style: {
               position: 'absolute',
               bottom: 8,
-              left: 8,
-              width: 30,
-              height: 30,
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              borderRadius: 15,
-              justifyContent: 'center',
-              alignItems: 'center',
+              left: 0,
+              width: containerSize,
+              fontSize: 14,
+              fontWeight: 'bold',
+              color: '#fff',
+              textAlign: 'center',
             },
-            children: this.ui.Text({
-              text: this.ui.bindingManager.playerDataBinding.binding.derive((pd: any) => {
-                const level = pd?.boosts?.[upgrade.id] || 0;
-                return level > 0 ? `Lv${level}` : '';
-              }),
-              style: {
-                fontSize: 14,
-                fontWeight: 'bold',
-                color: '#fff',
-                textAlign: 'center',
-              },
-            }),
           }),
         ],
       });
@@ -7146,17 +7064,12 @@ namespace BloomBeasts {
           }),
           // Upgrade popup (conditionally rendered) - derive from UIState
           ...(this.ui.UINode ? [this.ui.UINode.if(
-            this.ui.bindingManager.derive([BindingType.UIState], (state: any) => (state.upgrade?.selectedUpgradeId ?? null) !== null),
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                top: 0,
-                left: 0,
-              },
-              children: this.createUpgradePopup(),
-            })
+            this.ui.bindingManager.derive([BindingType.UIState], (state: any) => {
+              const shouldShow = (state.upgrade?.selectedUpgradeId ?? null) !== null;
+              console.log('[UpgradeScreen] Popup condition evaluated:', shouldShow, 'selectedUpgradeId:', state.upgrade?.selectedUpgradeId);
+              return shouldShow;
+            }),
+            this.createUpgradePopup()
           )] : []),
         ],
       });
@@ -7206,15 +7119,30 @@ namespace BloomBeasts {
             color: 'green',
             disabled: this.ui.bindingManager.derive([BindingType.PlayerData, BindingType.UIState], (pd: any, state: any) => {
               const upgradeId = state.upgrade?.selectedUpgradeId ?? null;
-              if (!upgradeId) return true;
+              console.log('[UpgradeScreen] Disabled check - upgradeId:', upgradeId);
+              if (!upgradeId) {
+                console.log('[UpgradeScreen] Disabled: no upgradeId');
+                return true;
+              }
               const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
-              if (!upgrade) return true;
+              console.log('[UpgradeScreen] Found upgrade:', upgrade?.name);
+              if (!upgrade) {
+                console.log('[UpgradeScreen] Disabled: upgrade not found');
+                return true;
+              }
               const currentLevel = pd?.boosts?.[upgradeId] || 0;
-              if (currentLevel >= 6) return true;
+              console.log('[UpgradeScreen] Current level:', currentLevel);
+              if (currentLevel >= 6) {
+                console.log('[UpgradeScreen] Disabled: max level reached');
+                return true;
+              }
 
               const nextLevelCost = upgrade.costs[currentLevel];
               const coins = pd?.coins ?? 0;
-              return coins < nextLevelCost;
+              console.log('[UpgradeScreen] Cost check - coins:', coins, 'nextLevelCost:', nextLevelCost);
+              const isDisabled = coins < nextLevelCost;
+              console.log('[UpgradeScreen] Button disabled:', isDisabled);
+              return isDisabled;
             }),
           },
           {
@@ -7305,8 +7233,11 @@ namespace BloomBeasts {
       // Format difficulty nicely (capitalize first letter)
       const formattedDifficulty = mission.difficulty.charAt(0).toUpperCase() + mission.difficulty.slice(1);
 
+      // Add completion indicator if mission is completed
+      const completionIndicator = mission.isCompleted ? '✓ ' : '';
+
       // Combine all text with line breaks
-      return `${mission.name}\nLevel ${mission.level} - ${formattedDifficulty}\n\n${mission.description}`;
+      return `${completionIndicator}${mission.name}\nLevel ${mission.level} - ${formattedDifficulty}\n\n${mission.description}`;
     });
 
     const missionImageBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
@@ -8061,8 +7992,8 @@ namespace BloomBeasts {
         source: this.ui.assetIdToImageSource?.('background') || null,
         style: {
           position: 'absolute',
-          width: gameDimensions.panelWidth,
-          height: gameDimensions.panelHeight,
+          width: '100%',
+          height: '100%',
           top: 0,
           left: 0,
         },
@@ -9605,7 +9536,7 @@ namespace BloomBeasts {
             style: {
               position: 'absolute',
               left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
-              top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y - sideMenuButtonDimensions.height - 10,
+              top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y - sideMenuButtonDimensions.height - GAPS.buttons,
             },
           }),
 
@@ -9918,51 +9849,55 @@ namespace BloomBeasts {
           overflow: 'hidden',
         },
         children: [
+          // Stretched background layer
+          this.backgroundComponent.createBackground(),
+
+          // Game content container - all content scales to fit screen
           this.ui.View({
             style: {
+              position: 'absolute',
               width: '100%',
               height: '100%',
-              position: 'relative',
-              aspectRatio: `${gameDimensions.panelWidth}/${gameDimensions.panelHeight}`
+              top: 0,
+              left: 0,
             },
             children: [
-              // Layer 1: Background image (full screen)
-              this.backgroundComponent.createBackground(),
+                // Layer 2: Playboard overlay
+                this.backgroundComponent.createPlayboard(),
 
-              // Layer 2: Playboard overlay
-              this.backgroundComponent.createPlayboard(),
+                // Layer 3: Battle zones (beasts, traps, buffs, habitat)
+                ...this.beastFieldComponent.createBeastField('player'),
+                ...this.beastFieldComponent.createBeastField('opponent'),
+                ...this.trapZoneComponent.createTrapZone('player'),
+                ...this.trapZoneComponent.createTrapZone('opponent'),
+                ...this.buffZoneComponent.createBuffZone('player'),
+                ...this.buffZoneComponent.createBuffZone('opponent'),
+                this.habitatZoneComponent.createHabitatZone(),
 
-              // Layer 3: Battle zones (beasts, traps, buffs, habitat)
-              ...this.beastFieldComponent.createBeastField('player'),
-              ...this.beastFieldComponent.createBeastField('opponent'),
-              ...this.trapZoneComponent.createTrapZone('player'),
-              ...this.trapZoneComponent.createTrapZone('opponent'),
-              ...this.buffZoneComponent.createBuffZone('player'),
-              ...this.buffZoneComponent.createBuffZone('opponent'),
-              this.habitatZoneComponent.createHabitatZone(),
+                // Layer 4: Player/Opponent info displays
+                this.infoDisplaysComponent.createInfoDisplays(),
 
-              // Layer 4: Player/Opponent info displays
-              this.infoDisplaysComponent.createInfoDisplays(),
+                // Layer 5: Side menu with controls
+                this.sideMenuComponent.createBattleSideMenu(),
 
-              // Layer 5: Side menu with controls
-              this.sideMenuComponent.createBattleSideMenu(),
+                // Layer 6: Player hand overlay (always rendered, bindings control visibility)
+                this.playerHandComponent.createPlayerHand(),
 
-              // Layer 6: Player hand overlay (always rendered, bindings control visibility)
-              this.playerHandComponent.createPlayerHand(),
+                // Layer 7: Card detail popup (from battleDisplay) - conditionally visible
+                this.createCardPopupLayer(),
 
-              // Layer 7: Card detail popup (from battleDisplay) - conditionally visible
-              this.createCardPopupLayer(),
+                // Layer 7.25: Selected card detail popup (from clicking buff/trap cards) - conditionally visible
+                this.createSelectedCardDetailLayer(),
 
-              // Layer 7.25: Selected card detail popup (from clicking buff/trap cards) - conditionally visible
-              this.createSelectedCardDetailLayer(),
+                // Layer 7.5: Played card popup (temporary 2-second display) - conditionally visible
+                this.createPlayedCardPopupLayer(),
 
-              // Layer 7.5: Played card popup (temporary 2-second display) - conditionally visible
-              this.createPlayedCardPopupLayer(),
-
-              // Layer 8: Attack animation overlays
-              this.createAttackAnimations(),
-          ],
+                // Layer 8: Attack animation overlays
+                this.createAttackAnimations(),
+            ],
           }),
+
+          // Note: Forfeit popup is handled at the root level in BloomBeastsGame
         ],
       });
     }
@@ -10059,6 +9994,11 @@ namespace BloomBeasts {
       // TODO: Make playedCardDisplay reactive and implement properly
       return this.ui.View({ style: { display: 'none' } });
     }
+
+    /**
+     * Forfeit popup is now handled at the root level in BloomBeastsGame.ts
+     * This method has been removed to avoid duplicate popups
+     */
 
     /**
      * Create card popup overlay
@@ -10662,7 +10602,7 @@ namespace BloomBeasts {
               height: 50,
               justifyContent: 'center',
               alignItems: 'center',
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              // backgroundColor: 'rgba(0, 0, 0, 0.5)',
               borderRadius: 10,
             },
             children: this.ui.Text({
@@ -10671,7 +10611,7 @@ namespace BloomBeasts {
                 fontSize: DIMENSIONS.fontSize.xl,
                 fontWeight: 'bold',
                 color: COLORS.primary,
-                textAlign: 'center',
+                // textAlign: 'center',
               },
             }),
           }),
@@ -10683,7 +10623,7 @@ namespace BloomBeasts {
               left: 25,
               width: panelWidth - 50,
               height: panelHeight - 80,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              // backgroundColor: 'rgba(0, 0, 0, 0.5)',
               borderRadius: 10,
               padding: 15,
             },
@@ -10749,7 +10689,7 @@ namespace BloomBeasts {
               ),
               // Speed Leaderboard (right)
               this.createLeaderboardPanel(
-                '⚡ Fastest Cluck Norris',
+                '🐔 Fastest Cluck Norris',
                 'speed',
                 460
               ),
@@ -10791,7 +10731,7 @@ namespace BloomBeasts {
     mission: {
       id: string;
       name: string;
-      affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky';
+      affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
     };
     rewards: {
       xpGained: number;
@@ -10815,12 +10755,65 @@ namespace BloomBeasts {
 
   /**
    * Unified Mission Complete Popup using common Popup component
+   * Derives content from MissionCompletePopup binding
    */
-  export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionCompletePopupProps): UINodeType {
-    const { mission, rewards, chestOpened, onClaimRewards, onContinue, playSfx } = props;
-    const isFailed = !rewards;
+  export function createMissionCompletePopup(ui: UIMethodMappings, bindingManager: any): UINodeType {
+    // Get the playSfx function from current binding state
+    const currentProps = bindingManager.getSnapshot(BindingType.MissionCompletePopup);
+    const playSfx = currentProps?.playSfx;
 
-    // Create content for the popup
+    // Derive chest image source
+    const chestImageSource = bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+      if (!props) return null;
+      if (!props.rewards) {
+        return ui.assetIdToImageSource?.('lose-image') || null;
+      }
+      const affinity = props.mission.affinity === 'Boss' ? 'Fire' : (props.mission.affinity || 'Forest');
+      const state = props.chestOpened ? 'opened' : 'closed';
+      return ui.assetIdToImageSource?.(`${affinity}-chest-${state}`.toLowerCase()) || null;
+    });
+
+    // Derive info text
+    const infoText = bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+      if (!props) return '';
+      if (!props.rewards) {
+        return 'Better luck next time!\n\nKeep training your beasts\nand try again.';
+      }
+      if (props.chestOpened) {
+        // Show detailed rewards
+        const lines: string[] = [];
+        if (props.rewards.coinsReceived) {
+          lines.push(`🪙 ${props.rewards.coinsReceived} Coins`);
+        }
+        if (props.rewards.bonusRewards && props.rewards.bonusRewards.length > 0) {
+          lines.push(...props.rewards.bonusRewards);
+        }
+        if (props.rewards.cardsReceived && props.rewards.cardsReceived.length > 0) {
+          lines.push('', 'Cards Received:');
+          props.rewards.cardsReceived.forEach((card: any) => {
+            lines.push(`• ${card.name}`);
+          });
+        }
+        return lines.join('\n');
+      } else {
+        // Show basic info
+        const minutes = Math.floor(props.rewards.completionTimeSeconds / 60);
+        const seconds = props.rewards.completionTimeSeconds % 60;
+        const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+        const lines = [
+          `Time: ${timeString}`,
+          '',
+          `Player XP: +${props.rewards.xpGained}`,
+          `Beast XP: +${props.rewards.beastXP}`
+        ];
+        if (props.rewards.coinsReceived) {
+          lines.push(`Coins: +${props.rewards.coinsReceived}`);
+        }
+        return lines.join('\n');
+      }
+    });
+
+    // Create content
     const content: UINodeType[] = [
       // Chest or lose image
       ui.View({
@@ -10831,25 +10824,13 @@ namespace BloomBeasts {
           marginTop: 10,
           marginBottom: 20,
         },
-        children: isFailed
-          ? ui.Image({
-              source: ui.assetIdToImageSource?.('lose-image') || null,
-              style: {
-                width: chestImageMissionCompleteDimensions.width,
-                height: chestImageMissionCompleteDimensions.height,
-              },
-            })
-          : ui.Image({
-              source: ui.assetIdToImageSource?.(
-                chestOpened
-                  ? `${mission.affinity || 'Forest'}-chest-opened`.toLowerCase()
-                  : `${mission.affinity || 'Forest'}-chest-closed`.toLowerCase()
-              ) || null,
-              style: {
-                width: chestImageMissionCompleteDimensions.width,
-                height: chestImageMissionCompleteDimensions.height,
-              },
-            }),
+        children: ui.Image({
+          source: chestImageSource as any,
+          style: {
+            width: chestImageMissionCompleteDimensions.width,
+            height: chestImageMissionCompleteDimensions.height,
+          },
+        }),
       }),
 
       // Info text
@@ -10859,25 +10840,36 @@ namespace BloomBeasts {
           paddingLeft: 20,
           paddingRight: 20,
         },
-        children: isFailed
-          ? createFailedInfo(ui)
-          : chestOpened
-          ? createDetailedRewards(ui, rewards)
-          : createBasicInfo(ui, rewards),
+        children: ui.Text({
+          text: infoText as any,
+          numberOfLines: 15,
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            color: COLORS.textPrimary,
+            textAlign: 'center',
+            lineHeight: 20,
+          },
+        }),
       }),
     ];
 
-    // Create button
+    // Create button with derived label
     const popupButton: PopupButton = {
-      label: isFailed ? 'CONTINUE' : chestOpened ? 'CONTINUE' : 'CLAIM REWARDS',
+      label: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+        if (!props) return 'CONTINUE';
+        if (!props.rewards || props.chestOpened) return 'CONTINUE';
+        return 'CLAIM REWARDS';
+      }) as any,
       onClick: () => {
-        console.log('[MissionCompletePopup] Button clicked, isFailed:', isFailed, 'chestOpened:', chestOpened);
-        if (isFailed || chestOpened) {
+        const props = bindingManager.getSnapshot(BindingType.MissionCompletePopup);
+        if (!props) return;
+
+        if (!props.rewards || props.chestOpened) {
           console.log('[MissionCompletePopup] Calling onContinue');
-          onContinue?.();
+          props.onContinue?.();
         } else {
           console.log('[MissionCompletePopup] Calling onClaimRewards');
-          onClaimRewards?.();
+          props.onClaimRewards?.();
         }
       },
       type: 'long',
@@ -10886,11 +10878,15 @@ namespace BloomBeasts {
 
     return createPopup({
       ui,
-      title: isFailed ? 'MISSION FAILED' : 'MISSION COMPLETE!',
-      titleColor: isFailed ? '#FF4444' : '#FFD700',
+      title: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+        return props?.rewards === null ? 'MISSION FAILED' : 'MISSION COMPLETE!';
+      }) as any,
+      titleColor: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+        return props?.rewards === null ? '#FF4444' : '#FFD700';
+      }) as any,
       content,
       buttons: [popupButton],
-      playSfx,
+      playSfx, // Direct function reference, not a binding
       width: missionCompleteCardDimensions.width,
       height: missionCompleteCardDimensions.height,
     });
@@ -11114,23 +11110,61 @@ namespace BloomBeasts {
 
   /**
    * Create a button popup using the common Popup component
+   * Derives content from ForfeitPopup binding
    */
-  export function createButtonPopup(ui: UIMethodMappings, props: ButtonPopupProps): any {
-    const { title, message, buttons, playSfx } = props;
+  export function createButtonPopup(ui: UIMethodMappings, bindingManager: any): any {
+    // Get the playSfx function from current binding state
+    const currentProps = bindingManager.getSnapshot(BindingType.ForfeitPopup);
+    const playSfx = currentProps?.playSfx;
 
-    // Convert button format to PopupButton format
-    const popupButtons: PopupButton[] = buttons.map((button) => ({
-      label: button.text,
-      onClick: button.onClick,
-      color: (button.color as ButtonColor) || 'default',
-    }));
+    // Derive title
+    const title = bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+      return props?.title || '';
+    });
+
+    // Derive message
+    const message = bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+      return props?.message || '';
+    });
+
+    // Create buttons that capture click handlers at click time
+    const popupButtons: PopupButton[] = [
+      {
+        label: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+          return props?.buttons?.[0]?.text || 'Yes';
+        }) as any,
+        onClick: () => {
+          const props = bindingManager.getSnapshot(BindingType.ForfeitPopup);
+          if (props?.buttons?.[0]?.onClick) {
+            props.buttons[0].onClick();
+          }
+        },
+        color: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+          return (props?.buttons?.[0]?.color || 'default') as ButtonColor;
+        }) as any,
+      },
+      {
+        label: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+          return props?.buttons?.[1]?.text || 'No';
+        }) as any,
+        onClick: () => {
+          const props = bindingManager.getSnapshot(BindingType.ForfeitPopup);
+          if (props?.buttons?.[1]?.onClick) {
+            props.buttons[1].onClick();
+          }
+        },
+        color: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+          return (props?.buttons?.[1]?.color || 'default') as ButtonColor;
+        }) as any,
+      },
+    ];
 
     return createPopup({
       ui,
-      title,
-      description: message,
+      title: title as any,
+      description: message as any,
       buttons: popupButtons,
-      playSfx,
+      playSfx, // Direct function reference, not a binding
       width: 450,
       height: 280,
     });
@@ -12554,22 +12588,8 @@ namespace BloomBeasts {
         };
       }
 
-      const level = getCardLevel(cardInstance.currentXP, cardDef);
-      let abilities = [...cardDef.abilities];
-
-      // Apply ability upgrades based on level (use the most recent complete set)
-      if (cardDef.levelingConfig?.abilityUpgrades) {
-        const upgrades = cardDef.levelingConfig.abilityUpgrades;
-
-        // Check upgrade levels in reverse order (9, 7, 4) to get the most recent applicable upgrade
-        if (level >= 9 && upgrades[9]) {
-          abilities = upgrades[9].abilities || abilities;
-        } else if (level >= 7 && upgrades[7]) {
-          abilities = upgrades[7].abilities || abilities;
-        } else if (level >= 4 && upgrades[4]) {
-          abilities = upgrades[4].abilities || abilities;
-        }
-      }
+      // Abilities remain constant across all levels
+      const abilities = [...cardDef.abilities];
 
       return { abilities };
     }
@@ -12600,7 +12620,7 @@ namespace BloomBeasts {
 
           // For Bloom cards, apply level-based upgrades
           if (cardDef.type === 'Bloom') {
-            const level = getCardLevel(cardInstance.currentXP, cardDef as BloomBeastCard);
+            const level = getCardLevel(cardInstance.currentXP);
             const abilities = this.getAbilitiesForLevel(cardInstance);
 
             // Convert to BloomBeastCard format for battle
@@ -12615,7 +12635,6 @@ namespace BloomBeasts {
               baseHealth: cardDef.baseHealth || 0,
               abilities: abilities.abilities,
               level: level, // Include computed level for beast instance (added to Card interface)
-              levelingConfig: {} as any, // Not used in battle
             };
 
             deckCards.push(bloomCard);
@@ -12982,11 +13001,33 @@ namespace BloomBeasts {
 
     // Use a function to build the deck on demand (after catalogs are loaded)
     opponentDeck: () => {
-      const testDeck = buildForestDeck();
-      testDeck.cards = testDeck.cards.filter((card) => card.id === 'rootling');
-      testDeck.totalCards = testDeck.cards.length;
-      console.log('testDeck', testDeck);
-      return testDeck;
+      // Get the catalog manager to access cards
+      const game = (globalThis as any).bloomBeastsGame;
+      if (!game?.catalogManager) {
+        console.error('[mission01] Catalog manager not available');
+        return { name: 'Rootling Deck', affinity: 'Forest', cards: [], totalCards: 0 };
+      }
+
+      // Get Rootling card and create a weakened version with only 1 HP
+      const rootlingCard = game.catalogManager.getCard('rootling');
+      if (!rootlingCard) {
+        console.error('[mission01] Rootling card not found');
+        return { name: 'Rootling Deck', affinity: 'Forest', cards: [], totalCards: 0 };
+      }
+
+      // Create a single Rootling with 1 HP (tutorial difficulty)
+      const weakRootling = {
+        ...rootlingCard,
+        baseHealth: 1,
+        instanceId: 'rootling-1',
+      };
+
+      return {
+        name: 'Rootling (Tutorial)',
+        affinity: 'Forest' as const,
+        cards: [weakRootling],
+        totalCards: 1,
+      };
     },
 
     rewards: {
@@ -13029,7 +13070,36 @@ namespace BloomBeasts {
     affinity: 'Forest',
     beastId: 'Mushroomancer',
 
-    opponentDeck: () => buildForestDeck(),
+    opponentDeck: () => {
+      // Get the catalog manager to access cards
+      const game = (globalThis as any).bloomBeastsGame;
+      if (!game?.catalogManager) {
+        console.error('[mission02] Catalog manager not available');
+        return { name: 'Mushroomancer Deck', affinity: 'Forest', cards: [], totalCards: 0 };
+      }
+
+      // Simple beginner deck: 3 Mushroomancers only
+      const mushroomancerCard = game.catalogManager.getCard('mushroomancer');
+      if (!mushroomancerCard) {
+        console.error('[mission02] Mushroomancer card not found');
+        return { name: 'Mushroomancer Deck', affinity: 'Forest', cards: [], totalCards: 0 };
+      }
+
+      const cards = [];
+      for (let i = 1; i <= 3; i++) {
+        cards.push({
+          ...mushroomancerCard,
+          instanceId: `mushroomancer-${i}`,
+        });
+      }
+
+      return {
+        name: 'Mushroomancer Pack',
+        affinity: 'Forest' as const,
+        cards,
+        totalCards: cards.length,
+      };
+    },
 
     rewards: {
       guaranteedXP: 60,
@@ -13043,6 +13113,11 @@ namespace BloomBeasts {
           dropChance: 0.9,
         },
       ],
+      coinRewards: {
+        minAmount: 75,
+        maxAmount: 175,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13066,7 +13141,43 @@ namespace BloomBeasts {
     affinity: 'Forest',
     beastId: 'Mosslet',
 
-    opponentDeck: () => buildForestDeck(),
+    opponentDeck: () => {
+      // Get the catalog manager to access cards
+      const game = (globalThis as any).bloomBeastsGame;
+      if (!game?.catalogManager) {
+        console.error('[mission03] Catalog manager not available');
+        return { name: 'Mosslet Deck', affinity: 'Forest', cards: [], totalCards: 0 };
+      }
+
+      // Beginner deck: 2 Mosslets + 2 Rootlings + 3 Nectar Blocks
+      const mossletCard = game.catalogManager.getCard('mosslet');
+      const rootlingCard = game.catalogManager.getCard('rootling');
+      const nectarBlockCard = game.catalogManager.getCard('nectar-block');
+
+      const cards = [];
+
+      // Add 2 Mosslets
+      for (let i = 1; i <= 2; i++) {
+        cards.push({ ...mossletCard, instanceId: `mosslet-${i}` });
+      }
+
+      // Add 2 Rootlings
+      for (let i = 1; i <= 2; i++) {
+        cards.push({ ...rootlingCard, instanceId: `rootling-${i}` });
+      }
+
+      // Add 3 Nectar Blocks
+      for (let i = 1; i <= 3; i++) {
+        cards.push({ ...nectarBlockCard, instanceId: `nectar-block-${i}` });
+      }
+
+      return {
+        name: 'Forest Basics',
+        affinity: 'Forest' as const,
+        cards,
+        totalCards: cards.length,
+      };
+    },
 
     rewards: {
       guaranteedXP: 70,
@@ -13080,6 +13191,11 @@ namespace BloomBeasts {
           dropChance: 0.8,
         },
       ],
+      coinRewards: {
+        minAmount: 100,
+        maxAmount: 200,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13103,7 +13219,51 @@ namespace BloomBeasts {
     affinity: 'Forest',
     beastId: 'Leaf Sprite',
 
-    opponentDeck: () => buildForestDeck(),
+    opponentDeck: () => {
+      // Get the catalog manager to access cards
+      const game = (globalThis as any).bloomBeastsGame;
+      if (!game?.catalogManager) {
+        console.error('[mission04] Catalog manager not available');
+        return { name: 'Leaf Sprite Deck', affinity: 'Forest', cards: [], totalCards: 0 };
+      }
+
+      // More advanced beginner deck with habitat
+      const leafSpriteCard = game.catalogManager.getCard('leaf-sprite');
+      const mushroomancerCard = game.catalogManager.getCard('mushroomancer');
+      const nectarBlockCard = game.catalogManager.getCard('nectar-block');
+      const ancientForestCard = game.catalogManager.getCard('ancient-forest');
+      const powerUpCard = game.catalogManager.getCard('power-up');
+
+      const cards = [];
+
+      // Add 3 Leaf Sprites
+      for (let i = 1; i <= 3; i++) {
+        cards.push({ ...leafSpriteCard, instanceId: `leaf-sprite-${i}` });
+      }
+
+      // Add 2 Mushroomancers
+      for (let i = 1; i <= 2; i++) {
+        cards.push({ ...mushroomancerCard, instanceId: `mushroomancer-${i}` });
+      }
+
+      // Add 1 Ancient Forest habitat
+      cards.push({ ...ancientForestCard, instanceId: 'ancient-forest-1' });
+
+      // Add 5 Nectar Blocks
+      for (let i = 1; i <= 5; i++) {
+        cards.push({ ...nectarBlockCard, instanceId: `nectar-block-${i}` });
+      }
+
+      // Add 1 Power Up
+      cards.push({ ...powerUpCard, instanceId: 'power-up-1' });
+
+      return {
+        name: 'Forest Advancement',
+        affinity: 'Forest' as const,
+        cards,
+        totalCards: cards.length,
+      };
+    },
 
     rewards: {
       guaranteedXP: 80,
@@ -13117,6 +13277,11 @@ namespace BloomBeasts {
           dropChance: 0.8,
         },
       ],
+      coinRewards: {
+        minAmount: 125,
+        maxAmount: 225,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13154,6 +13319,11 @@ namespace BloomBeasts {
           dropChance: 0.7,
         },
       ],
+      coinRewards: {
+        minAmount: 150,
+        maxAmount: 250,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13191,6 +13361,11 @@ namespace BloomBeasts {
           dropChance: 0.7,
         },
       ],
+      coinRewards: {
+        minAmount: 175,
+        maxAmount: 275,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13228,6 +13403,11 @@ namespace BloomBeasts {
           dropChance: 0.7,
         },
       ],
+      coinRewards: {
+        minAmount: 200,
+        maxAmount: 300,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13271,6 +13451,11 @@ namespace BloomBeasts {
           dropChance: 0.4,
         },
       ],
+      coinRewards: {
+        minAmount: 225,
+        maxAmount: 325,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13314,6 +13499,11 @@ namespace BloomBeasts {
           dropChance: 0.5,
         },
       ],
+      coinRewards: {
+        minAmount: 250,
+        maxAmount: 350,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13357,6 +13547,11 @@ namespace BloomBeasts {
           dropChance: 0.5,
         },
       ],
+      coinRewards: {
+        minAmount: 275,
+        maxAmount: 375,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13394,6 +13589,11 @@ namespace BloomBeasts {
           dropChance: 0.7,
         },
       ],
+      coinRewards: {
+        minAmount: 300,
+        maxAmount: 400,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13437,6 +13637,11 @@ namespace BloomBeasts {
           dropChance: 0.4,
         },
       ],
+      coinRewards: {
+        minAmount: 325,
+        maxAmount: 425,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13480,6 +13685,11 @@ namespace BloomBeasts {
           dropChance: 0.4,
         },
       ],
+      coinRewards: {
+        minAmount: 350,
+        maxAmount: 450,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13523,6 +13733,11 @@ namespace BloomBeasts {
           dropChance: 0.4,
         },
       ],
+      coinRewards: {
+        minAmount: 375,
+        maxAmount: 475,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13566,6 +13781,11 @@ namespace BloomBeasts {
           dropChance: 0.5,
         },
       ],
+      coinRewards: {
+        minAmount: 400,
+        maxAmount: 500,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13609,6 +13829,11 @@ namespace BloomBeasts {
           dropChance: 0.5,
         },
       ],
+      coinRewards: {
+        minAmount: 425,
+        maxAmount: 525,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -13698,6 +13923,11 @@ namespace BloomBeasts {
           dropChance: 0.5,
         },
       ],
+      coinRewards: {
+        minAmount: 1000,
+        maxAmount: 1500,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -14204,28 +14434,30 @@ namespace BloomBeasts {
      * Check if a mission can be played
      */
     private isMissionPlayable(mission: Mission): boolean {
+      // Check if mission has been completed before - if so, it's always playable (for replay)
+      const completionCount = this.missionManager.getCompletedCount(mission.id);
+      if (completionCount > 0) {
+        return true;
+      }
+
       // First mission is always unlocked
       if (mission.unlocked) {
         return true;
       }
 
-      // Check if mission is unlocked by checking actual completion counts
-      const completionCount = this.missionManager.getCompletedCount(mission.id);
-      if (completionCount === 0) {
-        // Check if previous mission is completed
-        const allMissions = getAvailableMissions(99); // Get all missions
-        const missionIndex = allMissions.findIndex(m => m.id === mission.id);
+      // For uncompleted missions, check if previous mission is completed
+      const allMissions = getAvailableMissions(99); // Get all missions
+      const missionIndex = allMissions.findIndex(m => m.id === mission.id);
 
-        if (missionIndex > 0) {
-          const previousMission = allMissions[missionIndex - 1];
-          const previousCompletionCount = this.missionManager.getCompletedCount(previousMission.id);
-          if (previousCompletionCount === 0) {
-            return false;
-          }
+      if (missionIndex > 0) {
+        const previousMission = allMissions[missionIndex - 1];
+        const previousCompletionCount = this.missionManager.getCompletedCount(previousMission.id);
+        if (previousCompletionCount === 0) {
+          return false;
         }
       }
 
-      // Check level requirements
+      // Check level requirements for uncompleted missions
       const levelDifference = Math.abs(this.currentPlayerLevel - mission.level);
       return levelDifference <= 3; // Allow missions within 3 levels
     }
@@ -18127,8 +18359,12 @@ namespace BloomBeasts {
 
       console.log('[BloomBeastsGame] Upgraded boost:', boostId, 'to level', this.playerData.boosts[boostId], 'for', cost, 'coins');
 
-      // Play success sound
-      this.playSfx('sfx-menu-button-select');
+      // Play upgrade sound (special sound for rooster)
+      if (boostId === ROOSTER.id) {
+        this.playSfx('sfx-upgrade-rooster');
+      } else {
+        this.playSfx('sfx-upgrade');
+      }
 
       // Save and update
       this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
@@ -18534,39 +18770,26 @@ namespace BloomBeasts {
       ];
 
       // Add popups (these already use UINode.if)
+      // Mission Complete Popup - static structure with derived content
       if (this.UI.UINode) {
         children.push(
           this.UI.UINode.if(
             this.UI.bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
               return props !== null;
             }),
-            createMissionCompletePopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.MissionCompletePopup) || {
-              mission: {
-                id: 'fallback-mission',
-                name: 'Loading...',
-                affinity: 'Forest'
-              },
-              rewards: null,
-              chestOpened: false,
-              onContinue: () => {},
-              playSfx: this.playSfx.bind(this)
-            })
+            createMissionCompletePopup(this.UI, this.UI.bindingManager)
           )
         );
       }
 
+      // Forfeit Popup - static structure with derived content
       if (this.UI.UINode) {
         children.push(
           this.UI.UINode.if(
             this.UI.bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
               return props !== null;
             }),
-            createButtonPopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.ForfeitPopup) || {
-              title: '',
-              message: '',
-              buttons: [],
-              playSfx: this.playSfx.bind(this)
-            })
+            createButtonPopup(this.UI, this.UI.bindingManager)
           )
         );
       }
@@ -18612,7 +18835,9 @@ namespace BloomBeasts {
           View({
             style: {
               width: '100%',
-              height: '100%',
+              height: 'auto',
+              maxWidth: '100%',
+              maxHeight: '100%',
               position: 'relative',
               aspectRatio: `${gameDimensions.panelWidth}/${gameDimensions.panelHeight}`
             },
@@ -19119,21 +19344,7 @@ namespace BloomBeasts {
                 }
               ]
             }
-          ],
-          levelingConfig: {
-            statGains: {
-              "1": { hp: 0, atk: 0 },
-              "2": { hp: 0, atk: 0 },
-              "3": { hp: 0, atk: 0 },
-              "4": { hp: 0, atk: 0 },
-              "5": { hp: 0, atk: 0 },
-              "6": { hp: 0, atk: 0 },
-              "7": { hp: 0, atk: 0 },
-              "8": { hp: 0, atk: 0 },
-              "9": { hp: 0, atk: 0 }
-            },
-            abilityUpgrades: {}
-          }
+          ]
         },
         assets: [
           {
@@ -19478,6 +19689,20 @@ namespace BloomBeasts {
         ]
       },
       {
+        id: "player-stats-container",
+        type: "ui",
+        category: "container",
+        name: "Player Stats Container",
+        description: "Container for player stats display",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "PLACEHOLDER_ID",
+            path: "assets/images/ui_container_player-stats.png"
+          }
+        ]
+      },
+      {
         id: "experience-bar",
         type: "ui",
         category: "other",
@@ -19500,7 +19725,7 @@ namespace BloomBeasts {
         assets: [
           {
             type: "image",
-            horizonAssetId: "823441590335166",
+            horizonAssetId: "1559448588566044",
             path: "assets/images/cards_base-card.png"
           }
         ]
@@ -19514,7 +19739,7 @@ namespace BloomBeasts {
         assets: [
           {
             type: "image",
-            horizonAssetId: "802428729033291",
+            horizonAssetId: "2581420452257174",
             path: "assets/images/cards_magic-card.png"
           }
         ]
@@ -19542,7 +19767,7 @@ namespace BloomBeasts {
         assets: [
           {
             type: "image",
-            horizonAssetId: "2847974385407960",
+            horizonAssetId: "3122347641277336",
             path: "assets/images/cards_trap-card.png"
           }
         ]
@@ -19570,7 +19795,7 @@ namespace BloomBeasts {
         assets: [
           {
             type: "image",
-            horizonAssetId: "1962518914567182",
+            horizonAssetId: "3182045765293902",
             path: "assets/images/cards_buff-card.png"
           }
         ]
@@ -19743,6 +19968,34 @@ namespace BloomBeasts {
           }
         ]
       },
+      {
+        id: "icon-coin",
+        type: "ui",
+        category: "icon",
+        name: "Coin Icon",
+        description: "Coin currency icon",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "PLACEHOLDER_ID",
+            path: "assets/images/icon_coin.png"
+          }
+        ]
+      },
+      {
+        id: "icon-serum",
+        type: "ui",
+        category: "icon",
+        name: "Serum Icon",
+        description: "Serum item icon",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "PLACEHOLDER_ID",
+            path: "assets/images/icon_serum.png"
+          }
+        ]
+      },
       // Counter icons removed - counter system deprecated
       {
         id: "lose-image",
@@ -19853,6 +20106,34 @@ namespace BloomBeasts {
             type: "audio",
             horizonAssetId: "1323050035978393",
             path: "assets/audio/sfx_lose.wav"
+          }
+        ]
+      },
+      {
+        id: "sfx-upgrade",
+        type: "ui",
+        category: "other",
+        name: "Upgrade SFX",
+        description: "Sound for purchasing upgrades",
+        assets: [
+          {
+            type: "audio",
+            horizonAssetId: "PLACEHOLDER_ID",
+            path: "assets/audio/sfx_upgrade.wav"
+          }
+        ]
+      },
+      {
+        id: "sfx-upgrade-rooster",
+        type: "ui",
+        category: "other",
+        name: "Upgrade Rooster SFX",
+        description: "Sound for purchasing rooster upgrade",
+        assets: [
+          {
+            type: "audio",
+            horizonAssetId: "PLACEHOLDER_ID",
+            path: "assets/audio/sfx_upgrade_rooster.wav"
           }
         ]
       },
@@ -20008,114 +20289,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 0,
-                atk: 1
-              },
-              "3": {
-                hp: 0,
-                atk: 3
-              },
-              "4": {
-                hp: 1,
-                atk: 5
-              },
-              "5": {
-                hp: 1,
-                atk: 6
-              },
-              "6": {
-                hp: 2,
-                atk: 8
-              },
-              "7": {
-                hp: 2,
-                atk: 9
-              },
-              "8": {
-                hp: 3,
-                atk: 11
-              },
-              "9": {
-                hp: 3,
-                atk: 13
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Ember Strike",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "triple-damage",
-                        condition: {
-                          type: "IsDamaged"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Lightning Speed",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.RemoveSummoningSickness,
-                        target: AbilityTarget.Self
-                      },
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "attack-twice"
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Phoenix Form",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "attack-twice"
-                      }
-                    ]
-                  },
-                  {
-                    name: "Annihilation",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "instant-destroy",
-                        condition: {
-                          type: "IsDamaged"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -20151,113 +20324,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 1,
-                atk: 1
-              },
-              "3": {
-                hp: 2,
-                atk: 2
-              },
-              "4": {
-                hp: 3,
-                atk: 3
-              },
-              "5": {
-                hp: 4,
-                atk: 4
-              },
-              "6": {
-                hp: 5,
-                atk: 5
-              },
-              "7": {
-                hp: 6,
-                atk: 6
-              },
-              "8": {
-                hp: 7,
-                atk: 7
-              },
-              "9": {
-                hp: 8,
-                atk: 8
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Inferno Bite",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.Target,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Flame Burst",
-                    trigger: AbilityTrigger.OnSummon,
-                    cost: {
-                      type: "Discard",
-                      value: 1
-                    },
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.AllEnemies,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Wildfire Aura",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.Target,
-                        value: 3
-                      }
-                    ]
-                  },
-                  {
-                    name: "Apocalypse Flame",
-                    trigger: AbilityTrigger.OnSummon,
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.AllEnemies,
-                        value: 3
-                      },
-                      {
-                        type: EffectType.DealDamage,
-                        target: "Opponent",
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -20293,132 +20359,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 1,
-                atk: 1
-              },
-              "3": {
-                hp: 2,
-                atk: 2
-              },
-              "4": {
-                hp: 4,
-                atk: 3
-              },
-              "5": {
-                hp: 5,
-                atk: 4
-              },
-              "6": {
-                hp: 6,
-                atk: 5
-              },
-              "7": {
-                hp: 8,
-                atk: 6
-              },
-              "8": {
-                hp: 9,
-                atk: 7
-              },
-              "9": {
-                hp: 11,
-                atk: 8
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Burning Retaliation",
-                    trigger: AbilityTrigger.OnDamage,
-                    effects: [
-                      {
-                        type: "Retaliation",
-                        target: AbilityTarget.Attacker,
-                        value: 2
-                      },
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.Attacker,
-                        value: 1
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Smoke Screen",
-                    trigger: AbilityTrigger.OnDamage,
-                    effects: [
-                      {
-                        type: "Immunity",
-                        target: AbilityTarget.Self,
-                        immuneTo: [
-                          "Magic",
-                          "Trap"
-                        ],
-                        duration: EffectDuration.WhileOnField
-                      },
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.Target,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Blazing Vengeance",
-                    trigger: AbilityTrigger.OnDamage,
-                    effects: [
-                      {
-                        type: "Immunity",
-                        target: AbilityTarget.Self,
-                        immuneTo: [
-                          "Magic",
-                          "Trap"
-                        ],
-                        duration: EffectDuration.WhileOnField
-                      },
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.Attacker,
-                        value: 3
-                      }
-                    ]
-                  },
-                  {
-                    name: "Infernal Reflection",
-                    trigger: AbilityTrigger.OnDamage,
-                    effects: [
-                      {
-                        type: "Retaliation",
-                        target: AbilityTarget.Attacker,
-                        value: "reflected"
-                      },
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.Attacker,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -20455,125 +20395,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 2,
-                atk: 1
-              },
-              "3": {
-                hp: 3,
-                atk: 2
-              },
-              "4": {
-                hp: 5,
-                atk: 3
-              },
-              "5": {
-                hp: 7,
-                atk: 4
-              },
-              "6": {
-                hp: 9,
-                atk: 5
-              },
-              "7": {
-                hp: 11,
-                atk: 6
-              },
-              "8": {
-                hp: 13,
-                atk: 7
-              },
-              "9": {
-                hp: 15,
-                atk: 9
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Molten Armor",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.DamageReduction,
-                        target: AbilityTarget.Self,
-                        value: 2,
-                        duration: EffectDuration.WhileOnField
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Eruption",
-                    trigger: AbilityTrigger.OnDestroy,
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: "Opponent",
-                        value: 5
-                      },
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.AllEnemies,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Obsidian Carapace",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.DamageReduction,
-                        target: AbilityTarget.Self,
-                        value: 3,
-                        duration: EffectDuration.WhileOnField
-                      },
-                      {
-                        type: "Retaliation",
-                        target: AbilityTarget.Attacker,
-                        value: 2
-                      }
-                    ]
-                  },
-                  {
-                    name: "Cataclysm",
-                    trigger: AbilityTrigger.OnDestroy,
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: "Opponent",
-                        value: 8
-                      },
-                      {
-                        type: "Destroy",
-                        target: AbilityTarget.AllEnemies,
-                        condition: {
-                          type: "HealthBelow",
-                          value: 4,
-                          comparison: "Less"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -20619,7 +20440,7 @@ namespace BloomBeasts {
           },
           {
             type: "image",
-            horizonAssetId: "1762741407742835",
+            horizonAssetId: "1574158663591082",
             path: "assets/images/cards_fire_habitat-card.png"
           },
           {
@@ -20691,7 +20512,7 @@ namespace BloomBeasts {
         assets: [
           {
             type: "image",
-            horizonAssetId: "1762741407742835",
+            horizonAssetId: "1574158663591082",
             path: "assets/images/cards_fire_habitat-card.png"
           }
         ]
@@ -20740,118 +20561,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 1,
-                atk: 0
-              },
-              "3": {
-                hp: 2,
-                atk: 1
-              },
-              "4": {
-                hp: 3,
-                atk: 2
-              },
-              "5": {
-                hp: 4,
-                atk: 3
-              },
-              "6": {
-                hp: 5,
-                atk: 4
-              },
-              "7": {
-                hp: 6,
-                atk: 5
-              },
-              "8": {
-                hp: 7,
-                atk: 6
-              },
-              "9": {
-                hp: 8,
-                atk: 7
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Abundant Nourish",
-                    trigger: AbilityTrigger.OnDestroy,
-                    effects: [
-                      {
-                        type: EffectType.GainResource,
-                        target: AbilityTarget.Player,
-                        resource: ResourceType.Nectar,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Ancient Roots",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.CannotBeTargeted,
-                        target: AbilityTarget.Self,
-                        by: [
-                          "magic",
-                          "trap"
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Eternal Roots",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.CannotBeTargeted,
-                        target: AbilityTarget.Self,
-                        by: [
-                          "magic",
-                          "trap",
-                          "abilities"
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    name: "Harvest Feast",
-                    trigger: AbilityTrigger.OnDestroy,
-                    effects: [
-                      {
-                        type: EffectType.GainResource,
-                        target: AbilityTarget.Player,
-                        resource: ResourceType.Nectar,
-                        value: 2
-                      },
-                      {
-                        type: EffectType.DrawCards,
-                        target: AbilityTarget.Player,
-                        value: 1
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -20889,94 +20598,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 0,
-                atk: 1
-              },
-              "3": {
-                hp: 1,
-                atk: 1
-              },
-              "4": {
-                hp: 1,
-                atk: 2
-              },
-              "5": {
-                hp: 2,
-                atk: 3
-              },
-              "6": {
-                hp: 3,
-                atk: 4
-              },
-              "7": {
-                hp: 4,
-                atk: 5
-              },
-              "8": {
-                hp: 5,
-                atk: 6
-              },
-              "9": {
-                hp: 6,
-                atk: 7
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Swiftness",
-                    trigger: AbilityTrigger.OnSummon,
-                    effects: [
-                      {
-                        type: EffectType.DrawCards,
-                        target: AbilityTarget.Player,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Evasive",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.CannotBeTargeted,
-                        target: AbilityTarget.Self,
-                        by: [
-                          "trap"
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Sprint",
-                    trigger: AbilityTrigger.OnSummon,
-                    effects: [
-                      {
-                        type: EffectType.RemoveSummoningSickness,
-                        target: AbilityTarget.Self
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -21016,98 +20637,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 1,
-                atk: 0
-              },
-              "3": {
-                hp: 1,
-                atk: 1
-              },
-              "4": {
-                hp: 2,
-                atk: 2
-              },
-              "5": {
-                hp: 3,
-                atk: 3
-              },
-              "6": {
-                hp: 4,
-                atk: 4
-              },
-              "7": {
-                hp: 5,
-                atk: 5
-              },
-              "8": {
-                hp: 6,
-                atk: 6
-              },
-              "9": {
-                hp: 7,
-                atk: 7
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Rapid Growth",
-                    trigger: AbilityTrigger.OnOwnEndOfTurn,
-                    effects: [
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.Self,
-                        stat: StatType.Both,
-                        value: 2,
-                        duration: EffectDuration.Permanent
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Mossy Armor",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.DamageReduction,
-                        target: AbilityTarget.Self,
-                        value: 1,
-                        duration: EffectDuration.WhileOnField
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Overgrowth",
-                    trigger: AbilityTrigger.OnOwnEndOfTurn,
-                    effects: [
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.Self,
-                        stat: StatType.Both,
-                        value: 3,
-                        duration: EffectDuration.Permanent
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -21145,93 +20674,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 1,
-                atk: 0
-              },
-              "3": {
-                hp: 2,
-                atk: 1
-              },
-              "4": {
-                hp: 3,
-                atk: 2
-              },
-              "5": {
-                hp: 4,
-                atk: 3
-              },
-              "6": {
-                hp: 5,
-                atk: 4
-              },
-              "7": {
-                hp: 6,
-                atk: 5
-              },
-              "8": {
-                hp: 7,
-                atk: 6
-              },
-              "9": {
-                hp: 8,
-                atk: 7
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Virulent Spores",
-                    trigger: AbilityTrigger.OnSummon,
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.AllEnemies,
-                        value: 3
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Spore Burst",
-                    trigger: AbilityTrigger.OnDestroy,
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.AllEnemies,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Fungal Network",
-                    trigger: AbilityTrigger.OnOwnEndOfTurn,
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.AllEnemies,
-                        value: 1
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -21278,7 +20720,7 @@ namespace BloomBeasts {
           },
           {
             type: "image",
-            horizonAssetId: "787776974149741",
+            horizonAssetId: "715084184317947",
             path: "assets/images/cards_forest_habitat-card.png",
             description: "Forest habitat card template"
           },
@@ -21356,7 +20798,7 @@ namespace BloomBeasts {
         assets: [
           {
             type: "image",
-            horizonAssetId: "787776974149741",
+            horizonAssetId: "715084184317947",
             path: "assets/images/cards_forest_habitat-card.png"
           }
         ]
@@ -21757,137 +21199,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 1,
-                atk: 1
-              },
-              "3": {
-                hp: 2,
-                atk: 2
-              },
-              "4": {
-                hp: 3,
-                atk: 3
-              },
-              "5": {
-                hp: 4,
-                atk: 4
-              },
-              "6": {
-                hp: 5,
-                atk: 5
-              },
-              "7": {
-                hp: 6,
-                atk: 6
-              },
-              "8": {
-                hp: 7,
-                atk: 7
-              },
-              "9": {
-                hp: 8,
-                atk: 8
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Hypnotic Wings",
-                    trigger: AbilityTrigger.OnSummon,
-                    effects: [
-                      {
-                        type: EffectType.DrawCards,
-                        target: AbilityTarget.Player,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Hypnotic Wings",
-                    trigger: AbilityTrigger.OnSummon,
-                    effects: [
-                      {
-                        type: EffectType.DrawCards,
-                        target: AbilityTarget.Player,
-                        value: 2
-                      }
-                    ]
-                  },
-                  {
-                    name: "Cyclone",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: "SwapPositions",
-                        target: AbilityTarget.AllEnemies
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Rainbow Cascade",
-                    trigger: AbilityTrigger.OnSummon,
-                    effects: [
-                      {
-                        type: EffectType.DrawCards,
-                        target: AbilityTarget.Player,
-                        value: 3
-                      },
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.AllAllies,
-                        stat: StatType.Attack,
-                        value: 1,
-                        duration: EffectDuration.Permanent
-                      },
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.AllAllies,
-                        stat: StatType.Health,
-                        value: 1,
-                        duration: EffectDuration.Permanent
-                      }
-                    ]
-                  },
-                  {
-                    name: "Chaos Storm",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: "SwapPositions",
-                        target: AbilityTarget.AllEnemies
-                      },
-                      {
-                        type: EffectType.ReturnToHand,
-                        target: AbilityTarget.RandomEnemy,
-                        value: 1
-                      },
-                      {
-                        type: EffectType.DrawCards,
-                        target: AbilityTarget.Player,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -21926,122 +21237,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 3,
-                atk: 0
-              },
-              "3": {
-                hp: 5,
-                atk: 0
-              },
-              "4": {
-                hp: 7,
-                atk: 1
-              },
-              "5": {
-                hp: 10,
-                atk: 1
-              },
-              "6": {
-                hp: 12,
-                atk: 2
-              },
-              "7": {
-                hp: 14,
-                atk: 3
-              },
-              "8": {
-                hp: 17,
-                atk: 3
-              },
-              "9": {
-                hp: 20,
-                atk: 4
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Storm Shield",
-                    trigger: AbilityTrigger.OnOwnStartOfTurn,
-                    effects: [
-                      {
-                        type: "TemporaryHP",
-                        target: AbilityTarget.AllAllies,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Ethereal Form",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.CannotBeTargeted,
-                        target: AbilityTarget.Self,
-                        by: [
-                          "attacks"
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Celestial Protector",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.CannotBeTargeted,
-                        target: AbilityTarget.Self,
-                        by: [
-                          "all"
-                        ]
-                      },
-                      {
-                        type: EffectType.DamageReduction,
-                        target: AbilityTarget.AllAllies,
-                        value: 1,
-                        duration: EffectDuration.WhileOnField
-                      }
-                    ]
-                  },
-                  {
-                    name: "Divine Barrier",
-                    trigger: AbilityTrigger.OnOwnStartOfTurn,
-                    effects: [
-                      {
-                        type: "TemporaryHP",
-                        target: AbilityTarget.AllAllies,
-                        value: 3
-                      },
-                      {
-                        type: "Immunity",
-                        target: AbilityTarget.AllAllies,
-                        immuneTo: [
-                          "NegativeEffects"
-                        ],
-                        duration: EffectDuration.ThisTurn
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -22077,126 +21272,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 0,
-                atk: 2
-              },
-              "3": {
-                hp: 0,
-                atk: 3
-              },
-              "4": {
-                hp: 1,
-                atk: 5
-              },
-              "5": {
-                hp: 1,
-                atk: 7
-              },
-              "6": {
-                hp: 2,
-                atk: 9
-              },
-              "7": {
-                hp: 2,
-                atk: 10
-              },
-              "8": {
-                hp: 3,
-                atk: 12
-              },
-              "9": {
-                hp: 3,
-                atk: 14
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Wind Dance",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: "MoveUnit",
-                        target: AbilityTarget.Self,
-                        destination: "any-slot"
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Storm Blade",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "attack-first"
-                      },
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.Self,
-                        stat: StatType.Attack,
-                        value: 2,
-                        duration: "NextAttack"
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Tempest Strike",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "attack-first"
-                      },
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "triple-damage"
-                      },
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "cannot-counterattack"
-                      }
-                    ]
-                  },
-                  {
-                    name: "Hurricane Assault",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "attack-twice"
-                      },
-                      {
-                        type: "MoveUnit",
-                        target: AbilityTarget.Self,
-                        destination: "any-slot"
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -22234,114 +21309,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 1,
-                atk: 1
-              },
-              "3": {
-                hp: 2,
-                atk: 2
-              },
-              "4": {
-                hp: 4,
-                atk: 3
-              },
-              "5": {
-                hp: 6,
-                atk: 4
-              },
-              "6": {
-                hp: 8,
-                atk: 5
-              },
-              "7": {
-                hp: 10,
-                atk: 6
-              },
-              "8": {
-                hp: 12,
-                atk: 7
-              },
-              "9": {
-                hp: 14,
-                atk: 9
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Radiant Aura",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.AllAllies,
-                        stat: StatType.Attack,
-                        value: 2,
-                        duration: EffectDuration.WhileOnField
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Astral Dominance",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.AllAllies,
-                        stat: StatType.Attack,
-                        value: 3,
-                        duration: EffectDuration.WhileOnField
-                      },
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.AllAllies,
-                        stat: StatType.Health,
-                        value: 2,
-                        duration: EffectDuration.WhileOnField
-                      }
-                    ]
-                  },
-                  {
-                    name: "Universal Harmony",
-                    trigger: AbilityTrigger.OnSummon,
-                    effects: [
-                      {
-                        type: EffectType.DrawCards,
-                        target: AbilityTarget.Player,
-                        value: 3
-                      },
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.AllAllies,
-                        stat: StatType.Attack,
-                        value: 2,
-                        duration: EffectDuration.Permanent
-                      },
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.AllAllies,
-                        stat: StatType.Health,
-                        value: 2,
-                        duration: EffectDuration.Permanent
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -22384,7 +21351,7 @@ namespace BloomBeasts {
           },
           {
             type: "image",
-            horizonAssetId: "1140855177628973",
+            horizonAssetId: "724533667339482",
             path: "assets/images/cards_sky_habitat-card.png"
           },
           {
@@ -22456,7 +21423,7 @@ namespace BloomBeasts {
         assets: [
           {
             type: "image",
-            horizonAssetId: "1140855177628973",
+            horizonAssetId: "724533667339482",
             path: "assets/images/cards_sky_habitat-card.png"
           }
         ]
@@ -22805,116 +21772,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 1,
-                atk: 0
-              },
-              "3": {
-                hp: 3,
-                atk: 0
-              },
-              "4": {
-                hp: 4,
-                atk: 1
-              },
-              "5": {
-                hp: 6,
-                atk: 2
-              },
-              "6": {
-                hp: 7,
-                atk: 3
-              },
-              "7": {
-                hp: 9,
-                atk: 4
-              },
-              "8": {
-                hp: 10,
-                atk: 5
-              },
-              "9": {
-                hp: 12,
-                atk: 6
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Tidal Surge",
-                    trigger: "OnAllySummon",
-                    effects: [
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.Self,
-                        stat: StatType.Attack,
-                        value: 2,
-                        duration: EffectDuration.EndOfTurn,
-                        condition: {
-                          type: "AffinityMatches",
-                          value: "Water"
-                        }
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Rejuvenation",
-                    trigger: AbilityTrigger.OnOwnEndOfTurn,
-                    effects: [
-                      {
-                        type: EffectType.Heal,
-                        target: AbilityTarget.AllAllies,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Tsunami Force",
-                    trigger: "OnAllySummon",
-                    effects: [
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.Self,
-                        stat: StatType.Attack,
-                        value: 3,
-                        duration: EffectDuration.Permanent,
-                        condition: {
-                          type: "AffinityMatches",
-                          value: "Water"
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    name: "Fountain of Life",
-                    trigger: AbilityTrigger.OnOwnEndOfTurn,
-                    effects: [
-                      {
-                        type: EffectType.Heal,
-                        target: AbilityTarget.AllAllies,
-                        value: "Full"
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -22952,120 +21809,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 2,
-                atk: 0
-              },
-              "3": {
-                hp: 4,
-                atk: 0
-              },
-              "4": {
-                hp: 6,
-                atk: 1
-              },
-              "5": {
-                hp: 8,
-                atk: 2
-              },
-              "6": {
-                hp: 10,
-                atk: 3
-              },
-              "7": {
-                hp: 12,
-                atk: 4
-              },
-              "8": {
-                hp: 14,
-                atk: 5
-              },
-              "9": {
-                hp: 16,
-                atk: 6
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Tidal Shield",
-                    trigger: AbilityTrigger.OnDamage,
-                    effects: [
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.Attacker,
-                        stat: StatType.Attack,
-                        value: -2,
-                        duration: EffectDuration.EndOfTurn
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Deep Dive",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.CannotBeTargeted,
-                        target: AbilityTarget.Self,
-                        by: [
-                          "trap",
-                          "magic"
-                        ]
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Ocean Sanctuary",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.CannotBeTargeted,
-                        target: AbilityTarget.Self,
-                        by: [
-                          "magic",
-                          "trap",
-                          "abilities"
-                        ]
-                      }
-                    ]
-                  },
-                  {
-                    name: "Crushing Depths",
-                    trigger: AbilityTrigger.OnDamage,
-                    effects: [
-                      {
-                        type: EffectType.ModifyStats,
-                        target: AbilityTarget.Attacker,
-                        stat: StatType.Attack,
-                        value: -3,
-                        duration: EffectDuration.Permanent
-                      },
-                      {
-                        type: EffectType.Heal,
-                        target: AbilityTarget.Self,
-                        value: 2
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -23106,125 +21849,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 1,
-                atk: 1
-              },
-              "3": {
-                hp: 2,
-                atk: 2
-              },
-              "4": {
-                hp: 4,
-                atk: 3
-              },
-              "5": {
-                hp: 6,
-                atk: 4
-              },
-              "6": {
-                hp: 8,
-                atk: 5
-              },
-              "7": {
-                hp: 10,
-                atk: 6
-              },
-              "8": {
-                hp: 12,
-                atk: 7
-              },
-              "9": {
-                hp: 14,
-                atk: 8
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Deluge",
-                    trigger: AbilityTrigger.OnAttack,
-                    cost: {
-                      type: ResourceType.Nectar,
-                      value: 1
-                    },
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.Opponent,
-                        value: 3
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Fog Veil",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "attack-first"
-                      },
-                      {
-                        type: EffectType.DamageReduction,
-                        target: AbilityTarget.Self,
-                        value: 1,
-                        duration: EffectDuration.WhileOnField
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Storm Guardian",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: EffectType.AttackModification,
-                        target: AbilityTarget.Self,
-                        modification: "attack-first"
-                      },
-                      {
-                        type: EffectType.DamageReduction,
-                        target: AbilityTarget.Self,
-                        value: 2,
-                        duration: EffectDuration.WhileOnField
-                      }
-                    ]
-                  },
-                  {
-                    name: "Maelstrom",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.Opponent,
-                        value: 5
-                      },
-                      {
-                        type: EffectType.DealDamage,
-                        target: AbilityTarget.RandomEnemy,
-                        value: 1
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -23260,129 +21884,6 @@ namespace BloomBeasts {
               ]
             }
           ],
-          levelingConfig: {
-            statGains: {
-              "1": {
-                hp: 0,
-                atk: 0
-              },
-              "2": {
-                hp: 1,
-                atk: 1
-              },
-              "3": {
-                hp: 2,
-                atk: 2
-              },
-              "4": {
-                hp: 3,
-                atk: 3
-              },
-              "5": {
-                hp: 4,
-                atk: 4
-              },
-              "6": {
-                hp: 5,
-                atk: 5
-              },
-              "7": {
-                hp: 6,
-                atk: 6
-              },
-              "8": {
-                hp: 7,
-                atk: 7
-              },
-              "9": {
-                hp: 8,
-                atk: 8
-              }
-            },
-            abilityUpgrades: {
-              "4": {
-                abilities: [
-                  {
-                    name: "Binding Vines",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: "PreventAttack",
-                        target: AbilityTarget.Target,
-                        duration: "StartOfNextTurn"
-                      },
-                      {
-                        type: "PreventAbilities",
-                        target: AbilityTarget.Target,
-                        duration: "StartOfNextTurn"
-                      }
-                    ]
-                  }
-                ]
-              },
-              "7": {
-                abilities: [
-                  {
-                    name: "Deep Anchor",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: "Immunity",
-                        target: AbilityTarget.Self,
-                        immuneTo: [
-                          "Magic",
-                          "Trap",
-                          "Abilities"
-                        ],
-                        duration: EffectDuration.WhileOnField
-                      }
-                    ]
-                  }
-                ]
-              },
-              "9": {
-                abilities: [
-                  {
-                    name: "Strangling Grasp",
-                    trigger: AbilityTrigger.OnAttack,
-                    effects: [
-                      {
-                        type: "PreventAttack",
-                        target: AbilityTarget.Target,
-                        duration: EffectDuration.Permanent
-                      },
-                      {
-                        type: "PreventAbilities",
-                        target: AbilityTarget.Target,
-                        duration: EffectDuration.Permanent
-                      }
-                    ]
-                  },
-                  {
-                    name: "Immovable Force",
-                    trigger: AbilityTrigger.WhileOnField,
-                    effects: [
-                      {
-                        type: "Immunity",
-                        target: AbilityTarget.Self,
-                        immuneTo: [
-                          "Damage",
-                          "Targeting",
-                          "NegativeEffects"
-                        ],
-                        duration: EffectDuration.WhileOnField
-                      },
-                      {
-                        type: "Retaliation",
-                        target: AbilityTarget.Self,
-                        value: 1
-                      }
-                    ]
-                  }
-                ]
-              }
-            }
-          }
         },
         assets: [
           {
@@ -23430,7 +21931,7 @@ namespace BloomBeasts {
           },
           {
             type: "image",
-            horizonAssetId: "797144049734620",
+            horizonAssetId: "1356075539231203",
             path: "assets/images/cards_water_habitat-card.png"
           },
           {
@@ -23502,7 +22003,7 @@ namespace BloomBeasts {
         assets: [
           {
             type: "image",
-            horizonAssetId: "797144049734620",
+            horizonAssetId: "1356075539231203",
             path: "assets/images/cards_water_habitat-card.png"
           }
         ]

@@ -16,6 +16,8 @@ interface PlayerCardPositions {
   trapTwo: SimplePosition;
   trapThree: SimplePosition;
   health: SimplePosition;
+  nectar: SimplePosition;
+  deckCount: SimplePosition;
 }
 
 interface CardTextInfo extends SimplePosition {

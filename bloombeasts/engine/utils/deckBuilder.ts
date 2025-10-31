@@ -115,11 +115,57 @@ export function getAllStarterDecks(): DeckList[] {
  * Get a specific starter deck by type
  */
 export function getStarterDeck(type: DeckType): DeckList {
+  // TESTING: Use quick win deck for fast testing
+  return quickWinDeck(type);
+
   // TESTING: Use testing deck with 1 of each card
-  return getTestingDeck(type);
+  // return getTestingDeck(type);
 
   // ORIGINAL: Starter deck with multiple copies
   // return buildDeck(type);
+}
+
+/**
+ * Get a quick win deck with just a few low-level beasts for fast testing
+ * This creates a minimal deck for quick victories in testing
+ */
+export function quickWinDeck(type: DeckType): DeckList {
+  if (!_deckBuilderCatalogManager) {
+    console.error('[deckBuilder] catalogManager not initialized');
+    return { name: '', affinity: type, cards: [], totalCards: 0 };
+  }
+
+  const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
+  const allCards: AnyCard[] = [];
+
+  // Add just a few level 1 beasts (3 total - easy to draw and summon quickly)
+  const beastEntry = deckConfig.beasts[0]; // Get the first beast type
+  if (beastEntry) {
+    for (let i = 1; i <= 3; i++) {
+      allCards.push({
+        ...beastEntry.card,
+        instanceId: `${beastEntry.card.id}-${i}`,
+      } as unknown as AnyCard);
+    }
+  }
+
+  // Add 27 Nectar Blocks for fast summoning
+  const nectarBlock = _deckBuilderCatalogManager.getCard('nectar-block');
+  if (nectarBlock) {
+    for (let i = 1; i <= 27; i++) {
+      allCards.push({
+        ...nectarBlock,
+        instanceId: `nectar-block-${i}`,
+      } as unknown as AnyCard);
+    }
+  }
+
+  return {
+    name: `${deckConfig.name} (Quick Win)`,
+    affinity: type,
+    cards: allCards,
+    totalCards: allCards.length,
+  };
 }
 
 /**

@@ -11,6 +11,7 @@ import { canAttack } from '../../../engine/utils/combatHelpers';
 import { createButton } from '../../common/Button';
 import { BindingType } from '../../types/BindingManager';
 import { COLORS } from '../../styles/colors';
+import { GAPS } from '../../styles/dimensions';
 
 export class BattleSideMenu {
   private ui: BattleSideMenuProps['ui'];
@@ -189,7 +190,7 @@ export class BattleSideMenu {
           style: {
             position: 'absolute',
             left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
-            top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y - sideMenuButtonDimensions.height - 10,
+            top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y - sideMenuButtonDimensions.height - GAPS.buttons,
           },
         }),
 

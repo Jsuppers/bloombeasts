@@ -39,118 +39,6 @@ export const forestAssets: AssetCatalog = {
             ]
           }
         ],
-        levelingConfig: {
-          statGains: {
-            "1": {
-              hp: 0,
-              atk: 0
-            },
-            "2": {
-              hp: 1,
-              atk: 0
-            },
-            "3": {
-              hp: 2,
-              atk: 1
-            },
-            "4": {
-              hp: 3,
-              atk: 2
-            },
-            "5": {
-              hp: 4,
-              atk: 3
-            },
-            "6": {
-              hp: 5,
-              atk: 4
-            },
-            "7": {
-              hp: 6,
-              atk: 5
-            },
-            "8": {
-              hp: 7,
-              atk: 6
-            },
-            "9": {
-              hp: 8,
-              atk: 7
-            }
-          },
-          abilityUpgrades: {
-            "4": {
-              abilities: [
-                {
-                  name: "Abundant Nourish",
-                  trigger: AbilityTrigger.OnDestroy,
-                  effects: [
-                    {
-                      type: EffectType.GainResource,
-                      target: AbilityTarget.Player,
-                      resource: ResourceType.Nectar,
-                      value: 2
-                    }
-                  ]
-                }
-              ]
-            },
-            "7": {
-              abilities: [
-                {
-                  name: "Ancient Roots",
-                  trigger: AbilityTrigger.WhileOnField,
-                  effects: [
-                    {
-                      type: EffectType.CannotBeTargeted,
-                      target: AbilityTarget.Self,
-                      by: [
-                        "magic",
-                        "trap"
-                      ]
-                    }
-                  ]
-                }
-              ]
-            },
-            "9": {
-              abilities: [
-                {
-                  name: "Eternal Roots",
-                  trigger: AbilityTrigger.WhileOnField,
-                  effects: [
-                    {
-                      type: EffectType.CannotBeTargeted,
-                      target: AbilityTarget.Self,
-                      by: [
-                        "magic",
-                        "trap",
-                        "abilities"
-                      ]
-                    }
-                  ]
-                },
-                {
-                  name: "Harvest Feast",
-                  trigger: AbilityTrigger.OnDestroy,
-                  effects: [
-                    {
-                      type: EffectType.GainResource,
-                      target: AbilityTarget.Player,
-                      resource: ResourceType.Nectar,
-                      value: 2
-                    },
-                    {
-                      type: EffectType.DrawCards,
-                      target: AbilityTarget.Player,
-                      value: 1
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        }
       },
       assets: [
         {
@@ -188,94 +76,6 @@ export const forestAssets: AssetCatalog = {
             ]
           }
         ],
-        levelingConfig: {
-          statGains: {
-            "1": {
-              hp: 0,
-              atk: 0
-            },
-            "2": {
-              hp: 0,
-              atk: 1
-            },
-            "3": {
-              hp: 1,
-              atk: 1
-            },
-            "4": {
-              hp: 1,
-              atk: 2
-            },
-            "5": {
-              hp: 2,
-              atk: 3
-            },
-            "6": {
-              hp: 3,
-              atk: 4
-            },
-            "7": {
-              hp: 4,
-              atk: 5
-            },
-            "8": {
-              hp: 5,
-              atk: 6
-            },
-            "9": {
-              hp: 6,
-              atk: 7
-            }
-          },
-          abilityUpgrades: {
-            "4": {
-              abilities: [
-                {
-                  name: "Swiftness",
-                  trigger: AbilityTrigger.OnSummon,
-                  effects: [
-                    {
-                      type: EffectType.DrawCards,
-                      target: AbilityTarget.Player,
-                      value: 2
-                    }
-                  ]
-                }
-              ]
-            },
-            "7": {
-              abilities: [
-                {
-                  name: "Evasive",
-                  trigger: AbilityTrigger.WhileOnField,
-                  effects: [
-                    {
-                      type: EffectType.CannotBeTargeted,
-                      target: AbilityTarget.Self,
-                      by: [
-                        "trap"
-                      ]
-                    }
-                  ]
-                }
-              ]
-            },
-            "9": {
-              abilities: [
-                {
-                  name: "Sprint",
-                  trigger: AbilityTrigger.OnSummon,
-                  effects: [
-                    {
-                      type: EffectType.RemoveSummoningSickness,
-                      target: AbilityTarget.Self
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        }
       },
       assets: [
         {
@@ -315,98 +115,6 @@ export const forestAssets: AssetCatalog = {
             ]
           }
         ],
-        levelingConfig: {
-          statGains: {
-            "1": {
-              hp: 0,
-              atk: 0
-            },
-            "2": {
-              hp: 1,
-              atk: 0
-            },
-            "3": {
-              hp: 1,
-              atk: 1
-            },
-            "4": {
-              hp: 2,
-              atk: 2
-            },
-            "5": {
-              hp: 3,
-              atk: 3
-            },
-            "6": {
-              hp: 4,
-              atk: 4
-            },
-            "7": {
-              hp: 5,
-              atk: 5
-            },
-            "8": {
-              hp: 6,
-              atk: 6
-            },
-            "9": {
-              hp: 7,
-              atk: 7
-            }
-          },
-          abilityUpgrades: {
-            "4": {
-              abilities: [
-                {
-                  name: "Rapid Growth",
-                  trigger: AbilityTrigger.OnOwnEndOfTurn,
-                  effects: [
-                    {
-                      type: EffectType.ModifyStats,
-                      target: AbilityTarget.Self,
-                      stat: StatType.Both,
-                      value: 2,
-                      duration: EffectDuration.Permanent
-                    }
-                  ]
-                }
-              ]
-            },
-            "7": {
-              abilities: [
-                {
-                  name: "Mossy Armor",
-                  trigger: AbilityTrigger.WhileOnField,
-                  effects: [
-                    {
-                      type: EffectType.DamageReduction,
-                      target: AbilityTarget.Self,
-                      value: 1,
-                      duration: EffectDuration.WhileOnField
-                    }
-                  ]
-                }
-              ]
-            },
-            "9": {
-              abilities: [
-                {
-                  name: "Overgrowth",
-                  trigger: AbilityTrigger.OnOwnEndOfTurn,
-                  effects: [
-                    {
-                      type: EffectType.ModifyStats,
-                      target: AbilityTarget.Self,
-                      stat: StatType.Both,
-                      value: 3,
-                      duration: EffectDuration.Permanent
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        }
       },
       assets: [
         {
@@ -444,93 +152,6 @@ export const forestAssets: AssetCatalog = {
             ]
           }
         ],
-        levelingConfig: {
-          statGains: {
-            "1": {
-              hp: 0,
-              atk: 0
-            },
-            "2": {
-              hp: 1,
-              atk: 0
-            },
-            "3": {
-              hp: 2,
-              atk: 1
-            },
-            "4": {
-              hp: 3,
-              atk: 2
-            },
-            "5": {
-              hp: 4,
-              atk: 3
-            },
-            "6": {
-              hp: 5,
-              atk: 4
-            },
-            "7": {
-              hp: 6,
-              atk: 5
-            },
-            "8": {
-              hp: 7,
-              atk: 6
-            },
-            "9": {
-              hp: 8,
-              atk: 7
-            }
-          },
-          abilityUpgrades: {
-            "4": {
-              abilities: [
-                {
-                  name: "Virulent Spores",
-                  trigger: AbilityTrigger.OnSummon,
-                  effects: [
-                    {
-                      type: EffectType.DealDamage,
-                      target: AbilityTarget.AllEnemies,
-                      value: 3
-                    }
-                  ]
-                }
-              ]
-            },
-            "7": {
-              abilities: [
-                {
-                  name: "Spore Burst",
-                  trigger: AbilityTrigger.OnDestroy,
-                  effects: [
-                    {
-                      type: EffectType.DealDamage,
-                      target: AbilityTarget.AllEnemies,
-                      value: 2
-                    }
-                  ]
-                }
-              ]
-            },
-            "9": {
-              abilities: [
-                {
-                  name: "Fungal Network",
-                  trigger: AbilityTrigger.OnOwnEndOfTurn,
-                  effects: [
-                    {
-                      type: EffectType.DealDamage,
-                      target: AbilityTarget.AllEnemies,
-                      value: 1
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        }
       },
       assets: [
         {
@@ -577,7 +198,7 @@ export const forestAssets: AssetCatalog = {
         },
         {
           type: "image",
-          horizonAssetId: "787776974149741",
+          horizonAssetId: "715084184317947",
           path: "assets/images/cards_forest_habitat-card.png",
           description: "Forest habitat card template"
         },
@@ -655,7 +276,7 @@ export const forestAssets: AssetCatalog = {
       assets: [
         {
           type: "image",
-          horizonAssetId: "787776974149741",
+          horizonAssetId: "715084184317947",
           path: "assets/images/cards_forest_habitat-card.png"
         }
       ]

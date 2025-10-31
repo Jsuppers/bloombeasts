@@ -50,24 +50,9 @@ const CARD_XP_THRESHOLDS = [
 /**
  * Calculate card level from current XP
  * Works for all card types (Bloom, Magic, Trap, Habitat, Buff)
+ * Uses standard XP thresholds for all cards
  */
-export function getCardLevel(currentXP: number, card?: BloomBeastCard): number {
-  // For Bloom beasts with custom XP requirements, use those
-  if (card?.levelingConfig?.xpRequirements) {
-    const customXP = card.levelingConfig.xpRequirements;
-    let cumulativeXP = 0;
-
-    for (let level = 2; level <= 9; level++) {
-      const levelKey = level as 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-      cumulativeXP += customXP[levelKey] || CARD_XP_THRESHOLDS[level] - CARD_XP_THRESHOLDS[level - 1];
-
-      if (currentXP < cumulativeXP) {
-        return level - 1;
-      }
-    }
-    return 9; // Max level
-  }
-
+export function getCardLevel(currentXP: number): number {
   // Standard XP thresholds
   for (let level = 9; level >= 1; level--) {
     if (currentXP >= CARD_XP_THRESHOLDS[level - 1]) {
@@ -78,20 +63,12 @@ export function getCardLevel(currentXP: number, card?: BloomBeastCard): number {
 }
 
 /**
- * Calculate XP required for next level
+ * Calculate XP required for next level (uses standard progression)
  */
-export function getXPRequired(currentLevel: number, currentXP: number, card?: BloomBeastCard): number {
+export function getXPRequired(currentLevel: number, currentXP: number): number {
   if (currentLevel >= 9) return 0; // Max level
 
   const nextLevel = currentLevel + 1;
-
-  // For Bloom beasts with custom XP requirements
-  if (card?.levelingConfig?.xpRequirements) {
-    const customXP = card.levelingConfig.xpRequirements;
-    const levelKey = nextLevel as 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-    const nextLevelXP = CARD_XP_THRESHOLDS[nextLevel - 1];
-    return nextLevelXP - currentXP;
-  }
 
   // Standard XP requirements
   const nextLevelXP = CARD_XP_THRESHOLDS[nextLevel - 1];
@@ -170,8 +147,8 @@ export function computeCardDisplay(instance: CardInstance): CardDisplayData {
     };
   }
 
-  const level = getCardLevel(instance.currentXP, cardDef as BloomBeastCard);
-  const xpRequired = getXPRequired(level, instance.currentXP, cardDef as BloomBeastCard);
+  const level = getCardLevel(instance.currentXP);
+  const xpRequired = getXPRequired(level, instance.currentXP);
 
   const displayData: CardDisplayData = {
     id: instance.id,
@@ -185,48 +162,16 @@ export function computeCardDisplay(instance: CardInstance): CardDisplayData {
     experienceRequired: xpRequired,
   };
 
-  // Add type-specific data
+  // Add type-specific data (base stats only - level bonuses applied in battle)
   if (cardDef.type === 'Bloom' && 'baseAttack' in cardDef) {
     const bloomCard = cardDef as BloomBeastCard;
-
-    // Apply levelingConfig stat gains if they exist
-    let baseAttack = bloomCard.baseAttack;
-    let baseHealth = bloomCard.baseHealth;
-
-    if (bloomCard.levelingConfig?.statGains) {
-      const statGain = bloomCard.levelingConfig.statGains[level as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9];
-      if (statGain) {
-        baseAttack = statGain.atk;
-        baseHealth = statGain.hp;
-      }
-    }
-
-    displayData.baseAttack = baseAttack;
-    displayData.baseHealth = baseHealth;
+    displayData.baseAttack = bloomCard.baseAttack;
+    displayData.baseHealth = bloomCard.baseHealth;
   }
 
-  // Add abilities (with level-based upgrades for Bloom cards)
+  // Add abilities (abilities remain constant across all levels)
   if ('abilities' in cardDef) {
-    let abilities = cardDef.abilities as any[];
-
-    // Apply ability upgrades for Bloom cards based on level
-    if (cardDef.type === 'Bloom' && 'levelingConfig' in cardDef) {
-      const bloomCard = cardDef as BloomBeastCard;
-      const upgrades = bloomCard.levelingConfig?.abilityUpgrades;
-
-      if (upgrades) {
-        // Check upgrade levels in reverse order (9, 7, 4) to get the most recent applicable upgrade
-        if (level >= 9 && upgrades[9]) {
-          abilities = upgrades[9].abilities || abilities;
-        } else if (level >= 7 && upgrades[7]) {
-          abilities = upgrades[7].abilities || abilities;
-        } else if (level >= 4 && upgrades[4]) {
-          abilities = upgrades[4].abilities || abilities;
-        }
-      }
-    }
-
-    displayData.abilities = abilities;
+    displayData.abilities = cardDef.abilities as any[];
   }
 
   // Generate description from abilities using getCardDescription
