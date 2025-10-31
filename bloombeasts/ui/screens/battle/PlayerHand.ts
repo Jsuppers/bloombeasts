@@ -7,6 +7,7 @@ import { standardCardDimensions, gameDimensions } from './types';
 import { UINodeType } from '../ScreenUtils';
 import { BattleDisplay } from '../../../gameManager';
 import { BindingType, UIState } from '../../types/BindingManager';
+import { createReactiveCardComponent } from '../common/CardRenderer';
 
 export class PlayerHand {
   private ui: PlayerHandProps['ui'];
@@ -32,243 +33,15 @@ export class PlayerHand {
 
   /**
    * Create static card structure with reactive properties for hand slot
-   * Handles all card types: Bloom, Magic, Trap, Buff, Habitat
+   * Now uses the shared reactive card component
    */
-  private createHandCardStructure(slotIndex: number, cardsPerPage: number): UINodeType[] {
-    const cardWidth = standardCardDimensions.width;
-    const cardHeight = standardCardDimensions.height;
-    const beastImageWidth = 185;
-    const beastImageHeight = 185;
-
-    const positions = {
-      beastImage: { x: 12, y: 13 },
-      cost: { x: 20, y: 10 },
-      affinity: { x: 175, y: 7 },
-      name: { x: 105, y: 13 },
-      ability: { x: 21, y: 212 },
-      attack: { x: 20, y: 176 },
-      health: { x: 188, y: 176 },
-    };
-
-    return [
-      // Layer 1: Card/Beast artwork image
-      this.ui.Image({
-        source: this.ui.bindingManager.derive(
-          [BindingType.BattleDisplay, BindingType.UIState],
-          ( display: BattleDisplay | null, uiState: UIState) => {
-            if (!display || !display.playerHand) return null;
-            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
-            const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-            const card = display.playerHand[actualIndex];
-            if (!card) return null;
-            const baseId = card.id?.replace(/-\d+-\d+$/, '') || card.name.toLowerCase().replace(/\s+/g, '-');
-            return this.ui.assetIdToImageSource?.(baseId) || null;
-          }
-        ),
-        style: {
-          width: beastImageWidth,
-          height: beastImageHeight,
-          position: 'absolute',
-          top: positions.beastImage.y,
-          left: positions.beastImage.x,
-        },
-      }),
-
-      // Layer 2: Base card frame (only for Bloom cards)
-      this.ui.Image({
-        source: this.ui.bindingManager.derive(
-          [BindingType.BattleDisplay, BindingType.UIState],
-          ( display: BattleDisplay | null, uiState: UIState) => {
-            if (!display || !display.playerHand) return null;
-            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
-            const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-            const card = display.playerHand[actualIndex];
-            if (!card || card.type !== 'Bloom') return null;
-            return this.ui.assetIdToImageSource?.('base-card') || null;
-          }
-        ),
-        style: {
-          width: cardWidth,
-          height: cardHeight,
-          position: 'absolute',
-          top: 0,
-          left: 0,
-        },
-      }),
-
-      // Layer 3: Type-specific template overlay - reactive source
-      this.ui.Image({
-        source: this.ui.bindingManager.derive(
-          [BindingType.BattleDisplay, BindingType.UIState],
-          ( display: BattleDisplay | null, uiState: UIState) => {
-            if (!display || !display.playerHand) return null;
-            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
-            const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-            const card = display.playerHand[actualIndex];
-            if (!card || card.type === 'Bloom') return null;
-
-            let templateKey = '';
-            if (card.type === 'Habitat' && card.affinity) {
-              templateKey = `${card.affinity.toLowerCase()}-habitat`;
-            } else {
-              templateKey = `${card.type.toLowerCase()}-card`;
-            }
-            return this.ui.assetIdToImageSource?.(templateKey) || null;
-          }
-        ),
-        style: {
-          width: cardWidth,
-          height: cardHeight,
-          position: 'absolute',
-          top: 0,
-          left: 0,
-        },
-      }),
-
-
-      // Layer 4: Affinity icon (for Bloom cards) - reactive source
-      this.ui.Image({
-        source: this.ui.bindingManager.derive(
-          [BindingType.BattleDisplay, BindingType.UIState],
-          ( display: BattleDisplay | null, uiState: UIState) => {
-            if (!display || !display.playerHand) return null;
-            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
-            const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-            const card = display.playerHand[actualIndex];
-            if (!card || card.type !== 'Bloom' || !card.affinity) return null;
-            return this.ui.assetIdToImageSource?.(`${card.affinity.toLowerCase()}-icon`) || null;
-          }
-        ),
-        style: {
-          width: 30,
-          height: 30,
-          position: 'absolute',
-          top: positions.affinity.y,
-          left: positions.affinity.x,
-        },
-      }),
-
-      // Layer 5: Card name - reactive text
-      this.ui.Text({
-        text: this.ui.bindingManager.derive(
-          [BindingType.BattleDisplay, BindingType.UIState],
-          (display: BattleDisplay | null, uiState: UIState) => {
-            if (!display || !display.playerHand) return '';
-            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
-            const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-            const card = display.playerHand[actualIndex];
-            return card?.name || '';
-          }
-        ),
-        style: {
-          position: 'absolute',
-          top: positions.name.y,
-          left: 0,
-          width: cardWidth,
-          fontSize: 14,
-          color: '#fff',
-          textAlign: 'center',
-        },
-      }),
-
-      // Layer 6: Cost
-      this.ui.Text({
-        text: this.ui.bindingManager.derive(
-          [BindingType.BattleDisplay, BindingType.UIState],
-          (display: BattleDisplay | null, uiState: UIState) => {
-            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
-            if (!display || !display.playerHand) return '';
-            const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-            const card = display.playerHand[actualIndex];
-            return card && card.cost !== undefined ? String(card.cost) : '';
-          }
-        ),
-        style: {
-          position: 'absolute',
-          top: positions.cost.y,
-          left: positions.cost.x - 10,
-          width: 20,
-          fontSize: 24,
-          color: '#fff',
-          textAlign: 'center',
-        },
-      }),
-
-      // Layer 7: Attack (for Bloom cards) - reactive text
-      this.ui.Text({
-        text: this.ui.bindingManager.derive(
-          [BindingType.BattleDisplay, BindingType.UIState],
-          (display: BattleDisplay | null, uiState: UIState) => {
-            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
-            if (!display || !display.playerHand) return '';
-            const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-            const card = display.playerHand[actualIndex];
-            if (!card || card.type !== 'Bloom') return '';
-            return String((card as any).currentAttack ?? (card as any).baseAttack ?? 0);
-          }
-        ),
-        style: {
-          position: 'absolute',
-          top: positions.attack.y,
-          left: positions.attack.x - 10,
-          width: 20,
-          fontSize: 24,
-          color: '#fff',
-          textAlign: 'center',
-        },
-      }),
-
-
-      // Layer 8: Health (for Bloom cards) - reactive text
-      this.ui.Text({
-        text: this.ui.bindingManager.derive(
-          [BindingType.BattleDisplay, BindingType.UIState],
-          (display: BattleDisplay | null, uiState: UIState) => {
-            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
-            if (!display || !display.playerHand) return '';
-            const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-            const card = display.playerHand[actualIndex];
-            if (!card || card.type !== 'Bloom') return '';
-            return String((card as any).currentHealth ?? (card as any).baseHealth ?? 0);
-          }
-        ),
-        style: {
-          position: 'absolute',
-          top: positions.health.y,
-          left: positions.health.x - 10,
-          width: 20,
-          fontSize: 24,
-          color: '#fff',
-          textAlign: 'center',
-        },
-      }),
-
-      // Layer 9: Ability text (for non-Bloom cards) - reactive text
-      this.ui.Text({
-        text: this.ui.bindingManager.derive(
-          [BindingType.BattleDisplay, BindingType.UIState],
-          (display: BattleDisplay | null, uiState: UIState) => {
-            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
-            if (!display || !display.playerHand) return '';
-            const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-            const card = display.playerHand[actualIndex];
-            if (!card || card.type === 'Bloom') return '';
-            // For now, show basic ability text - could enhance with description generator
-            return card.abilities?.[0]?.description || '';
-          }
-        ),
-        numberOfLines: 3,
-        style: {
-          position: 'absolute',
-          top: positions.ability.y,
-          left: positions.ability.x,
-          width: 168,
-          fontSize: 10,
-          color: '#fff',
-          textAlign: 'left',
-        },
-      }),
-    ];
+  private createHandCardStructure(slotIndex: number, cardsPerPage: number): UINodeType {
+    return createReactiveCardComponent(this.ui, {
+      mode: 'battleHand',
+      slotIndex,
+      cardsPerPage,
+      showDeckIndicator: false,
+    });
   }
 
   /**
@@ -429,6 +202,7 @@ export class PlayerHand {
                 showHand: newShowHand,
               },
             });
+            this.onRenderNeeded?.();
             this.onShowHandChange?.(newShowHand);
             this.onAction?.('toggle-hand');
           },

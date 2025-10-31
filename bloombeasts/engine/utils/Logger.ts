@@ -81,6 +81,7 @@ class LoggerClass {
   debug(message: string, ...data: any[]): void {
     if (this.config.level <= LogLevel.DEBUG) {
       const formatted = this.format('DEBUG', message);
+      console.log(formatted, ...data);
     }
   }
 
@@ -92,6 +93,7 @@ class LoggerClass {
   info(message: string, ...data: any[]): void {
     if (this.config.level <= LogLevel.INFO) {
       const formatted = this.format('INFO', message);
+      console.log(formatted, ...data);
     }
   }
 
@@ -138,6 +140,7 @@ class LoggerClass {
   group(label: string, collapsed: boolean = false): void {
     if (this.config.level <= LogLevel.INFO) {
       const formatted = this.format('GROUP', `>>> ${label}`);
+      console.log(formatted);
     }
   }
 
@@ -147,6 +150,7 @@ class LoggerClass {
   groupEnd(): void {
     if (this.config.level <= LogLevel.INFO) {
       const formatted = this.format('GROUP', `<<<`);
+      console.log(formatted);
     }
   }
 
@@ -157,6 +161,7 @@ class LoggerClass {
   table(data: any): void {
     if (this.config.level <= LogLevel.INFO) {
       const formatted = this.format('TABLE', JSON.stringify(data, null, 2));
+      console.log(formatted);
     }
   }
 
@@ -168,6 +173,7 @@ class LoggerClass {
     if (this.config.level <= LogLevel.DEBUG) {
       this.timers.set(label, Date.now());
       const formatted = this.format('TIMER', `${label}: started`);
+      console.log(formatted);
     }
   }
 
@@ -182,6 +188,7 @@ class LoggerClass {
         const duration = Date.now() - startTime;
         this.timers.delete(label);
         const formatted = this.format('TIMER', `${label}: ${duration}ms`);
+        console.log(formatted);
       }
     }
   }

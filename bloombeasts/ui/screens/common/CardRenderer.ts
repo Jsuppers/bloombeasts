@@ -10,6 +10,7 @@ import { computeCardDisplay, type CardDisplayData } from '../../../utils/cardUti
 import { getCardDescription } from '../../../engine/utils/cardDescriptionGenerator';
 import { UINodeType } from '../ScreenUtils';
 import type { PlayerData, UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
+import type { BattleDisplay } from '../../../../bloombeasts/gameManager';
 import { BindingType, UIState } from '../../types/BindingManager';
 
 export interface CardRendererProps {
@@ -223,8 +224,8 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
             top: positions.ability.y,
             left: positions.ability.x,
             width: 168,
-            fontSize: DIMENSIONS.fontSize.xs,
-            color: COLORS.textPrimary,
+            fontSize: 16,
+            color: '#000000',
             textAlign: 'left',
           },
         })
@@ -280,11 +281,14 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
 export interface ReactiveCardRendererProps {
 
   // Mode selection
-  mode: 'selectedCard' | 'slot';
+  mode: 'selectedCard' | 'slot' | 'battleBeast' | 'battleHand' | 'battleSelectedCard';
 
-  // Slot-based selection (required for slot mode)
+  // Slot-based selection (required for slot and battle modes)
   slotIndex?: number;
   cardsPerPage?: number;
+
+  // Battle-specific props
+  player?: 'player' | 'opponent'; // Required for battleBeast mode
 
   onClick?: (cardId: string) => void;
   showDeckIndicator?: boolean;
@@ -298,6 +302,7 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     mode,
     slotIndex,
     cardsPerPage,
+    player,
     onClick,
     showDeckIndicator = true
   } = props;
@@ -305,6 +310,9 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   // Determine which mode we're in
   const isSelectedCardMode = mode === 'selectedCard';
   const isSlotMode = mode === 'slot';
+  const isBattleBeastMode = mode === 'battleBeast';
+  const isBattleHandMode = mode === 'battleHand';
+  const isBattleSelectedCardMode = mode === 'battleSelectedCard';
 
   // Standard card dimensions
   const cardWidth = 210;
@@ -315,14 +323,14 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   // Standard card positions
   const positions = {
     beastImage: { x: 12, y: 13 },
-    cost: { x: 20, y: 10 },
-    affinity: { x: 175, y: 7 },
+    cost: { x: 21, y: 7 },
+    affinity: { x: 171, y: 7 },
     level: { x: 105, y: 182 },
     experienceBar: { x: 44, y: 182 },
     name: { x: 105, y: 13 },
     ability: { x: 21, y: 212 },
-    attack: { x: 20, y: 176 },
-    health: { x: 188, y: 176 },
+    attack: { x: 21, y: 171 },
+    health: { x: 188, y: 171 },
   };
 
   // Helper function to extract base ID
@@ -334,8 +342,30 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   };
 
   // Helper to get card from combined data
-  // Now accepts both uiState and playerData to properly react to changes
-  const getCard = (uiState: UIState, playerData: PlayerData): CardDisplayData | null => {
+  // Now accepts uiState, playerData, and battleDisplay to properly react to changes
+  const getCard = (uiState: UIState, playerData: PlayerData, battleDisplay: BattleDisplay | null): CardDisplayData | null => {
+    // Battle modes - get card directly from battleDisplay
+    if (isBattleBeastMode && slotIndex !== undefined && player) {
+      if (!battleDisplay) return null;
+      const field = player === 'player' ? battleDisplay.playerField : battleDisplay.opponentField;
+      const beast = field?.[slotIndex];
+      return beast || null; // BattleDisplay cards are already in CardDisplayData format
+    }
+
+    if (isBattleHandMode && slotIndex !== undefined && cardsPerPage !== undefined) {
+      if (!battleDisplay) return null;
+      const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+      const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+      const card = battleDisplay.playerHand?.[actualIndex];
+      return card || null; // BattleDisplay cards are already in CardDisplayData format
+    }
+
+    if (isBattleSelectedCardMode) {
+      const card = uiState.battle?.selectedCardDetail;
+      return card || null; // BattleDisplay cards are already in CardDisplayData format
+    }
+
+    // PlayerData modes - get card from collected cards
     const cardInstances: CardInstance[] = playerData?.cards?.collected || [];
 
     let instance: CardInstance | null = null;
@@ -364,34 +394,56 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     return deckCardIds.includes(cardId);
   };
 
-  // Create reactive text bindings that watch BOTH UIState and PlayerData
-  // This ensures the bindings update when either the selected card changes OR the card data changes
-  const cardNameBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-    const card = getCard(uiState, playerData);
+  // Determine which bindings to watch based on mode
+  const isBattleMode = isBattleBeastMode || isBattleHandMode || isBattleSelectedCardMode;
+  const bindingTypes = isBattleMode
+    ? [BindingType.UIState, BindingType.BattleDisplay]
+    : [BindingType.UIState, BindingType.PlayerData];
+
+  // Create reactive text bindings that watch the appropriate bindings
+  // Battle modes: UIState + BattleDisplay
+  // Card screen modes: UIState + PlayerData
+  const cardNameBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
+    const [uiState, data] = args;
+    const card = isBattleMode
+      ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
+      : getCard(uiState, data as PlayerData, null);
     return card?.name || '';
   });
 
-  const cardCostBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-    const card = getCard(uiState, playerData);
+  const cardCostBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
+    const [uiState, data] = args;
+    const card = isBattleMode
+      ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
+      : getCard(uiState, data as PlayerData, null);
     return card && card.cost !== undefined ? String(card.cost) : '';
   });
 
-  const cardAttackBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-    const card = getCard(uiState, playerData);
+  const cardAttackBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
+    const [uiState, data] = args;
+    const card = isBattleMode
+      ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
+      : getCard(uiState, data as PlayerData, null);
     if (!card || card.type !== 'Bloom') return '';
     const bloomCard = card as any;
     return String(bloomCard.currentAttack ?? bloomCard.baseAttack ?? 0);
   });
 
-  const cardHealthBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-    const card = getCard(uiState, playerData);
+  const cardHealthBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
+    const [uiState, data] = args;
+    const card = isBattleMode
+      ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
+      : getCard(uiState, data as PlayerData, null);
     if (!card || card.type !== 'Bloom') return '';
     const bloomCard = card as any;
     return String(bloomCard.currentHealth ?? bloomCard.baseHealth ?? 0);
   });
 
-  const cardLevelBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-    const card = getCard(uiState, playerData);
+  const cardLevelBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
+    const [uiState, data] = args;
+    const card = isBattleMode
+      ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
+      : getCard(uiState, data as PlayerData, null);
     if (!card || card.level === undefined) return '';
 
     // For all cards, show level and experience
@@ -400,22 +452,31 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     return `lvl ${card.level}. ${exp}/${expRequired}`;
   });
 
-  const abilityTextBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-    const card = getCard(uiState, playerData);
+  const abilityTextBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
+    const [uiState, data] = args;
+    const card = isBattleMode
+      ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
+      : getCard(uiState, data as PlayerData, null);
     return card ? getCardDescription(card) : '';
   });
 
-  // Create image source bindings that watch BOTH UIState and PlayerData
-  const baseCardImageBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-    const card = getCard(uiState, playerData);
+  // Create image source bindings that watch the appropriate bindings
+  const baseCardImageBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
+    const [uiState, data] = args;
+    const card = isBattleMode
+      ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
+      : getCard(uiState, data as PlayerData, null);
     if (!card) return null;
     const baseId = extractBaseId(card.id, card.name);
     if (!baseId) return null;
     return ui.assetIdToImageSource?.(baseId) ?? null;
   });
 
-  const templateImageBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-    const card = getCard(uiState, playerData);
+  const templateImageBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
+    const [uiState, data] = args;
+    const card = isBattleMode
+      ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
+      : getCard(uiState, data as PlayerData, null);
     if (!card) return null;
 
     let templateAssetId = '';
@@ -428,8 +489,11 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     return templateAssetId ? (ui.assetIdToImageSource?.(templateAssetId) ?? null) : null;
   });
 
-  const affinityIconBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-    const card = getCard(uiState, playerData);
+  const affinityIconBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
+    const [uiState, data] = args;
+    const card = isBattleMode
+      ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
+      : getCard(uiState, data as PlayerData, null);
     if (!card || card.type !== 'Bloom' || !card.affinity) return null;
     const affinityAssetId = `${card.affinity.toLowerCase()}-icon`;
     if (!affinityAssetId) return null;
@@ -454,8 +518,11 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
 
     // Layer 2: Card frame (base-card for Bloom, type-specific for others)
     ui.Image({
-      source: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-        const card = getCard(uiState, playerData);
+      source: ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
+        const [uiState, data] = args;
+        const card = isBattleMode
+          ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
+          : getCard(uiState, data as PlayerData, null);
         if (!card) return null;
 
         // Bloom cards use base-card
@@ -574,16 +641,16 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
         top: positions.ability.y,
         left: positions.ability.x,
         width: 168,
-        fontSize: DIMENSIONS.fontSize.xs,
-        color: COLORS.textPrimary,
+        fontSize: 16,
+        color: '#000000',
         textAlign: 'left',
       },
     }),
 
-    // Layer 7: Deck indicator border (only if showDeckIndicator is true)
-    ...(showDeckIndicator ? [ui.View({
+    // Layer 7: Deck indicator border (only if showDeckIndicator is true and not in battle mode)
+    ...(showDeckIndicator && !isBattleMode ? [ui.View({
       style: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
-        const card = getCard(uiState, playerData);
+        const card = getCard(uiState, playerData, null);
         const inDeck = isCardInDeck(playerData, card?.id);
 
         return {
@@ -595,6 +662,7 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
           borderWidth: inDeck ? 4 : 0,
           borderColor: COLORS.success,
           borderRadius: 8,
+          pointerEvents: 'none' as const, // Allow clicks to pass through
         };
       }),
     })] : []),
@@ -609,7 +677,7 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
         // Get current state to determine which card was clicked
         const currentState = ui.bindingManager.getSnapshot(BindingType.UIState);
         const playerData = ui.bindingManager.getSnapshot(BindingType.PlayerData);
-        const card = getCard(currentState, playerData);
+        const card = getCard(currentState, playerData, null);
         if (card?.id) {
           onClick(card.id);
         }

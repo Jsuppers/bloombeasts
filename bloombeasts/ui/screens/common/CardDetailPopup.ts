@@ -14,6 +14,7 @@ export interface CardDetailPopupProps {
   cardDetail: CardDetailDisplay;
   onButtonClick: (buttonId: string) => void;
   playSfx?: (sfxId: string) => void;
+  hideBackdrop?: boolean; // Hide the semi-transparent backdrop
 }
 
 export interface ReactiveCardDetailPopupProps {
@@ -68,7 +69,7 @@ export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: React
  * Create a card detail popup overlay using common Popup component
  */
 export function createCardDetailPopup(ui: UIMethodMappings, props: CardDetailPopupProps): UINodeType {
-  const { cardDetail, onButtonClick, playSfx } = props;
+  const { cardDetail, onButtonClick, playSfx, hideBackdrop = false } = props;
 
   // Create card component as content
   const cardContent = [
@@ -108,5 +109,6 @@ export function createCardDetailPopup(ui: UIMethodMappings, props: CardDetailPop
     width: 400,
     height: 500,
     onBackdropClick: () => onButtonClick('btn-card-close'),
+    hideBackdrop,
   });
 }

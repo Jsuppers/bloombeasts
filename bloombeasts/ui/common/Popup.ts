@@ -29,6 +29,7 @@ export interface PopupProps {
   width?: number;
   height?: number;
   onBackdropClick?: () => void;
+  hideBackdrop?: boolean; // Hide the semi-transparent backdrop
 }
 
 /**
@@ -46,6 +47,7 @@ export function createPopup(props: PopupProps): UINodeType {
     width = 550,
     height = 400,
     onBackdropClick,
+    hideBackdrop = false,
   } = props;
 
   // Calculate center position (assuming 1280x720 screen)
@@ -74,25 +76,27 @@ export function createPopup(props: PopupProps): UINodeType {
       zIndex: 1000,
     },
     children: [
-      // Semi-transparent backdrop
-      onBackdropClick
-        ? ui.Pressable({
-            onClick: onBackdropClick,
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            },
-          })
-        : ui.View({
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            },
-          }),
+      // Semi-transparent backdrop (optional)
+      ...(hideBackdrop ? [] : [
+        onBackdropClick
+          ? ui.Pressable({
+              onClick: onBackdropClick,
+              style: {
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              },
+            })
+          : ui.View({
+              style: {
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              },
+            })
+      ]),
 
       // Content container with mission-container image (centered)
       ui.View({

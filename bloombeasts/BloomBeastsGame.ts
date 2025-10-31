@@ -450,6 +450,7 @@ export class BloomBeastsGame {
       ui: this.UI,
       onNavigate: this.navigate.bind(this),
       onUpgrade: this.handleUpgrade.bind(this),
+      onRenderNeeded: this.triggerRender.bind(this),
       playSfx: this.playSfx.bind(this)
     });
 
@@ -850,12 +851,14 @@ export class BloomBeastsGame {
           text: 'No',
           onClick: () => {
             this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, null);
+            this.triggerRender();
           },
           color: 'default',
         },
       ],
       playSfx: this.playSfx.bind(this),
     });
+    this.triggerRender();
   }
 
   /**
@@ -871,8 +874,10 @@ export class BloomBeastsGame {
       onButtonClick: () => {
         // Close button clicked
         this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, null);
+        this.triggerRender();
       },
-      playSfx: this.playSfx.bind(this)
+      playSfx: this.playSfx.bind(this),
+      hideBackdrop: true, // Hide backdrop for played card popups
     });
     this.triggerRender();
 
@@ -890,6 +895,7 @@ export class BloomBeastsGame {
   private handleForfeit(): void {
     // Close popup
     this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, null);
+    this.triggerRender();
 
     // Play lose sound
     this.playSfx('sfx-lose');
@@ -1536,23 +1542,27 @@ export class BloomBeastsGame {
           this.UI.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
             return props !== null;
           }),
-          createCardDetailPopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.CardDetailPopup) || {
-            cardDetail: {
-              card: {
-                id: null, // No ID so CardRenderer returns null for images
-                name: '',
-                type: 'Bloom',
-                level: 1,
-                experience: 0,
-                count: 0,
-                description: ''
+          (() => {
+            const props = this.UI.bindingManager.getSnapshot(BindingType.CardDetailPopup);
+            return createCardDetailPopup(this.UI, props || {
+              cardDetail: {
+                card: {
+                  id: null, // No ID so CardRenderer returns null for images
+                  name: '',
+                  type: 'Bloom',
+                  level: 1,
+                  experience: 0,
+                  count: 0,
+                  description: ''
+                },
+                buttons: [],
+                isInDeck: false
               },
-              buttons: [],
-              isInDeck: false
-            },
-            onButtonClick: () => {},
-            playSfx: this.playSfx.bind(this)
-          })
+              onButtonClick: () => {},
+              playSfx: this.playSfx.bind(this),
+              hideBackdrop: false,
+            });
+          })()
         )
       );
     }

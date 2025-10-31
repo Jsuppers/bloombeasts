@@ -115,14 +115,8 @@ export function getAllStarterDecks(): DeckList[] {
  * Get a specific starter deck by type
  */
 export function getStarterDeck(type: DeckType): DeckList {
-  // TESTING: Use quick win deck for fast testing
-  return quickWinDeck(type);
-
-  // TESTING: Use testing deck with 1 of each card
-  // return getTestingDeck(type);
-
-  // ORIGINAL: Starter deck with multiple copies
-  // return buildDeck(type);
+  // Use simple Forest starter deck
+  return buildDeck('Forest');
 }
 
 /**

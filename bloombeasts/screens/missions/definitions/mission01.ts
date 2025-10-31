@@ -24,25 +24,42 @@ export const mission01: Mission = {
       return { name: 'Rootling Deck', affinity: 'Forest', cards: [], totalCards: 0 };
     }
 
-    // Get Rootling card and create a weakened version with only 1 HP
+    // Get Rootling card
     const rootlingCard = game.catalogManager.getCard('rootling');
     if (!rootlingCard) {
       console.error('[mission01] Rootling card not found');
       return { name: 'Rootling Deck', affinity: 'Forest', cards: [], totalCards: 0 };
     }
 
-    // Create a single Rootling with 1 HP (tutorial difficulty)
-    const weakRootling = {
-      ...rootlingCard,
-      baseHealth: 1,
-      instanceId: 'rootling-1',
-    };
+    // Create a very simple deck for tutorial (3 weak Rootlings + 2 basic Sproutlings)
+    const cards = [];
+
+    // Add 3 Rootlings (weakened to 2/2 for tutorial)
+    for (let i = 0; i < 3; i++) {
+      cards.push({
+        ...rootlingCard,
+        baseAttack: 2,
+        baseHealth: 2,
+        instanceId: `rootling-${i + 1}`,
+      });
+    }
+
+    // Add 2 Sproutlings if available (basic 1-cost cards)
+    const sproutlingCard = game.catalogManager.getCard('sproutling');
+    if (sproutlingCard) {
+      for (let i = 0; i < 2; i++) {
+        cards.push({
+          ...sproutlingCard,
+          instanceId: `sproutling-${i + 1}`,
+        });
+      }
+    }
 
     return {
       name: 'Rootling (Tutorial)',
       affinity: 'Forest' as const,
-      cards: [weakRootling],
-      totalCards: 1,
+      cards: cards,
+      totalCards: cards.length,
     };
   },
 

@@ -14,6 +14,7 @@ export interface UpgradeScreenProps {
   ui: UIMethodMappings;
   onNavigate?: (screen: string) => void;
   onUpgrade?: (boostId: string) => void;
+  onRenderNeeded?: () => void;
   playSfx?: (sfxId: string) => void;
 }
 
@@ -21,12 +22,14 @@ export class UpgradeScreen {
   private ui: UIMethodMappings;
   private onNavigate?: (screen: string) => void;
   private onUpgrade?: (boostId: string) => void;
+  private onRenderNeeded?: () => void;
   private playSfx?: (sfxId: string) => void;
 
   constructor(props: UpgradeScreenProps) {
     this.ui = props.ui;
     this.onNavigate = props.onNavigate;
     this.onUpgrade = props.onUpgrade;
+    this.onRenderNeeded = props.onRenderNeeded;
     this.playSfx = props.playSfx;
   }
 
@@ -50,6 +53,7 @@ export class UpgradeScreen {
             selectedUpgradeId: upgrade.id
           }
         });
+        this.onRenderNeeded?.();
       },
       style: {
         width: containerSize,
@@ -226,6 +230,7 @@ export class UpgradeScreen {
                 selectedUpgradeId: null
               }
             });
+            this.onRenderNeeded?.();
           },
           color: 'green',
           disabled: this.ui.bindingManager.derive([BindingType.PlayerData, BindingType.UIState], (pd: any, state: any) => {
@@ -260,6 +265,7 @@ export class UpgradeScreen {
                 selectedUpgradeId: null
               }
             });
+            this.onRenderNeeded?.();
           },
           color: 'default',
         },

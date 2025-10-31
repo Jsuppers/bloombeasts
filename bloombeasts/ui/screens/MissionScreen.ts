@@ -249,6 +249,7 @@ export class MissionScreen {
                 scrollOffset: (currentState.missions?.scrollOffset ?? 0) - 1
               }
             });
+            this.onRenderNeeded?.();
           },
           disabled: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
             const offset: number = uiState.missions?.scrollOffset ?? 0;
@@ -276,6 +277,7 @@ export class MissionScreen {
                 scrollOffset: (currentState.missions?.scrollOffset ?? 0) + 1
               }
             });
+            this.onRenderNeeded?.();
           },
           disabled: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
             const offset: number = uiState.missions?.scrollOffset ?? 0;

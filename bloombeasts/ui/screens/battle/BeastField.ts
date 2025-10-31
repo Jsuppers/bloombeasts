@@ -7,6 +7,7 @@ import { standardCardDimensions, battleBoardAssetPositions } from './types';
 import { UINodeType } from '../ScreenUtils';
 import { BattleDisplay } from '../../../gameManager';
 import { BindingType } from '../../types/BindingManager';
+import { createReactiveCardComponent } from '../common/CardRenderer';
 
 export class BeastField {
   private ui: BattleComponentWithCallbacks['ui'];
@@ -21,156 +22,15 @@ export class BeastField {
 
   /**
    * Create static beast card structure with reactive properties
-   * All images, text, etc. use bindings instead of being dynamically created
+   * Now uses the shared reactive card component
    */
-  private createBeastCardStructure(player: 'player' | 'opponent', slotIndex: number): UINodeType[] {
-    const cardWidth = standardCardDimensions.width;
-    const cardHeight = standardCardDimensions.height;
-    const beastImageWidth = 185;
-    const beastImageHeight = 185;
-
-    const positions = {
-      beastImage: { x: 12, y: 13 },
-      cost: { x: 20, y: 10 },
-      affinity: { x: 175, y: 7 },
-      name: { x: 105, y: 13 },
-      attack: { x: 20, y: 176 },
-      health: { x: 188, y: 176 },
-    };
-
-    return [
-      // Layer 1: Beast artwork image - reactive source
-      this.ui.Image({
-        source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
-            if (!state) return null;
-            const field = player === 'player' ? state.playerField : state.opponentField;
-            const beast = field?.[slotIndex];
-            if (!beast) return null;
-            const baseId = beast.id?.replace(/-\d+-\d+$/, '') || beast.name.toLowerCase().replace(/\s+/g, '-');
-            return this.ui.assetIdToImageSource?.(baseId) || null;
-          }),
-        style: {
-          width: beastImageWidth,
-          height: beastImageHeight,
-          position: 'absolute',
-          top: positions.beastImage.y,
-          left: positions.beastImage.x,
-        },
-      }),
-
-      // Layer 2: Base card frame
-      this.ui.Image({
-        source: this.ui.assetIdToImageSource?.('base-card') || null,
-        style: {
-          width: cardWidth,
-          height: cardHeight,
-          position: 'absolute',
-          top: 0,
-          left: 0,
-        },
-      }),
-
-      // Layer 3: Affinity icon - reactive source
-      this.ui.Image({
-        source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
-            if (!state) return null;
-            const field = player === 'player' ? state.playerField : state.opponentField;
-            const beast = field?.[slotIndex];
-            if (!beast || !beast.affinity) return null;
-            return this.ui.assetIdToImageSource?.(`${beast.affinity.toLowerCase()}-icon`) || null;
-          }
-        ),
-        style: {
-          width: 30,
-          height: 30,
-          position: 'absolute',
-          top: positions.affinity.y,
-          left: positions.affinity.x,
-        },
-      }),
-
-      // Layer 4: Card name - reactive text
-      this.ui.Text({
-        text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
-            if (!state) return '';
-            const field = player === 'player' ? state.playerField : state.opponentField;
-            const beast = field?.[slotIndex];
-            return beast?.name || '';
-          }
-        ),
-        style: {
-          position: 'absolute',
-          top: positions.name.y,
-          left: 0,
-          width: cardWidth,
-          fontSize: 14,
-          color: '#fff',
-          textAlign: 'center',
-        },
-      }),
-
-      // Layer 5: Cost - reactive text
-      this.ui.Text({
-        text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
-            if (!state) return '';
-            const field = player === 'player' ? state.playerField : state.opponentField;
-            const beast = field?.[slotIndex];
-            return beast && beast.cost !== undefined ? String(beast.cost) : '';
-          }
-        ),
-        style: {
-          position: 'absolute',
-          top: positions.cost.y,
-          left: positions.cost.x - 10,
-          width: 20,
-          fontSize: 24,
-          color: '#fff',
-          textAlign: 'center',
-        },
-      }),
-
-      // Layer 6: Attack - reactive text
-      this.ui.Text({
-        text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
-            if (!state) return '';
-            const field = player === 'player' ? state.playerField : state.opponentField;
-            const beast = field?.[slotIndex];
-            return beast ? String(beast.currentAttack ?? beast.baseAttack ?? 0) : '';
-          }
-        ),
-        style: {
-          position: 'absolute',
-          top: positions.attack.y,
-          left: positions.attack.x - 10,
-          width: 20,
-          fontSize: 24,
-          color: '#fff',
-          textAlign: 'center',
-        },
-      }),
-
-      // Layer 7: Health - reactive text
-      this.ui.Text({
-        text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
-            if (!state) return '';
-            const field = player === 'player' ? state.playerField : state.opponentField;
-            const beast = field?.[slotIndex];
-            return beast ? String(beast.currentHealth ?? beast.baseHealth ?? 0) : '';
-          }
-        ),
-        style: {
-          position: 'absolute',
-          top: positions.health.y,
-          left: positions.health.x - 10,
-          width: 20,
-          fontSize: 24,
-          color: '#fff',
-          textAlign: 'center',
-        },
-      }),
-
-      // Counter icons removed to reduce UI size
-    ];
+  private createBeastCardStructure(player: 'player' | 'opponent', slotIndex: number): UINodeType {
+    return createReactiveCardComponent(this.ui, {
+      mode: 'battleBeast',
+      player,
+      slotIndex,
+      showDeckIndicator: false,
+    });
   }
 
   /**

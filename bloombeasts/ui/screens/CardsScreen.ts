@@ -329,6 +329,7 @@ export class CardsScreen {
         selectedCardId: cardId
       }
     });
+    this.onRenderNeeded?.();
   }
 
   /**
@@ -343,6 +344,7 @@ export class CardsScreen {
         selectedCardId: null
       }
     });
+    this.onRenderNeeded?.();
   }
 
   /**

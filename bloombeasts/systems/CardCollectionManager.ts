@@ -133,9 +133,11 @@ export class CardCollectionManager {
    * Initialize starting collection with minimal CardInstance format
    */
   async initializeStartingCollection(cardInstances: CardInstance[], playerDeck: string[]): Promise<string[]> {
-    // Give player the first 30 cards from the card catalog as the default deck
-    const allCards = this.catalogManager.getAllCardData();
-    const starterCards = allCards.slice(0, 30);
+    // Give player a proper starter deck (Forest starter deck)
+    const starterDeckList = getStarterDeck('Forest');
+    const starterCards = starterDeckList.cards;
+
+    Logger.info(`Initializing starter deck: ${starterDeckList.name} with ${starterCards.length} cards`);
 
     starterCards.forEach((card: any, index: number) => {
       const instanceId = `${card.id}-${Date.now()}-${index}`;
@@ -149,11 +151,11 @@ export class CardCollectionManager {
 
       cardInstances.push(cardInstance);
 
-      // Add to player's deck (up to DECK_SIZE cards)
-      if (playerDeck.length < DECK_SIZE) {
-        playerDeck.push(cardInstance.id);
-      }
+      // Add to player's deck (all starter deck cards go in the deck)
+      playerDeck.push(cardInstance.id);
     });
+
+    Logger.info(`Starter deck initialized with ${playerDeck.length} cards in deck and ${cardInstances.length} cards collected`);
 
     return playerDeck;
   }

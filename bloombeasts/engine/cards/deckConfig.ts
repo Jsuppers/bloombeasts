@@ -97,34 +97,12 @@ const AFFINITY_DECK_CONFIG_IDS: Record<AffinityType, AffinityDeckConfigIds> = {
 };
 
 /**
- * Shared core cards (card IDs)
+ * Shared core cards (card IDs) - Simplified for Forest starter deck
  */
 const SHARED_CORE_CARD_IDS: DeckCardIdEntry[] = [
   // Basic resource generation
   { cardId: 'nectar-block', quantity: 10 },
   { cardId: 'nectar-surge', quantity: 2 },
-  { cardId: 'nectar-drain', quantity: 1 },
-
-  // Removal and utility
-  { cardId: 'cleansing-downpour', quantity: 1 },
-  { cardId: 'purify', quantity: 1 },
-  { cardId: 'lightning-strike', quantity: 1 },
-  { cardId: 'elemental-burst', quantity: 1 },
-
-  // Buffs and positioning
-  { cardId: 'power-up', quantity: 1 },
-  { cardId: 'overgrowth', quantity: 1 },
-  { cardId: 'aether-swap', quantity: 1 },
-
-  // Trap cards
-  { cardId: 'habitat-lock', quantity: 1 },
-  { cardId: 'magic-shield', quantity: 1 },
-  { cardId: 'habitat-shield', quantity: 1 },
-  { cardId: 'bear-trap', quantity: 1 },
-  { cardId: 'thorn-snare', quantity: 1 },
-  { cardId: 'vaporize', quantity: 1 },
-  { cardId: 'emergency-bloom', quantity: 1 },
-  { cardId: 'xp-harvest', quantity: 1 },
 ];
 
 /**
