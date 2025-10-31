@@ -6,9 +6,12 @@
 import { BloomBeastsGame, PlatformConfig, type PlayerData } from '../../../bloombeasts/BloomBeastsGame';
 import { AssetCatalogManager } from '../../../bloombeasts/AssetCatalogManager';
 import { allCatalogs } from '../../../bloombeasts/catalogs';
+import { createDefaultPlayerData } from '../../../bloombeasts/utils/createDefaultPlayerData';
 import { UIRenderer } from './ui/UIRenderer';
 import { View, Text, Image, Pressable, Binding, DerivedBinding, ValueBindingBase, UINode } from './ui';
 import { AnimatedBinding, Animation, Easing } from './ui';
+import { AsyncMethods } from '../../../bloombeasts/ui/types/bindings';
+import { BindingManager } from '../../../bloombeasts/ui/types/BindingManager';
 
 /**
  * Initialize and load all asset catalogs
@@ -113,6 +116,13 @@ class WebGameApp {
      * Create platform configuration with asset mappings
      */
     private createPlatformConfig(manager: AssetCatalogManager): PlatformConfig {
+        const asyncMethods: AsyncMethods = {
+            setTimeout: (callback, timeout) => window.setTimeout(callback, timeout ?? 0),
+            clearTimeout: (id) => window.clearTimeout(id),
+            setInterval: (callback, timeout) => window.setInterval(callback, timeout ?? 0),
+            clearInterval: (id) => window.clearInterval(id)
+        };
+        const bindingManager = new BindingManager(Binding, asyncMethods);
         return {
             // Storage: localStorage
             setPlayerData: (data: PlayerData) => {
@@ -126,10 +136,23 @@ class WebGameApp {
             getPlayerData: () => {
                 try {
                     const stored = localStorage.getItem('bloombeasts_playerData');
-                    return stored ? JSON.parse(stored) : null;
+                    if (stored) {
+                        return JSON.parse(stored);
+                    }
+
+                    // No saved data - create default with "Web Player" name
+                    console.log('No saved data found - creating default player data');
+                    const defaultData = createDefaultPlayerData('Web Player');
+
+                    // Save it immediately
+                    localStorage.setItem('bloombeasts_playerData', JSON.stringify(defaultData));
+                    console.log('Default player data created and saved');
+
+                    return defaultData;
                 } catch (error) {
-                    console.error('Failed to load player data:', error);
-                    return null;
+                    console.error('Failed to load/create player data:', error);
+                    // Return default data even on error to prevent game crash
+                    return createDefaultPlayerData('Web Player');
                 }
             },
 
@@ -152,24 +175,14 @@ class WebGameApp {
                     Image,
                     Pressable,
                     UINode,
-                    Binding,
-                    AnimatedBinding,
-                    Animation,
-                    Easing,
+                    bindingManager: bindingManager,
                     // Web just returns the asset ID as-is (string path)
                     assetIdToImageSource: (assetId: string) => assetId,
-                    // Web loads assets synchronously, so always ready
-                    assetsLoadedBinding: new Binding(true),
                 };
             },
 
             // Async methods: standard browser APIs
-            async: {
-                setTimeout: (callback, timeout) => window.setTimeout(callback, timeout ?? 0),
-                clearTimeout: (id) => window.clearTimeout(id),
-                setInterval: (callback, timeout) => window.setInterval(callback, timeout ?? 0),
-                clearInterval: (id) => window.clearInterval(id)
-            },
+            async: asyncMethods,
 
             // Rendering: canvas renderer
             render: (uiNode) => {
@@ -287,6 +300,40 @@ class WebGameApp {
             setSfxEnabled: (enabled: boolean) => {
                 console.log('[Web Audio] Set SFX enabled:', enabled);
                 this.sfxEnabled = enabled;
+            },
+
+            // World Variables: Mock implementation for web
+            getWorldVariable: (variableGroup: string, variableName: string) => {
+                console.log(`[Web] getWorldVariable called: ${variableGroup}.${variableName}`);
+
+                // Mock leaderboard data for web testing
+                if (variableGroup === 'BloomBeastsData' && variableName === 'leaderboard') {
+                    return {
+                        topExperience: [
+                            { playerName: 'Player 1', score: 10000, level: 7 },
+                            { playerName: 'Player 2', score: 5000, level: 6 },
+                            { playerName: 'Player 3', score: 3000, level: 5 },
+                        ],
+                        fastestCluckNorris: [
+                            { playerName: 'Speed Runner', score: 45 },
+                            { playerName: 'Fast Player', score: 60 },
+                            { playerName: 'Quick Win', score: 75 },
+                        ],
+                    };
+                }
+
+                return null;
+            },
+
+            setWorldVariable: (variableGroup: string, variableName: string, value: any) => {
+                console.log(`[Web] setWorldVariable called: ${variableGroup}.${variableName}`, value);
+                // Web doesn't persist world variables - just log for debugging
+            },
+
+            // Network Events: Mock implementation for web
+            sendNetworkEvent: (eventName: string, data: any) => {
+                console.log(`[Web] sendNetworkEvent called: ${eventName}`, data);
+                // Web doesn't send network events - just log for debugging
             }
         };
     }

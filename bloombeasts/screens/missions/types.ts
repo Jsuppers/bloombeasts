@@ -21,7 +21,12 @@ export interface MissionRewards {
   bonusXPChance: number;        // Chance for bonus XP (0-1)
   bonusXPAmount: number;        // Amount of bonus XP if triggered
   cardRewards: CardReward[];    // Possible card rewards
-  itemRewards?: ItemReward[];   // Possible item rewards
+  coinRewards?: {               // Coin rewards
+    minAmount: number;
+    maxAmount: number;
+    dropChance: number;
+  };
+  itemRewards?: ItemReward[];   // Possible item rewards (serums, etc)
 }
 
 export interface CardReward {
@@ -57,7 +62,6 @@ export interface Mission {
   // Mission specifics (all optional now)
   objectives?: MissionObjective[];
   turnLimit?: number;           // Optional turn limit
-  specialRules?: SpecialRule[]; // Special battle rules
 
   // Rewards
   rewards: MissionRewards;
@@ -68,14 +72,6 @@ export interface Mission {
   bestScore?: number;
   lastPlayed?: Date;
   unlocked: boolean;
-}
-
-export interface SpecialRule {
-  id: string;
-  name: string;
-  description: string;
-  effect: 'double-xp' | 'no-abilities' | 'fast-nectar' |
-          'burn-damage' | 'heal-per-turn' | 'random-effects';
 }
 
 export interface AIProfile {

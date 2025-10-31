@@ -11,7 +11,7 @@ import {
   validateStatGainsProgression,
   loadCardFromJSON,
 } from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+import { StructuredAbility, AbilityTrigger } from '../../types/abilities.js';
 
 const GALE_GLIDER = loadCardFromJSON('gale-glider', 'sky');
 
@@ -42,7 +42,7 @@ describe('Gale Glider Card', () => {
     });
 
     test('should have correct trigger', () => {
-      expect(GALE_GLIDER.abilities[0].trigger).toBe('Passive');
+      expect(GALE_GLIDER.abilities[0].trigger).toBe(AbilityTrigger.WhileOnField);
     });
 
     test('should have correct effects', () => {
@@ -87,7 +87,7 @@ describe('Gale Glider Card', () => {
       const upgrade = GALE_GLIDER.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnAttack');
+      expect(ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
   });
 
@@ -110,7 +110,7 @@ describe('Gale Glider Card', () => {
       const upgrade = GALE_GLIDER.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('Passive');
+      expect(ability.trigger).toBe(AbilityTrigger.WhileOnField);
     });
   });
 
@@ -133,7 +133,7 @@ describe('Gale Glider Card', () => {
       const upgrade = GALE_GLIDER.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('Passive');
+      expect(ability.trigger).toBe(AbilityTrigger.WhileOnField);
     });
   });
 

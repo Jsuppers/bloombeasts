@@ -2,7 +2,7 @@
  * Game state and player types
  */
 
-import { AnyCard, HabitatCard, Counter } from './core';
+import { AnyCard, HabitatCard } from './core';
 import { BloomBeastInstance } from './leveling';
 import { SimpleMap } from '../../utils/polyfills';
 
@@ -10,7 +10,7 @@ import { SimpleMap } from '../../utils/polyfills';
 export { BloomBeastInstance } from './leveling';
 
 // Battle state enum for state-based battle flow
-export enum BattleState {
+export enum BattlePhase {
   Setup = 'Setup',
   Player1StartOfTurn = 'Player1StartOfTurn',
   Player1Playing = 'Player1Playing',
@@ -41,7 +41,6 @@ export interface Player {
   field: (BloomBeastInstance | null)[]; // Nullable for empty slots
   trapZone: (AnyCard | null)[]; // Face-down trap cards (max 3)
   buffZone: (AnyCard | null)[]; // Active buff cards (max 2)
-  habitatCounters: SimpleMap<string, number>; // Counters specific to this player's habitat
 }
 
 export interface GameState {
@@ -49,10 +48,9 @@ export interface GameState {
   currentPlayerIndex?: 0 | 1;
   activePlayer: 0 | 1;  // Current player's turn
   habitatZone: HabitatCard | null;
-  habitatCounters?: Counter[]; // Counters on the habitat (like Spores)
   turn: number;
   phase: Phase;  // Kept for backward compatibility
-  battleState: BattleState;  // New state-based battle flow
+  battleState: BattlePhase;  // New state-based battle flow
   turnHistory: any[];  // History of actions taken
   // Pending actions that need to be resolved
   drawCardsQueued?: number;

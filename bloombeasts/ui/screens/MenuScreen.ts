@@ -7,20 +7,17 @@
 import { COLORS } from '../styles/colors';
 import { DIMENSIONS, GAPS } from '../styles/dimensions';
 import { sideMenuButtonDimensions } from '../constants/dimensions';
-import type { MenuStats } from '../../../bloombeasts/gameManager';
-import type { BindingInterface, UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
-import type { AsyncMethods } from '../types/bindings';
+import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { UINodeType } from './ScreenUtils';
-import { createSideMenu, createTextRow } from './common/SideMenu';
-import { IntervaledBinding } from '../bindings/IntervaledBinding';
+import { createSideMenu } from './common/SideMenu';
+import { BindingType } from '../types/BindingManager';
 
 export interface MenuScreenProps {
   ui: UIMethodMappings;
-  async: AsyncMethods;
-  playerDataBinding: any; // PlayerData binding
   onButtonClick?: (buttonId: string) => void;
   onNavigate?: (screen: string) => void;
   onRenderNeeded?: () => void;
+  playSfx?: (sfxId: string) => void;
 }
 
 /**
@@ -29,13 +26,7 @@ export interface MenuScreenProps {
 export class MenuScreen {
   // UI methods (injected)
   private ui: UIMethodMappings;
-  private async: AsyncMethods;
 
-  // State bindings
-  private displayedText: any;
-  private playerDataBinding: any;
-  private menuFrameAnimation: BindingInterface<string>;
-  private frameInterval: any;
 
   // Menu frame IDs
   private menuFrameIds: string[] = [
@@ -51,39 +42,22 @@ export class MenuScreen {
   private onButtonClick?: (buttonId: string) => void;
   private onNavigate?: (screen: string) => void;
   private onRenderNeeded?: () => void;
+  private playSfx?: (sfxId: string) => void;
 
   constructor(props: MenuScreenProps) {
     this.ui = props.ui;
-    this.async = props.async;
-    this.playerDataBinding = props.playerDataBinding;
     this.onButtonClick = props.onButtonClick;
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
+    this.playSfx = props.playSfx;
 
-    // Initialize bindings using injected UI implementation
-    this.displayedText = new this.ui.Binding('');
-
-    // Show the first quote statically
-    this.displayedText.set(this.quotes[0]);
-
-    // Create animated binding for menu frames
-    let frameIndex = 0;
-    this.menuFrameAnimation = new this.ui.Binding<string>(this.menuFrameIds[0]);
-    this.frameInterval = this.async.setInterval(() => {
-      frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
-      this.menuFrameAnimation.set(this.menuFrameIds[frameIndex]);
-      // Trigger a render when the frame changes
-      if (this.onRenderNeeded) {
-        this.onRenderNeeded();
-      }
-    }, 200);
   }
 
   /**
    * Create the unified menu UI - uses common side menu
    */
   createUI(): UINodeType {
-    const menuOptions = ['missions', 'cards', 'settings'];
+    const menuOptions = ['missions', 'cards', 'upgrades', 'leaderboard', 'settings'];
     const lineHeight = DIMENSIONS.fontSize.lg + 5;
 
     // Create menu buttons for the side menu
@@ -101,23 +75,6 @@ export class MenuScreen {
       yOffset: index * (sideMenuButtonDimensions.height + GAPS.buttons),
     }));
 
-    // Create custom text content (quote + resources)
-    // Derive item quantities from playerData
-    const getItemQuantity = (items: any[], itemId: string) => {
-      const item = items?.find((i: any) => i.itemId === itemId);
-      return item ? item.quantity : 0;
-    };
-
-    const tokensText = this.playerDataBinding.derive((pd: any) =>
-      `🪙 ${pd ? getItemQuantity(pd.items, 'token') : 0}`
-    );
-    const diamondsText = this.playerDataBinding.derive((pd: any) =>
-      `💎 ${pd ? getItemQuantity(pd.items, 'diamond') : 0}`
-    );
-    const serumsText = this.playerDataBinding.derive((pd: any) =>
-      `🧪 ${pd ? getItemQuantity(pd.items, 'serum') : 0}`
-    );
-
     const customTextContent = [
       this.ui.View({
         style: {
@@ -132,7 +89,7 @@ export class MenuScreen {
               width: 110,
             },
             children: this.ui.Text({
-              text: this.displayedText,
+              text: this.quotes[0], // TODO: listen on intervaled binding to change the quote
               numberOfLines: 3,
               style: {
                 fontSize: DIMENSIONS.fontSize.lg,
@@ -141,11 +98,6 @@ export class MenuScreen {
               },
             }),
           }),
-
-          // Resources (lines 4-6) - using createTextRow instead of createResourceRow
-          createTextRow(this.ui, tokensText, lineHeight * 4),
-          createTextRow(this.ui, diamondsText, lineHeight * 5),
-          createTextRow(this.ui, serumsText, lineHeight * 6),
         ],
       }),
     ];
@@ -159,12 +111,7 @@ export class MenuScreen {
       children: [
         // Background image (full screen)
         this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => {
-              return assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null;
-            }
-          ),
+          source: this.ui.assetIdToImageSource?.('background') || null,
           style: {
             position: 'absolute',
             width: '100%',
@@ -182,21 +129,13 @@ export class MenuScreen {
             height: '100%',
           },
           children: [
-            // Animated character frame - try without centering first
+            // Animated character frame - derive directly from UIState
             this.ui.Image({
-                source: this.ui.Binding.derive(
-                  [this.ui.assetsLoadedBinding, this.menuFrameAnimation],
-                  (assetsLoaded: boolean, menuFrameAnimation: string) => {
-                    // console.log('[MenuScreen] Image binding fired:', { assetsLoaded, menuFrameAnimation });
-
-                    if (!assetsLoaded) {
-                      console.log('[MenuScreen] Assets not loaded yet');
-                      return null;
-                    }
-
-                    return this.ui.assetIdToImageSource?.(menuFrameAnimation);
-                  },
-                ),
+                source: this.ui.assetIdToImageSource?.(this.menuFrameIds[0]) || null,
+                // source: this.ui.bindingManager.derive([BindingType.IntervaledBinding], (counter: number) => {
+                //   const frameId = this.menuFrameIds[counter % this.menuFrameIds.length];
+                //   return this.ui.assetIdToImageSource?.(frameId) || null;
+                // }),
                 style: {
                   position: 'absolute',
                   left: 250,
@@ -217,12 +156,12 @@ export class MenuScreen {
             onClick: () => {}, // Disabled button
             disabled: true,
           },
-          playerDataBinding: this.playerDataBinding,
           onXPBarClick: (title: string, message: string) => {
             if (this.onButtonClick) {
               this.onButtonClick(`show-counter-info:${title}:${message}`);
             }
           },
+          playSfx: this.playSfx,
         }),
       ],
     });
@@ -235,17 +174,13 @@ export class MenuScreen {
     const labels: Record<string, string> = {
       missions: 'Missions',
       cards: 'Cards',
+      upgrades: 'Upgrades',
+      leaderboard: 'Leaderboard',
       settings: 'Settings',
     };
     return labels[option] || option;
   }
 
-  /**
-   * Clean up animations
-   */
-  dispose(): void {
-    if (this.frameInterval) {
-      this.async.clearInterval(this.frameInterval);
-    }
+  dispose() {
   }
 }

@@ -2,16 +2,18 @@
  * Mission Screen - Refactored with UI Component System
  */
 
-import { COLORS } from '../styles/colors';
 import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
-import { DIMENSIONS, GAPS } from '../styles/dimensions';
+import { GAPS } from '../styles/dimensions';
 import { sideMenuButtonDimensions } from '../constants/dimensions';
 import type { SimplePosition } from '../constants/positions';
 import { missionEmoji } from '../constants/emojis';
-import type { MissionDisplay, MenuStats } from '../../../bloombeasts/gameManager';
+import type { MissionDisplay } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu, createTextRow } from './common/SideMenu';
 import { createReactiveMissionComponent, MISSION_DIMENSIONS } from './common/MissionRenderer';
+import { COLORS } from '../styles/colors';
+import { DIMENSIONS } from '../styles/dimensions';
+import { BindingType, UIState } from '../types/BindingManager';
 
 // MissionScreen-specific constants
 const cardsUIContainerDimensions = {
@@ -26,11 +28,10 @@ const cardsUIContainerPosition: SimplePosition = {
 
 export interface MissionScreenProps {
   ui: UIMethodMappings;
-  missions: any; // Missions binding - still separate
-  playerDataBinding: any; // PlayerData binding
   onMissionSelect?: (missionId: string) => void;
   onNavigate?: (screen: string) => void;
   onRenderNeeded?: () => void;
+  playSfx?: (sfxId: string) => void;
 }
 
 /**
@@ -40,14 +41,6 @@ export class MissionScreen {
   // UI methods (injected)
   private ui: UIMethodMappings;
 
-  // State bindings
-  private missions: any;
-  private playerDataBinding: any;
-  private scrollOffset: any;
-
-  // Track scroll offset value for button handlers (can't use .get() in Horizon)
-  private scrollOffsetValue: number = 0;
-
   // Configuration
   private missionsPerRow: number = 3;
   private rowsPerPage: number = 3;
@@ -56,15 +49,14 @@ export class MissionScreen {
   private onMissionSelect?: (missionId: string) => void;
   private onNavigate?: (screen: string) => void;
   private onRenderNeeded?: () => void;
+  private playSfx?: (sfxId: string) => void;
 
   constructor(props: MissionScreenProps) {
     this.ui = props.ui;
-    this.scrollOffset = new this.ui.Binding(0);
-    this.missions = props.missions;
-    this.playerDataBinding = props.playerDataBinding;
     this.onMissionSelect = props.onMissionSelect;
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
+    this.playSfx = props.playSfx;
   }
 
   /**
@@ -95,10 +87,7 @@ export class MissionScreen {
    */
   private createBackground(): UINodeType {
     return this.ui.Image({
-      source: this.ui.Binding.derive(
-        [this.ui.assetsLoadedBinding],
-        (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
-      ),
+      source: this.ui.assetIdToImageSource?.('background') || null,
       style: {
         position: 'absolute',
         width: '100%',
@@ -124,10 +113,7 @@ export class MissionScreen {
       children: [
         // Cards container background image
         this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('cards-container') : null
-          ),
+          source: this.ui.assetIdToImageSource?.('cards-container') || null,
           style: {
             position: 'absolute',
             width: cardsUIContainerDimensions.width,
@@ -165,8 +151,6 @@ export class MissionScreen {
         top: y,
       },
       children: createReactiveMissionComponent(this.ui, {
-        missionsBinding: this.missions,
-        scrollOffsetBinding: this.scrollOffset,
         slotIndex,
         missionsPerPage,
         onClick: (missionId: string) => {
@@ -178,8 +162,9 @@ export class MissionScreen {
     });
   }
 
+
   /**
-   * Create the mission grid with reactive components
+   * Create the mission grid using single binding (Horizon-compatible)
    */
   private createMissionGrid(): UINodeType {
     const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
@@ -210,7 +195,7 @@ export class MissionScreen {
 
         // Empty state message (only show when no missions, render on top)
         ...(this.ui.UINode ? [this.ui.UINode.if(
-          this.ui.Binding.derive([this.missions], (missions: MissionDisplay[]) => {
+          this.ui.bindingManager.derive([BindingType.Missions], (missions: MissionDisplay[]) => {
             return missions.length === 0 ? true : false;
           }),
           this.ui.View({
@@ -224,7 +209,7 @@ export class MissionScreen {
               left: 0,
             },
             children: this.ui.Text({
-              text: new this.ui.Binding('No missions available yet.'),
+              text: 'No missions available yet.',
               style: {
                 fontSize: DIMENSIONS.fontSize.xl,
                 color: COLORS.textSecondary,
@@ -241,13 +226,10 @@ export class MissionScreen {
    * Create side menu with controls
    */
   private createSideMenu(): UINodeType {
-    const completionText = this.ui.Binding.derive(
-      [this.missions],
-      (missions: MissionDisplay[]) => {
-        const completedCount = missions.filter((m: MissionDisplay) => m.isCompleted).length;
-        return `${missionEmoji} ${completedCount}/${missions.length}`;
-      }
-    );
+    const completionText = this.ui.bindingManager.derive([BindingType.Missions], (missions: MissionDisplay[]) => {
+      const completedCount = missions.filter((m: MissionDisplay) => m.isCompleted).length;
+      return `${missionEmoji} ${completedCount}/${missions.length}`;
+    });
 
     return createSideMenu(this.ui, {
       title: 'Missions',
@@ -258,31 +240,41 @@ export class MissionScreen {
         {
           label: 'Up',
           onClick: () => {
+            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
             // Reactive disabled state prevents invalid scrolling, so just decrement
-            this.scrollOffsetValue--;
-            this.scrollOffset.set(this.scrollOffsetValue);
+            this.ui.bindingManager.setBinding(BindingType.UIState, {
+              ...currentState,
+              missions: {
+                ...currentState.missions,
+                scrollOffset: (currentState.missions?.scrollOffset ?? 0) - 1
+              }
+            });
           },
-          disabled: this.ui.Binding.derive(
-            [this.missions, this.scrollOffset],
-            (missions, offset) => offset <= 0 ? true : false
-          ) as any,
+          disabled: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+            const offset: number = uiState.missions?.scrollOffset ?? 0;
+            return offset <= 0 ? true : false;
+          }),
           yOffset: 0,
         },
         {
           label: 'Down',
           onClick: () => {
+            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
             // Reactive disabled state prevents invalid scrolling, so just increment
-            this.scrollOffsetValue++;
-            this.scrollOffset.set(this.scrollOffsetValue);
+            this.ui.bindingManager.setBinding(BindingType.UIState, {
+              ...currentState,
+              missions: {
+                ...currentState.missions,
+                scrollOffset: (currentState.missions?.scrollOffset ?? 0) + 1
+              }
+            });
           },
-          disabled: this.ui.Binding.derive(
-            [this.missions, this.scrollOffset],
-            (missions: MissionDisplay[], offset: number) => {
-              const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-              const totalPages = Math.ceil(missions.length / missionsPerPage);
-              return offset >= totalPages - 1 ? true : false;
-            }
-          ) as any,
+          disabled: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+            const offset: number = uiState.missions?.scrollOffset ?? 0;
+            const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+            const totalPages = Math.ceil(missions.length / missionsPerPage);
+            return offset >= totalPages - 1 ? true : false;
+          }),
           yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
         },
       ],
@@ -295,7 +287,7 @@ export class MissionScreen {
         },
         disabled: false,
       },
-      playerDataBinding: this.playerDataBinding,
+      playSfx: this.playSfx,
     });
   }
 

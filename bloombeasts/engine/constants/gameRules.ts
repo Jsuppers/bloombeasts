@@ -14,8 +14,8 @@ export const MIN_DECK_SIZE = 30;
 export const MAX_DECK_SIZE = 30;
 
 // Health Configuration
-export const STARTING_HEALTH = 10;
-export const GARDENER_MAX_HEALTH = 10;
+export const STARTING_HEALTH = 30;
+export const PLAYER_MAX_HEALTH = 30;
 
 // Turn Configuration
 export const TURN_TIME_LIMIT = 60; // seconds
@@ -47,8 +47,7 @@ export const MAX_HEALTH = 99;
 export const MIN_ATTACK = 0;
 export const MIN_HEALTH = 1;
 
-// Counter Limits
-export const MAX_COUNTERS = 10;
+// Counter limits removed
 
 // Card Limits
 export const MAX_COPIES_PER_CARD = 3;

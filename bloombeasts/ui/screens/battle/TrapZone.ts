@@ -2,6 +2,7 @@
  * Trap zone rendering - 3 slots per player
  */
 
+import { BindingType } from '../../types/BindingManager';
 import { BattleDisplay } from '../../../gameManager';
 import { UINodeType } from '../ScreenUtils';
 import type { BattleComponentWithCallbacks } from './types';
@@ -9,12 +10,10 @@ import { trapCardDimensions, battleBoardAssetPositions } from './types';
 
 export class TrapZone {
   private ui: BattleComponentWithCallbacks['ui'];
-  private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
   private onCardDetailSelected?: (card: any) => void;
 
   constructor(props: BattleComponentWithCallbacks) {
     this.ui = props.ui;
-    this.battleDisplay = props.battleDisplay;
     this.onCardDetailSelected = props.onCardDetailSelected;
   }
 
@@ -40,16 +39,13 @@ export class TrapZone {
           top: pos.y,
           width: trapCardDimensions.width,
           height: trapCardDimensions.height,
-          // Hide slot if no trap - derive directly from battleDisplay
-          display: this.ui.Binding.derive(
-            [this.battleDisplay],
-            (state: BattleDisplay | null) => {
-              if (!state) return 'none';
-              const trapZone = player === 'player' ? state.playerTrapZone : state.opponentTrapZone;
-              const trap = trapZone?.[index];
-              return trap ? 'flex' : 'none';
-            }
-          ),
+          // Hide slot if no trap - derive from battleDisplay
+          display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+            if (!state) return 'none';
+            const trapZone = player === 'player' ? state.playerTrapZone : state.opponentTrapZone;
+            const trap = trapZone?.[index];
+            return trap ? 'flex' : 'none';
+          }),
         },
         children: [
           // Clickable wrapper for trap card
@@ -59,9 +55,9 @@ export class TrapZone {
               if (player === 'player') {
                 console.log('[TrapZone] Player trap clicked, showing detail');
                 // Get current trap at click time
-                const state = this.battleDisplay;
-                if (state && typeof state === 'object' && 'playerTrapZone' in state) {
-                  const trapZone = (state as any).playerTrapZone;
+                const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay) as BattleDisplay | null;
+                if (state) {
+                  const trapZone = state?.playerTrapZone;
                   const trap = trapZone?.[index];
                   if (trap) {
                     this.onCardDetailSelected?.(trap);

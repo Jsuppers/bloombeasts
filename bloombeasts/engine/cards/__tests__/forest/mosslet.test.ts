@@ -11,7 +11,7 @@ import {
   validateStatGainsProgression,
   loadCardFromJSON,
 } from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+import { StructuredAbility, AbilityTrigger } from '../../types/abilities.js';
 
 const MOSSLET = loadCardFromJSON('mosslet', 'forest');
 
@@ -42,7 +42,7 @@ describe('Mosslet Card', () => {
     });
 
     test('should have correct trigger', () => {
-      expect(MOSSLET.abilities[0].trigger).toBe('OnOwnEndOfTurn');
+      expect(MOSSLET.abilities[0].trigger).toBe(AbilityTrigger.OnOwnEndOfTurn);
     });
 
     test('should have correct effects', () => {
@@ -87,7 +87,7 @@ describe('Mosslet Card', () => {
       const upgrade = MOSSLET.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnOwnEndOfTurn');
+      expect(ability.trigger).toBe(AbilityTrigger.OnOwnEndOfTurn);
     });
   });
 
@@ -110,7 +110,7 @@ describe('Mosslet Card', () => {
       const upgrade = MOSSLET.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('Passive');
+      expect(ability.trigger).toBe(AbilityTrigger.WhileOnField);
     });
   });
 
@@ -133,7 +133,7 @@ describe('Mosslet Card', () => {
       const upgrade = MOSSLET.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnOwnEndOfTurn');
+      expect(ability.trigger).toBe(AbilityTrigger.OnOwnEndOfTurn);
     });
   });
 

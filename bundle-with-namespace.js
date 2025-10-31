@@ -194,6 +194,7 @@ processFile(entryPoint);
 
 // Process core game logic
 processFile(path.resolve(__dirname, './bloombeasts/gameManager.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/utils/createDefaultPlayerData.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/systems/CardCollectionManager.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/systems/SoundManager.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/systems/BattleDisplayManager.ts'));

@@ -11,7 +11,7 @@ import {
   validateStatGainsProgression,
   loadCardFromJSON,
 } from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+import { StructuredAbility, AbilityTrigger } from '../../types/abilities.js';
 
 const AERO_MOTH = loadCardFromJSON('aero-moth', 'sky');
 
@@ -42,7 +42,7 @@ describe('Aero Moth Card', () => {
     });
 
     test('should have correct trigger', () => {
-      expect(AERO_MOTH.abilities[0].trigger).toBe('OnSummon');
+      expect(AERO_MOTH.abilities[0].trigger).toBe(AbilityTrigger.OnSummon);
     });
 
     test('should have correct effects', () => {
@@ -87,7 +87,7 @@ describe('Aero Moth Card', () => {
       const upgrade = AERO_MOTH.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnSummon');
+      expect(ability.trigger).toBe(AbilityTrigger.OnSummon);
     });
   });
 
@@ -110,7 +110,7 @@ describe('Aero Moth Card', () => {
       const upgrade = AERO_MOTH.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnSummon');
+      expect(ability.trigger).toBe(AbilityTrigger.OnSummon);
     });
   });
 
@@ -133,7 +133,7 @@ describe('Aero Moth Card', () => {
       const upgrade = AERO_MOTH.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnSummon');
+      expect(ability.trigger).toBe(AbilityTrigger.OnSummon);
     });
   });
 

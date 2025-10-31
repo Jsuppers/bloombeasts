@@ -3,214 +3,110 @@
  * Shows card details in a popup overlay with action buttons
  */
 
-import { COLORS } from '../../styles/colors';
-import { DIMENSIONS, GAPS } from '../../styles/dimensions';
-import { sideMenuButtonDimensions } from '../../constants/dimensions';
-import type { CardDetailDisplay, MenuStats } from '../../../../bloombeasts/gameManager';
+import type { CardDetailDisplay } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
 import { createCardComponent, createReactiveCardComponent } from './CardRenderer';
 import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
+import { createPopup, type PopupButton } from '../../common/Popup';
+import { BindingType, type UIState } from '../../types/BindingManager';
 
 export interface CardDetailPopupProps {
   cardDetail: CardDetailDisplay;
   onButtonClick: (buttonId: string) => void;
+  playSfx?: (sfxId: string) => void;
 }
 
 export interface ReactiveCardDetailPopupProps {
-  cardIdBinding: any; // Binding<string | null>
-  playerDataBinding: any; // PlayerData binding
   onClose: () => void;
-  sideContent?: (ui: UIMethodMappings, deps: {
-    cardIdBinding: any;
-    playerDataBinding: any;
-  }) => UINodeType[];
+  buttons?: PopupButton[]; // Buttons to display at bottom
+  playSfx?: (sfxId: string) => void;
 }
 
 /**
- * Create a reactive card detail popup overlay
- * Uses createReactiveCardComponent in ID mode to display the card
+ * Create a reactive card detail popup overlay using common Popup
  */
 export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: ReactiveCardDetailPopupProps): UINodeType {
-  const { cardIdBinding, playerDataBinding, onClose, sideContent } = props;
+  const { onClose, buttons = [], playSfx } = props;
 
-  const cardWidth = 210;
-  const cardHeight = 280;
-  const screenWidth = 1280;
-  const screenHeight = 720;
-  const totalWidth = cardWidth + DIMENSIONS.spacing.xl + sideMenuButtonDimensions.width;
-  const contentX = (screenWidth - totalWidth) / 2;
-  const contentY = (screenHeight - cardHeight) / 2;
+  // Derive card name using instance method (no new binding)
+  const cardNameBinding = ui.bindingManager.derive([BindingType.UIState], (uiState: UIState) => {
+    const pd = ui.bindingManager.getSnapshot(BindingType.PlayerData);
+    const card = pd?.cards?.collected?.find((c: any) => c.id === uiState.cards?.selectedCardId);
+    return card?.name || 'Card Details';
+  });
 
-  return ui.View({
-    style: {
-      position: 'absolute',
-      width: '100%',
-      height: '100%',
-      top: 0,
-      left: 0,
-    },
-    children: [
-      // Black backdrop
-      ui.Pressable({
-        onClick: () => onClose(),
-        style: {
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        },
+  // Create content with card display (centered)
+  const content = [
+    ui.View({
+      style: {
+        width: '100%',
+        height: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+      },
+      children: createReactiveCardComponent(ui, {
+        mode: 'selectedCard',
+        onClick: undefined, // No click handler in popup
+        showDeckIndicator: true, // Show deck indicator
       }),
+    }),
+  ];
 
-      // Content container
-      ui.View({
-        style: {
-          position: 'absolute',
-          left: contentX,
-          top: contentY,
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-        },
-        children: [
-          // Card display using reactive card component in ID mode
-          createReactiveCardComponent(ui, {
-            playerDataBinding: playerDataBinding,
-            cardIdBinding: cardIdBinding,
-            onClick: undefined, // No click handler in popup
-            showDeckIndicator: true, // Show deck indicator
-          }),
-
-          // Side content (buttons, etc.)
-          ui.View({
-            style: {
-              marginLeft: DIMENSIONS.spacing.xl,
-              flexDirection: 'column',
-            },
-            children: sideContent ? sideContent(ui, { cardIdBinding, playerDataBinding }) : [],
-          }),
-        ],
-      }),
-    ],
+  return createPopup({
+    ui,
+    title: cardNameBinding,
+    content,
+    buttons, // Buttons will be centered at bottom in a row
+    playSfx,
+    width: 450,
+    height: 520,
+    onBackdropClick: onClose,
   });
 }
 
 /**
- * Create a card detail popup overlay
+ * Create a card detail popup overlay using common Popup component
  */
 export function createCardDetailPopup(ui: UIMethodMappings, props: CardDetailPopupProps): UINodeType {
-  const { cardDetail, onButtonClick } = props;
+  const { cardDetail, onButtonClick, playSfx } = props;
 
-  const cardWidth = 210; // Standard card width
-  const cardHeight = 280; // Standard card height
-  const buttonWidth = sideMenuButtonDimensions.width;
-  const buttonHeight = sideMenuButtonDimensions.height;
-  const buttonSpacing = GAPS.buttons;
-
-  // Calculate center position (screen is 1280x720)
-  const screenWidth = 1280;
-  const screenHeight = 720;
-  const totalWidth = cardWidth + DIMENSIONS.spacing.xl + buttonWidth;
-  const contentX = (screenWidth - totalWidth) / 2;
-  const contentY = (screenHeight - cardHeight) / 2;
-
-  return ui.View({
-    style: {
-      position: 'absolute',
-      width: '100%',
-      height: '100%',
-      top: 0,
-      left: 0,
-    },
-    children: [
-      // Black backdrop - clicking closes the popup
-      ui.Pressable({
-        onClick: () => onButtonClick('btn-card-close'),
-        style: {
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        },
+  // Create card component as content
+  const cardContent = [
+    ui.View({
+      style: {
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 20,
+      },
+      children: createCardComponent(ui, {
+        card: cardDetail.card,
+        isInDeck: cardDetail.isInDeck,
+        showDeckIndicator: false, // Don't show deck indicator in detail view
       }),
+    }),
+  ];
 
-      // Content container (centered)
-      ui.View({
-        style: {
-          position: 'absolute',
-          left: contentX,
-          top: contentY,
-          flexDirection: 'row',
-          alignItems: 'flex-start',
-        },
-        children: [
-          // Card display
-          createCardComponent(ui, {
-            card: cardDetail.card,
-            isInDeck: cardDetail.isInDeck,
-            showDeckIndicator: false, // Don't show deck indicator in detail view
-          }),
+  // Convert buttons to PopupButton format
+  const popupButtons: PopupButton[] = (cardDetail.buttons || [])
+    .filter(b => b)
+    .map((buttonText) => ({
+      label: buttonText,
+      onClick: () => {
+        const buttonId = `btn-card-${buttonText.toLowerCase().replace(/ /g, '-')}`;
+        onButtonClick(buttonId);
+      },
+      color: buttonText === 'Add' ? 'green' : buttonText === 'Remove' ? 'red' : 'default',
+    }));
 
-          // Buttons to the right
-          ui.View({
-            style: {
-              marginLeft: DIMENSIONS.spacing.xl,
-              flexDirection: 'column',
-            },
-            children: (cardDetail.buttons || []).filter(b => b).map((buttonText, index) =>
-              ui.Pressable({
-                onClick: () => {
-                  // Prevent backdrop click
-                  const buttonId = `btn-card-${buttonText.toLowerCase().replace(/ /g, '-')}`;
-                  onButtonClick(buttonId);
-                },
-                style: {
-                  width: buttonWidth,
-                  height: buttonHeight,
-                  position: 'relative',
-                  marginBottom: index < cardDetail.buttons.length - 1 ? buttonSpacing : 0,
-                },
-                children: [
-                  // Button background image
-                  ui.Image({
-                    source: ui.Binding.derive(
-                      [ui.assetsLoadedBinding],
-                      (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(
-                        buttonText === 'Add' ? 'green-button' :
-                        buttonText === 'Remove' ? 'red-button' :
-                        'standard-button'
-                      ) : null
-                    ),
-                    style: {
-                      position: 'absolute',
-                      width: buttonWidth,
-                      height: buttonHeight,
-                      top: 0,
-                      left: 0,
-                    },
-                  }),
-                  // Button text
-                  ui.View({
-                    style: {
-                      position: 'absolute',
-                      width: buttonWidth,
-                      height: buttonHeight,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                    },
-                    children: ui.Text({
-                      text: new ui.Binding(buttonText),
-                      style: {
-                        fontSize: DIMENSIONS.fontSize.md,
-                        color: COLORS.textPrimary,
-                        fontWeight: 'bold',
-                      },
-                    }),
-                  }),
-                ],
-              })
-            ),
-          }),
-        ],
-      }),
-    ],
+  return createPopup({
+    ui,
+    title: cardDetail.card.name || 'Card Details',
+    content: cardContent,
+    buttons: popupButtons,
+    playSfx,
+    width: 400,
+    height: 500,
+    onBackdropClick: () => onButtonClick('btn-card-close'),
   });
 }

@@ -405,8 +405,11 @@ export class UIRenderer {
 
         const flexDirection = parentStyle.flexDirection || 'column';
         const isRow = flexDirection === 'row' || flexDirection === 'row-reverse';
+        const gap = this.resolveAndTrack<number>(parentStyle.gap) || 0;
+        const justifyContent = parentStyle.justifyContent || 'flex-start';
+        const alignItems = parentStyle.alignItems || 'stretch';
 
-        UIRenderer.DEBUG_ENABLED && console.log('renderChildren - flexbox layout:', { isRow, childCount: childArray.length });
+        UIRenderer.DEBUG_ENABLED && console.log('renderChildren - flexbox layout:', { isRow, childCount: childArray.length, gap, justifyContent, alignItems });
 
         // TWO-PASS LAYOUT:
         // Pass 1: Calculate sizes for all children
@@ -472,8 +475,10 @@ export class UIRenderer {
         });
 
         // Calculate remaining space for flex and non-fixed children
+        // Account for gaps between children (n-1 gaps for n children)
+        const totalGaps = Math.max(0, childArray.length - 1) * gap;
         const availableSpace = isRow ? parentBox.width : parentBox.height;
-        const remainingSpace = Math.max(0, availableSpace - totalFixedSize);
+        const remainingSpace = Math.max(0, availableSpace - totalFixedSize - totalGaps);
 
         // Count non-fixed, non-flex, non-absolute children that need to share space
         const nonFixedNonFlexCount = childSizes.filter(s => !s.isFixedSize && s.flex === 0 && !s.isAbsolute).length;
@@ -490,9 +495,41 @@ export class UIRenderer {
             spacePerSharer
         });
 
-        // Pass 2: Render children with calculated sizes
-        let currentX = parentBox.x;
-        let currentY = parentBox.y;
+        // Pass 2: Calculate justify content positioning
+        let startOffset = 0;
+        let spaceBetween = gap;
+
+        if (justifyContent !== 'flex-start') {
+            // Calculate total content size (all children + gaps)
+            let totalContentSize = totalFixedSize + totalGaps;
+            if (totalFlex > 0) {
+                totalContentSize += remainingSpace; // Flex children take all remaining space
+            } else if (nonFixedNonFlexCount > 0) {
+                totalContentSize += remainingSpace; // Non-fixed children take remaining space
+            }
+
+            const freeSpace = availableSpace - totalContentSize;
+
+            if (justifyContent === 'center') {
+                startOffset = freeSpace / 2;
+            } else if (justifyContent === 'flex-end') {
+                startOffset = freeSpace;
+            } else if (justifyContent === 'space-between') {
+                if (childArray.length > 1) {
+                    spaceBetween = freeSpace / (childArray.length - 1);
+                }
+            } else if (justifyContent === 'space-around') {
+                spaceBetween = freeSpace / childArray.length;
+                startOffset = spaceBetween / 2;
+            } else if (justifyContent === 'space-evenly') {
+                spaceBetween = freeSpace / (childArray.length + 1);
+                startOffset = spaceBetween;
+            }
+        }
+
+        // Pass 3: Render children with calculated sizes and positioning
+        let currentX = parentBox.x + (isRow ? startOffset : 0);
+        let currentY = parentBox.y + (isRow ? 0 : startOffset);
 
         childArray.forEach((child, index) => {
             const sizeInfo = childSizes[index];
@@ -527,22 +564,40 @@ export class UIRenderer {
                 }
             }
 
+            // Apply alignItems (cross-axis alignment)
+            let alignOffset = 0;
+            if (isRow) {
+                // Row: alignItems affects vertical (y) position
+                if (alignItems === 'center') {
+                    alignOffset = (parentBox.height - childHeight) / 2;
+                } else if (alignItems === 'flex-end') {
+                    alignOffset = parentBox.height - childHeight;
+                }
+            } else {
+                // Column: alignItems affects horizontal (x) position
+                if (alignItems === 'center') {
+                    alignOffset = (parentBox.width - childWidth) / 2;
+                } else if (alignItems === 'flex-end') {
+                    alignOffset = parentBox.width - childWidth;
+                }
+            }
+
             const childParentBox: LayoutBox = {
-                x: currentX,
-                y: currentY,
+                x: currentX + (isRow ? 0 : alignOffset),
+                y: currentY + (isRow ? alignOffset : 0),
                 width: Math.max(0, childWidth),
                 height: Math.max(0, childHeight),
             };
 
-            UIRenderer.DEBUG_ENABLED && console.log(`Child ${index}:`, { flex: sizeInfo.flex, isFixedSize: sizeInfo.isFixedSize, isAbsolute: sizeInfo.isAbsolute, childParentBox });
+            UIRenderer.DEBUG_ENABLED && console.log(`Child ${index}:`, { flex: sizeInfo.flex, isFixedSize: sizeInfo.isFixedSize, isAbsolute: sizeInfo.isAbsolute, childParentBox, alignOffset });
 
             const childBox = this.renderNode(child, childParentBox);
 
             if (childBox) {
                 if (isRow) {
-                    currentX += childBox.width;
+                    currentX += childBox.width + spaceBetween;
                 } else {
-                    currentY += childBox.height;
+                    currentY += childBox.height + spaceBetween;
                 }
             }
         });
@@ -711,28 +766,41 @@ export class UIRenderer {
         // Guard against undefined or null text
         if (!text) return [];
 
-        const words = text.split(' ');
+        // First split by newlines to respect explicit line breaks
+        const paragraphs = text.split('\n');
         const lines: string[] = [];
-        let currentLine = '';
 
-        for (const word of words) {
-            const testLine = currentLine ? `${currentLine} ${word}` : word;
-            const metrics = this.ctx.measureText(testLine);
+        for (const paragraph of paragraphs) {
+            const words = paragraph.split(' ');
+            let currentLine = '';
 
-            if (metrics.width > maxWidth && currentLine) {
-                lines.push(currentLine);
-                currentLine = word;
+            for (const word of words) {
+                const testLine = currentLine ? `${currentLine} ${word}` : word;
+                const metrics = this.ctx.measureText(testLine);
 
-                if (maxLines && lines.length >= maxLines) {
-                    break;
+                if (metrics.width > maxWidth && currentLine) {
+                    lines.push(currentLine);
+                    currentLine = word;
+
+                    if (maxLines && lines.length >= maxLines) {
+                        return lines;
+                    }
+                } else {
+                    currentLine = testLine;
                 }
-            } else {
-                currentLine = testLine;
             }
-        }
 
-        if (currentLine && (!maxLines || lines.length < maxLines)) {
-            lines.push(currentLine);
+            if (currentLine && (!maxLines || lines.length < maxLines)) {
+                lines.push(currentLine);
+            } else if (!currentLine) {
+                // Empty line (from consecutive newlines)
+                lines.push('');
+            }
+
+            // Stop if we've reached max lines
+            if (maxLines && lines.length >= maxLines) {
+                break;
+            }
         }
 
         return lines;

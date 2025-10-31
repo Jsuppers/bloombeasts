@@ -31,6 +31,7 @@ export interface ItemRewardResult {
 export interface RewardResult {
   xpGained: number;
   beastXP: number;              // XP earned by beasts
+  coinsReceived?: number;       // Coins earned
   cardsReceived: (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[];
   itemsReceived: ItemRewardResult[];
   completionTimeSeconds: number; // Time taken to complete mission
@@ -240,6 +241,18 @@ export class MissionManager {
       });
     }
 
+    // Generate coin rewards
+    if (rewardConfig.coinRewards) {
+      if (Math.random() < rewardConfig.coinRewards.dropChance) {
+        const amount = Math.floor(
+          Math.random() * (rewardConfig.coinRewards.maxAmount - rewardConfig.coinRewards.minAmount + 1) +
+          rewardConfig.coinRewards.minAmount
+        );
+
+        result.coinsReceived = amount;
+      }
+    }
+
     // Generate item rewards
     if (rewardConfig.itemRewards) {
       rewardConfig.itemRewards.forEach(itemReward => {
@@ -255,17 +268,6 @@ export class MissionManager {
           });
         }
       });
-    }
-
-    // Apply special rule rewards (like double rewards for mission 10)
-    if (this.currentMission?.specialRules) {
-      const hasDoubleRewards = this.currentMission.specialRules.some(
-        rule => rule.effect === 'double-xp' || rule.id === 'champions-trial'
-      );
-      if (hasDoubleRewards) {
-        result.xpGained *= 2;
-        result.bonusRewards?.push('Double rewards earned!');
-      }
     }
 
     return result;

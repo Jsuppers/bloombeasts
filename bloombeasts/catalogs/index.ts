@@ -5,6 +5,7 @@
 
 import type { AssetCatalog } from '../AssetCatalogManager';
 
+export { bossAssets } from './bossAssets';
 export { buffAssets } from './buffAssets';
 export { commonAssets } from './commonAssets';
 export { fireAssets } from './fireAssets';
@@ -15,6 +16,7 @@ export { trapAssets } from './trapAssets';
 export { waterAssets } from './waterAssets';
 
 // Export all catalogs as array for easy loading
+import { bossAssets } from './bossAssets';
 import { buffAssets } from './buffAssets';
 import { commonAssets } from './commonAssets';
 import { fireAssets } from './fireAssets';
@@ -25,6 +27,7 @@ import { trapAssets } from './trapAssets';
 import { waterAssets } from './waterAssets';
 
 export const allCatalogs: AssetCatalog[] = [
+  bossAssets,
   buffAssets,
   commonAssets,
   fireAssets,

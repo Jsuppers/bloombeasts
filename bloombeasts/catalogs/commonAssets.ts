@@ -404,20 +404,6 @@ export const commonAssets: AssetCatalog = {
       ]
     },
     {
-      id: "icon-ability",
-      type: "ui",
-      category: "icon",
-      name: "Ability Icon",
-      description: "Ability indicator icon",
-      assets: [
-        {
-          type: "image",
-          horizonAssetId: "1550821249252575",
-          path: "assets/images/icon_ability.png"
-        }
-      ]
-    },
-    {
       id: "icon-attack",
       type: "ui",
       category: "icon",
@@ -431,6 +417,7 @@ export const commonAssets: AssetCatalog = {
         }
       ]
     },
+    // Counter icons removed - counter system deprecated
     {
       id: "lose-image",
       type: "ui",
@@ -442,35 +429,6 @@ export const commonAssets: AssetCatalog = {
           type: "image",
           horizonAssetId: "2155452308310801",
           path: "assets/images/misc_lose-image.png"
-        }
-      ]
-    },
-    {
-      id: "boss-mission",
-      type: "mission",
-      affinity: "boss",
-      missionNumber: 5,
-      name: "The Bloom Master",
-      description: "Final boss mission",
-      assets: [
-        {
-          type: "image",
-          horizonAssetId: "1879466909654800",
-          path: "assets/images/cards_boss-mission.png"
-        }
-      ]
-    },
-    {
-      id: "the-bloom-master",
-      type: "ui",
-      category: "other",
-      name: "The Bloom Master",
-      description: "Boss card image",
-      assets: [
-        {
-          type: "image",
-          horizonAssetId: "1948729499041670",
-          path: "assets/images/cards_the-bloom-master.png"
         }
       ]
     },
@@ -597,6 +555,90 @@ export const commonAssets: AssetCatalog = {
           type: "audio",
           horizonAssetId: "668023946362739",
           path: "assets/audio/music_battle.mp3"
+        }
+      ]
+    },
+    {
+      id: "upgrade-coin-boost",
+      type: "ui",
+      category: "upgrade",
+      name: "Coin Boost Upgrade",
+      description: "Coin boost upgrade icon",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "1059820639487262",
+          path: "assets/images/upgrade_coin-boost.png"
+        }
+      ]
+    },
+    {
+      id: "upgrade-container-card",
+      type: "ui",
+      category: "upgrade",
+      name: "Container Card Upgrade",
+      description: "Container card upgrade icon",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "852906320567105",
+          path: "assets/images/upgrade_container-card.png"
+        }
+      ]
+    },
+    {
+      id: "upgrade-exp-boost",
+      type: "ui",
+      category: "upgrade",
+      name: "Experience Boost Upgrade",
+      description: "Experience boost upgrade icon",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "662687460055242",
+          path: "assets/images/upgrade_exp-boost.png"
+        }
+      ]
+    },
+    {
+      id: "upgrade-luck-boost",
+      type: "ui",
+      category: "upgrade",
+      name: "Luck Boost Upgrade",
+      description: "Luck boost upgrade icon",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "2054672501734665",
+          path: "assets/images/upgrade_luck-boost.png"
+        }
+      ]
+    },
+    {
+      id: "upgrade-rooster",
+      type: "ui",
+      category: "upgrade",
+      name: "Rooster Upgrade",
+      description: "Rooster upgrade icon",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "1504708944108154",
+          path: "assets/images/upgrade_rooster.png"
+        }
+      ]
+    },
+    {
+      id: "upgrade-upgraded-box",
+      type: "ui",
+      category: "upgrade",
+      name: "Upgraded Box",
+      description: "Upgraded box icon",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "814844064745019",
+          path: "assets/images/upgrade_upgraded-box.png"
         }
       ]
     }

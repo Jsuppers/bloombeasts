@@ -10,8 +10,8 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-30T10:53:47.944Z
- * Files: 96
+ * Generated: 2025-10-31T16:07:24.656Z
+ * Files: 104
  *
  * @version 1.0.0
  * @license MIT
@@ -48,8 +48,8 @@ namespace BloomBeasts {
     AllEnemies = 'all-enemies',                  // All enemy Bloom Beasts
     AdjacentAllies = 'adjacent-allies',          // Adjacent allied units
     AdjacentEnemies = 'adjacent-enemies',        // Adjacent enemy units
-    OpponentGardener = 'opponent-gardener',      // The opponent player
-    PlayerGardener = 'player-gardener',          // The controlling player
+    Opponent = 'opponent',                       // The opponent player
+    Player = 'player',                           // The controlling player
     RandomEnemy = 'random-enemy',                // Random enemy unit
     AllUnits = 'all-units',                      // All units on board
     DamagedEnemies = 'damaged-enemies',          // All damaged enemy units
@@ -84,8 +84,6 @@ namespace BloomBeasts {
     Heal = 'heal',
     DrawCards = 'draw-cards',
     DiscardCards = 'discard-cards',
-    ApplyCounter = 'apply-counter',
-    RemoveCounter = 'remove-counter',
     Immunity = 'immunity',
     CannotBeTargeted = 'cannot-be-targeted',
     RemoveSummoningSickness = 'remove-summoning-sickness',
@@ -109,7 +107,6 @@ namespace BloomBeasts {
    * Condition types for abilities
    */
   export enum ConditionType {
-    HasCounter = 'has-counter',
     HealthBelow = 'health-below',
     HealthAbove = 'health-above',
     CostAbove = 'cost-above',
@@ -167,8 +164,7 @@ namespace BloomBeasts {
   export enum CostType {
     Nectar = 'nectar',
     Discard = 'discard',
-    Sacrifice = 'sacrifice',
-    RemoveCounter = 'remove-counter'
+    Sacrifice = 'sacrifice'
   }
 
   /**
@@ -176,7 +172,7 @@ namespace BloomBeasts {
    */
   export interface AbilityCondition {
     type: ConditionType;
-    value?: number | Affinity | CounterType;
+    value?: number | Affinity;
     comparison?: Comparison;
   }
 
@@ -250,22 +246,7 @@ namespace BloomBeasts {
     value: number;
   }
 
-  /**
-   * Counter application effect
-   */
-  export interface ApplyCounterEffect extends BaseEffect {
-    type: EffectType.ApplyCounter;
-    counter: CounterType;
-    value: number;
-  }
-
-  /**
-   * Counter removal effect
-   */
-  export interface RemoveCounterEffect extends BaseEffect {
-    type: EffectType.RemoveCounter;
-    counter?: CounterType;
-  }
+  // Counter effects removed to reduce game complexity
 
   /**
    * Immunity types
@@ -275,7 +256,6 @@ namespace BloomBeasts {
     Trap = 'trap',
     Abilities = 'abilities',
     Attacks = 'attacks',
-    Counters = 'counters',
     Damage = 'damage',
     Targeting = 'targeting',
     NegativeEffects = 'negative-effects'
@@ -373,8 +353,6 @@ namespace BloomBeasts {
   export interface RetaliationEffect extends BaseEffect {
     type: EffectType.Retaliation;
     value: number | 'reflected'; // Fixed damage or reflect all damage
-    applyCounter?: CounterType; // Optional counter to apply
-    counterValue?: number;
   }
 
   /**
@@ -432,8 +410,6 @@ namespace BloomBeasts {
     | DamageEffect
     | HealEffect
     | DrawCardEffect
-    | ApplyCounterEffect
-    | RemoveCounterEffect
     | ImmunityEffect
     | CannotBeTargetedEffect
     | AttackModificationEffect
@@ -458,7 +434,6 @@ namespace BloomBeasts {
   export interface AbilityCost {
     type: CostType;
     value?: number;
-    counter?: CounterType;
   }
 
   /**
@@ -480,16 +455,11 @@ namespace BloomBeasts {
    */
 
 
-  export type Affinity = 'Forest' | 'Fire' | 'Water' | 'Sky' | 'Generic';
+  export type Affinity = 'Forest' | 'Fire' | 'Water' | 'Sky' | 'Generic' | 'Boss';
 
   export type CardType = 'Magic' | 'Trap' | 'Bloom' | 'Habitat' | 'Buff';
 
-  export type CounterType = 'XP' | 'Spore' | 'Burn' | 'Freeze' | 'Soot' | 'Entangle';
-
-  export interface Counter {
-    type: CounterType;
-    amount: number;
-  }
+  // Counter types removed to reduce game complexity
 
   /**
    * Base card interface
@@ -500,6 +470,8 @@ namespace BloomBeasts {
     type: CardType;
     cost: number;
     titleColor?: string;  // Optional custom color for card title (hex color, e.g., '#000000')
+    instanceId?: string;  // Optional instance ID for tracking unique card instances in battle
+    level?: number;  // Optional runtime level for card instances (not present in card definitions)
   }
 
   /**
@@ -554,7 +526,6 @@ namespace BloomBeasts {
     type: 'Trap';
     activation: TrapActivation;  // Structured activation instead of string
     abilities: Ability[];         // Standardized to use abilities like BloomBeast cards
-    counters?: Counter[];  // Optional counters on the trap card
   }
 
   /**
@@ -564,7 +535,6 @@ namespace BloomBeasts {
     type: 'Habitat';
     affinity: Affinity;
     abilities: Ability[];  // Standardized to use abilities like BloomBeast cards
-    counters?: Counter[];  // Optional counters on the habitat card
   }
 
   /**
@@ -575,7 +545,6 @@ namespace BloomBeasts {
     affinity?: Affinity;  // Optional affinity for buff cards
     abilities: Ability[];  // Standardized to use abilities like BloomBeast cards
     duration?: number;  // Optional turn duration (undefined = permanent)
-    counters?: Counter[];  // Optional counters on the buff card
   }
 
   /**
@@ -729,8 +698,7 @@ namespace BloomBeasts {
     // Stat modification tracking
     statModifiers?: StatModifier[];
 
-    // Counters and effects
-    counters: Counter[];
+    // Status effects (counters removed to reduce complexity)
     statusEffects: any[];  // Status effects like burn, freeze, etc.
 
     // Positioning
@@ -879,7 +847,7 @@ namespace BloomBeasts {
   // Re-export for convenience
 
   // Battle state enum for state-based battle flow
-  export enum BattleState {
+  export enum BattlePhase {
     Setup = 'Setup',
     Player1StartOfTurn = 'Player1StartOfTurn',
     Player1Playing = 'Player1Playing',
@@ -910,7 +878,6 @@ namespace BloomBeasts {
     field: (BloomBeastInstance | null)[]; // Nullable for empty slots
     trapZone: (AnyCard | null)[]; // Face-down trap cards (max 3)
     buffZone: (AnyCard | null)[]; // Active buff cards (max 2)
-    habitatCounters: SimpleMap<string, number>; // Counters specific to this player's habitat
   }
 
   export interface GameState {
@@ -918,10 +885,9 @@ namespace BloomBeasts {
     currentPlayerIndex?: 0 | 1;
     activePlayer: 0 | 1;  // Current player's turn
     habitatZone: HabitatCard | null;
-    habitatCounters?: Counter[]; // Counters on the habitat (like Spores)
     turn: number;
     phase: Phase;  // Kept for backward compatibility
-    battleState: BattleState;  // New state-based battle flow
+    battleState: BattlePhase;  // New state-based battle flow
     turnHistory: any[];  // History of actions taken
     // Pending actions that need to be resolved
     drawCardsQueued?: number;
@@ -1472,7 +1438,6 @@ namespace BloomBeasts {
     private cloneBeast(beast: BloomBeastInstance): BloomBeastInstance {
       return {
         ...beast,
-        counters: beast.counters.map(c => ({ ...c })),
         temporaryEffects: beast.temporaryEffects?.map(e => ({ ...e })) || [],
         statusEffects: [...beast.statusEffects],
         immunities: beast.immunities ? [...beast.immunities] : undefined,
@@ -1525,14 +1490,7 @@ namespace BloomBeasts {
               return false;
             }
             break;
-          case 'remove-counter':
-            const counter = context.gameState.habitatCounters?.find(
-              c => c.type === ability.cost!.counter
-            );
-            if (!counter || counter.amount < (ability.cost.value || 1)) {
-              return false;
-            }
-            break;
+          // Counter costs removed
         }
       }
 
@@ -1553,7 +1511,7 @@ namespace BloomBeasts {
 
       // Get targets
       const targets = this.resolveTargets(effect.target, context);
-      if (targets.length === 0 && effect.target !== AbilityTarget.OpponentGardener && effect.target !== AbilityTarget.PlayerGardener) {
+      if (targets.length === 0 && effect.target !== AbilityTarget.Opponent && effect.target !== AbilityTarget.Player) {
         return { success: false, message: 'No valid targets' };
       }
 
@@ -1567,8 +1525,7 @@ namespace BloomBeasts {
           return this.processHeal(effect as HealEffect, targets, context);
         case EffectType.DrawCards:
           return this.processDrawCards(effect as DrawCardEffect, context);
-        case EffectType.ApplyCounter:
-          return this.processApplyCounter(effect as ApplyCounterEffect, targets, context);
+        // Counter effects removed
         case EffectType.Immunity:
           return this.processImmunity(effect as ImmunityEffect, targets, context);
         case EffectType.CannotBeTargeted:
@@ -1684,8 +1641,7 @@ namespace BloomBeasts {
       context: AbilityContext
     ): boolean {
       switch (condition.type) {
-        case ConditionType.HasCounter:
-          return context.source.counters.some(c => c.type === condition.value);
+        // Counter conditions removed
         case ConditionType.HealthBelow:
           return context.source.currentHealth < (condition.value as number);
         case ConditionType.HealthAbove:
@@ -1778,14 +1734,14 @@ namespace BloomBeasts {
         modifiedUnits.push(modified);
       }
 
-      // Handle damage to gardener
-      if (effect.target === AbilityTarget.OpponentGardener) {
+      // Handle damage to opponent
+      if (effect.target === AbilityTarget.Opponent) {
         const damage = effect.value === 'attack-value'
           ? context.source.currentAttack
           : effect.value;
         return {
           success: true,
-          message: `Dealt ${damage} damage to opponent Gardener`,
+          message: `Dealt ${damage} damage to opponent`,
           modifiedState: {
             players: [
               context.gameState.players[0] === context.opposingPlayer
@@ -1845,11 +1801,11 @@ namespace BloomBeasts {
     ): EffectResult {
       // Determine which player should draw based on target
       let drawForPlayerIndex: 0 | 1;
-      if (effect.target === AbilityTarget.OpponentGardener) {
+      if (effect.target === AbilityTarget.Opponent) {
         // Draw for opponent
         drawForPlayerIndex = context.gameState.players[0] === context.opposingPlayer ? 0 : 1;
       } else {
-        // Default: PlayerGardener or other - draw for controlling player
+        // Default: Player or other - draw for controlling player
         drawForPlayerIndex = context.gameState.players[0] === context.controllingPlayer ? 0 : 1;
       }
 
@@ -1863,55 +1819,7 @@ namespace BloomBeasts {
       };
     }
 
-    /**
-     * Process apply counter effect
-     */
-    private processApplyCounter(
-      effect: ApplyCounterEffect,
-      targets: BloomBeastInstance[],
-      context: AbilityContext
-    ): EffectResult {
-      const modifiedUnits: BloomBeastInstance[] = [];
-
-      for (const target of targets) {
-        const modified = this.cloneBeast(target);
-        const existingCounter = modified.counters.find(c => c.type === effect.counter);
-
-        if (existingCounter) {
-          existingCounter.amount += effect.value;
-        } else {
-          modified.counters.push({
-            type: effect.counter,
-            amount: effect.value,
-          });
-        }
-
-        modifiedUnits.push(modified);
-      }
-
-      // Handle habitat counters
-      if (effect.target === 'self' && effect.counter === 'Spore') {
-        return {
-          success: true,
-          message: `Added ${effect.value} ${effect.counter} counter(s) to Habitat`,
-          modifiedState: {
-            habitatCounters: [
-              ...(context.gameState.habitatCounters || []).filter(c => c.type !== 'Spore'),
-              {
-                type: 'Spore',
-                amount: ((context.gameState.habitatCounters || []).find(c => c.type === 'Spore')?.amount || 0) + effect.value,
-              },
-            ],
-          },
-        };
-      }
-
-      return {
-        success: true,
-        modifiedUnits,
-        message: `Applied ${effect.value} ${effect.counter} counter(s)`,
-      };
-    }
+    // Counter processing removed to reduce game complexity
 
     /**
      * Process immunity effect
@@ -2413,8 +2321,8 @@ namespace BloomBeasts {
   export const MAX_DECK_SIZE = 30;
 
   // Health Configuration
-  export const STARTING_HEALTH = 10;
-  export const GARDENER_MAX_HEALTH = 10;
+  export const STARTING_HEALTH = 30;
+  export const PLAYER_MAX_HEALTH = 30;
 
   // Turn Configuration
   export const TURN_TIME_LIMIT = 60; // seconds
@@ -2446,8 +2354,7 @@ namespace BloomBeasts {
   export const MIN_ATTACK = 0;
   export const MIN_HEALTH = 1;
 
-  // Counter Limits
-  export const MAX_COUNTERS = 10;
+  // Counter limits removed
 
   // Card Limits
   export const MAX_COPIES_PER_CARD = 3;
@@ -2965,7 +2872,6 @@ namespace BloomBeasts {
         currentAttack: stats.attack,
         currentHealth: stats.health,
         maxHealth: stats.health,
-        counters: [],
         statusEffects: [],
         slotIndex,
         summoningSickness: true,
@@ -3682,9 +3588,7 @@ namespace BloomBeasts {
     if (cost.type === 'sacrifice') {
       return `Sacrifice ${cost.value} unit${cost.value > 1 ? 's' : ''}:`;
     }
-    if (cost.type === 'remove-counter') {
-      return `Remove ${cost.value} ${cost.counter} counter${cost.value > 1 ? 's' : ''}:`;
-    }
+    // Counter costs removed
     return '';
   }
 
@@ -3707,9 +3611,9 @@ namespace BloomBeasts {
         return 'adjacent allies';
       case AbilityTarget.AdjacentEnemies:
         return 'adjacent enemies';
-      case AbilityTarget.OpponentGardener:
+      case AbilityTarget.Opponent:
         return 'opponent';
-      case AbilityTarget.PlayerGardener:
+      case AbilityTarget.Player:
         return 'you';
       case AbilityTarget.RandomEnemy:
         return 'random enemy';
@@ -3798,16 +3702,7 @@ namespace BloomBeasts {
         return `draw ${effect.value} card${effect.value > 1 ? 's' : ''}`;
       }
 
-      case EffectType.ApplyCounter: {
-        return `place ${effect.value} ${effect.counter} counter${effect.value > 1 ? 's' : ''} on ${target}`;
-      }
-
-      case EffectType.RemoveCounter: {
-        if (effect.counter) {
-          return `remove ${effect.counter} counters from ${target}`;
-        }
-        return `remove all counters from ${target}`;
-      }
+      // Counter effects removed
 
       case EffectType.CannotBeTargeted: {
         const byWhat = effect.by.join(', ').replace(/,([^,]*)$/, ' or$1');
@@ -4001,7 +3896,6 @@ namespace BloomBeasts {
     currentAttack?: number;
     baseHealth?: number;
     currentHealth?: number;
-    counters?: Array<{ type: string; amount: number }>;
     abilities?: any[];
   }
 
@@ -4234,8 +4128,7 @@ namespace BloomBeasts {
   export interface MenuStats {
     playerLevel: number;
     totalXP: number;
-    tokens: number;
-    diamonds: number;
+    coins: number;
     serums: number;
   }
 
@@ -4318,6 +4211,8303 @@ namespace BloomBeasts {
     progress: number;
     target: number;
     isComplete: boolean;
+  }
+
+  // ==================== bloombeasts\ui\styles\colors.ts ====================
+
+  /**
+   * Shared color palette for BloomBeasts
+   * Used across both Web and Horizon platforms
+   */
+
+  export const COLORS = {
+    // Primary colors
+    background: '#1a1a2e',
+    backgroundDark: '#0f0f1e',
+    primary: '#00d9ff',
+    primaryLight: '#3498db',
+
+    // Text colors
+    textPrimary: '#ffffff',
+    textSecondary: '#aaaaaa',
+    textMuted: '#666666',
+
+    // UI element colors
+    buttonPrimary: '#3498db',
+    buttonDanger: '#e74c3c',
+    buttonSuccess: '#27ae60',
+    buttonDisabled: '#555555',
+    surface: '#2c3e50',
+    disabled: '#555555',
+    error: '#e74c3c',
+
+    // Card/Panel colors
+    cardBackground: '#2c3e50',
+    panelBackground: '#1a1a1a',
+    overlayBackground: 'rgba(0, 0, 0, 0.8)',
+    overlayBackgroundDark: 'rgba(0, 0, 0, 0.9)',
+
+    // Borders
+    borderPrimary: '#00d9ff',
+    borderSuccess: '#27ae60',
+    borderDefault: '#3498db',
+    border: '#3a3a4a',
+
+    // Affinity colors
+    affinity: {
+      fire: '#e74c3c',
+      water: '#3498db',
+      forest: '#27ae60',
+      sky: '#9b59b6',
+      neutral: '#95a5a6',
+    },
+
+    // Status colors
+    success: '#27ae60',
+    warning: '#f39c12',
+    danger: '#e74c3c',
+    info: '#3498db',
+
+    // Rarity colors (for cards)
+    rarity: {
+      common: '#95a5a6',
+      uncommon: '#27ae60',
+      rare: '#3498db',
+      epic: '#9b59b6',
+      legendary: '#f39c12',
+    },
+  } as const;
+
+  // ==================== bloombeasts\ui\styles\dimensions.ts ====================
+
+  /**
+   * Shared dimensions and spacing for BloomBeasts
+   * Used across both Web and Horizon platforms
+   */
+
+  export const DIMENSIONS = {
+    // Panel/Screen dimensions
+    panel: {
+      width: 1280,
+      height: 720,
+    },
+
+    // Button dimensions
+    button: {
+      height: 50,
+      minWidth: 200,
+      padding: 15,
+      borderRadius: 10,
+    },
+
+    buttonSmall: {
+      height: 40,
+      minWidth: 100,
+      padding: 10,
+      borderRadius: 8,
+    },
+
+    // Card dimensions
+    card: {
+      width: 150,
+      height: 200,
+      borderRadius: 10,
+      borderWidth: 2,
+      padding: 10,
+    },
+
+    // Mission card dimensions
+    missionCard: {
+      padding: 15,
+      borderRadius: 10,
+      borderWidth: 2,
+      minHeight: 80,
+    },
+
+    // Dialog/Modal dimensions
+    dialog: {
+      minWidth: 400,
+      maxWidth: 600,
+      padding: 30,
+      borderRadius: 15,
+    },
+
+    // Spacing scale
+    spacing: {
+      xs: 5,
+      sm: 10,
+      md: 15,
+      lg: 20,
+      xl: 30,
+      xxl: 40,
+    },
+
+    // Font sizes
+    fontSize: {
+      xs: 12,
+      sm: 14,
+      md: 18,
+      lg: 20,
+      xl: 24,
+      xxl: 28,
+      title: 36,
+      hero: 72,
+    },
+
+    // Border widths
+    borderWidth: {
+      thin: 1,
+      normal: 2,
+      thick: 3,
+    },
+
+    // Stat badge dimensions
+    statBadge: {
+      padding: 10,
+      borderRadius: 8,
+      borderWidth: 2,
+    },
+  } as const;
+
+  /**
+   * Common gaps for flexbox layouts
+   */
+  export const GAPS = {
+    cards: 15,
+    buttons: 3,
+    missions: 10,
+    stats: 20,
+    sections: 30,
+  } as const;
+
+  // ==================== bloombeasts\ui\constants\dimensions.ts ====================
+
+  // Multi-use card dimensions
+  export const standardCardDimensions = {
+    width: 210,
+    height: 280,
+  };
+
+  export const missionCompleteCardDimensions = {
+    width: 550,
+    height: 330,
+  };
+
+  export const chestImageMissionCompleteDimensions = {
+    width: 160,
+    height: 180,
+  };
+
+  // Multi-use button dimensions
+  export const sideMenuButtonDimensions = {
+    width: 105,
+    height: 36,
+  };
+
+  export const longButtonDimensions = {
+    width: 201,
+    height: 35,
+  };
+
+  // ==================== bloombeasts\ui\screens\ScreenUtils.ts ====================
+
+  /**
+   * Utilities for screen components
+   * Provides type-safe ways to work with dynamic UI components
+   */
+
+
+  /**
+   * Type annotation for UINode - since UINode is dynamically loaded, we use 'any' type
+   */
+  export type UINodeType<T = any> = any;
+
+  /**
+   * Extend CardDisplayData with additional UI properties
+   * These are properties used in the UI but not in the core game model
+   */
+  export interface UICardDisplay extends CardDisplayData {
+    // Add emoji based on affinity
+    emoji?: string;
+    // Use level as rarity indicator
+    rarityLevel?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+    // Map attack/defense/health for display
+    attack?: number;
+    defense?: number;
+    health?: number;
+  }
+
+  /**
+   * Convert CardDisplayData to UICardDisplay with additional UI properties
+   */
+  export function toUICard(card: CardDisplayData): UICardDisplay {
+    const uiCard: UICardDisplay = {
+      ...card,
+      attack: card.baseAttack || 0,
+      defense: 0, // Not in CardDisplayData - using 0 as default
+      health: card.baseHealth || 0,
+      emoji: getCardEmoji(card),
+      rarityLevel: getCardRarity(card)
+    };
+    return uiCard;
+  }
+
+  /**
+   * Get emoji based on card affinity
+   */
+  function getCardEmoji(card: CardDisplayData): string {
+    switch (card.affinity?.toLowerCase()) {
+      case 'fire':
+        return '🔥';
+      case 'water':
+        return '💧';
+      case 'forest':
+        return '🌿';
+      case 'sky':
+        return '☁️';
+      default:
+        return '✨';
+    }
+  }
+
+  /**
+   * Determine rarity based on card level
+   */
+  function getCardRarity(card: CardDisplayData): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
+    const level = card.level || 1;
+    if (level >= 10) return 'legendary';
+    if (level >= 7) return 'epic';
+    if (level >= 5) return 'rare';
+    if (level >= 3) return 'uncommon';
+    return 'common';
+  }
+
+  /**
+   * Extend MissionDisplay with UI properties
+   */
+  export interface UIMissionDisplay {
+    id: string;
+    name: string;
+    level: number;
+    difficulty: string;
+    isAvailable: boolean;
+    isCompleted: boolean;
+    description: string;
+    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
+    beastId?: string;
+    // Additional UI properties
+    progress?: number;
+    requirement?: number;
+    rewards?: {
+      coins?: number;
+    };
+  }
+
+  // ==================== bloombeasts\ui\constants\positions.ts ====================
+
+  // Type definitions
+  export interface SimplePosition {
+    x: number;
+    y: number;
+  }
+
+  interface PlayerCardPositions {
+    beastOne: SimplePosition;
+    beastTwo: SimplePosition;
+    beastThree: SimplePosition;
+    buffOne: SimplePosition;
+    buffTwo: SimplePosition;
+    trapOne: SimplePosition;
+    trapTwo: SimplePosition;
+    trapThree: SimplePosition;
+    health: SimplePosition;
+  }
+
+  interface CardTextInfo extends SimplePosition {
+    size: number;
+    textAlign?: 'left' | 'right' | 'center' | 'start' | 'end';
+    textBaseline?: 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom';
+  }
+
+  export interface CardTextPositions {
+    cost: CardTextInfo;
+    affinity: SimplePosition;
+    level: CardTextInfo;
+    experienceBar: SimplePosition;
+    name: CardTextInfo;
+    ability: CardTextInfo;
+    attack: CardTextInfo;
+    health: CardTextInfo;
+    beastImage: SimplePosition;
+    icons: {
+      attack: CardTextInfo;
+      ability: CardTextInfo;
+    };
+  }
+
+  export interface UIButtonPositions {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    spacing: number;
+  }
+
+  export interface UITextSafeZone {
+    x: number;
+    y: number;
+    lineHeight: number;
+  }
+
+  export interface SideMenuPositions {
+    x: number;
+    y: number;
+    headerStartPosition: SimplePosition;
+    textStartPosition: SimplePosition;
+    buttonStartPosition: SimplePosition;
+    playerName: CardTextInfo;
+    playerLevel: CardTextInfo;
+    playerExperienceBar: SimplePosition & { maxWidth: number };
+  }
+
+  export interface BattleBoardAssetPositions {
+    playerOne: PlayerCardPositions;
+    playOneInfoPosition: SimplePosition;
+    playerTwo: PlayerCardPositions;
+    playerTwoInfoPosition: SimplePosition;
+    habitatZone: SimplePosition;
+    cardTextPositions: CardTextPositions;
+  }
+
+
+  /**
+   * Safe zone for UI buttons and interactive elements
+   * This position ensures elements won't be covered by platform-specific UI (status bars, navigation, etc.)
+   */
+  export const uiSafeZoneButtons: UIButtonPositions = {
+    x: 1149,
+    y: 131,
+    width: DIMENSIONS.button.minWidth,
+    height: DIMENSIONS.button.height,
+    spacing: DIMENSIONS.spacing.xxl * 2, // Vertical spacing between stacked buttons
+  };
+
+  /**
+   * Safe zone for text display (titles, counters, etc.)
+   * This area is safe for displaying informational text
+   */
+  export const uiSafeZoneText: UITextSafeZone = {
+    x: 1152,
+    y: 407,
+    lineHeight: DIMENSIONS.spacing.xl, // Vertical spacing between lines of text
+  };
+
+  /**
+   * Side menu positions
+   * The side menu contains player info, text, and buttons
+   */
+  export const sideMenuPositions: SideMenuPositions = {
+    x: 1145,
+    y: 128,
+    headerStartPosition: { x: 1156, y: 139 },
+    textStartPosition: { x: 1162, y: 188 },
+    buttonStartPosition: { x: 1156, y: 369 },
+    playerName: { x: 10, y: 426, textAlign: 'left', textBaseline: 'top', size: DIMENSIONS.fontSize.sm },
+    playerLevel: { x: 64, y: 445, textAlign: 'center', textBaseline: 'top', size: DIMENSIONS.fontSize.xs },
+    playerExperienceBar: { x: 9, y: 445, maxWidth: 109 },
+  };
+
+  /**
+   * Mission complete popup card positions
+   */
+  export const missionCompleteCardPositions = {
+    title: { x: 275, y: 24, size: DIMENSIONS.fontSize.title, textAlign: 'center', textBaseline: 'top' },
+    chestImage: { x: 73, y: 76 },
+    infoText: { x: 245, y: 98, size: DIMENSIONS.fontSize.sm, textAlign: 'left', textBaseline: 'top' },
+    claimRewardButton: { x: 175, y: 271 },
+  };
+
+  // ==================== bloombeasts\ui\types\bindings.ts ====================
+
+  /**
+   * Binding Type Declarations
+   *
+   * These are type-only declarations for reactive data bindings.
+   * Actual implementations are provided by the platform via UIMethodMappings.
+   */
+
+  /**
+   * Base class for value bindings
+   */
+  declare class ValueBindingBase<T> {
+    protected _key: string;
+    protected _isInitialized: boolean;
+  }
+
+  /**
+   * Reactive data binding
+   * Matches Horizon's Binding API (no get() or subscribe() methods)
+   */
+  declare class Binding<T = any> extends ValueBindingBase<T> {
+    constructor(value: T);
+    set(value: T | ((prev: T) => T)): void;
+    derive<U>(fn: (value: T) => U): Binding<U>;
+    static derive<T extends any[], R>(
+      bindings: { [K in keyof T]: Binding<T[K]> },
+      deriveFn: (...values: T) => R
+    ): Binding<R>;
+  }
+
+  /**
+   * Platform async methods interface
+   * Provides setTimeout, setInterval, clearTimeout, clearInterval
+   *
+   * For web: Uses standard window.setTimeout, etc.
+   * For Horizon: Uses component.async.setTimeout, etc.
+   */
+  export interface AsyncMethods {
+    /**
+     * Sets a timer which executes a function once the timer expires
+     */
+    setTimeout: (callback: (...args: any[]) => void, timeout?: number) => number;
+
+    /**
+     * Cancels a timeout previously established by setTimeout
+     */
+    clearTimeout: (id: number) => void;
+
+    /**
+     * Repeatedly calls a function with a fixed time delay between calls
+     */
+    setInterval: (callback: (...args: any[]) => void, timeout?: number) => number;
+
+    /**
+     * Cancels a timed, repeating action established by setInterval
+     */
+    clearInterval: (id: number) => void;
+  }
+
+  // ==================== bloombeasts\ui\common\Button.ts ====================
+
+  /**
+   * Common Button Component
+   * Reusable button with hover effects and sound
+   */
+
+
+  export type ButtonType = 'default' | 'short' | 'long';
+  export type ButtonColor = 'default' | 'red' | 'green';
+
+  export interface ButtonProps {
+    ui: UIMethodMappings;
+    label: string | ValueBindingBase<string> | ReadonlyBindingInterface<string>;
+    onClick: () => void;
+    type?: ButtonType;
+
+    // Simple usage: just pass color string (static)
+    color?: ButtonColor;
+    disabled?: boolean | ValueBindingBase<boolean> | ReadonlyBindingInterface<boolean>;
+
+    // Advanced usage: pass complete bindings that return final computed values
+    // Use these when you need reactive bindings (avoids .derive() on derived bindings)
+    imageSource?: any; // Binding or static image source for button background
+    opacity?: any; // Binding or static opacity value (0-1)
+    textColor?: any; // Binding or static text color string
+
+    playSfx?: (sfxId: string) => void;
+    style?: any; // Additional style overrides
+  }
+
+  /**
+   * Get button dimensions based on type
+   */
+  function getButtonDimensions(type: ButtonType): { width: number; height: number } {
+    switch (type) {
+      case 'short':
+        return { width: 80, height: 36 };
+      case 'long':
+        return longButtonDimensions;
+      case 'default':
+      default:
+        return sideMenuButtonDimensions;
+    }
+  }
+
+  /**
+   * Get button asset ID based on color and type
+   */
+  function getButtonAssetId(color: ButtonColor, type: ButtonType): string {
+    // Long buttons have their own green variant
+    if (type === 'long' && color === 'green') {
+      return 'long-green-button';
+    }
+
+    // Standard color mapping
+    switch (color) {
+      case 'red':
+        return 'red-button';
+      case 'green':
+        return 'green-button';
+      case 'default':
+      default:
+        return 'standard-button';
+    }
+  }
+
+  /**
+   * Create a common button with hover effects and sound
+   *
+   * Two usage patterns:
+   * 1. Simple: Pass static `color` and `disabled` props (for static buttons)
+   * 2. Advanced: Pass complete `imageSource`, `opacity`, `textColor` bindings
+   *    (for reactive buttons - avoids calling .derive() on derived bindings)
+   */
+  export function createButton(props: ButtonProps): UINodeType {
+    const {
+      ui,
+      label,
+      onClick,
+      type = 'default',
+      color = 'default',
+      disabled = false,
+      imageSource: customImageSource,
+      opacity: customOpacity,
+      textColor: customTextColor,
+      playSfx,
+      style = {},
+    } = props;
+
+    const dimensions = getButtonDimensions(type);
+
+    // Use custom bindings if provided, otherwise compute from color/disabled
+    const imageSource = customImageSource ?? (ui.assetIdToImageSource?.(getButtonAssetId(color, type)) || null);
+    const opacity = customOpacity ?? (disabled ? 0.5 : 1.0);
+    const textColor = customTextColor ?? (disabled ? '#888' : COLORS.textPrimary);
+
+    return ui.Pressable({
+      onClick: () => {
+        if (playSfx) {
+          playSfx('sfx-menu-button-select');
+        }
+        onClick();
+      },
+      disabled: disabled,
+      style: {
+        width: dimensions.width,
+        height: dimensions.height,
+        ...style,
+      },
+      children: [
+        // Button background image
+        ui.Image({
+          source: imageSource,
+          style: {
+            position: 'absolute',
+            width: dimensions.width,
+            height: dimensions.height,
+            opacity: opacity,
+          },
+        }),
+        // Button text centered
+        ui.View({
+          style: {
+            position: 'absolute',
+            width: dimensions.width,
+            height: dimensions.height,
+            justifyContent: 'center',
+            alignItems: 'center',
+          },
+          children: ui.Text({
+            text: label,
+            style: {
+              fontSize: DIMENSIONS.fontSize.md,
+              color: textColor,
+              textAlign: 'center',
+              fontWeight: 'bold',
+              textAlignVertical: 'center',
+            },
+          }),
+        }),
+      ],
+    });
+  }
+
+  // ==================== bloombeasts\ui\types\BindingManager.ts ====================
+
+  /**
+   * Centralized Binding Manager
+   * Horizon has a strict binding limit (~10 bindings total)
+   * This manager provides controlled access to all bindings in the app
+   */
+
+
+  export enum BindingType {
+    PlayerData = 'playerData',
+    CurrentScreen = 'currentScreen',
+    IntervaledBinding = 'intervaledBinding', // runs every 200ms to change the frame animation
+    Missions = 'missions',
+    LeaderboardData = 'leaderboardData',
+    BattleDisplay = 'battleDisplay',
+    MissionCompletePopup = 'missionCompletePopup',
+    ForfeitPopup = 'forfeitPopup',
+    CardDetailPopup = 'cardDetailPopup',
+    UIState = 'uiState', // Consolidated UI state (scroll, selected items, timers, etc.)
+  }
+
+  /**
+   * Consolidated UI State
+   * Replaces multiple screen-local bindings with single state object
+   */
+  export interface UIState {
+    // BattleScreen state
+    battle?: {
+      showHand: boolean;
+      handScrollOffset: number;
+      playerTimer: number;
+      opponentTimer: number;
+      selectedCardDetail: any | null;
+    };
+
+    // CardsScreen state
+    cards?: {
+      selectedCardId: string | null;
+      scrollOffset: number;
+    };
+
+    // MissionScreen state
+    missions?: {
+      scrollOffset?: number;
+    };
+
+    // UpgradeScreen state
+    upgrade?: {
+      selectedUpgradeId: string | null;
+    };
+  }
+
+  export interface BindingManagerInterface {
+    /**
+     * Create a derived value from one or more bindings
+     * This is the ONLY way to create derived bindings in the app
+     */
+    derive<T>(bindingTypes: BindingType[], deriveFn: (...values: any[]) => T): any;
+
+    /**
+     * Get a binding directly (for setting values)
+     */
+    setBinding(bindingType: BindingType, value: any): void;
+
+    /**
+     * Get a snapshot of the current value of a binding.
+     * Note: Use carefully, ideally only for on click events when you need to access the current value of a binding.
+     */
+    getSnapshot(bindingType: BindingType): any;
+
+    /**
+     * Get the raw binding object for a specific binding type
+     * Use this to call .derive() on a single binding
+     */
+    getBinding(bindingType: BindingType): any;
+
+    /**
+     * Legacy accessor for PlayerData binding
+     * @deprecated Use getBinding(BindingType.PlayerData) instead
+     */
+    readonly playerDataBinding: { binding: any };
+  }
+
+  export class BindingManager implements BindingManagerInterface {
+    private bindings: Map<BindingType, {
+      binding: any;
+      snapshot: any;
+    }>;
+    private BindingClass: any;
+    private async: AsyncMethods;
+
+    constructor(BindingClass: any, async: AsyncMethods) {
+      this.BindingClass = BindingClass;
+      this.async = async;
+      this.bindings = new Map();
+
+      // Initialize ALL bindings here (single source of truth)
+      // PlayerData binding - must start with valid structure due to Horizon limitation
+      this.bindings.set(BindingType.PlayerData, this.createBindingEntry({
+        name: '',
+        totalXP: 0,
+        coins: 0,
+        items: [],
+        cards: { collected: [], deck: [] },
+        missions: { completedMissions: {} },
+        boosts: {
+          'coin-boost': 0,
+          'exp-boost': 0,
+          'luck-boost': 0,
+          'rooster': 0
+        },
+        settings: { musicVolume: 10, sfxVolume: 50, musicEnabled: true, sfxEnabled: true }
+      }));
+
+      // Menu state binding - use a simple counter instead of timestamp
+      this.bindings.set(BindingType.IntervaledBinding, this.createBindingEntry(0));
+      let frameCounter = 0;
+      this.async.setInterval(() => {
+        frameCounter = (frameCounter + 1) % 1000; // Reset every 1000 to prevent overflow
+        this.setBinding(BindingType.IntervaledBinding, frameCounter);
+      }, 200);
+
+      // UI navigation binding
+      this.bindings.set(BindingType.CurrentScreen, this.createBindingEntry('loading'));
+
+      // Mission data binding
+      this.bindings.set(BindingType.Missions, this.createBindingEntry([]));
+
+      // Leaderboard data binding
+      this.bindings.set(BindingType.LeaderboardData, this.createBindingEntry());
+
+      // Battle display binding
+      this.bindings.set(BindingType.BattleDisplay, this.createBindingEntry());
+
+      // Popup bindings
+      this.bindings.set(BindingType.MissionCompletePopup, this.createBindingEntry());
+      this.bindings.set(BindingType.ForfeitPopup, this.createBindingEntry());
+      this.bindings.set(BindingType.CardDetailPopup, this.createBindingEntry());
+
+      // Consolidated UI state binding
+      this.bindings.set(BindingType.UIState, this.createBindingEntry({
+        battle: {
+          showHand: true,
+          handScrollOffset: 0,
+          playerTimer: 0,
+          opponentTimer: 0,
+          selectedCardDetail: null,
+        },
+        cards: {
+          selectedCardId: null,
+          scrollOffset: 0,
+        },
+        missions: {
+          scrollOffset: 0,
+        },
+        menu: {
+          displayedText: '',
+          frameAnimation: '',
+        },
+        upgrade: {
+          selectedUpgradeId: null,
+        },
+      }));
+
+      console.log(`[BindingManager] Initialized ${this.bindings.size} bindings`);
+    }
+
+    derive<T>(bindingTypes: BindingType[], deriveFn: (...values: any[]) => T): any {
+      // Get the actual binding objects
+      const actualBindings = bindingTypes.map(type => {
+        const binding = this.bindings.get(type);
+        if (!binding) {
+          throw new Error(`Binding not found: ${type}`);
+        }
+        return binding.binding;
+      });
+
+      // For single binding, use the binding's derive method (doesn't create new binding)
+      if (actualBindings.length === 1) {
+        return actualBindings[0].derive(deriveFn);
+      }
+
+      // For multiple bindings, must use Binding.derive (creates new binding - avoid if possible!)
+      console.warn(`[BindingManager] Creating multi-binding derive for ${bindingTypes.join(', ')} - this uses a binding slot!`);
+      return this.BindingClass.derive(actualBindings, deriveFn);
+    }
+
+    setBinding(bindingType: BindingType, value: any): void {
+      const binding = this.bindings.get(bindingType);
+      if (!binding) {
+        throw new Error(`Binding not found: ${bindingType}`);
+      }
+      binding.binding.set(value);
+      binding.snapshot = value;
+    }
+
+    getSnapshot(bindingType: BindingType): any {
+      const binding = this.bindings.get(bindingType);
+      if (!binding) {
+        throw new Error(`Binding not found: ${bindingType}`);
+      }
+      return binding.snapshot;
+    }
+
+    getBinding(bindingType: BindingType): any {
+      const binding = this.bindings.get(bindingType);
+      if (!binding) {
+        throw new Error(`Binding not found: ${bindingType}`);
+      }
+      return binding.binding;
+    }
+
+    /**
+     * Legacy accessor for PlayerData binding
+     * Returns an object with a 'binding' property for backwards compatibility
+     */
+    get playerDataBinding(): { binding: any } {
+      const binding = this.bindings.get(BindingType.PlayerData);
+      if (!binding) {
+        throw new Error(`PlayerData binding not found`);
+      }
+      return { binding: binding.binding };
+    }
+
+    private createBindingEntry(value: any = null): { binding: any, snapshot: any } {
+      return {
+        binding: new this.BindingClass(value),
+        snapshot: value,
+      };
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\common\SideMenu.ts ====================
+
+  /**
+   * Common Side Menu Component
+   * Shared sidebar used across all unified screens (Horizon & Web)
+   */
+
+
+  // SideMenu-specific constants
+  const sideMenuDimensions = {
+    width: 127,
+    height: 465,
+  };
+
+  export interface SideMenuButton {
+      label: string | ValueBindingBase<string>;
+      onClick: () => void;
+      disabled?: boolean | ValueBindingBase<boolean>;
+      yOffset?: number; // Vertical offset from buttonStartPosition
+  }
+
+  export interface SideMenuConfig {
+      /** Title text displayed at headerStartPosition */
+      title?: string | ValueBindingBase<string>;
+      /** Custom content items to display at textStartPosition */
+      customTextContent?: UINodeType[];
+      /** Buttons to display at buttonStartPosition */
+      buttons?: SideMenuButton[];
+      /** Bottom button at headerStartPosition */
+      bottomButton?: SideMenuButton;
+      /** Callback for XP bar click */
+      onXPBarClick?: (title: string, message: string) => void;
+      /** Callback for playing sound effects */
+      playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Create a common sidebar used across all screens
+   */
+  export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UINodeType {
+      const children: UINodeType[] = [];
+
+      // Calculate positions relative to sidebar origin (using sideMenuPositions)
+      const headerRelativeX = sideMenuPositions.headerStartPosition.x - sideMenuPositions.x;
+      const headerRelativeY = sideMenuPositions.headerStartPosition.y - sideMenuPositions.y;
+      const textRelativeX = sideMenuPositions.textStartPosition.x - sideMenuPositions.x;
+      const textRelativeY = sideMenuPositions.textStartPosition.y - sideMenuPositions.y;
+      const buttonRelativeX = sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x;
+      const buttonRelativeY = sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y;
+
+      // Title at headerStartPosition (if provided)
+      if (config.title) {
+          children.push(
+              ui.View({
+                  style: {
+                      position: 'absolute',
+                      left: headerRelativeX,
+                      top: headerRelativeY,
+                  },
+                  children: ui.Text({
+                      text: config.title,
+                      style: {
+                          fontSize: DIMENSIONS.fontSize.md,
+                          color: COLORS.textPrimary,
+                          fontWeight: 'bold',
+                      },
+                  }),
+              })
+          );
+      }
+
+      // Custom text content at textStartPosition
+      if (config.customTextContent && config.customTextContent.length > 0) {
+          children.push(
+              ui.View({
+                  style: {
+                      position: 'absolute',
+                      left: textRelativeX,
+                      top: textRelativeY,
+                      flexDirection: 'column',
+                  },
+                  children: config.customTextContent,
+              })
+          );
+      }
+
+      // Buttons at buttonStartPosition
+      if (config.buttons && config.buttons.length > 0) {
+          children.push(
+              ui.View({
+                  style: {
+                      position: 'absolute',
+                      left: buttonRelativeX,
+                      top: buttonRelativeY,
+                      flexDirection: 'column',
+                  },
+                  children: config.buttons.map(button =>
+                      createButton({
+                          ui,
+                          label: button.label,
+                          onClick: button.onClick,
+                          disabled: button.disabled,
+                          playSfx: config.playSfx,
+                          style: {
+                              position: 'relative',
+                              top: button.yOffset !== undefined ? button.yOffset : 0,
+                          },
+                      })
+                  ),
+              })
+          );
+      }
+
+      // Player info at bottom of sidebar (aligned to bottom like web deployment)
+      children.push(
+          ui.View({
+              style: {
+                  position: 'absolute',
+                  left: 0,
+                  top: sideMenuDimensions.height - 40,
+                  width: sideMenuDimensions.width,
+                  height: 50,
+              },
+              children: createPlayerInfo(ui, config.onXPBarClick),
+          })
+      );
+
+      // Bottom button (if provided, at headerStartPosition)
+      if (config.bottomButton) {
+          children.push(
+              createButton({
+                  ui,
+                  label: config.bottomButton.label,
+                  onClick: config.bottomButton.onClick,
+                  disabled: config.bottomButton.disabled,
+                  playSfx: config.playSfx,
+                  style: {
+                      position: 'absolute',
+                      left: headerRelativeX,
+                      top: headerRelativeY,
+                  },
+              })
+          );
+      }
+
+      return ui.View({
+          style: {
+              position: 'absolute',
+              left: sideMenuPositions.x,
+              top: sideMenuPositions.y,
+              width: sideMenuDimensions.width,
+              height: sideMenuDimensions.height,
+              flexDirection: 'column',
+          },
+          children: [
+              // Sidebar background image - assets preload automatically
+              ui.Image({
+                  source: ui.assetIdToImageSource?.('side-menu') || null,
+                  style: {
+                      position: 'absolute',
+                      width: sideMenuDimensions.width,
+                      height: sideMenuDimensions.height,
+                      top: 0,
+                      left: 0,
+                  },
+              }),
+              // Sidebar content
+              ...children,
+          ],
+      });
+  }
+
+  /**
+   * Create player info display (name, level and XP text)
+   * Positioned using sideMenuPositions
+   */
+  function createPlayerInfo(
+      ui: UIMethodMappings,
+      onXPBarClick?: (title: string, message: string) => void
+  ): UINodeType {
+      // Helper to get item quantity
+      const getItemQuantity = (items: any[], itemId: string) => {
+          const item = items?.find((i: any) => i.itemId === itemId);
+          return item ? item.quantity : 0;
+      };
+
+      // Helper to extract MenuStats from PlayerData
+      const extractStats = (pd: any): MenuStats | null => {
+          if (!pd) return null;
+          return {
+              playerLevel: pd.playerLevel || 1,
+              totalXP: pd.totalXP || 0,
+              coins: pd.coins || 0,
+              serums: getItemQuantity(pd.items || [], 'serum'),
+          };
+      };
+
+      // Single binding for level and XP text
+      const levelXPTextBinding = ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+          const statsVal = extractStats(data);
+          if (!statsVal) return 'Level 1\n0/100';
+
+          const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+          const currentLevel = statsVal.playerLevel;
+          const totalXP = statsVal.totalXP;
+          const xpForCurrentLevel = xpThresholds[currentLevel - 1];
+          const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
+          const currentXP = totalXP - xpForCurrentLevel;
+          const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+
+          return `Level ${currentLevel}\n${currentXP}/${xpNeeded}`;
+      });
+
+      return ui.View({
+          style: {
+              position: 'relative',
+          },
+          children: [
+              // Player name
+              ui.View({
+                  style: {
+                      position: 'absolute',
+                      left: sideMenuPositions.playerName.x,
+                      top: 0,
+                  },
+                  children: ui.Text({
+                      text: 'Player',
+                      style: {
+                          fontSize: sideMenuPositions.playerName.size,
+                          color: COLORS.textPrimary,
+                          textAlign: sideMenuPositions.playerName.textAlign as any,
+                      },
+                  }),
+              }),
+
+              // Level and XP text
+              ui.View({
+                  style: {
+                      position: 'absolute',
+                      left: sideMenuPositions.playerName.x,
+                      top: 19,
+                  },
+                  children: ui.Text({
+                      text: levelXPTextBinding,
+                      numberOfLines: 2,
+                      style: {
+                          fontSize: DIMENSIONS.fontSize.xs,
+                          color: COLORS.textSecondary,
+                          lineHeight: 12,
+                      },
+                  }),
+              }),
+          ],
+      });
+  }
+
+  /**
+   * Helper: Create a text row component
+   */
+  export function createTextRow(ui: UIMethodMappings, text: string | ValueBindingBase<string>, top: number = 0): UINodeType {
+      return ui.View({
+          style: {
+              position: 'absolute',
+              top: top,
+          },
+          children: ui.Text({
+              text: text,
+              style: {
+                  fontSize: DIMENSIONS.fontSize.md,
+                  color: COLORS.textPrimary,
+              },
+          }),
+      });
+  }
+
+  /**
+   * Helper: Create a resource row (emoji + count)
+   */
+  export function createResourceRow(ui: UIMethodMappings, 
+      emoji: string,
+      amount: number | ValueBindingBase<number>,
+      top: number = 0
+  ): UINodeType {
+      const amountText = typeof amount === 'number'
+          ? `${emoji} ${amount}`
+          : (amount as any).derive((a: number) => `${emoji} ${a}`);
+
+      return ui.View({
+          style: {
+              position: 'absolute',
+              top: top,
+          },
+          children: ui.Text({
+              text: amountText,
+              style: {
+                  fontSize: 18,
+                  color: COLORS.textPrimary,
+              },
+          }),
+      });
+  }
+
+  // ==================== bloombeasts\ui\screens\MenuScreen.ts ====================
+
+  /**
+   * Unified Menu Screen Component
+   * Works on both Horizon and Web platforms
+   * Matches the styling from menuScreen.new.ts
+   */
+
+
+  export interface MenuScreenProps {
+    ui: UIMethodMappings;
+    onButtonClick?: (buttonId: string) => void;
+    onNavigate?: (screen: string) => void;
+    onRenderNeeded?: () => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Unified Menu Screen that works on both platforms
+   */
+  export class MenuScreen {
+    // UI methods (injected)
+    private ui: UIMethodMappings;
+
+
+    // Menu frame IDs
+    private menuFrameIds: string[] = [
+      'menu-frame-1', 'menu-frame-2', 'menu-frame-3', 'menu-frame-4', 'menu-frame-5',
+      'menu-frame-6', 'menu-frame-7', 'menu-frame-8', 'menu-frame-9', 'menu-frame-10',
+    ];
+
+    private quotes: string[] = [
+      'Welcome back, Trainer!',
+    ];
+
+    // Callbacks
+    private onButtonClick?: (buttonId: string) => void;
+    private onNavigate?: (screen: string) => void;
+    private onRenderNeeded?: () => void;
+    private playSfx?: (sfxId: string) => void;
+
+    constructor(props: MenuScreenProps) {
+      this.ui = props.ui;
+      this.onButtonClick = props.onButtonClick;
+      this.onNavigate = props.onNavigate;
+      this.onRenderNeeded = props.onRenderNeeded;
+      this.playSfx = props.playSfx;
+
+    }
+
+    /**
+     * Create the unified menu UI - uses common side menu
+     */
+    createUI(): UINodeType {
+      const menuOptions = ['missions', 'cards', 'upgrades', 'leaderboard', 'settings'];
+      const lineHeight = DIMENSIONS.fontSize.lg + 5;
+
+      // Create menu buttons for the side menu
+      const menuButtons = menuOptions.map((option, index) => ({
+        label: this.getMenuLabel(option),
+        onClick: () => {
+          if (this.onButtonClick) {
+            this.onButtonClick(`btn-${option}`);
+          }
+          if (this.onNavigate) {
+            this.onNavigate(option);
+          }
+        },
+        disabled: false,
+        yOffset: index * (sideMenuButtonDimensions.height + GAPS.buttons),
+      }));
+
+      const customTextContent = [
+        this.ui.View({
+          style: {
+            position: 'relative',
+          },
+          children: [
+            // Quote text (lines 0-2)
+            this.ui.View({
+              style: {
+                position: 'absolute',
+                top: 0,
+                width: 110,
+              },
+              children: this.ui.Text({
+                text: this.quotes[0], // TODO: listen on intervaled binding to change the quote
+                numberOfLines: 3,
+                style: {
+                  fontSize: DIMENSIONS.fontSize.lg,
+                  color: COLORS.textPrimary,
+                  lineHeight: lineHeight,
+                },
+              }),
+            }),
+          ],
+        }),
+      ];
+
+      return this.ui.View({
+        style: {
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        },
+        children: [
+          // Background image (full screen)
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('background') || null,
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              top: 0,
+              left: 0,
+            },
+          }),
+
+          // Main content area with animated character
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+            },
+            children: [
+              // Animated character frame - derive directly from UIState
+              this.ui.Image({
+                  source: this.ui.assetIdToImageSource?.(this.menuFrameIds[0]) || null,
+                  // source: this.ui.bindingManager.derive([BindingType.IntervaledBinding], (counter: number) => {
+                  //   const frameId = this.menuFrameIds[counter % this.menuFrameIds.length];
+                  //   return this.ui.assetIdToImageSource?.(frameId) || null;
+                  // }),
+                  style: {
+                    position: 'absolute',
+                    left: 250,
+                    top: 4,
+                    width: 675,
+                    height: 630,
+                  },
+                }),
+            ],
+          }),
+
+          // Side menu (positioned absolutely on top)
+          createSideMenu(this.ui, {
+            customTextContent,
+            buttons: menuButtons,
+            bottomButton: {
+              label: 'Close',
+              onClick: () => {}, // Disabled button
+              disabled: true,
+            },
+            onXPBarClick: (title: string, message: string) => {
+              if (this.onButtonClick) {
+                this.onButtonClick(`show-counter-info:${title}:${message}`);
+              }
+            },
+            playSfx: this.playSfx,
+          }),
+        ],
+      });
+    }
+
+    /**
+     * Get menu label for option
+     */
+    private getMenuLabel(option: string): string {
+      const labels: Record<string, string> = {
+        missions: 'Missions',
+        cards: 'Cards',
+        upgrades: 'Upgrades',
+        leaderboard: 'Leaderboard',
+        settings: 'Settings',
+      };
+      return labels[option] || option;
+    }
+
+    dispose() {
+    }
+  }
+
+  // ==================== bloombeasts\ui\constants\emojis.ts ====================
+
+  export const nectarEmoji = '🏵️';
+  export const missionEmoji = '🎯';
+  export const deckEmoji = '🎲';
+  export const playerLevelEmoji = '💪';
+  export const playerExperienceEmoji = '🧪';
+
+  // ==================== bloombeasts\ui\screens\common\CardRenderer.ts ====================
+
+  /**
+   * Common Card Rendering Component
+   * Reusable card display with multi-layer rendering
+   */
+
+
+  export interface CardRendererProps {
+    card: CardDisplayData;
+    isInDeck?: boolean;
+    onClick?: (cardId: string) => void;
+    showDeckIndicator?: boolean;
+  }
+
+  /**
+   * Create a card UI component with proper multi-layer rendering
+   * This follows the standard card format:
+   * - Layer 1: Card artwork (185x185) - beast image for Bloom, card art for others
+   * - Layer 2: Base card frame (210x280) - BaseCard.png
+   * - Layer 3: Type-specific template overlay (MagicCard, TrapCard, etc.)
+   * - Layer 4: Affinity icon (for Bloom cards)
+   * - Layer 5: Experience bar (for Bloom cards with levels)
+   * - Layer 6: Text overlays (name, cost, stats, level, ability)
+   * - Layer 7: Deck indicator (if showDeckIndicator is true)
+   */
+  export function createCardComponent(ui: UIMethodMappings, props: CardRendererProps): UINodeType {
+    const { card, isInDeck = false, onClick, showDeckIndicator = true } = props;
+
+    // Standard card dimensions from shared constants
+    const cardWidth = 210; // standardCardDimensions.width
+    const cardHeight = 280; // standardCardDimensions.height
+    const beastImageWidth = 185; // standardCardBeastImageDimensions.width
+    const beastImageHeight = 185; // standardCardBeastImageDimensions.height
+
+    // Standard card positions (offsets within the card)
+    const positions = {
+      beastImage: { x: 12, y: 13 },
+      cost: { x: 20, y: 10 },
+      affinity: { x: 175, y: 7 },
+      level: { x: 105, y: 182 },
+      experienceBar: { x: 44, y: 182 },
+      name: { x: 105, y: 13 },
+      ability: { x: 21, y: 212 },
+      attack: { x: 20, y: 176 },
+      health: { x: 188, y: 176 },
+    };
+
+    // Extract base card ID for asset lookup
+    // Card IDs may have timestamp suffixes (e.g., "nectar-block-1761200302194-0")
+    // We need to extract the base ID (e.g., "nectar-block") to match catalog IDs
+    const extractBaseId = (id: string | undefined): string => {
+      if (!id) {
+        console.warn('[CardRenderer] Card missing id, using name fallback:', card);
+        // Fallback: use card name converted to kebab-case
+        return card.name.toLowerCase().replace(/\s+/g, '-');
+      }
+      // Remove timestamp pattern: -digits-digits at the end
+      return id.replace(/-\d+-\d+$/, '');
+    };
+
+    // Generate unique image URI keys for this card
+    // Extract base ID from card.id to match asset catalog IDs
+    const baseId = extractBaseId(card.id);
+    const cardImageKey = baseId; // Card images use the base card ID
+    const beastImageKey = baseId; // Beast images use the base card ID
+    const baseCardKey = 'base-card'; // All cards use base-card as the frame
+
+    // Type-specific template overlay
+    // Habitat cards use habitat templates from affinity folders
+    let templateKey = '';
+    if (card.type === 'Habitat' && card.affinity) {
+      // Template key format: affinity-habitat (e.g., 'forest-habitat')
+      templateKey = `${card.affinity.toLowerCase()}-habitat`;
+    } else if (card.type !== 'Bloom') {
+      templateKey = `${card.type.toLowerCase()}-card`;
+    }
+
+    // Affinity icon key format: affinity-icon (e.g., 'forest-icon', 'fire-icon')
+    const affinityKey = card.affinity ? `${card.affinity.toLowerCase()}-icon` : '';
+    const expBarKey = 'experience-bar';
+
+    // Get card description for ability text using the official cardDescriptionGenerator
+    const abilityText = getCardDescription(card);
+
+    // Debug logging for cards without descriptions
+    if ((!abilityText || abilityText.trim() === '') && card.type !== 'Bloom') {
+      console.log(`[CardRenderer] ❌ No description for ${card.name} (${card.type}, id: ${card.id})`);
+      console.log(`  Abilities:`, card.abilities);
+      console.log(`  Generated abilityText: "${abilityText}"`);
+    } else if (card.type !== 'Bloom') {
+      console.log(`[CardRenderer] ✅ ${card.name} (${card.type}): "${abilityText}"`);
+    }
+
+    const imageSourceKey = card.type === 'Bloom' ? beastImageKey : cardImageKey;
+
+    const children = [
+        // Layer 1: Card/Beast artwork image (185x185)
+        // For Bloom cards: use beast image
+        // For other cards (Magic/Trap/Buff/Habitat): use card artwork image
+        ui.Image({
+          source: ui.assetIdToImageSource?.(imageSourceKey) || null,
+          style: {
+            width: beastImageWidth,
+            height: beastImageHeight,
+            position: 'absolute',
+            top: positions.beastImage.y,
+            left: positions.beastImage.x,
+          },
+        }),
+
+        // Layer 2: Base card frame (210x280) - ALL cards use BaseCard.png
+        ui.Image({
+          source: ui.assetIdToImageSource?.(baseCardKey) || null,
+          style: {
+            width: cardWidth,
+            height: cardHeight,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          },
+        }),
+
+        // Layer 2.5: Template overlay for non-Bloom cards (Magic/Trap/Buff/Habitat)
+        ...(templateKey ? [
+          ui.Image({
+            source: ui.assetIdToImageSource?.(templateKey) || null,
+            style: {
+              width: cardWidth,
+              height: cardHeight,
+              position: 'absolute',
+              top: 0,
+              left: 0,
+            },
+          })
+        ] : []),
+
+        // Layer 3: Affinity icon (for Bloom cards)
+        ...(card.type === 'Bloom' && card.affinity && affinityKey ? [
+          ui.Image({
+            source: ui.assetIdToImageSource?.(affinityKey) || null,
+            style: {
+              width: 30,
+              height: 30,
+              position: 'absolute',
+              top: positions.affinity.y,
+              left: positions.affinity.x,
+            },
+          })
+        ] : []),
+
+        // Layer 4: Experience bar (for Bloom cards with level)
+        ...(card.type === 'Bloom' && card.level ? [
+          ui.Image({
+            source: ui.assetIdToImageSource?.(expBarKey) || null,
+            style: {
+              width: 120,
+              height: 20,
+              position: 'absolute',
+              top: positions.experienceBar.y,
+              left: positions.experienceBar.x,
+            },
+          })
+        ] : []),
+
+        // Layer 5: Text overlays
+        // Card name
+        ui.Text({
+          text: card.name || '',
+          style: {
+            position: 'absolute',
+            top: positions.name.y,
+            left: 0,
+            width: cardWidth,
+            fontSize: DIMENSIONS.fontSize.md,
+            color: COLORS.textPrimary,
+            textAlign: 'center',
+          },
+        }),
+
+        // Cost (top-left)
+        ...(card.cost !== undefined ? [
+          ui.Text({
+            text: String(card.cost),
+            style: {
+              position: 'absolute',
+              top: positions.cost.y,
+              left: positions.cost.x - 10,
+              width: 20,
+              fontSize: DIMENSIONS.fontSize.xxl,
+              color: COLORS.textPrimary,
+              textAlign: 'center',
+            },
+          })
+        ] : []),
+
+        // Attack and Health (for Bloom cards)
+        ...(card.type === 'Bloom' && ((card as any).currentAttack !== undefined || (card as any).baseAttack !== undefined) ? [
+          ui.Text({
+            text: String((card as any).currentAttack ?? (card as any).baseAttack ?? 0),
+            style: {
+              position: 'absolute',
+              top: positions.attack.y,
+              left: positions.attack.x - 10,
+              width: 20,
+              fontSize: DIMENSIONS.fontSize.xxl,
+              color: COLORS.textPrimary,
+              textAlign: 'center',
+            },
+          })
+        ] : []),
+
+        ...(card.type === 'Bloom' && ((card as any).currentHealth !== undefined || (card as any).baseHealth !== undefined) ? [
+          ui.Text({
+            text: String((card as any).currentHealth ?? (card as any).baseHealth ?? 0),
+            style: {
+              position: 'absolute',
+              top: positions.health.y,
+              left: positions.health.x - 10,
+              width: 20,
+              fontSize: DIMENSIONS.fontSize.xxl,
+              color: COLORS.textPrimary,
+              textAlign: 'center',
+            },
+          })
+        ] : []),
+
+        // Level (for all cards)
+        ...(card.level !== undefined ? [
+          ui.Text({
+            text: `Level ${card.level}`,
+            style: {
+              position: 'absolute',
+              top: positions.level.y,
+              left: 0,
+              width: cardWidth,
+              fontSize: DIMENSIONS.fontSize.xs,
+              color: COLORS.textPrimary,
+              textAlign: 'center',
+            },
+          })
+        ] : []),
+
+        // Ability/Effect text (for all cards)
+        ...(abilityText ? [
+          ui.Text({
+            text: abilityText,
+            numberOfLines: 3,
+            style: {
+              position: 'absolute',
+              top: positions.ability.y,
+              left: positions.ability.x,
+              width: 168,
+              fontSize: DIMENSIONS.fontSize.xs,
+              color: COLORS.textPrimary,
+              textAlign: 'left',
+            },
+          })
+        ] : []),
+
+        // Deck indicator border if in deck and showDeckIndicator is true
+        ...(isInDeck && showDeckIndicator ? [
+          ui.View({
+            style: {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: cardWidth,
+              height: cardHeight,
+              borderWidth: 4,
+              borderColor: COLORS.success,
+              borderRadius: 8,
+            },
+          })
+        ] : []),
+      ];
+
+    // Filter out any undefined values to prevent rendering errors
+    const filteredChildren = children.filter(child => child !== undefined && child !== null);
+
+    // Only wrap in Pressable if onClick is provided
+    // Otherwise use View to avoid blocking parent click handlers
+    if (onClick) {
+      return ui.Pressable({
+        onClick: () => onClick(card.id),
+        style: {
+          width: cardWidth,
+          height: cardHeight,
+          position: 'relative',
+        },
+        children: filteredChildren,
+      });
+    } else {
+      return ui.View({
+        style: {
+          width: cardWidth,
+          height: cardHeight,
+          position: 'relative',
+        },
+        children: filteredChildren,
+      });
+    }
+  }
+
+  /**
+   * Props for reactive card component that uses bindings
+   */
+  export interface ReactiveCardRendererProps {
+
+    // Mode selection
+    mode: 'selectedCard' | 'slot';
+
+    // Slot-based selection (required for slot mode)
+    slotIndex?: number;
+    cardsPerPage?: number;
+
+    onClick?: () => void;
+    showDeckIndicator?: boolean;
+  }
+
+  /**
+   * Create a reactive card UI component using bindings
+   */
+  export function createReactiveCardComponent(ui: UIMethodMappings, props: ReactiveCardRendererProps): UINodeType {
+    const {
+      mode,
+      slotIndex,
+      cardsPerPage,
+      onClick,
+      showDeckIndicator = true
+    } = props;
+
+    // Determine which mode we're in
+    const isSelectedCardMode = mode === 'selectedCard';
+    const isSlotMode = mode === 'slot';
+
+    // Standard card dimensions
+    const cardWidth = 210;
+    const cardHeight = 280;
+    const beastImageWidth = 185;
+    const beastImageHeight = 185;
+
+    // Standard card positions
+    const positions = {
+      beastImage: { x: 12, y: 13 },
+      cost: { x: 20, y: 10 },
+      affinity: { x: 175, y: 7 },
+      level: { x: 105, y: 182 },
+      experienceBar: { x: 44, y: 182 },
+      name: { x: 105, y: 13 },
+      ability: { x: 21, y: 212 },
+      attack: { x: 20, y: 176 },
+      health: { x: 188, y: 176 },
+    };
+
+    // Helper function to extract base ID
+    const extractBaseId = (id: string | undefined, name: string): string => {
+      if (!id) {
+        return name.toLowerCase().replace(/\s+/g, '-');
+      }
+      return id.replace(/-\d+-\d+$/, '');
+    };
+
+    // Helper to get card from combined data
+    // Now accepts both uiState and playerData to properly react to changes
+    const getCard = (uiState: UIState, playerData: PlayerData): CardDisplayData | null => {
+      const cardInstances: CardInstance[] = playerData?.cards?.collected || [];
+
+      let instance: CardInstance | null = null;
+
+      if (isSelectedCardMode) {
+        const cardId = uiState.cards?.selectedCardId;
+        // ID-based mode: find card by ID
+        if (!cardId) return null;
+        instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;
+      } else if (isSlotMode && slotIndex !== undefined && cardsPerPage !== undefined) {
+        // Slot-based mode: find card by slot index
+        const pageStart = (uiState.cards?.scrollOffset ?? 0) * cardsPerPage;
+        const cardIndex = pageStart + slotIndex;
+        instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
+      }
+
+      // Compute display data from instance
+      return instance ? computeCardDisplay(instance) : null;
+    };
+
+
+    // Helper to check if card is in deck
+    const isCardInDeck = (playerData: PlayerData, cardId: string | undefined): boolean => {
+      if (!showDeckIndicator || !cardId) return false;
+      const deckCardIds: string[] = playerData?.cards?.deck || [];
+      return deckCardIds.includes(cardId);
+    };
+
+    // Create reactive text bindings that watch BOTH UIState and PlayerData
+    // This ensures the bindings update when either the selected card changes OR the card data changes
+    const cardNameBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      const card = getCard(uiState, playerData);
+      return card?.name || '';
+    });
+
+    const cardCostBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      const card = getCard(uiState, playerData);
+      return card && card.cost !== undefined ? String(card.cost) : '';
+    });
+
+    const cardAttackBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      const card = getCard(uiState, playerData);
+      if (!card || card.type !== 'Bloom') return '';
+      const bloomCard = card as any;
+      return String(bloomCard.currentAttack ?? bloomCard.baseAttack ?? 0);
+    });
+
+    const cardHealthBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      const card = getCard(uiState, playerData);
+      if (!card || card.type !== 'Bloom') return '';
+      const bloomCard = card as any;
+      return String(bloomCard.currentHealth ?? bloomCard.baseHealth ?? 0);
+    });
+
+    const cardLevelBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      const card = getCard(uiState, playerData);
+      return card && card.level !== undefined ? `Level ${card.level}` : '';
+    });
+
+    const abilityTextBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      const card = getCard(uiState, playerData);
+      return card ? getCardDescription(card) : '';
+    });
+
+    // Create image source bindings that watch BOTH UIState and PlayerData
+    const baseCardImageBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      const card = getCard(uiState, playerData);
+      if (!card) return null;
+      const baseId = extractBaseId(card.id, card.name);
+      if (!baseId) return null;
+      return ui.assetIdToImageSource?.(baseId) ?? null;
+    });
+
+    const templateImageBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      const card = getCard(uiState, playerData);
+      if (!card) return null;
+
+      let templateAssetId = '';
+      if (card.type === 'Habitat' && card.affinity) {
+        templateAssetId = `${card.affinity.toLowerCase()}-habitat`;
+      } else if (card.type !== 'Bloom') {
+        templateAssetId = `${card.type.toLowerCase()}-card`;
+      }
+
+      return templateAssetId ? (ui.assetIdToImageSource?.(templateAssetId) ?? null) : null;
+    });
+
+    const affinityIconBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      const card = getCard(uiState, playerData);
+      if (!card || card.type !== 'Bloom' || !card.affinity) return null;
+      const affinityAssetId = `${card.affinity.toLowerCase()}-icon`;
+      if (!affinityAssetId) return null;
+      return ui.assetIdToImageSource?.(affinityAssetId) ?? null;
+    });
+
+
+    // Render all layers without conditional wrapping
+    // Null/empty values will naturally hide elements
+    const children = [
+      // Layer 1: Card/Beast artwork image
+      ui.Image({
+        source: baseCardImageBinding,
+        style: {
+          width: beastImageWidth,
+          height: beastImageHeight,
+          position: 'absolute',
+          top: positions.beastImage.y,
+          left: positions.beastImage.x,
+        },
+      }),
+
+      // Layer 2: Base card frame
+      ui.Image({
+        source: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+          const card = getCard(uiState, playerData);
+          return card ? ui.assetIdToImageSource?.('base-card') : null;
+        }),
+        style: {
+          width: cardWidth,
+          height: cardHeight,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+        },
+      }),
+
+      // Layer 3: Template overlay
+      ui.Image({
+        source: templateImageBinding,
+        style: {
+          width: cardWidth,
+          height: cardHeight,
+          position: 'absolute',
+          top: 0,
+          left: 0,
+        },
+      }),
+
+      // Layer 4: Affinity icon
+      ui.Image({
+        source: affinityIconBinding,
+        style: {
+          width: 30,
+          height: 30,
+          position: 'absolute',
+          top: positions.affinity.y,
+          left: positions.affinity.x,
+        },
+      }),
+
+      // Layer 5: Experience bar
+      ui.Image({
+        source: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+          const card = getCard(uiState, playerData);
+          if (!card || card.type !== 'Bloom' || card.level === undefined) return null;
+          return ui.assetIdToImageSource?.('experience-bar');
+        }),
+        style: {
+          width: 120,
+          height: 20,
+          position: 'absolute',
+          top: positions.experienceBar.y,
+          left: positions.experienceBar.x,
+        },
+      }),
+
+      // Layer 6: Text overlays
+      // Card name
+      ui.Text({
+        text: cardNameBinding,
+        style: {
+          position: 'absolute',
+          top: positions.name.y,
+          left: 0,
+          width: cardWidth,
+          fontSize: DIMENSIONS.fontSize.md,
+          color: COLORS.textPrimary,
+          textAlign: 'center',
+        },
+      }),
+
+      // Cost
+      ui.Text({
+        text: cardCostBinding,
+        style: {
+          position: 'absolute',
+          top: positions.cost.y,
+          left: positions.cost.x - 10,
+          width: 20,
+          fontSize: DIMENSIONS.fontSize.xxl,
+          color: COLORS.textPrimary,
+          textAlign: 'center',
+        },
+      }),
+
+      // Attack
+      ui.Text({
+        text: cardAttackBinding,
+        style: {
+          position: 'absolute',
+          top: positions.attack.y,
+          left: positions.attack.x - 10,
+          width: 20,
+          fontSize: DIMENSIONS.fontSize.xxl,
+          color: COLORS.textPrimary,
+          textAlign: 'center',
+        },
+      }),
+
+      // Health
+      ui.Text({
+        text: cardHealthBinding,
+        style: {
+          position: 'absolute',
+          top: positions.health.y,
+          left: positions.health.x - 10,
+          width: 20,
+          fontSize: DIMENSIONS.fontSize.xxl,
+          color: COLORS.textPrimary,
+          textAlign: 'center',
+        },
+      }),
+
+      // Level
+      ui.Text({
+        text: cardLevelBinding,
+        style: {
+          position: 'absolute',
+          top: positions.level.y,
+          left: 0,
+          width: cardWidth,
+          fontSize: DIMENSIONS.fontSize.xs,
+          color: COLORS.textPrimary,
+          textAlign: 'center',
+        },
+      }),
+
+      // Ability text
+      ui.Text({
+        text: abilityTextBinding,
+        numberOfLines: 3,
+        style: {
+          position: 'absolute',
+          top: positions.ability.y,
+          left: positions.ability.x,
+          width: 168,
+          fontSize: DIMENSIONS.fontSize.xs,
+          color: COLORS.textPrimary,
+          textAlign: 'left',
+        },
+      }),
+
+      // Layer 7: Deck indicator border (only if showDeckIndicator is true)
+      ...(showDeckIndicator ? [ui.View({
+        style: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+          const card = getCard(uiState, playerData);
+          const inDeck = isCardInDeck(playerData, card?.id);
+
+          return {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: cardWidth,
+            height: cardHeight,
+            borderWidth: inDeck ? 4 : 0,
+            borderColor: COLORS.success,
+            borderRadius: 8,
+          };
+        }),
+      })] : []),
+    ];
+
+    const filteredChildren = children.filter(child => child !== undefined && child !== null);
+
+    // Wrap in Pressable if onClick is provided, otherwise use View
+    if (onClick) {
+      return ui.Pressable({
+        onClick: () => {
+          console.log('[CardRenderer] Pressable clicked');
+          onClick();
+        },
+        style: {
+          width: cardWidth,
+          height: cardHeight,
+          position: 'relative',
+        },
+        children: filteredChildren,
+      });
+    } else {
+      return ui.View({
+        style: {
+          width: cardWidth,
+          height: cardHeight,
+          position: 'relative',
+        },
+        children: filteredChildren,
+      });
+    }
+  }
+
+  /**
+   * Standard card dimensions for external use
+   */
+  export const CARD_DIMENSIONS = {
+    width: 210,
+    height: 280,
+    imageWidth: 185,
+    imageHeight: 185,
+  };
+
+  // ==================== bloombeasts\ui\common\Popup.ts ====================
+
+  /**
+   * Common Popup Component
+   * Reusable popup with title, description, content, and buttons
+   */
+
+
+  export interface PopupButton {
+    label: string | ValueBindingBase<string> | ReadonlyBindingInterface<string>;
+    onClick: () => void;
+    color?: ButtonColor;
+    type?: ButtonType;
+    disabled?: boolean | ValueBindingBase<boolean> | ReadonlyBindingInterface<boolean>;
+  }
+
+  export interface PopupProps {
+    ui: UIMethodMappings;
+    title: string | ValueBindingBase<string> | ReadonlyBindingInterface<string>;
+    titleColor?: string; // Optional custom title color
+    description?: string | ValueBindingBase<string> | ReadonlyBindingInterface<string>;
+    content?: UINodeType[];
+    buttons?: PopupButton[];
+    playSfx?: (sfxId: string) => void;
+    width?: number;
+    height?: number;
+    onBackdropClick?: () => void;
+  }
+
+  /**
+   * Create a common popup with mission-container background
+   */
+  export function createPopup(props: PopupProps): UINodeType {
+    const {
+      ui,
+      title,
+      titleColor = COLORS.textPrimary,
+      description,
+      content = [],
+      buttons = [],
+      playSfx,
+      width = 550,
+      height = 400,
+      onBackdropClick,
+    } = props;
+
+    // Calculate center position (assuming 1280x720 screen)
+    const screenWidth = 1280;
+    const screenHeight = 720;
+    const centerX = (screenWidth - width) / 2;
+    const centerY = (screenHeight - height) / 2;
+
+    // Text component accepts string or binding directly
+    const titleBinding = title;
+    const descriptionBinding = description || null;
+
+    // Calculate content area dimensions
+    const contentPaddingTop = 80; // Space for title
+    const contentPaddingBottom = buttons.length > 0 ? 80 : 20; // Space for buttons
+    const contentHeight = height - contentPaddingTop - contentPaddingBottom;
+    const contentPadding = 30;
+
+    return ui.View({
+      style: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        top: 0,
+        left: 0,
+        zIndex: 1000,
+      },
+      children: [
+        // Semi-transparent backdrop
+        onBackdropClick
+          ? ui.Pressable({
+              onClick: onBackdropClick,
+              style: {
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              },
+            })
+          : ui.View({
+              style: {
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              },
+            }),
+
+        // Content container with mission-container image (centered)
+        ui.View({
+          style: {
+            position: 'absolute',
+            left: centerX,
+            top: centerY,
+            width: width,
+            height: height,
+          },
+          children: [
+            // Mission container background image - assets preload automatically
+            ui.Image({
+              source: ui.assetIdToImageSource?.('mission-container') ?? null,
+              style: {
+                position: 'absolute',
+                width: width,
+                height: height,
+                top: 0,
+                left: 0,
+              },
+            }),
+
+            // Title
+            ui.View({
+              style: {
+                position: 'absolute',
+                top: 20,
+                left: contentPadding,
+                width: width - contentPadding * 2,
+              },
+              children: ui.Text({
+                text: titleBinding,
+                style: {
+                  fontSize: DIMENSIONS.fontSize.xl,
+                  fontWeight: 'bold',
+                  color: titleColor,
+                  textAlign: 'center',
+                },
+              }),
+            }),
+
+            // Description (optional)
+            descriptionBinding
+              ? ui.View({
+                  style: {
+                    position: 'absolute',
+                    top: 60,
+                    left: contentPadding,
+                    width: width - contentPadding * 2,
+                  },
+                  children: ui.Text({
+                    text: descriptionBinding,
+                    style: {
+                      fontSize: DIMENSIONS.fontSize.md,
+                      color: COLORS.textSecondary,
+                      textAlign: 'center',
+                    },
+                  }),
+                })
+              : null,
+
+            // Content area (scrollable if needed)
+            content.length > 0
+              ? ui.View({
+                  style: {
+                    position: 'absolute',
+                    top: description ? 100 : contentPaddingTop,
+                    left: contentPadding,
+                    width: width - contentPadding * 2,
+                    height: description
+                      ? contentHeight - 40
+                      : contentHeight,
+                    flexDirection: 'column',
+                    gap: DIMENSIONS.spacing.sm,
+                  },
+                  children: content,
+                })
+              : null,
+
+            // Buttons row at bottom
+            buttons.length > 0
+              ? ui.View({
+                  style: {
+                    position: 'absolute',
+                    bottom: 20,
+                    left: 0,
+                    width: width,
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: DIMENSIONS.spacing.md,
+                  },
+                  children: buttons.map((button) =>
+                    createButton({
+                      ui,
+                      label: button.label,
+                      onClick: button.onClick,
+                      color: button.color,
+                      type: button.type,
+                      disabled: button.disabled,
+                      playSfx,
+                    })
+                  ),
+                })
+              : null,
+          ].filter(Boolean),
+        }),
+      ],
+    });
+  }
+
+  // ==================== bloombeasts\ui\screens\common\CardDetailPopup.ts ====================
+
+  /**
+   * Card Detail Popup Component
+   * Shows card details in a popup overlay with action buttons
+   */
+
+
+  export interface CardDetailPopupProps {
+    cardDetail: CardDetailDisplay;
+    onButtonClick: (buttonId: string) => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  export interface ReactiveCardDetailPopupProps {
+    onClose: () => void;
+    buttons?: PopupButton[]; // Buttons to display at bottom
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Create a reactive card detail popup overlay using common Popup
+   */
+  export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: ReactiveCardDetailPopupProps): UINodeType {
+    const { onClose, buttons = [], playSfx } = props;
+
+    // Derive card name using instance method (no new binding)
+    const cardNameBinding = ui.bindingManager.derive([BindingType.UIState], (uiState: UIState) => {
+      const pd = ui.bindingManager.getSnapshot(BindingType.PlayerData);
+      const card = pd?.cards?.collected?.find((c: any) => c.id === uiState.cards?.selectedCardId);
+      return card?.name || 'Card Details';
+    });
+
+    // Create content with card display (centered)
+    const content = [
+      ui.View({
+        style: {
+          width: '100%',
+          height: '100%',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        children: createReactiveCardComponent(ui, {
+          mode: 'selectedCard',
+          onClick: undefined, // No click handler in popup
+          showDeckIndicator: true, // Show deck indicator
+        }),
+      }),
+    ];
+
+    return createPopup({
+      ui,
+      title: cardNameBinding,
+      content,
+      buttons, // Buttons will be centered at bottom in a row
+      playSfx,
+      width: 450,
+      height: 520,
+      onBackdropClick: onClose,
+    });
+  }
+
+  /**
+   * Create a card detail popup overlay using common Popup component
+   */
+  export function createCardDetailPopup(ui: UIMethodMappings, props: CardDetailPopupProps): UINodeType {
+    const { cardDetail, onButtonClick, playSfx } = props;
+
+    // Create card component as content
+    const cardContent = [
+      ui.View({
+        style: {
+          width: '100%',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginTop: 20,
+        },
+        children: createCardComponent(ui, {
+          card: cardDetail.card,
+          isInDeck: cardDetail.isInDeck,
+          showDeckIndicator: false, // Don't show deck indicator in detail view
+        }),
+      }),
+    ];
+
+    // Convert buttons to PopupButton format
+    const popupButtons: PopupButton[] = (cardDetail.buttons || [])
+      .filter(b => b)
+      .map((buttonText) => ({
+        label: buttonText,
+        onClick: () => {
+          const buttonId = `btn-card-${buttonText.toLowerCase().replace(/ /g, '-')}`;
+          onButtonClick(buttonId);
+        },
+        color: buttonText === 'Add' ? 'green' : buttonText === 'Remove' ? 'red' : 'default',
+      }));
+
+    return createPopup({
+      ui,
+      title: cardDetail.card.name || 'Card Details',
+      content: cardContent,
+      buttons: popupButtons,
+      playSfx,
+      width: 400,
+      height: 500,
+      onBackdropClick: () => onButtonClick('btn-card-close'),
+    });
+  }
+
+  // ==================== bloombeasts\ui\screens\CardsScreen.ts ====================
+
+  /**
+   * Unified Cards Screen Component
+   * Works on both Horizon and Web platforms
+   * Matches the styling from cardsScreen.new.ts
+   */
+
+
+  export interface CardsScreenProps {
+    ui: UIMethodMappings;
+    onCardSelect?: (cardId: string) => void;
+    onNavigate?: (screen: string) => void;
+    onRenderNeeded?: () => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Unified Cards Screen
+   */
+  export class CardsScreen {
+    // UI methods (injected)
+    private ui: UIMethodMappings;
+
+    private cardsPerRow = 4;
+    private rowsPerPage = 2;
+    private onCardSelect?: (cardId: string) => void;
+    private onNavigate?: (screen: string) => void;
+    private onRenderNeeded?: () => void;
+    private playSfx?: (sfxId: string) => void;
+
+    constructor(props: CardsScreenProps) {
+      this.ui = props.ui;
+      this.onCardSelect = props.onCardSelect;
+      this.onNavigate = props.onNavigate;
+      this.onRenderNeeded = props.onRenderNeeded;
+      this.playSfx = props.playSfx;
+
+    }
+
+
+    /**
+     * Create a single card slot using reactive card component
+     * Passes playerDataBinding to avoid binding nesting
+     */
+    private createCardSlot(
+      slotIndex: number,
+      cardsPerPage: number,
+      hasMarginRight: boolean
+    ): UINodeType {
+      return this.ui.View({
+        style: {
+          marginRight: hasMarginRight ? GAPS.cards : 0,
+        },
+        children: createReactiveCardComponent(this.ui, {
+          mode: 'slot',
+          slotIndex,
+          cardsPerPage,
+          onClick: () => {
+            const state = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+            const cardId = state.cards?.selectedCardId;
+            if (cardId) {
+              this.handleCardClick(cardId);
+            }
+          },
+          showDeckIndicator: true,
+        }),
+      });
+    }
+
+    /**
+     * Create card grid with reactive bindings
+     * Card slots derive directly from playerDataBinding to avoid nesting
+     */
+    private createCardGrid(): UINodeType {
+      const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          left: 70,
+          top: 70,
+          width: 920,
+          height: 580,
+        },
+        children: [
+          // Empty state - derive directly from playerDataBinding
+          ...(this.ui.UINode ? [this.ui.UINode.if(
+            this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
+              const cards = pd?.cards?.collected || [];
+              console.log('[CardsScreen] Empty state check - cards.length:', cards.length);
+              return cards.length === 0 ? true : false;
+            }),
+            this.ui.View({
+              style: {
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+              },
+              children: this.ui.Text({
+                text: 'No cards in your collection yet.',
+                style: {
+                  fontSize: DIMENSIONS.fontSize.xl,
+                  color: COLORS.textPrimary,
+                },
+              }),
+            })
+          )] : []),
+
+          // Card grid - pre-create 8 slots using reactive card components
+          this.ui.View({
+            style: {
+              flexDirection: 'column',
+            },
+            children: Array.from({ length: this.rowsPerPage }, (_, rowIndex) =>
+              this.ui.View({
+                style: {
+                  flexDirection: 'row',
+                  marginBottom: rowIndex < this.rowsPerPage - 1 ? GAPS.cards : 0,
+                },
+                children: Array.from({ length: this.cardsPerRow }, (_, colIndex) => {
+                  const slotIndex = rowIndex * this.cardsPerRow + colIndex;
+
+                  // Create card slot - passes playerDataBinding
+                  return this.createCardSlot(slotIndex, cardsPerPage, colIndex < this.cardsPerRow - 1);
+                }),
+              })
+            ),
+          }),
+        ],
+      });
+    }
+
+    createUI(): UINodeType {
+
+      // Create scroll buttons for the side menu
+      // Check bounds inside onClick to avoid multi-binding derives (which create new bindings)
+      const scrollButtons = [
+        {
+          label: '↑',
+          onClick: () => {
+            // Check bounds before scrolling
+            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+            if (currentState.cards?.scrollOffset > 0) {
+              // Update UIState binding
+              this.ui.bindingManager.setBinding(BindingType.UIState, {
+                ...currentState,
+                cards: {
+                  ...currentState.cards,
+                  scrollOffset: currentState.cards?.scrollOffset - 1
+                }
+              });
+            }
+          },
+          yOffset: 0,
+        },
+        {
+          label: '↓',
+          onClick: () => {
+            // Reactive disabled state prevents invalid scrolling, so just increment
+            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+            const cards = currentState.playerData?.cards?.collected || [];
+            const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+            const totalPages = Math.ceil(cards.length / cardsPerPage);
+            if (currentState.cards?.scrollOffset < totalPages - 1) {
+              this.ui.bindingManager.setBinding(BindingType.UIState, {
+                ...currentState,
+                cards: {
+                  ...currentState.cards,
+                  scrollOffset: currentState.cards?.scrollOffset + 1
+                }
+              });
+            }
+          },
+          disabled: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            ( uiState: UIState) => {
+              const pd = this.ui.bindingManager.getSnapshot(BindingType.PlayerData);
+              const offset = uiState.cards?.scrollOffset ?? 0;
+              const cards = pd?.cards?.collected || [];
+              const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+              const totalPages = Math.ceil(cards.length / cardsPerPage);
+              return offset >= totalPages - 1 ? true : false;
+            }
+          ) as any,
+          yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
+        },
+      ];
+
+      // Deck info text - derive directly from playerDataBinding to avoid nesting
+      const deckInfoText = this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => `${deckEmoji} ${pd?.cards?.deck?.length || 0}/30`);
+
+      return this.ui.View({
+        style: {
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        },
+        children: [
+          // Background
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('background') || null,
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              top: 0,
+              left: 0,
+            },
+          }),
+          // Cards Container image as background
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('cards-container') || null,
+            style: {
+              position: 'absolute',
+              left: 40,
+              top: 40,
+              width: 980,
+              height: 640,
+            },
+          }),
+          // Main content - card grid
+          // Card grid view with Horizon-compatible pattern (derives bindings internally)
+          this.createCardGrid(),
+          // Sidebar with common side menu
+          createSideMenu(this.ui, {
+            title: 'Cards',
+            customTextContent: [
+              createTextRow(this.ui, deckInfoText, 0),
+            ],
+            buttons: scrollButtons,
+            bottomButton: {
+              label: 'Back',
+              onClick: () => {
+                if (this.onNavigate) this.onNavigate('menu');
+              },
+              disabled: false,
+            },
+            playSfx: this.playSfx,
+          }),
+
+          // Card detail popup overlay container (conditionally rendered)
+          // Uses UINode.if() for proper conditional rendering per Horizon docs
+          ...(this.ui.UINode ? [this.ui.UINode.if(
+            this.ui.bindingManager.derive([BindingType.UIState], (state: any) => (state.cards?.selectedCardId ?? null) !== null),
+            this.ui.View({
+              style: {
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                top: 0,
+                left: 0,
+              },
+              children: createReactiveCardDetailPopup(this.ui, {
+                onClose: () => this.closePopup(),
+                buttons: this.createPopupButtons(),
+                playSfx: this.playSfx,
+              }),
+            })
+          )] : []),
+        ],
+      });
+    }
+
+    /**
+     * Handle card click - show popup with Add/Remove options
+     */
+    private handleCardClick(cardId: string): void {
+      console.log('[CardsScreen] handleCardClick called with cardId:', cardId);
+      const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+      this.ui.bindingManager.setBinding(BindingType.UIState, {
+        ...currentState,
+        cards: {
+          ...currentState.cards,
+          selectedCardId: cardId
+        }
+      });
+    }
+
+    /**
+     * Close the popup
+     */
+    private closePopup(): void {
+      const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+      this.ui.bindingManager.setBinding(BindingType.UIState, {
+        ...currentState,
+        cards: {
+          ...currentState.cards,
+          selectedCardId: null
+        }
+      });
+    }
+
+    /**
+     * Create reactive popup buttons
+     * Returns Add/Remove and Close buttons as PopupButton array
+     */
+    private createPopupButtons(): PopupButton[] {
+      // Derive button label (Add/Remove) based on deck status
+      const buttonLabel = this.ui.bindingManager.derive(
+        [BindingType.PlayerData],
+        (pd: any) => {
+          const state = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+          const cardId = state.cards?.selectedCardId ?? null;
+          if (!cardId) return '';
+          const deckCardIds: string[] = pd?.cards?.deck || [];
+          const isInDeck = deckCardIds.includes(cardId);
+          return isInDeck ? 'Remove' : 'Add';
+        }
+      );
+
+      // Derive button color based on deck status
+      const buttonColor = this.ui.bindingManager.derive(
+        [BindingType.PlayerData],
+        (pd: any) => {
+          const state = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+          const cardId = state.cards?.selectedCardId ?? null;
+          if (!cardId) return 'default' as ButtonColor;
+          const deckCardIds: string[] = pd?.cards?.deck || [];
+          const isInDeck = deckCardIds.includes(cardId);
+          return (isInDeck ? 'red' : 'green') as ButtonColor;
+        }
+      );
+
+      return [
+        // Add/Remove button
+        {
+          label: buttonLabel,
+          onClick: () => {
+            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+            const cardId = currentState.cards?.selectedCardId ?? null;
+            if (cardId && this.onCardSelect) {
+              this.onCardSelect(cardId);
+            }
+          },
+          color: buttonColor as any,
+        },
+
+        // Close button
+        {
+          label: 'Close',
+          onClick: () => this.closePopup(),
+          color: 'default',
+        },
+      ];
+    }
+
+    dispose(): void {
+      // Nothing to clean up
+    }
+  }
+
+  // ==================== bloombeasts\constants\upgrades.ts ====================
+
+  /**
+   * Upgrade Constants
+   * Defines all available upgrades and their properties
+   */
+
+  export interface UpgradeDefinition {
+    id: string;
+    name: string;
+    description: string;
+    assetId: string;
+    costs: number[]; // Cost for each level (index 0 = level 1, index 5 = level 6)
+    values?: number[]; // Value of the upgrade (0-100) for each level
+  }
+
+  export const COIN_BOOST: UpgradeDefinition = {
+    id: 'coin-boost',
+    name: 'Coin Boost',
+    description: 'Earn more coins!',
+    assetId: 'upgrade-coin-boost',
+    costs: [100, 200, 400, 800, 1600, 3200], // Levels 1-6
+    values: [5, 15, 25, 50, 100, 200]
+  };
+
+  export const EXP_BOOST: UpgradeDefinition = {
+    id: 'exp-boost',
+    name: 'Experience Boost',
+    description: 'Gain more experience!',
+    assetId: 'upgrade-exp-boost',
+    costs: [100, 200, 400, 800, 1600, 3200], // Levels 1-6
+    values: [5, 15, 25, 50, 100, 200]
+  };
+
+  export const LUCK_BOOST: UpgradeDefinition = {
+    id: 'luck-boost',
+    name: 'Luck Boost',
+    description: 'Increase your chances in getting loot!',
+    assetId: 'upgrade-luck-boost',
+    costs: [100, 200, 400, 800, 1600, 3200], // Levels 1-6
+    values: [5, 15, 25, 50, 100, 200]
+  };
+
+  export const ROOSTER: UpgradeDefinition = {
+    id: 'rooster',
+    name: 'Rooster',
+    description: 'Please ignore this rooster, nothing good will come of it!',
+    assetId: 'upgrade-rooster',
+    costs: [400, 800, 1600, 3200, 6400, 12800], // Levels 1-6
+  };
+
+  // Array of all upgrades for iteration
+  export const ALL_UPGRADES: UpgradeDefinition[] = [
+    COIN_BOOST,
+    EXP_BOOST,
+    LUCK_BOOST,
+    ROOSTER
+  ];
+
+  // Map of upgrade costs by ID for quick lookup
+  export const UPGRADE_COSTS: { [key: string]: number[] } = {
+    [COIN_BOOST.id]: COIN_BOOST.costs,
+    [EXP_BOOST.id]: EXP_BOOST.costs,
+    [LUCK_BOOST.id]: LUCK_BOOST.costs,
+    [ROOSTER.id]: ROOSTER.costs
+  };
+
+  // ==================== bloombeasts\ui\screens\UpgradeScreen.ts ====================
+
+  /**
+   * Upgrade Screen Component
+   * Displays available upgrades for purchase
+   */
+
+
+  export interface UpgradeScreenProps {
+    ui: UIMethodMappings;
+    onNavigate?: (screen: string) => void;
+    onUpgrade?: (boostId: string) => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  export class UpgradeScreen {
+    private ui: UIMethodMappings;
+    private onNavigate?: (screen: string) => void;
+    private onUpgrade?: (boostId: string) => void;
+    private playSfx?: (sfxId: string) => void;
+
+    constructor(props: UpgradeScreenProps) {
+      this.ui = props.ui;
+      this.onNavigate = props.onNavigate;
+      this.onUpgrade = props.onUpgrade;
+      this.playSfx = props.playSfx;
+    }
+
+    /**
+     * Create a single upgrade item
+     */
+    private createUpgradeItem(upgrade: UpgradeDefinition): UINodeType {
+      const containerSize = 150;
+      const imageSize = { width: 142, height: 120 };
+      const imageOffset = { top: 4, left: 4 };
+      const upgradeBoxSize = { width: 25, height: 26 };
+
+      return this.ui.Pressable({
+        onClick: () => {
+          const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+          // Update UIState binding
+          this.ui.bindingManager.setBinding(BindingType.UIState, {
+            ...currentState,
+            upgrade: {
+              ...currentState.upgrade,
+              selectedUpgradeId: upgrade.id
+            }
+          });
+        },
+        style: {
+          width: containerSize,
+          height: containerSize,
+          position: 'relative',
+        },
+        children: [
+          // Container background
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('upgrade-container-card') || null,
+            style: {
+              position: 'absolute',
+              width: containerSize,
+              height: containerSize,
+              top: 0,
+              left: 0,
+              opacity: 1.0,
+            },
+          }),
+          // Upgrade image overlay
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.(upgrade.assetId) || null,
+            style: {
+              position: 'absolute',
+              width: imageSize.width,
+              height: imageSize.height,
+              top: imageOffset.top,
+              left: imageOffset.left,
+            },
+          }),
+          // Upgrade level indicator (single number display)
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              bottom: 8,
+              left: 8,
+              width: 30,
+              height: 30,
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              borderRadius: 15,
+              justifyContent: 'center',
+              alignItems: 'center',
+            },
+            children: this.ui.Text({
+              text: this.ui.bindingManager.playerDataBinding.binding.derive((pd: any) => {
+                const level = pd?.boosts?.[upgrade.id] || 0;
+                return level > 0 ? `Lv${level}` : '';
+              }),
+              style: {
+                fontSize: 14,
+                fontWeight: 'bold',
+                color: '#fff',
+                textAlign: 'center',
+              },
+            }),
+          }),
+        ],
+      });
+    }
+
+    /**
+     * Create the upgrade grid
+     */
+    private createUpgradeGrid(): UINodeType {
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          left: 70,
+          top: 70,
+          width: 920,
+          height: 580,
+        },
+        children: [
+          this.ui.View({
+            style: {
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 40,
+            },
+            children: ALL_UPGRADES.map((upgrade) =>
+              this.createUpgradeItem(upgrade)
+            ),
+          }),
+        ],
+      });
+    }
+
+    createUI(): UINodeType {
+      return this.ui.View({
+        style: {
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        },
+        children: [
+          // Background
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('background') || null,
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              top: 0,
+              left: 0,
+            },
+          }),
+          // Cards Container image as background
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('cards-container') || null,
+            style: {
+              position: 'absolute',
+              left: 40,
+              top: 40,
+              width: 980,
+              height: 640,
+            },
+          }),
+          // Upgrade grid
+          this.createUpgradeGrid(),
+          // Sidebar with common side menu
+          createSideMenu(this.ui, {
+            title: 'Upgrades',
+            customTextContent: [],
+            buttons: [],
+            bottomButton: {
+              label: 'Back',
+              onClick: () => {
+                if (this.onNavigate) this.onNavigate('menu');
+              },
+              disabled: false,
+            },
+            playSfx: this.playSfx,
+          }),
+          // Upgrade popup (conditionally rendered) - derive from UIState
+          ...(this.ui.UINode ? [this.ui.UINode.if(
+            this.ui.bindingManager.derive([BindingType.UIState], (state: any) => (state.upgrade?.selectedUpgradeId ?? null) !== null),
+            this.ui.View({
+              style: {
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                top: 0,
+                left: 0,
+              },
+              children: this.createUpgradePopup(),
+            })
+          )] : []),
+        ],
+      });
+    }
+
+    /**
+     * Create the upgrade popup
+     */
+    private createUpgradePopup(): UINodeType {
+
+      return createPopup({
+        ui: this.ui,
+        title: 'Upgrade',
+        description: this.ui.bindingManager.derive([BindingType.PlayerData, BindingType.UIState], (pd: any, state: any) => {
+          const upgradeId = state.upgrade?.selectedUpgradeId ?? null;
+          const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
+          if (!upgrade) return '';
+          const currentLevel = pd?.boosts?.[upgradeId] || 0;
+          const coins = pd?.coins ?? 0;
+
+          if (currentLevel >= 6) {
+            return `${upgrade.name}\n${upgrade.description}\n\nLevel: ${currentLevel}/6 (MAX)\nYour coins: ${coins}`;
+          }
+
+          const nextLevelCost = upgrade.costs[currentLevel];
+          return `${upgrade.name}\n${upgrade.description}\n\nLevel: ${currentLevel}/6\nNext upgrade cost: ${nextLevelCost} coins\nYour coins: ${coins}`;
+        }),
+        buttons: [
+          {
+            label: 'Upgrade',
+            onClick: () => {
+              const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+              const upgradeId = currentState.upgrade?.selectedUpgradeId ?? null;
+              if (!upgradeId) return;
+              if (this.onUpgrade) {
+                this.onUpgrade(upgradeId);
+              }
+              // Update UIState binding
+              this.ui.bindingManager.setBinding(BindingType.UIState, {
+                ...currentState,
+                upgrade: {
+                  ...currentState.upgrade,
+                  selectedUpgradeId: null
+                }
+              });
+            },
+            color: 'green',
+            disabled: this.ui.bindingManager.derive([BindingType.PlayerData, BindingType.UIState], (pd: any, state: any) => {
+              const upgradeId = state.upgrade?.selectedUpgradeId ?? null;
+              if (!upgradeId) return true;
+              const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
+              if (!upgrade) return true;
+              const currentLevel = pd?.boosts?.[upgradeId] || 0;
+              if (currentLevel >= 6) return true;
+
+              const nextLevelCost = upgrade.costs[currentLevel];
+              const coins = pd?.coins ?? 0;
+              return coins < nextLevelCost;
+            }),
+          },
+          {
+            label: 'Close',
+            onClick: () => {
+              const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+              // Update UIState binding
+              this.ui.bindingManager.setBinding(BindingType.UIState, {
+                ...currentState,
+                upgrade: {
+                  ...currentState.upgrade,
+                  selectedUpgradeId: null
+                }
+              });
+            },
+            color: 'default',
+          },
+        ],
+        playSfx: this.playSfx,
+      });
+    }
+
+    dispose(): void {
+      // Nothing to clean up
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\common\MissionRenderer.ts ====================
+
+  /**
+   * Mission Renderer Component
+   * Creates reactive mission cards for the mission selection screen
+   */
+
+
+  /**
+   * Mission card dimensions
+   */
+  export const MISSION_DIMENSIONS = {
+    width: 290,
+    height: 185,
+  };
+
+  /**
+   * Props for reactive mission component
+   */
+  export interface ReactiveMissionRendererProps {
+    slotIndex: number;
+    missionsPerPage: number;
+    onClick?: (missionId: string) => void;
+  }
+
+  /**
+   * Create a reactive mission component that updates based on bindings
+   */
+  export function createReactiveMissionComponent(ui: UIMethodMappings, props: ReactiveMissionRendererProps): UINodeType {
+    const {
+      slotIndex,
+      missionsPerPage,
+      onClick,
+    } = props;
+
+    // Track mission data for click handler
+    let trackedMission: MissionDisplay | null = null;
+
+    // Mission card positions
+    const positions = {
+      image: { x: 16, y: 16 },
+      text: { x: 97, y: 10 },
+    };
+
+    const cardWidth = MISSION_DIMENSIONS.width;
+    const cardHeight = MISSION_DIMENSIONS.height;
+    const beastSize = 70;
+
+    // Create a single binding for all text content
+    const missionTextBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+      const offset: number = uiState.missions?.scrollOffset ?? 0;
+      const pageStart = offset * missionsPerPage;
+      const missionIndex = pageStart + slotIndex;
+      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
+
+      // Track the mission for click handler
+      trackedMission = mission;
+
+      if (!mission) return '';
+
+      // Format difficulty nicely (capitalize first letter)
+      const formattedDifficulty = mission.difficulty.charAt(0).toUpperCase() + mission.difficulty.slice(1);
+
+      // Combine all text with line breaks
+      return `${mission.name}\nLevel ${mission.level} - ${formattedDifficulty}\n\n${mission.description}`;
+    });
+
+    const missionImageBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+      const offset: number = uiState.missions?.scrollOffset ?? 0;
+      const pageStart = offset * missionsPerPage;
+      const missionIndex = pageStart + slotIndex;
+      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
+
+      if (!mission) return null;
+
+      // Determine mission background image based on affinity
+      let missionImageName = 'forest-mission';
+      if (mission.affinity === 'Water') missionImageName = 'water-mission';
+      else if (mission.affinity === 'Fire') missionImageName = 'fire-mission';
+      else if (mission.affinity === 'Sky') missionImageName = 'sky-mission';
+      else if (mission.affinity === 'Boss') missionImageName = 'boss-mission';
+
+      return ui.assetIdToImageSource?.(missionImageName) ?? null;
+    });
+
+    const beastImageBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+      const offset: number = uiState.missions?.scrollOffset ?? 0;
+      const pageStart = offset * missionsPerPage;
+      const missionIndex = pageStart + slotIndex;
+      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
+
+      if (!mission || !mission.beastId) return null;
+
+      const beastAssetId = mission.beastId.toLowerCase().replace(/\s+/g, '-');
+      if (!beastAssetId) return null; // Don't try to load empty asset IDs
+      return ui.assetIdToImageSource?.(beastAssetId) ?? null;
+    });
+
+    const opacityBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+      const offset: number = uiState.missions?.scrollOffset ?? 0;
+      const pageStart = offset * missionsPerPage;
+      const missionIndex = pageStart + slotIndex;
+      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
+      return mission?.isAvailable ? 1 : 0.4;
+    });
+
+    const lockOverlayOpacityBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+      const offset: number = uiState.missions?.scrollOffset ?? 0;
+      const pageStart = offset * missionsPerPage;
+      const missionIndex = pageStart + slotIndex;
+      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
+      const lockOpacity = (mission && !mission.isAvailable) ? 1 : 0;
+
+      // Debug log for first 3 slots
+      if (slotIndex < 3 && mission) {
+        console.log(`[MissionRenderer] Slot ${slotIndex} (${mission.id}): isAvailable=${mission.isAvailable}, lockOpacity=${lockOpacity}`);
+      }
+
+      return lockOpacity;
+    });
+
+    // Render all layers - use opacity to hide/show
+    const children = [
+      // Mission background image
+      ui.Image({
+        source: missionImageBinding,
+        style: {
+          position: 'absolute',
+          width: cardWidth,
+          height: cardHeight,
+          top: 0,
+          left: 0,
+        },
+      }),
+
+      // Beast image
+      ui.Image({
+        source: beastImageBinding,
+        style: {
+          position: 'absolute',
+          width: beastSize,
+          height: beastSize,
+          left: positions.image.x,
+          top: positions.image.y,
+          opacity: opacityBinding,
+        },
+      }),
+
+      // All mission text (name, level, difficulty, description)
+      ui.Text({
+        text: missionTextBinding,
+        numberOfLines: 8,
+        style: {
+          position: 'absolute',
+          left: positions.text.x,
+          top: positions.text.y,
+          width: cardWidth - positions.text.x - 10,
+          fontSize: DIMENSIONS.fontSize.sm,
+          color: COLORS.textPrimary,
+          lineHeight: 16,
+        },
+      }),
+
+      // Lock overlay (for unavailable missions)
+      ui.View({
+        style: {
+          position: 'absolute',
+          width: cardWidth,
+          height: cardHeight,
+          top: 0,
+          left: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.6)',
+          opacity: lockOverlayOpacityBinding,
+        },
+        children: ui.Text({
+          text: '🔒',
+          style: {
+            position: 'absolute',
+            left: cardWidth / 2 - 15,
+            top: cardHeight / 2 - 15,
+            fontSize: 30,
+            color: COLORS.textPrimary,
+          },
+        }),
+      }),
+    ];
+
+    // Wrap in pressable container
+    return ui.Pressable({
+      onClick: () => {
+        if (trackedMission && trackedMission.isAvailable && onClick) {
+          onClick(trackedMission.id);
+        }
+      },
+      style: {
+        width: cardWidth,
+        height: cardHeight,
+        position: 'relative',
+        opacity: opacityBinding,
+      },
+      children: children.filter(child => child !== undefined && child !== null),
+    });
+  }
+
+  // ==================== bloombeasts\ui\screens\MissionScreen.ts ====================
+
+  /**
+   * Mission Screen - Refactored with UI Component System
+   */
+
+
+  // MissionScreen-specific constants
+  const cardsUIContainerDimensions = {
+    width: 950,
+    height: 640,
+  };
+
+  const cardsUIContainerPosition: SimplePosition = {
+    x: 103,
+    y: 41,
+  };
+
+  export interface MissionScreenProps {
+    ui: UIMethodMappings;
+    onMissionSelect?: (missionId: string) => void;
+    onNavigate?: (screen: string) => void;
+    onRenderNeeded?: () => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Unified Mission Screen that works on both platforms
+   */
+  export class MissionScreen {
+    // UI methods (injected)
+    private ui: UIMethodMappings;
+
+    // Configuration
+    private missionsPerRow: number = 3;
+    private rowsPerPage: number = 3;
+
+    // Callbacks
+    private onMissionSelect?: (missionId: string) => void;
+    private onNavigate?: (screen: string) => void;
+    private onRenderNeeded?: () => void;
+    private playSfx?: (sfxId: string) => void;
+
+    constructor(props: MissionScreenProps) {
+      this.ui = props.ui;
+      this.onMissionSelect = props.onMissionSelect;
+      this.onNavigate = props.onNavigate;
+      this.onRenderNeeded = props.onRenderNeeded;
+      this.playSfx = props.playSfx;
+    }
+
+    /**
+     * Create the missions UI
+     */
+    createUI(): UINodeType {
+      return this.ui.View({
+        style: {
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        },
+        children: [
+          // Background image (full screen)
+          this.createBackground(),
+
+          // Main content area with mission grid
+          this.createMainContent(),
+
+          // Side menu with controls (absolutely positioned)
+          this.createSideMenu(),
+        ],
+      });
+    }
+
+    /**
+     * Create full-screen background image
+     */
+    private createBackground(): UINodeType {
+      return this.ui.Image({
+        source: this.ui.assetIdToImageSource?.('background') || null,
+        style: {
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          top: 0,
+          left: 0,
+        },
+      });
+    }
+
+    /**
+     * Create main content area with mission grid
+     */
+    private createMainContent(): UINodeType {
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          left: cardsUIContainerPosition.x,
+          top: cardsUIContainerPosition.y,
+          width: cardsUIContainerDimensions.width,
+          height: cardsUIContainerDimensions.height,
+        },
+        children: [
+          // Cards container background image
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('cards-container') || null,
+            style: {
+              position: 'absolute',
+              width: cardsUIContainerDimensions.width,
+              height: cardsUIContainerDimensions.height,
+              top: 0,
+              left: 0,
+            },
+          }),
+          // Content on top of container image
+          // Mission grid container with reactive missions
+          this.createMissionGrid(),
+        ],
+      });
+    }
+
+    /**
+     * Create a single mission slot using reactive mission component
+     */
+    private createMissionSlot(slotIndex: number, missionsPerPage: number, row: number, col: number): UINodeType {
+      const cardWidth = MISSION_DIMENSIONS.width;
+      const cardHeight = MISSION_DIMENSIONS.height;
+      const gapX = 12;
+      const gapY = 12;
+      const startX = 24;
+      const startY = 24;
+      const spacingX = cardWidth + gapX;
+      const spacingY = cardHeight + gapY;
+      const x = startX + col * spacingX;
+      const y = startY + row * spacingY;
+
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          left: x,
+          top: y,
+        },
+        children: createReactiveMissionComponent(this.ui, {
+          slotIndex,
+          missionsPerPage,
+          onClick: (missionId: string) => {
+            if (this.onMissionSelect) {
+              this.onMissionSelect(missionId);
+            }
+          },
+        }),
+      });
+    }
+
+
+    /**
+     * Create the mission grid using single binding (Horizon-compatible)
+     */
+    private createMissionGrid(): UINodeType {
+      const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+
+      return this.ui.View({
+        style: {
+          position: 'relative',
+          paddingLeft: 4,
+          paddingTop: 4,
+          width: cardsUIContainerDimensions.width,
+          height: cardsUIContainerDimensions.height,
+        },
+        children: [
+          // Mission grid - pre-create all slots
+          this.ui.View({
+            style: {
+              position: 'relative',
+              width: '100%',
+              height: '100%',
+            },
+            children: Array.from({ length: this.rowsPerPage }, (_, rowIndex) =>
+              Array.from({ length: this.missionsPerRow }, (_, colIndex) => {
+                const slotIndex = rowIndex * this.missionsPerRow + colIndex;
+                return this.createMissionSlot(slotIndex, missionsPerPage, rowIndex, colIndex);
+              })
+            ).flat(),
+          }),
+
+          // Empty state message (only show when no missions, render on top)
+          ...(this.ui.UINode ? [this.ui.UINode.if(
+            this.ui.bindingManager.derive([BindingType.Missions], (missions: MissionDisplay[]) => {
+              return missions.length === 0 ? true : false;
+            }),
+            this.ui.View({
+              style: {
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                justifyContent: 'center',
+                alignItems: 'center',
+                top: 0,
+                left: 0,
+              },
+              children: this.ui.Text({
+                text: 'No missions available yet.',
+                style: {
+                  fontSize: DIMENSIONS.fontSize.xl,
+                  color: COLORS.textSecondary,
+                },
+              }),
+            })
+          )] : []),
+        ],
+      });
+    }
+
+
+    /**
+     * Create side menu with controls
+     */
+    private createSideMenu(): UINodeType {
+      const completionText = this.ui.bindingManager.derive([BindingType.Missions], (missions: MissionDisplay[]) => {
+        const completedCount = missions.filter((m: MissionDisplay) => m.isCompleted).length;
+        return `${missionEmoji} ${completedCount}/${missions.length}`;
+      });
+
+      return createSideMenu(this.ui, {
+        title: 'Missions',
+        customTextContent: [
+          createTextRow(this.ui, completionText as any, 0),
+        ],
+        buttons: [
+          {
+            label: 'Up',
+            onClick: () => {
+              const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+              // Reactive disabled state prevents invalid scrolling, so just decrement
+              this.ui.bindingManager.setBinding(BindingType.UIState, {
+                ...currentState,
+                missions: {
+                  ...currentState.missions,
+                  scrollOffset: (currentState.missions?.scrollOffset ?? 0) - 1
+                }
+              });
+            },
+            disabled: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+              const offset: number = uiState.missions?.scrollOffset ?? 0;
+              return offset <= 0 ? true : false;
+            }),
+            yOffset: 0,
+          },
+          {
+            label: 'Down',
+            onClick: () => {
+              const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+              // Reactive disabled state prevents invalid scrolling, so just increment
+              this.ui.bindingManager.setBinding(BindingType.UIState, {
+                ...currentState,
+                missions: {
+                  ...currentState.missions,
+                  scrollOffset: (currentState.missions?.scrollOffset ?? 0) + 1
+                }
+              });
+            },
+            disabled: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+              const offset: number = uiState.missions?.scrollOffset ?? 0;
+              const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+              const totalPages = Math.ceil(missions.length / missionsPerPage);
+              return offset >= totalPages - 1 ? true : false;
+            }),
+            yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
+          },
+        ],
+        bottomButton: {
+          label: 'Back',
+          onClick: () => {
+            if (this.onNavigate) {
+              this.onNavigate('menu');
+            }
+          },
+          disabled: false,
+        },
+        playSfx: this.playSfx,
+      });
+    }
+
+    /**
+     * Cleanup
+     */
+    dispose(): void {
+      // Nothing to clean up
+    }
+  }
+
+  // ==================== bloombeasts\engine\utils\combatHelpers.ts ====================
+
+  /**
+   * Combat Helper Utilities
+   */
+
+
+  /**
+   * Calculate damage after applying modifiers
+   */
+  export function calculateDamage(
+    baseDamage: number,
+    attacker: BloomBeastInstance,
+    defender: BloomBeastInstance
+  ): number {
+    let damage = baseDamage;
+
+    // Check for damage amplification on attacker
+    const ampEffect = attacker.statusEffects?.find(e => e.type === 'damage-amp');
+    if (ampEffect) {
+      damage = Math.floor(damage * (ampEffect.value || 1));
+    }
+
+    // Check for damage reduction on defender
+    const reduction = defender.statusEffects?.find(e => e.type === 'damage-reduction');
+    if (reduction) {
+      damage = Math.max(0, damage - (reduction.value || 0));
+    }
+
+    return damage;
+  }
+
+  /**
+   * Check if a beast can attack
+   */
+  export function canAttack(beast: BloomBeastInstance): boolean {
+    // Check summoning sickness
+    if (beast.summoningSickness) {
+      return false;
+    }
+
+    // Counter checks removed
+
+    // Check attack prevention effects
+    const preventAttack = beast.statusEffects?.find(e => e.type === 'prevent-attack');
+    if (preventAttack) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Get valid attack targets for a beast
+   */
+  export function getValidTargets(
+    attacker: BloomBeastInstance,
+    gameState: GameState,
+    attackerPlayer: number
+  ): BloomBeastInstance[] {
+    const opponentPlayer = attackerPlayer === 0 ? 1 : 0;
+    const opponent = gameState.players[opponentPlayer];
+
+    const targets: BloomBeastInstance[] = [];
+
+    // Check for taunt effects
+    const allOpponentBeasts = getAllBeasts(opponent.field);
+    const taunters = allOpponentBeasts.filter(b =>
+      b.statusEffects?.some(e => e.type === 'taunt')
+    );
+
+    if (taunters.length > 0) {
+      return taunters;
+    }
+
+    // Otherwise all alive opponent beasts are valid targets
+    return getAliveBeasts(opponent.field);
+  }
+
+  /**
+   * Check if a beast has a specific ability effect
+   */
+  export function hasAbilityEffect(
+    beast: BloomBeastInstance,
+    effectType: string
+  ): boolean {
+    return beast.statusEffects?.some(e => e.type === effectType) || false;
+  }
+
+  /**
+   * Apply a status effect to a beast
+   */
+  export function applyStatusEffect(
+    beast: BloomBeastInstance,
+    effect: AbilityEffect
+  ): void {
+    if (!beast.statusEffects) {
+      beast.statusEffects = [];
+    }
+
+    // Check for immunity
+    if (hasAbilityEffect(beast, 'immunity')) {
+      Logger.debug(`${beast.cardId} is immune to status effects`);
+      return;
+    }
+
+    beast.statusEffects.push({
+      type: effect.type,
+      value: (effect as any).value,
+      duration: (effect as any).duration,
+      turnsRemaining: getEffectDuration((effect as any).duration),
+    });
+  }
+
+  /**
+   * Get effect duration in turns
+   */
+  function getEffectDuration(duration: string): number {
+    switch (duration) {
+      case 'end-of-turn':
+        return 1;
+      case 'start-of-next-turn':
+        return 1;
+      case 'next-attack':
+        return -1; // Special handling needed
+      case 'permanent':
+        return 999;
+      case 'while-on-field':
+        return 999;
+      default:
+        return 1;
+    }
+  }
+
+  /**
+   * Remove expired status effects
+   */
+  export function cleanupStatusEffects(beast: BloomBeastInstance): void {
+    if (!beast.statusEffects) return;
+
+    beast.statusEffects = beast.statusEffects.filter(effect => {
+      if (effect.turnsRemaining === undefined) return true;
+      return effect.turnsRemaining > 0;
+    });
+  }
+
+  /**
+   * Decrease status effect durations
+   */
+  export function tickStatusEffects(beast: BloomBeastInstance): void {
+    if (!beast.statusEffects) return;
+
+    beast.statusEffects.forEach(effect => {
+      if (effect.turnsRemaining !== undefined && effect.turnsRemaining > 0) {
+        effect.turnsRemaining--;
+      }
+    });
+  }
+
+  /**
+   * Check if a position is adjacent
+   */
+  export function isAdjacent(pos1: number, pos2: number): boolean {
+    return Math.abs(pos1 - pos2) === 1;
+  }
+
+  /**
+   * Get adjacent positions
+   */
+  export function getAdjacentPositions(position: number): number[] {
+    const adjacent: number[] = [];
+    if (position > 0) adjacent.push(position - 1);
+    if (position < FIELD_SIZE - 1) adjacent.push(position + 1);
+    return adjacent;
+  }
+
+  /**
+   * Check if player has lost (no beasts on field and no cards in hand)
+   */
+  export function hasPlayerLost(player: Player): boolean {
+    const hasFieldBeasts = getAliveBeasts(player.field).length > 0;
+    const hasPlayableCards = player.hand.length > 0 || player.deck.length > 0;
+
+    return !hasFieldBeasts && !hasPlayableCards;
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\types.ts ====================
+
+  /**
+   * Shared types and constants for Battle Screen components
+   */
+
+
+  // Re-export standardCardDimensions from dimensions.ts to avoid duplication
+
+  /**
+   * Card dimensions (battle-specific)
+   */
+
+  export const trapCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  export const buffCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  export const habitatShiftCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  /**
+   * Game dimensions
+   */
+  export const gameDimensions = {
+    panelWidth: 1280,
+    panelHeight: 720,
+  };
+
+  /**
+   * Battle board asset positions (from canvas version)
+   */
+  export const battleBoardAssetPositions = {
+    playerOne: {
+      beastOne: { x: 170, y: 50 },
+      beastTwo: { x: 535, y: 50 },
+      beastThree: { x: 900, y: 50 },
+      trapOne: { x: 120, y: 240 },
+      trapTwo: { x: 590, y: 240 },
+      trapThree: { x: 1060, y: 240 },
+      buffOne: { x: 20, y: 50 },
+      buffTwo: { x: 20, y: 193 },
+      health: { x: 30, y: 10 },
+      nectar: { x: 930, y: 10 },
+      deckCount: { x: 1150, y: 10 },
+    },
+    playerTwo: {
+      beastOne: { x: 170, y: 390 },
+      beastTwo: { x: 535, y: 390 },
+      beastThree: { x: 900, y: 390 },
+      trapOne: { x: 120, y: 347 },
+      trapTwo: { x: 590, y: 347 },
+      trapThree: { x: 1060, y: 347 },
+      buffOne: { x: 1160, y: 477 },
+      buffTwo: { x: 1160, y: 587 },
+      health: { x: 30, y: 680 },
+      nectar: { x: 930, y: 680 },
+      deckCount: { x: 1150, y: 680 },
+    },
+    habitatZone: { x: 330, y: 293 },
+    playOneInfoPosition: { x: 640, y: 20 },
+    playTwoInfoPosition: { x: 640, y: 680 },
+  };
+
+  /**
+   * Component props interface for battle components
+   */
+  export interface BattleComponentProps {
+    ui: UIMethodMappings;
+  }
+
+  /**
+   * Extended props for components that need callbacks
+   */
+  export interface BattleComponentWithCallbacks extends BattleComponentProps {
+    onAction?: (action: string) => void;
+    showPlayedCard?: (card: any, callback?: () => void) => void;
+    onCardDetailSelected?: (card: any) => void;
+  }
+
+  /**
+   * Props for PlayerHand component
+   */
+  export interface PlayerHandProps extends BattleComponentProps {
+    getBattleDisplayValue: () => any | null; // Function to get current battle display value for onClick handlers
+    onAction?: (action: string) => void;
+    onShowHandChange?: (newValue: boolean) => void;
+    onScrollOffsetChange?: (newValue: number) => void;
+    onRenderNeeded?: () => void;
+    showPlayedCard?: (card: any, callback?: () => void) => void;
+  }
+
+  /**
+   * Props for BattleSideMenu component
+   */
+  export interface BattleSideMenuProps extends BattleComponentProps {
+    getIsPlayerTurn: () => boolean; // Function to get current turn state
+    getHasAttackableBeasts: () => boolean; // Function to check if player has beasts that can attack
+    onAction?: (action: string) => void;
+    onStopTurnTimer?: () => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Props for InfoDisplays component
+   */
+  export interface InfoDisplaysProps extends BattleComponentProps {
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\BattleBackground.ts ====================
+
+  /**
+   * Battle background and playboard rendering
+   */
+
+
+  export class BattleBackground {
+    private ui: BattleComponentProps['ui'];
+
+    constructor(props: BattleComponentProps) {
+      this.ui = props.ui;
+    }
+
+    /**
+     * Create full-screen background - assets preload automatically
+     */
+    createBackground(): UINodeType {
+      return this.ui.Image({
+        source: this.ui.assetIdToImageSource?.('background') || null,
+        style: {
+          position: 'absolute',
+          width: gameDimensions.panelWidth,
+          height: gameDimensions.panelHeight,
+          top: 0,
+          left: 0,
+        },
+      });
+    }
+
+    /**
+     * Create playboard overlay image - assets preload automatically
+     */
+    createPlayboard(): UINodeType {
+      return this.ui.Image({
+        source: this.ui.assetIdToImageSource?.('playboard') || null,
+        style: {
+          position: 'absolute',
+          width: gameDimensions.panelWidth,
+          height: gameDimensions.panelHeight,
+          top: 0,
+          left: 0,
+        },
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\BeastField.ts ====================
+
+  /**
+   * Beast field rendering - 3 slots per player
+   */
+
+
+  export class BeastField {
+    private ui: BattleComponentWithCallbacks['ui'];
+    private onAction?: (action: string) => void;
+    private showPlayedCard?: (card: any, callback?: () => void) => void;
+
+    constructor(props: BattleComponentWithCallbacks) {
+      this.ui = props.ui;
+      this.onAction = props.onAction;
+      this.showPlayedCard = props.showPlayedCard;
+    }
+
+    /**
+     * Create static beast card structure with reactive properties
+     * All images, text, etc. use bindings instead of being dynamically created
+     */
+    private createBeastCardStructure(player: 'player' | 'opponent', slotIndex: number): UINodeType[] {
+      const cardWidth = standardCardDimensions.width;
+      const cardHeight = standardCardDimensions.height;
+      const beastImageWidth = 185;
+      const beastImageHeight = 185;
+
+      const positions = {
+        beastImage: { x: 12, y: 13 },
+        cost: { x: 20, y: 10 },
+        affinity: { x: 175, y: 7 },
+        name: { x: 105, y: 13 },
+        attack: { x: 20, y: 176 },
+        health: { x: 188, y: 176 },
+      };
+
+      return [
+        // Layer 1: Beast artwork image - reactive source
+        this.ui.Image({
+          source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+              if (!state) return null;
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              if (!beast) return null;
+              const baseId = beast.id?.replace(/-\d+-\d+$/, '') || beast.name.toLowerCase().replace(/\s+/g, '-');
+              return this.ui.assetIdToImageSource?.(baseId) || null;
+            }),
+          style: {
+            width: beastImageWidth,
+            height: beastImageHeight,
+            position: 'absolute',
+            top: positions.beastImage.y,
+            left: positions.beastImage.x,
+          },
+        }),
+
+        // Layer 2: Base card frame
+        this.ui.Image({
+          source: this.ui.assetIdToImageSource?.('base-card') || null,
+          style: {
+            width: cardWidth,
+            height: cardHeight,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          },
+        }),
+
+        // Layer 3: Affinity icon - reactive source
+        this.ui.Image({
+          source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+              if (!state) return null;
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              if (!beast || !beast.affinity) return null;
+              return this.ui.assetIdToImageSource?.(`${beast.affinity.toLowerCase()}-icon`) || null;
+            }
+          ),
+          style: {
+            width: 30,
+            height: 30,
+            position: 'absolute',
+            top: positions.affinity.y,
+            left: positions.affinity.x,
+          },
+        }),
+
+        // Layer 4: Card name - reactive text
+        this.ui.Text({
+          text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+              if (!state) return '';
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              return beast?.name || '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.name.y,
+            left: 0,
+            width: cardWidth,
+            fontSize: 14,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 5: Cost - reactive text
+        this.ui.Text({
+          text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+              if (!state) return '';
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              return beast && beast.cost !== undefined ? String(beast.cost) : '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.cost.y,
+            left: positions.cost.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 6: Attack - reactive text
+        this.ui.Text({
+          text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+              if (!state) return '';
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              return beast ? String(beast.currentAttack ?? beast.baseAttack ?? 0) : '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.attack.y,
+            left: positions.attack.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 7: Health - reactive text
+        this.ui.Text({
+          text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+              if (!state) return '';
+              const field = player === 'player' ? state.playerField : state.opponentField;
+              const beast = field?.[slotIndex];
+              return beast ? String(beast.currentHealth ?? beast.baseHealth ?? 0) : '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.health.y,
+            left: positions.health.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Counter icons removed to reduce UI size
+      ];
+    }
+
+    /**
+     * Create beast field for a player - REACTIVE
+     * Creates 3 slots, bindings determine what's shown
+     */
+    createBeastField(player: 'player' | 'opponent'): UINodeType[] {
+      const positions = player === 'player'
+        ? battleBoardAssetPositions.playerTwo
+        : battleBoardAssetPositions.playerOne;
+      const slots = [positions.beastOne, positions.beastTwo, positions.beastThree];
+
+      // Create 3 beast slots
+      return slots.map((pos, index) => {
+        // All bindings must derive from this.battleDisplay, not from other derived bindings
+        return this.ui.View({
+          style: {
+            position: 'absolute',
+            left: pos.x,
+            top: pos.y,
+            width: standardCardDimensions.width,
+            height: standardCardDimensions.height,
+            // Hide slot if no beast - derive directly from battleDisplay
+            display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+                if (!state) return 'none';
+                const field = player === 'player' ? state.playerField : state.opponentField;
+                const beast = field?.[index];
+                return beast ? 'flex' : 'none';
+              }
+            ),
+          },
+          children: [
+            // Beast card - static structure with reactive properties
+            this.ui.Pressable({
+              onClick: () => {
+                // View card details only (selection removed)
+                this.onAction?.(`view-field-card-${player}-${index}`);
+              },
+              style: {
+                width: standardCardDimensions.width,
+                height: standardCardDimensions.height,
+                position: 'relative',
+              },
+              children: this.createBeastCardStructure(player, index),
+            }),
+
+            // Attack animation overlay - derive directly from battleDisplay
+            this.ui.View({
+              style: {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+                    const isAttacking = state?.attackAnimation?.attackerPlayer === player &&
+                                       state?.attackAnimation?.attackerIndex === index;
+                    const isTarget = state?.attackAnimation?.targetPlayer === player &&
+                                    state?.attackAnimation?.targetIndex === index;
+                    if (isAttacking) return 'rgba(0, 255, 0, 0.4)';
+                    if (isTarget) return 'rgba(255, 0, 0, 0.4)';
+                    return 'transparent';
+                  }
+                ),
+                borderRadius: 12,
+                display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+                    const isAttacking = state?.attackAnimation?.attackerPlayer === player &&
+                                       state?.attackAnimation?.attackerIndex === index;
+                    const isTarget = state?.attackAnimation?.targetPlayer === player &&
+                                    state?.attackAnimation?.targetIndex === index;
+                    return (isAttacking || isTarget) ? 'flex' : 'none';
+                  }
+                ),
+              },
+            }),
+
+            // Action icons overlay wrapper - always exists, visibility controlled by display
+            this.ui.View({
+              style: {
+                position: 'absolute',
+                left: 17,
+                top: 44,
+                width: 26,
+                height: 26,
+                // Hide when no beast or beast has summoning sickness
+                display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+                    if (!state) return 'none';
+                    const field = player === 'player' ? state.playerField : state.opponentField;
+                    const beast = field?.[index];
+                    if (!beast || beast.summoningSickness) return 'none';
+                    return 'flex';
+                  }
+                ),
+              },
+              children: this.ui.Image({
+                source: this.ui.assetIdToImageSource?.('icon-attack') || null,
+                style: { width: 26, height: 26 },
+              }),
+            }),
+          ],
+        });
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\TrapZone.ts ====================
+
+  /**
+   * Trap zone rendering - 3 slots per player
+   */
+
+
+  export class TrapZone {
+    private ui: BattleComponentWithCallbacks['ui'];
+    private onCardDetailSelected?: (card: any) => void;
+
+    constructor(props: BattleComponentWithCallbacks) {
+      this.ui = props.ui;
+      this.onCardDetailSelected = props.onCardDetailSelected;
+    }
+
+    /**
+     * Create trap zone for a player - REACTIVE
+     * Creates 3 slots, bindings determine what's shown
+     */
+    createTrapZone(player: 'player' | 'opponent'): UINodeType[] {
+      const positions = player === 'player'
+        ? battleBoardAssetPositions.playerTwo
+        : battleBoardAssetPositions.playerOne;
+      const trapSlots = [positions.trapOne, positions.trapTwo, positions.trapThree];
+
+      // Create 3 trap slots
+      return trapSlots.map((pos, index) => {
+        // Get trap card image source directly
+        const trapCardSource = this.ui.assetIdToImageSource?.('trap-card-playboard') || null;
+
+        return this.ui.View({
+          style: {
+            position: 'absolute',
+            left: pos.x,
+            top: pos.y,
+            width: trapCardDimensions.width,
+            height: trapCardDimensions.height,
+            // Hide slot if no trap - derive from battleDisplay
+            display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+              if (!state) return 'none';
+              const trapZone = player === 'player' ? state.playerTrapZone : state.opponentTrapZone;
+              const trap = trapZone?.[index];
+              return trap ? 'flex' : 'none';
+            }),
+          },
+          children: [
+            // Clickable wrapper for trap card
+            this.ui.Pressable({
+              onClick: () => {
+                // Only allow player to view their own trap cards
+                if (player === 'player') {
+                  console.log('[TrapZone] Player trap clicked, showing detail');
+                  // Get current trap at click time
+                  const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay) as BattleDisplay | null;
+                  if (state) {
+                    const trapZone = state?.playerTrapZone;
+                    const trap = trapZone?.[index];
+                    if (trap) {
+                      this.onCardDetailSelected?.(trap);
+                    }
+                  }
+                }
+              },
+              style: {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              },
+              children: [
+                // Trap card playboard image (face-down)
+                this.ui.Image({
+                  source: trapCardSource,
+                  style: {
+                    width: trapCardDimensions.width,
+                    height: trapCardDimensions.height,
+                  },
+                }),
+              ],
+            }),
+          ],
+        });
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\BuffZone.ts ====================
+
+  /**
+   * Buff zone rendering - 2 slots per player
+   */
+
+
+  export class BuffZone {
+    private ui: BattleComponentWithCallbacks['ui'];
+    private onCardDetailSelected?: (card: any) => void;
+
+    constructor(props: BattleComponentWithCallbacks) {
+      this.ui = props.ui;
+      this.onCardDetailSelected = props.onCardDetailSelected;
+    }
+
+    /**
+     * Create buff zone for a player - REACTIVE
+     * Creates 2 slots, bindings determine what's shown
+     */
+    createBuffZone(player: 'player' | 'opponent'): UINodeType[] {
+      const positions = player === 'player'
+        ? battleBoardAssetPositions.playerTwo
+        : battleBoardAssetPositions.playerOne;
+      const buffSlots = [positions.buffOne, positions.buffTwo];
+
+      // Create 2 buff slots
+      return buffSlots.map((pos, index) => {
+        // Get buff card template source directly
+        const buffCardSource = this.ui.assetIdToImageSource?.('buff-card-playboard') || null;
+
+        return this.ui.View({
+          style: {
+            position: 'absolute',
+            left: pos.x,
+            top: pos.y,
+            width: buffCardDimensions.width,
+            height: buffCardDimensions.height,
+            // Hide slot if no buff - derive from battleDisplay
+            display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+              if (!state) return 'none';
+              const buffZone = player === 'player' ? state.playerBuffZone : state.opponentBuffZone;
+              const buff = buffZone?.[index];
+              return buff ? 'flex' : 'none';
+            }),
+          },
+          children: [
+            // Clickable wrapper for buff card
+            this.ui.Pressable({
+              onClick: () => {
+                console.log(`[BuffZone] Buff card clicked: ${player}-${index}, showing detail`);
+                // Get current buff at click time
+                const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay);
+                if (state && typeof state === 'object' && 'playerBuffZone' in state) {
+                  const buffZone = player === 'player' ? (state as any).playerBuffZone : (state as any).opponentBuffZone;
+                  const buff = buffZone?.[index];
+                  if (buff) {
+                    this.onCardDetailSelected?.(buff);
+                  }
+                }
+              },
+              style: {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+              },
+              children: [
+                // Buff card playboard template (face-up)
+                this.ui.Image({
+                  source: buffCardSource,
+                  style: {
+                    width: buffCardDimensions.width,
+                    height: buffCardDimensions.height,
+                  },
+                }),
+
+                // Buff card artwork image wrapper - always exists, image source is reactive
+                this.ui.View({
+                  style: {
+                    position: 'absolute',
+                    top: (buffCardDimensions.height - 100) / 2,
+                    left: (buffCardDimensions.width - 100) / 2,
+                    width: 100,
+                    height: 100,
+                  },
+                  children: this.ui.Image({
+                    source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+                      if (!state) return null;
+                      const buffZone = player === 'player' ? state?.playerBuffZone : state?.opponentBuffZone;
+                      const buff = buffZone?.[index];
+                      if (!buff) return null;
+                      return this.ui.assetIdToImageSource?.(buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-'));
+                    }),
+                    style: {
+                      width: 100,
+                      height: 100,
+                    },
+                  }),
+                }),
+
+                // Golden glow effect
+                this.ui.View({
+                  style: {
+                    position: 'absolute',
+                    top: -3,
+                    left: -3,
+                    right: -3,
+                    bottom: -3,
+                    borderWidth: 3,
+                    borderColor: '#FFD700',
+                    borderRadius: 8,
+                    shadowColor: '#FFD700',
+                    shadowRadius: 8,
+                  },
+                }),
+              ],
+            }),
+          ],
+        });
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\HabitatZone.ts ====================
+
+  /**
+   * Habitat zone rendering (center of board)
+   */
+
+
+  export class HabitatZone {
+    private ui: BattleComponentWithCallbacks['ui'];
+    private onCardDetailSelected?: (card: any) => void;
+
+    constructor(props: BattleComponentWithCallbacks) {
+      this.ui = props.ui;
+      this.onCardDetailSelected = props.onCardDetailSelected;
+    }
+
+    /**
+     * Create habitat zone - REACTIVE
+     * Derives habitat from battleDisplay binding
+     */
+    createHabitatZone(): UINodeType {
+      const pos = battleBoardAssetPositions.habitatZone;
+
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          left: pos.x,
+          top: pos.y,
+          width: habitatShiftCardDimensions.width,
+          height: habitatShiftCardDimensions.height,
+          // Hide if no habitat
+          display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) =>
+            state?.habitatZone ? 'flex' : 'none'
+          ),
+        },
+        children: [
+          // Clickable wrapper for entire habitat card
+          this.ui.Pressable({
+            onClick: () => {
+              console.log('[HabitatZone] Habitat card clicked, showing detail');
+              // Get current habitat at click time
+              const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay);
+              if (state && typeof state === 'object' && 'habitatZone' in state) {
+                const habitat = (state as any).habitatZone;
+                if (habitat) {
+                  const habitatWithType = { ...habitat, type: 'Habitat' };
+                  this.onCardDetailSelected?.(habitatWithType);
+                }
+              }
+            },
+            style: {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            },
+            children: [
+              // Habitat artwork image wrapper - always exists, image source is reactive
+              this.ui.View({
+                style: {
+                  position: 'absolute',
+                  top: (habitatShiftCardDimensions.height - 70) / 2,
+                  left: (habitatShiftCardDimensions.width - 70) / 2,
+                  width: 70,
+                  height: 70,
+                },
+                children: this.ui.Image({
+                  source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+                    if (!state?.habitatZone) return null;
+                    const habitat = state?.habitatZone;
+                    return this.ui.assetIdToImageSource?.(habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-'));
+                  }),
+                  style: {
+                    width: 70,
+                    height: 70,
+                  },
+                }),
+              }),
+
+              // Green glow effect
+              this.ui.View({
+                style: {
+                  position: 'absolute',
+                  top: -4,
+                  left: -4,
+                  right: -4,
+                  bottom: -4,
+                  borderWidth: 4,
+                  borderColor: '#4caf50',
+                  borderRadius: 8,
+                  shadowColor: '#4caf50',
+                  shadowRadius: 10,
+                },
+              }),
+            ],
+          }),
+        ],
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\PlayerHand.ts ====================
+
+  /**
+   * Player hand overlay - 5 card slots with scroll and toggle
+   */
+
+
+  export class PlayerHand {
+    private ui: PlayerHandProps['ui'];
+    private getBattleDisplayValue: () => any | null;
+    private onAction?: (action: string) => void;
+    private onShowHandChange?: (newValue: boolean) => void;
+    private onScrollOffsetChange?: (newValue: number) => void;
+    private onRenderNeeded?: () => void;
+    private showPlayedCard?: (card: any, callback?: () => void) => void;
+
+    // Combined binding to avoid creating multiple multi-binding derives
+    private handDataBinding: any;
+
+    constructor(props: PlayerHandProps) {
+      this.ui = props.ui;
+      this.getBattleDisplayValue = props.getBattleDisplayValue;
+      this.onAction = props.onAction;
+      this.onShowHandChange = props.onShowHandChange;
+      this.onScrollOffsetChange = props.onScrollOffsetChange;
+      this.onRenderNeeded = props.onRenderNeeded;
+      this.showPlayedCard = props.showPlayedCard;
+    }
+
+    /**
+     * Create static card structure with reactive properties for hand slot
+     * Handles all card types: Bloom, Magic, Trap, Buff, Habitat
+     */
+    private createHandCardStructure(slotIndex: number, cardsPerPage: number): UINodeType[] {
+      const cardWidth = standardCardDimensions.width;
+      const cardHeight = standardCardDimensions.height;
+      const beastImageWidth = 185;
+      const beastImageHeight = 185;
+
+      const positions = {
+        beastImage: { x: 12, y: 13 },
+        cost: { x: 20, y: 10 },
+        affinity: { x: 175, y: 7 },
+        name: { x: 105, y: 13 },
+        ability: { x: 21, y: 212 },
+        attack: { x: 20, y: 176 },
+        health: { x: 188, y: 176 },
+      };
+
+      return [
+        // Layer 1: Card/Beast artwork image
+        this.ui.Image({
+          source: this.ui.bindingManager.derive(
+            [BindingType.BattleDisplay, BindingType.UIState],
+            ( display: BattleDisplay | null, uiState: UIState) => {
+              if (!display || !display.playerHand) return null;
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card) return null;
+              const baseId = card.id?.replace(/-\d+-\d+$/, '') || card.name.toLowerCase().replace(/\s+/g, '-');
+              return this.ui.assetIdToImageSource?.(baseId) || null;
+            }
+          ),
+          style: {
+            width: beastImageWidth,
+            height: beastImageHeight,
+            position: 'absolute',
+            top: positions.beastImage.y,
+            left: positions.beastImage.x,
+          },
+        }),
+
+        // Layer 2: Base card frame
+        this.ui.Image({
+          source: this.ui.assetIdToImageSource?.('base-card') || null,
+          style: {
+            width: cardWidth,
+            height: cardHeight,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          },
+        }),
+
+        // Layer 3: Type-specific template overlay - reactive source
+        this.ui.Image({
+          source: this.ui.bindingManager.derive(
+            [BindingType.BattleDisplay, BindingType.UIState],
+            ( display: BattleDisplay | null, uiState: UIState) => {
+              if (!display || !display.playerHand) return null;
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card || card.type === 'Bloom') return null;
+
+              let templateKey = '';
+              if (card.type === 'Habitat' && card.affinity) {
+                templateKey = `${card.affinity.toLowerCase()}-habitat`;
+              } else {
+                templateKey = `${card.type.toLowerCase()}-card`;
+              }
+              return this.ui.assetIdToImageSource?.(templateKey) || null;
+            }
+          ),
+          style: {
+            width: cardWidth,
+            height: cardHeight,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          },
+        }),
+
+
+        // Layer 4: Affinity icon (for Bloom cards) - reactive source
+        this.ui.Image({
+          source: this.ui.bindingManager.derive(
+            [BindingType.BattleDisplay, BindingType.UIState],
+            ( display: BattleDisplay | null, uiState: UIState) => {
+              if (!display || !display.playerHand) return null;
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card || card.type !== 'Bloom' || !card.affinity) return null;
+              return this.ui.assetIdToImageSource?.(`${card.affinity.toLowerCase()}-icon`) || null;
+            }
+          ),
+          style: {
+            width: 30,
+            height: 30,
+            position: 'absolute',
+            top: positions.affinity.y,
+            left: positions.affinity.x,
+          },
+        }),
+
+        // Layer 5: Card name - reactive text
+        this.ui.Text({
+          text: this.ui.bindingManager.derive(
+            [BindingType.BattleDisplay, BindingType.UIState],
+            (display: BattleDisplay | null, uiState: UIState) => {
+              if (!display || !display.playerHand) return '';
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              return card?.name || '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.name.y,
+            left: 0,
+            width: cardWidth,
+            fontSize: 14,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 6: Cost
+        this.ui.Text({
+          text: this.ui.bindingManager.derive(
+            [BindingType.BattleDisplay, BindingType.UIState],
+            (display: BattleDisplay | null, uiState: UIState) => {
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+              if (!display || !display.playerHand) return '';
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              return card && card.cost !== undefined ? String(card.cost) : '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.cost.y,
+            left: positions.cost.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 7: Attack (for Bloom cards) - reactive text
+        this.ui.Text({
+          text: this.ui.bindingManager.derive(
+            [BindingType.BattleDisplay, BindingType.UIState],
+            (display: BattleDisplay | null, uiState: UIState) => {
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+              if (!display || !display.playerHand) return '';
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card || card.type !== 'Bloom') return '';
+              return String((card as any).currentAttack ?? (card as any).baseAttack ?? 0);
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.attack.y,
+            left: positions.attack.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+
+        // Layer 8: Health (for Bloom cards) - reactive text
+        this.ui.Text({
+          text: this.ui.bindingManager.derive(
+            [BindingType.BattleDisplay, BindingType.UIState],
+            (display: BattleDisplay | null, uiState: UIState) => {
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+              if (!display || !display.playerHand) return '';
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card || card.type !== 'Bloom') return '';
+              return String((card as any).currentHealth ?? (card as any).baseHealth ?? 0);
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.health.y,
+            left: positions.health.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 9: Ability text (for non-Bloom cards) - reactive text
+        this.ui.Text({
+          text: this.ui.bindingManager.derive(
+            [BindingType.BattleDisplay, BindingType.UIState],
+            (display: BattleDisplay | null, uiState: UIState) => {
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+              if (!display || !display.playerHand) return '';
+              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+              const card = display.playerHand[actualIndex];
+              if (!card || card.type === 'Bloom') return '';
+              // For now, show basic ability text - could enhance with description generator
+              return card.abilities?.[0]?.description || '';
+            }
+          ),
+          numberOfLines: 3,
+          style: {
+            position: 'absolute',
+            top: positions.ability.y,
+            left: positions.ability.x,
+            width: 168,
+            fontSize: 10,
+            color: '#fff',
+            textAlign: 'left',
+          },
+        }),
+      ];
+    }
+
+    /**
+     * Create player hand overlay - REACTIVE version using bindings
+     * Creates all slots upfront, uses bindings to show/hide cards
+     */
+    createPlayerHand(): UINodeType {
+      // Hand overlay dimensions
+      const cardWidth = standardCardDimensions.width;  // 210
+      const cardHeight = standardCardDimensions.height; // 280
+      const cardsPerRow = 5;
+      const rowsPerPage = 1;
+      const spacing = 10;
+      const startX = 50;
+      const overlayWidth = 1210;
+      const startY = 10;
+
+      const cardsPerPage = cardsPerRow * rowsPerPage;
+
+      // Create card slots (5 slots total for one row)
+      const cardSlots = Array.from({ length: cardsPerPage }, (_, slotIndex) => {
+        const col = slotIndex % cardsPerRow;
+        const row = Math.floor(slotIndex / cardsPerRow);
+        const x = startX + col * (cardWidth + spacing);
+        const y = startY + row * (cardHeight + spacing);
+
+        return this.ui.View({
+          style: {
+            position: 'absolute',
+            left: x,
+            top: y,
+            width: cardWidth,
+            height: cardHeight,
+            // Hide slot if no card - derive directly from battleDisplay and handScrollOffset
+            display: this.ui.bindingManager.derive(
+              [BindingType.BattleDisplay, BindingType.UIState],
+              (display: BattleDisplay | null, uiState: UIState) => {
+                const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                if (!display || !display.playerHand) return 'none';
+                const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+                const card = display.playerHand[actualIndex];
+                return card ? 'flex' : 'none';
+              }
+            ),
+          },
+          children: [
+            // Card component wrapper - always exists, card content is reactive
+            this.ui.View({
+              style: {
+                width: cardWidth,
+                height: cardHeight,
+              },
+              children: this.ui.Pressable({
+                onClick: () => {
+                  console.log('[PlayerHand] onClick fired! slotIndex:', slotIndex);
+                  const scrollOffset = this.ui.bindingManager.getSnapshot(BindingType.UIState).battle?.handScrollOffset ?? 0;
+                  const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+                  // Get current card state from cached value
+                  const display = this.getBattleDisplayValue();
+                  console.log('[PlayerHand] display:', display ? 'EXISTS' : 'NULL', 'actualIndex:', actualIndex);
+                  if (display && display.playerHand) {
+                    console.log('[PlayerHand] playerHand length:', display.playerHand.length);
+                    const card = display.playerHand[actualIndex];
+                    console.log('[PlayerHand] card at', actualIndex, ':', card);
+                    if (card) {
+                      console.log(`[PlayerHand] Card clicked: ${actualIndex}, card: ${card.name}, onAction:`, this.onAction ? 'DEFINED' : 'UNDEFINED');
+
+                      // Show card popup for magic/buff cards, then play
+                      if (card.type === 'Magic' || card.type === 'Buff') {
+                        console.log('[PlayerHand] Showing card popup for', card.type);
+                        this.showPlayedCard?.(card, () => {
+                          console.log('[PlayerHand] Popup closed, calling onAction');
+                          this.onAction?.(`play-card-${actualIndex}`);
+                        });
+                      } else {
+                        console.log('[PlayerHand] Calling onAction directly');
+                        this.onAction?.(`play-card-${actualIndex}`);
+                      }
+                    } else {
+                      console.log('[PlayerHand] No card at index', actualIndex);
+                    }
+                  } else {
+                    console.log('[PlayerHand] No display or playerHand');
+                  }
+                },
+                style: {
+                  width: cardWidth,
+                  height: cardHeight,
+                  position: 'relative',
+                },
+                children: this.createHandCardStructure(slotIndex, cardsPerPage),
+              }),
+            }),
+
+            // Dim overlay if not affordable - derive directly from battleDisplay and handScrollOffset
+            this.ui.View({
+              style: {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: this.ui.bindingManager.derive(
+                  [BindingType.BattleDisplay, BindingType.UIState],
+                  (display: BattleDisplay | null, uiState: UIState) => {
+                    const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                    if (!display || !display.playerHand) return 'transparent';
+                    const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+                    const card = display.playerHand[actualIndex];
+                    if (!card) return 'transparent';
+                    const canAfford = card.cost <= display.playerNectar;
+                    return canAfford ? 'transparent' : 'rgba(0, 0, 0, 0.5)';
+                  }
+                ),
+              },
+            }),
+          ].filter(Boolean),
+        });
+      });
+
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          left: 40,
+          top: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (uiState: UIState) => {
+              const showFull = uiState.battle?.showHand ?? false;
+              return showFull ? (gameDimensions.panelHeight - 300) : 640;
+            }
+          ),
+          width: overlayWidth,
+          height: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (uiState: UIState) => {
+              const showFull = uiState.battle?.showHand ?? false;
+              return showFull ? 300 : 80;
+            }
+          ),
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          borderWidth: 3,
+          borderColor: '#4a8ec2',
+        },
+        children: [
+          // Render all card slots (they show/hide based on bindings)
+          ...cardSlots,
+
+          // Toggle button
+          this.ui.Pressable({
+            onClick: () => {
+              const snapshot = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+              const showFull = snapshot.battle?.showHand ?? false;
+              const newShowHand = !showFull;
+              this.ui.bindingManager.setBinding(BindingType.UIState, {
+                ...snapshot,
+                battle: {
+                  ...snapshot.battle,
+                  showHand: newShowHand,
+                },
+              });
+              this.onShowHandChange?.(newShowHand);
+              this.onAction?.('toggle-hand');
+            },
+            style: {
+              position: 'absolute',
+              left: overlayWidth - 50,
+              top: 10,
+              width: 60,
+              height: 50,
+              backgroundColor: '#4a8ec2',
+              borderRadius: 8,
+              justifyContent: 'center',
+              alignItems: 'center',
+            },
+            children: this.ui.Text({
+              text: this.ui.bindingManager.derive(
+                [BindingType.UIState],
+                (uiState: UIState) => {
+                  const showFull = uiState.battle?.showHand ?? false;
+                  return showFull ? 'X' : '↑';
+                }
+              ),
+              style: {
+                fontSize: 24,
+                fontWeight: 'bold',
+                color: '#fff',
+              },
+            }),
+          }),
+
+          // Scroll buttons (show/hide based on showHand binding)
+          // Up button (positioned below toggle button)
+          this.ui.Pressable({
+            onClick: () => {
+              const snapshot = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+              const scrollOffset = snapshot.battle?.handScrollOffset ?? 0;
+              const newOffset = Math.max(0, scrollOffset - 1);
+              this.onScrollOffsetChange?.(newOffset);
+            },
+            disabled: this.ui.bindingManager.derive(
+              [BindingType.UIState],
+              (uiState: UIState) => {
+                const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                return scrollOffset <= 0;
+              }
+            ),
+            style: {
+              position: 'absolute',
+              left: overlayWidth - 50,
+              top: 10 + 50 + 10, // Below toggle button
+              width: 60,
+              height: 50,
+              backgroundColor: this.ui.bindingManager.derive(
+                [BindingType.UIState],
+                (uiState: UIState) => {
+                  const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                  return scrollOffset > 0 ? '#4a8ec2' : '#666';
+                }
+              ),
+              borderRadius: 8,
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: this.ui.bindingManager.derive(
+                [BindingType.UIState],
+                (uiState: UIState) => {
+                  const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                  return scrollOffset > 0 ? 1 : 0.5;
+                }
+              ),
+              display: this.ui.bindingManager.derive(
+                [BindingType.UIState],
+                (uiState: UIState) => {
+                  const showFull = uiState.battle?.showHand ?? false;
+                  return showFull ? 'flex' : 'none';
+                }
+              ),
+            },
+            children: this.ui.Text({
+              text: 'UP',
+              style: {
+                fontSize: 24,
+                fontWeight: 'bold',
+                color: '#fff',
+              },
+            }),
+          }),
+
+          // Down button (positioned below up button)
+          this.ui.Pressable({
+            onClick: () => {
+              const snapshot = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+              const scrollOffset = snapshot.battle?.handScrollOffset ?? 0;
+              const newOffset = scrollOffset + 1;
+              this.onScrollOffsetChange?.(newOffset);
+            },
+            disabled: this.ui.bindingManager.derive(
+              [BindingType.UIState, BindingType.BattleDisplay],
+              (uiState: UIState, display: BattleDisplay | null) => {
+                const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                const totalPages = Math.ceil(display?.playerHand?.length ?? 0 / cardsPerPage);
+                return scrollOffset >= totalPages - 1 || (display?.playerHand?.length ?? 0) <= cardsPerPage;
+              }
+            ),
+            style: {
+              position: 'absolute',
+              left: overlayWidth - 50,
+              top: 10 + 50 + 10 + 50 + 10, // Below up button
+              width: 60,
+              height: 50,
+              backgroundColor: this.ui.bindingManager.derive(
+                [BindingType.UIState, BindingType.BattleDisplay],
+                (uiState: UIState, display: BattleDisplay | null) => {
+                  const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                  const totalPages = Math.ceil(display?.playerHand?.length ?? 0 / cardsPerPage);
+                  return (scrollOffset < totalPages - 1 && (display?.playerHand?.length ?? 0) > cardsPerPage) ? '#4a8ec2' : '#666';
+                }
+              ),
+              borderRadius: 8,
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: this.ui.bindingManager.derive(
+                [BindingType.UIState, BindingType.BattleDisplay],
+                (uiState: UIState, display: BattleDisplay | null) => {
+                  const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                  const totalPages = Math.ceil(display?.playerHand?.length ?? 0 / cardsPerPage);
+                  return (scrollOffset < totalPages - 1 && (display?.playerHand?.length ?? 0) > cardsPerPage) ? 1 : 0.5;
+                }
+              ),
+              display: this.ui.bindingManager.derive(
+                [BindingType.UIState],
+                (uiState: UIState) => {
+                  const showFull = uiState.battle?.showHand ?? false;
+                  return showFull ? 'flex' : 'none';
+                }
+              ),
+            },
+            children: this.ui.Text({
+              text: 'DOWN',
+              style: {
+                fontSize: 24,
+                fontWeight: 'bold',
+                color: '#fff',
+              },
+            }),
+          }),
+        ].filter(Boolean),
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\InfoDisplays.ts ====================
+
+  /**
+   * Player and opponent info displays (health, nectar, deck count, timer)
+   */
+
+
+  export class InfoDisplays {
+    private ui: InfoDisplaysProps['ui'];
+
+    constructor(props: InfoDisplaysProps) {
+      this.ui = props.ui;
+    }
+
+    /**
+     * Create player and opponent info displays - Centered at top with two columns
+     */
+    createInfoDisplays(): UINodeType {
+      const boxWidth = 225;
+      const centerX = 640; // Center of 1280px wide screen
+      const topY = 10;
+
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          left: centerX - boxWidth / 2,
+          top: topY,
+          width: boxWidth,
+          height: 125,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          borderRadius: 12,
+          borderWidth: 2,
+          borderColor: 'rgba(74, 142, 194, 0.8)',
+          flexDirection: 'row',
+          paddingTop: 15,
+          paddingBottom: 10,
+          paddingLeft: 10,
+          paddingRight: 10,
+          gap: 10,
+        },
+        children: [
+          // Opponent column (left)
+          this.ui.View({
+            style: {
+              flex: 1,
+              flexDirection: 'column',
+              gap: 3,
+              paddingRight: 5,
+              borderRightWidth: 1,
+              borderRightColor: 'rgba(255, 255, 255, 0.3)',
+            },
+            children: [
+              this.ui.Text({
+                text: 'Opponent',
+                style: {
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                  color: '#ff6b6b',
+                  textAlign: 'center',
+                },
+              }),
+              // Timer
+              this.ui.Text({
+                text: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
+                  state.battle?.opponentTimer ? `⏱️ ${state.battle.opponentTimer}` : '⏱️ 0:00'
+                ),
+                style: {
+                  fontSize: 15,
+                  fontWeight: 'bold',
+                  color: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
+                    state.battle?.opponentTimer ? '#ff6b6b' : '#fff'
+                  ),
+                  textAlign: 'center',
+                },
+              }),
+              this.ui.Text({
+                text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                  state ? `❤️ ${state?.opponentHealth}/${state?.opponentMaxHealth}` : '❤️ 20/20'
+                ),
+                style: {
+                  fontSize: 15,
+                  color: '#fff',
+                  textAlign: 'center',
+                },
+              }),
+              this.ui.Text({
+                text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                  state ? `${nectarEmoji} ${state.opponentNectar}/10` : `${nectarEmoji} 0/10`
+                ),
+                style: {
+                  fontSize: 15,
+                  color: '#fff',
+                  textAlign: 'center',
+                },
+              }),
+              this.ui.Text({
+                text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                  state ? `${deckEmoji} ${state.opponentDeckCount}/30` : `${deckEmoji} 30/30`
+                ),
+                style: {
+                  fontSize: 15,
+                  color: '#fff',
+                  textAlign: 'center',
+                },
+              }),
+            ],
+          }),
+
+          // Player column (right)
+          this.ui.View({
+            style: {
+              flex: 1,
+              flexDirection: 'column',
+              gap: 3,
+              paddingLeft: 5,
+            },
+            children: [
+              this.ui.Text({
+                text: 'Player',
+                style: {
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                  color: '#4a8ec2',
+                  textAlign: 'center',
+                },
+              }),
+              // Timer
+              this.ui.Text({
+                text: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
+                  state.battle?.playerTimer ? `⏱️ ${state.battle.playerTimer}` : '⏱️ 0:00'
+                ),
+                style: {
+                  fontSize: 15,
+                  fontWeight: 'bold',
+                  color: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
+                    state.battle?.playerTimer ? '#4a8ec2' : '#fff'
+                  ),
+                  textAlign: 'center',
+                },
+              }),
+              this.ui.Text({
+                text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                  state ? `❤️ ${state.playerHealth}/${state.playerMaxHealth}` : '❤️ 20/20'
+                ),
+                style: {
+                  fontSize: 15,
+                  color: '#fff',
+                  textAlign: 'center',
+                },
+              }),
+              this.ui.Text({
+                text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                  state ? `${nectarEmoji} ${state.playerNectar}/10` : `${nectarEmoji} 0/10`
+                ),
+                style: {
+                  fontSize: 15,
+                  color: '#fff',
+                  textAlign: 'center',
+                },
+              }),
+              this.ui.Text({
+                text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                  state ? `${deckEmoji} ${state?.playerDeckCount}/30` : `${deckEmoji} 30/30`
+                ),
+                style: {
+                  fontSize: 15,
+                  color: '#fff',
+                  textAlign: 'center',
+                },
+              }),
+            ],
+          }),
+        ],
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\BattleSideMenu.ts ====================
+
+  /**
+   * Battle side menu - Turn counter, end turn button, forfeit
+   */
+
+
+  export class BattleSideMenu {
+    private ui: BattleSideMenuProps['ui'];
+    private getIsPlayerTurn: () => boolean;
+    private getHasAttackableBeasts: () => boolean;
+    private onAction?: (action: string) => void;
+    private onStopTurnTimer?: () => void;
+    private playSfx?: (sfxId: string) => void;
+
+    constructor(props: BattleSideMenuProps) {
+      this.ui = props.ui;
+      this.getIsPlayerTurn = props.getIsPlayerTurn;
+      this.getHasAttackableBeasts = props.getHasAttackableBeasts;
+      this.onAction = props.onAction;
+      this.onStopTurnTimer = props.onStopTurnTimer;
+      this.playSfx = props.playSfx;
+
+      console.log('[BattleSideMenu] Constructor - onAction:', this.onAction ? 'DEFINED' : 'UNDEFINED');
+    }
+
+    /**
+     * Create battle-specific side menu - Fully reactive
+     */
+    createBattleSideMenu(): UINodeType {
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          left: sideMenuPositions.x,
+          top: sideMenuPositions.y,
+          width: 127,
+          height: 465,
+        },
+        children: [
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('side-menu') || null,
+            style: {
+              position: 'absolute',
+              width: 127,
+              height: 465,
+            },
+          }),
+
+          // Forfeit button (at header position)
+          createButton({
+            ui: this.ui,
+            label: 'Forfeit',
+            onClick: () => {
+              console.log('[BattleSideMenu] Forfeit button clicked');
+              this.onAction?.('btn-forfeit');
+            },
+            color: 'default',
+            playSfx: this.playSfx,
+            style: {
+              position: 'absolute',
+              left: sideMenuPositions.headerStartPosition.x - sideMenuPositions.x,
+              top: sideMenuPositions.headerStartPosition.y - sideMenuPositions.y,
+            },
+          }),
+
+          // Battle info text
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              left: sideMenuPositions.textStartPosition.x - sideMenuPositions.x,
+              top: sideMenuPositions.textStartPosition.y - sideMenuPositions.y,
+            },
+            children: [
+              this.ui.Text({
+                text: 'Battle',
+                style: {
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  marginBottom: 5,
+                },
+              }),
+              this.ui.Text({
+                text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                  state ? `Turn ${state.currentTurn}` : 'Turn 1'
+                ),
+                style: {
+                  fontSize: 18,
+                  color: '#fff',
+                  marginBottom: 5,
+                },
+              }),
+            ],
+          }),
+
+          // Attack button (red) - positioned above End Turn button
+          createButton({
+            ui: this.ui,
+            label: 'Attack',
+            onClick: () => {
+              console.log('[BattleSideMenu] Attack button onClick fired!');
+              const currentIsPlayerTurn = this.getIsPlayerTurn();
+              const hasAttackable = this.getHasAttackableBeasts();
+              console.log('[BattleSideMenu] Attack button clicked, isPlayerTurn:', currentIsPlayerTurn, 'hasAttackable:', hasAttackable);
+
+              if (currentIsPlayerTurn && hasAttackable) {
+                console.log('[BattleSideMenu] Calling onAction with auto-attack-all');
+                this.onAction?.('auto-attack-all');
+                // Auto end turn after attacking
+                console.log('[BattleSideMenu] Auto ending turn after attack');
+                this.onStopTurnTimer?.();
+                this.onAction?.('end-turn');
+              } else {
+                console.log('[BattleSideMenu] Attack button cannot be used - turn:', currentIsPlayerTurn, 'attackable:', hasAttackable);
+              }
+            },
+            // Use complete bindings (avoids .derive() on derived bindings)
+            imageSource: this.ui.assetIdToImageSource?.('red-button') || null,
+            opacity: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
+              // Disabled if state not ready
+              if (!state) return 0.5;
+
+              // Disabled if not player turn
+              if (state.turnPlayer !== 'player') return 0.5;
+
+              // Check if player has any attackable beasts
+              let hasAttackable = false;
+              if (state.playerField && Array.isArray(state.playerField)) {
+                for (const beast of state.playerField) {
+                  if (beast && canAttack(beast)) {
+                    hasAttackable = true;
+                    break;
+                  }
+                }
+              }
+
+              return hasAttackable ? 1.0 : 0.5;
+            }),
+            textColor: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
+              // Disabled if state not ready
+              if (!state) return '#888';
+
+              // Disabled if not player turn
+              if (state.turnPlayer !== 'player') return '#888';
+
+              // Check if player has any attackable beasts
+              let hasAttackable = false;
+              if (state.playerField && Array.isArray(state.playerField)) {
+                for (const beast of state.playerField) {
+                  if (beast && canAttack(beast)) {
+                    hasAttackable = true;
+                    break;
+                  }
+                }
+              }
+
+              return hasAttackable ? COLORS.textPrimary : '#888';
+            }),
+            disabled: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
+              // Disabled if state not ready
+              if (!state) return true;
+
+              // Disabled if not player turn
+              const notPlayerTurn = state.turnPlayer !== 'player';
+              if (notPlayerTurn) return true;
+
+              // Check if player has any attackable beasts (using proper canAttack check)
+              let hasAttackable = false;
+              if (state.playerField && Array.isArray(state.playerField)) {
+                for (const beast of state.playerField) {
+                  if (beast && canAttack(beast)) {
+                    hasAttackable = true;
+                    break;
+                  }
+                }
+              }
+
+              // Disabled if no attackable beasts
+              return !hasAttackable;
+            }),
+            playSfx: this.playSfx,
+            style: {
+              position: 'absolute',
+              left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
+              top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y - sideMenuButtonDimensions.height - 10,
+            },
+          }),
+
+          // End Turn button with timer - uses derived bindings for reactive updates
+          createButton({
+            ui: this.ui,
+            label: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+              state?.turnPlayer === 'player' ? 'End Turn' : 'Enemy Turn'
+            ),
+            onClick: () => {
+              console.log('[BattleSideMenu] End Turn button onClick fired!');
+              const currentIsPlayerTurn = this.getIsPlayerTurn();
+              console.log('[BattleSideMenu] End Turn button clicked, isPlayerTurn:', currentIsPlayerTurn);
+              console.log('[BattleSideMenu] onAction defined?', this.onAction ? 'YES' : 'NO');
+              if (currentIsPlayerTurn) {
+                this.onStopTurnTimer?.();
+                console.log('[BattleSideMenu] Calling onAction with end-turn');
+                this.onAction?.('end-turn');
+              } else {
+                console.log('[BattleSideMenu] End Turn clicked but not player turn');
+              }
+            },
+            // Use complete bindings (avoids .derive() on derived bindings)
+            imageSource: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
+              const color = state?.turnPlayer === 'player' ? 'green' : 'default';
+              const assetId = color === 'green' ? 'green-button' : 'standard-button';
+              return this.ui.assetIdToImageSource?.(assetId) || null;
+            }),
+            opacity: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+              state?.turnPlayer !== 'player' ? 0.5 : 1.0
+            ),
+            textColor: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+              state?.turnPlayer !== 'player' ? '#888' : COLORS.textPrimary
+            ),
+            disabled: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+              state?.turnPlayer !== 'player'
+            ),
+            playSfx: this.playSfx,
+            style: {
+              position: 'absolute',
+              left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
+              top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y,
+            },
+          }),
+        ],
+      });
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\battle\index.ts ====================
+
+  /**
+   * Battle screen components - Modular, reactive battle UI
+   */
+
+  // Export components
+
+  // Export constants from types
+
+  // Note: Prop interfaces (BattleComponentProps, etc.) are exported from types.ts
+  // but not re-exported here to avoid namespace bundling issues.
+  // Import them directly from './types' if needed externally.
+
+  // ==================== bloombeasts\ui\screens\BattleScreen.ts ====================
+
+  /**
+   * Unified Battle Screen Component
+   * Works on both Horizon and Web platforms
+   * Exactly mimics the UI from deployments/web/src/screens/battleScreen.ts
+   */
+
+
+  // Import modular battle components
+
+  export interface BattleScreenProps {
+    ui: UIMethodMappings;
+    async: AsyncMethods;
+    onAction?: (action: string) => void;
+    onNavigate?: (screen: string) => void;
+    onRenderNeeded?: () => void;
+    onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Unified Battle Screen that exactly replicates web deployment's battle UI
+   */
+  export class BattleScreen {
+    // UI methods (injected)
+    private ui: UIMethodMappings;
+    private async: AsyncMethods;
+
+    // Temporary card display (for showing played cards)
+    private playedCardDisplay: any | null = null;
+    private playedCardTimeout: number | null = null;
+
+    // Timer management
+    private timerInterval: number | null = null;
+
+    // Track binding values separately (as per Horizon docs - no .get() method)
+    private playerTimerValue = 300; // 5 minutes = 300 seconds
+    private opponentTimerValue = 300; // 5 minutes = 300 seconds
+    private isPlayerTurnValue = false;
+    private battleDisplayValue: any | null = null;
+    private hasAttackableBeasts = false;
+    private showHandValue = true;
+    private handScrollOffsetValue = 0;
+    private selectedCardDetailValue: any = null;
+
+    // Track current UIState value for updates
+    private currentUIState: any = {
+      battle: {
+        showHand: true,
+        handScrollOffset: 0,
+        playerTimer: 300,
+        opponentTimer: 300,
+        selectedCardDetail: null,
+      },
+    };
+
+    // Configuration
+    private cardsPerRow = 5;
+    private rowsPerPage = 1;
+
+    // Render guard to prevent infinite loops
+    private isRendering = false;
+    private needsRerender = false;
+
+    // Callbacks
+    private onAction?: (action: string) => void;
+    private onNavigate?: (screen: string) => void;
+    private onRenderNeeded?: () => void;
+    private onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
+    private playSfx?: (sfxId: string) => void;
+
+    // Battle components (modular)
+    private backgroundComponent!: BattleBackground;
+    private beastFieldComponent!: BeastField;
+    private trapZoneComponent!: TrapZone;
+    private buffZoneComponent!: BuffZone;
+    private habitatZoneComponent!: HabitatZone;
+    private playerHandComponent!: PlayerHand;
+    private infoDisplaysComponent!: InfoDisplays;
+    private sideMenuComponent!: BattleSideMenu;
+
+    constructor(props: BattleScreenProps) {
+      this.ui = props.ui;
+      this.async = props.async;
+      console.log('[BattleScreen] Constructor called, onAction:', props.onAction ? 'DEFINED' : 'UNDEFINED');
+
+      // Initialize local value trackers
+      this.showHandValue = true;
+      this.handScrollOffsetValue = 0;
+      this.playerTimerValue = 300;
+      this.opponentTimerValue = 300;
+      this.selectedCardDetailValue = null;
+
+      // Wrap onAction to add logging
+      this.onAction = props.onAction ? (action: string) => {
+        console.log('[BattleScreen] onAction called with:', action);
+        props.onAction!(action);
+      } : undefined;
+
+      this.onNavigate = props.onNavigate;
+      this.onRenderNeeded = props.onRenderNeeded;
+      this.onShowCardDetail = props.onShowCardDetail;
+      this.playSfx = props.playSfx;
+
+      // Initialize player turn tracking - derive from battleDisplay only (not multi-binding)
+      // NOTE: this should be moved to the battle logic right?
+      this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+        const newIsPlayerTurn = state?.turnPlayer === 'player';
+
+        // Cache battle display value for onClick handlers
+        this.battleDisplayValue = state;
+
+        // Check if player has any beasts that can attack (using proper canAttack check)
+        this.hasAttackableBeasts = false;
+        if (state && state.playerField) {
+          for (const beast of state.playerField) {
+            if (beast && canAttack(beast)) {
+              this.hasAttackableBeasts = true;
+              break;
+            }
+          }
+        }
+
+        // Start/stop timer based on turn changes
+        if (this.isPlayerTurnValue !== newIsPlayerTurn) {
+          this.isPlayerTurnValue = newIsPlayerTurn;
+          if (newIsPlayerTurn) {
+            this.startTurnTimer();
+          } else {
+            this.stopTurnTimer();
+          }
+        }
+
+        return newIsPlayerTurn;
+      });
+
+      // Initialize battle components
+      this.backgroundComponent = new BattleBackground({
+        ui: this.ui,
+      });
+
+      this.beastFieldComponent = new BeastField({
+        ui: this.ui,
+        onAction: this.onAction,
+        showPlayedCard: this.showPlayedCard.bind(this),
+      });
+
+      this.trapZoneComponent = new TrapZone({
+        ui: this.ui,
+        onCardDetailSelected: (card) => {
+          this.selectedCardDetailValue = card;
+          this.updateUIState({ selectedCardDetail: card });
+        },
+      });
+
+      this.buffZoneComponent = new BuffZone({
+        ui: this.ui,
+        onCardDetailSelected: (card) => {
+          this.selectedCardDetailValue = card;
+          this.updateUIState({ selectedCardDetail: card });
+        },
+      });
+
+      this.habitatZoneComponent = new HabitatZone({
+        ui: this.ui,
+        onCardDetailSelected: (card) => {
+          const habitatWithType = { ...card, type: 'Habitat' };
+          this.selectedCardDetailValue = habitatWithType;
+          this.updateUIState({ selectedCardDetail: habitatWithType });
+        },
+      });
+
+      this.playerHandComponent = new PlayerHand({
+        ui: this.ui,
+        getBattleDisplayValue: () => this.battleDisplayValue,
+        onAction: this.onAction,
+        onShowHandChange: (newValue) => {
+          this.showHandValue = newValue;
+          this.updateUIState({ showHand: newValue });
+        },
+        onScrollOffsetChange: (newValue) => {
+          this.handScrollOffsetValue = newValue;
+          this.updateUIState({ handScrollOffset: newValue });
+        },
+        onRenderNeeded: this.onRenderNeeded,
+        showPlayedCard: this.showPlayedCard.bind(this),
+      });
+
+      this.infoDisplaysComponent = new InfoDisplays({
+        ui: this.ui,
+      });
+
+      this.sideMenuComponent = new BattleSideMenu({
+        ui: this.ui,
+        getIsPlayerTurn: () => this.isPlayerTurnValue,
+        getHasAttackableBeasts: () => this.hasAttackableBeasts,
+        onAction: this.onAction,
+        onStopTurnTimer: () => this.stopTurnTimer(),
+        playSfx: this.playSfx,
+      });
+    }
+
+    /**
+     * Helper to update UIState.battle
+     */
+    private updateUIState(updates: Partial<typeof this.currentUIState.battle>): void {
+      this.currentUIState = {
+        ...this.currentUIState,
+        battle: {
+          ...this.currentUIState.battle,
+          ...updates,
+        },
+      };
+      this.ui.bindingManager.setBinding(BindingType.UIState, this.currentUIState);
+    }
+
+    /**
+     * Safe render wrapper to prevent infinite loops
+     */
+    private safeRender(): void {
+      if (this.isRendering) {
+        // Already rendering, schedule for after current render completes
+        this.needsRerender = true;
+        return;
+      }
+      this.onRenderNeeded?.();
+    }
+
+    /**
+     * Create the complete battle UI
+     */
+    createUI(): UINodeType {
+      // console.log('[BattleScreen] createUI called');
+      this.isRendering = true;
+      this.needsRerender = false;
+
+      // Mark rendering as complete
+      this.finishRender();
+
+      // Full battle UI - all structure created once, bindings handle updates
+      return this.ui.View({
+        style: {
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          overflow: 'hidden',
+        },
+        children: [
+          this.ui.View({
+            style: {
+              width: '100%',
+              height: '100%',
+              position: 'relative',
+              aspectRatio: `${gameDimensions.panelWidth}/${gameDimensions.panelHeight}`
+            },
+            children: [
+              // Layer 1: Background image (full screen)
+              this.backgroundComponent.createBackground(),
+
+              // Layer 2: Playboard overlay
+              this.backgroundComponent.createPlayboard(),
+
+              // Layer 3: Battle zones (beasts, traps, buffs, habitat)
+              ...this.beastFieldComponent.createBeastField('player'),
+              ...this.beastFieldComponent.createBeastField('opponent'),
+              ...this.trapZoneComponent.createTrapZone('player'),
+              ...this.trapZoneComponent.createTrapZone('opponent'),
+              ...this.buffZoneComponent.createBuffZone('player'),
+              ...this.buffZoneComponent.createBuffZone('opponent'),
+              this.habitatZoneComponent.createHabitatZone(),
+
+              // Layer 4: Player/Opponent info displays
+              this.infoDisplaysComponent.createInfoDisplays(),
+
+              // Layer 5: Side menu with controls
+              this.sideMenuComponent.createBattleSideMenu(),
+
+              // Layer 6: Player hand overlay (always rendered, bindings control visibility)
+              this.playerHandComponent.createPlayerHand(),
+
+              // Layer 7: Card detail popup (from battleDisplay) - conditionally visible
+              this.createCardPopupLayer(),
+
+              // Layer 7.25: Selected card detail popup (from clicking buff/trap cards) - conditionally visible
+              this.createSelectedCardDetailLayer(),
+
+              // Layer 7.5: Played card popup (temporary 2-second display) - conditionally visible
+              this.createPlayedCardPopupLayer(),
+
+              // Layer 8: Attack animation overlays
+              this.createAttackAnimations(),
+          ],
+          }),
+        ],
+      });
+    }
+
+
+    /**
+     * Create card popup layer with conditional visibility
+     */
+    private createCardPopupLayer(): UINodeType {
+      // Use UINode.if for conditional rendering if available
+      if (this.ui.UINode?.if) {
+        return this.ui.UINode.if(
+          this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => !!state?.cardPopup),
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 1000,
+            },
+            children: this.ui.Text({
+              text: 'Card Popup - TODO: Implement with reactive data',
+              style: { color: '#fff', fontSize: 20 }
+            }),
+          })
+        );
+      }
+
+      // Fallback: empty View (popup won't work)
+      return this.ui.View({ style: { display: 'none' } });
+    }
+
+    /**
+     * Create selected card detail popup layer with conditional visibility
+     */
+    private createSelectedCardDetailLayer(): UINodeType {
+      // Use UINode.if for conditional rendering if available
+      if (this.ui.UINode?.if) {
+        return this.ui.UINode.if(
+          // Derive visibility from base UIState binding (not from derived selectedCardDetail)
+          this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) => !!(state.battle?.selectedCardDetail)),
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              top: 0,
+              left: 0,
+            },
+            children: [
+              // Black backdrop
+              this.ui.Pressable({
+                onClick: () => {
+                  this.selectedCardDetailValue = null;
+                  this.updateUIState({ selectedCardDetail: null });
+                },
+                style: {
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                },
+              }),
+              // Card display
+              this.ui.Text({
+                text: 'Selected Card Detail - TODO: Implement with reactive card rendering',
+                style: {
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  color: '#fff',
+                  fontSize: 20,
+                }
+              }),
+            ],
+          })
+        );
+      }
+
+      // Fallback: empty View
+      return this.ui.View({ style: { display: 'none' } });
+    }
+
+    /**
+     * Create played card popup layer with conditional visibility
+     */
+    private createPlayedCardPopupLayer(): UINodeType {
+      // For now, return empty View since playedCardDisplay is not reactive yet
+      // TODO: Make playedCardDisplay reactive and implement properly
+      return this.ui.View({ style: { display: 'none' } });
+    }
+
+    /**
+     * Create card popup overlay
+     */
+    private createCardPopup(popup: any): UINodeType {
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+        },
+        children: [
+          // Card detail popup
+          createCardDetailPopup(this.ui, {
+            cardDetail: {
+              card: popup.card,
+              isInDeck: false,
+              buttons: popup.showCloseButton ? ['Close'] : []
+            },
+            onButtonClick: () => this.onAction?.('btn-card-close'),
+          }),
+        ],
+      });
+    }
+
+    /**
+     * Create attack animation overlays
+     */
+    private createAttackAnimations(): UINodeType | null {
+      // Attack animations are handled directly in the beast field rendering (reactive)
+      // This is a placeholder for any additional animation effects
+      return null;
+    }
+
+    /**
+     * Start the turn timer (chess-clock style)
+     */
+    private startTurnTimer(): void {
+      // Don't start if already running
+      if (this.timerInterval !== null) {
+        return;
+      }
+
+      console.log('[BattleScreen] Starting timer for player turn');
+      this.onRenderNeeded?.(); // Trigger re-render
+
+      this.timerInterval = this.async.setInterval(() => {
+        // Count down the current player's timer
+        if (this.isPlayerTurnValue) {
+          const current = this.playerTimerValue;
+          if (current <= 0) {
+            console.log('[BattleScreen] Player timer reached 0, player loses');
+            this.stopTurnTimer();
+            // Trigger loss - forfeit the battle
+            this.onAction?.('forfeit');
+          } else {
+            this.playerTimerValue = current - 1;
+            this.updateUIState({ playerTimer: this.playerTimerValue });
+            this.onRenderNeeded?.();
+          }
+        } else {
+          const current = this.opponentTimerValue;
+          if (current <= 0) {
+            console.log('[BattleScreen] Opponent timer reached 0, opponent loses');
+            this.stopTurnTimer();
+            // Opponent loses - this should trigger victory
+            // For now, just end their turn
+            this.onAction?.('end-turn');
+          } else {
+            this.opponentTimerValue = current - 1;
+            this.updateUIState({ opponentTimer: this.opponentTimerValue });
+            this.onRenderNeeded?.();
+          }
+        }
+      }, 1000);
+    }
+
+    /**
+     * Stop the turn timer
+     */
+    private stopTurnTimer(): void {
+      if (this.timerInterval) {
+        this.async.clearInterval(this.timerInterval);
+        this.timerInterval = null;
+      }
+    }
+
+    /**
+     * Update the end turn button text based on turn and timer
+     */
+    private updateEndTurnButtonText(): void {
+      // endTurnButtonText is now a derived binding, so it updates automatically
+      // This method is kept for compatibility but doesn't need to do anything
+      console.log('[BattleScreen] updateEndTurnButtonText called (no-op, using derived binding)');
+    }
+
+    /**
+     * Finish render and trigger re-render if needed
+     */
+    private finishRender(): void {
+      this.isRendering = false;
+      if (this.needsRerender) {
+        console.log('[BattleScreen] Re-render needed after current render');
+        this.needsRerender = false;
+        // Use setTimeout to break out of the current call stack
+        this.async.setTimeout(() => this.onRenderNeeded?.(), 0);
+      }
+    }
+
+    /**
+     * Cleanup resources
+     */
+    /**
+     * Create played card popup (shows for 2 seconds when card is played)
+     */
+    private createPlayedCardPopup(card: any): UINodeType {
+      return createCardDetailPopup(this.ui, {
+        cardDetail: {
+          card: card,
+          isInDeck: false,
+          buttons: []
+        },
+        onButtonClick: (buttonId: string) => {
+          // User can close early by clicking
+          if (this.playedCardTimeout) {
+            this.async.clearTimeout(this.playedCardTimeout);
+            this.playedCardTimeout = null;
+          }
+          this.playedCardDisplay = null;
+          this.onRenderNeeded?.();
+        }
+      });
+    }
+
+    /**
+     * Show a played card popup for 2 seconds, then execute callback
+     */
+    private showPlayedCard(card: any, callback?: () => void): void {
+      console.log('[BattleScreen] Showing played card popup:', card.name);
+
+      // Use the onShowCardDetail callback if available
+      if (this.onShowCardDetail) {
+        this.onShowCardDetail(card, 2000, callback);
+      } else {
+        console.warn('[BattleScreen] onShowCardDetail not defined, executing callback immediately');
+        callback?.();
+      }
+    }
+
+    public cleanup(): void {
+      this.stopTurnTimer();
+      // Reset all UI state
+      this.playerTimerValue = 300;
+      this.opponentTimerValue = 300;
+      this.showHandValue = true;
+      this.handScrollOffsetValue = 0;
+      this.selectedCardDetailValue = null;
+
+      // Update UIState with reset values
+      this.updateUIState({
+        playerTimer: 300,
+        opponentTimer: 300,
+        showHand: true,
+        handScrollOffset: 0,
+        selectedCardDetail: null,
+      });
+
+      // Trigger final re-render
+      this.onRenderNeeded?.();
+
+      // Clear played card timeout
+      if (this.playedCardTimeout) {
+        this.async.clearTimeout(this.playedCardTimeout);
+        this.playedCardTimeout = null;
+      }
+      this.playedCardDisplay = null;
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\SettingsScreen.ts ====================
+
+  /**
+   * Unified Settings Screen Component
+   * Works on both Horizon and Web platforms
+   * Matches the styling from settingsScreen.new.ts
+   */
+
+
+  export interface SettingsScreenProps {
+    ui: UIMethodMappings;
+    onSettingChange?: (settingId: string, value: any) => void;
+    onNavigate?: (screen: string) => void;
+    onRenderNeeded?: () => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Unified Settings Screen
+   */
+  export class SettingsScreen {
+    // UI methods (injected)
+    private ui: UIMethodMappings;
+    private settingsValue: any = {};
+
+    private onSettingChange?: (settingId: string, value: any) => void;
+    private onNavigate?: (screen: string) => void;
+    private onRenderNeeded?: () => void;
+    private playSfx?: (sfxId: string) => void;
+
+    constructor(props: SettingsScreenProps) {
+      this.ui = props.ui;
+      this.onSettingChange = props.onSettingChange;
+      this.onNavigate = props.onNavigate;
+      this.onRenderNeeded = props.onRenderNeeded;
+      this.playSfx = props.playSfx;
+      console.log('[SettingsScreen] constructor, onRenderNeeded:', this.onRenderNeeded ? 'defined' : 'undefined');
+    }
+
+    createUI(): UINodeType {
+      return this.ui.View({
+        style: {
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        },
+        children: [
+          // Background
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('background') || null,
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              top: 0,
+              left: 0,
+            },
+          }),
+          // Cards Container image as background
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('cards-container') || null,
+            style: {
+              position: 'absolute',
+              left: 40,
+              top: 40,
+              width: 980,
+              height: 640,
+            },
+          }),
+          // Main content - settings panel
+          // Pass playerDataBinding directly to controls to avoid nesting
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              left: 70,
+              top: 70,
+              width: 920,
+              height: 580,
+              padding: 40,
+            },
+            children: [
+              // Music settings (pass playerDataBinding directly)
+              this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume'),
+              this.createToggleControl('Music', 'musicEnabled', 'musicEnabled'),
+
+              // SFX settings (pass playerDataBinding directly)
+              this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume'),
+              this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled'),
+            ],
+          }),
+          // Sidebar with common side menu
+          createSideMenu(this.ui, {
+            title: 'Settings',
+            bottomButton: {
+              label: 'Back',
+              onClick: () => {
+                if (this.onNavigate) this.onNavigate('menu');
+              },
+              disabled: false,
+            },
+            playSfx: this.playSfx,
+          }),
+        ],
+      });
+    }
+
+    /**
+     * Create volume control with +/- buttons
+     */
+    private createVolumeControl(
+      label: string,
+      settingKey: 'musicVolume' | 'sfxVolume',
+      settingId: string
+    ): UINodeType {
+      return this.ui.View({
+        style: {
+          marginBottom: 30,
+        },
+        children: [
+          // Label and value
+          this.ui.View({
+            style: {
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginBottom: 10,
+              alignItems: 'center',
+            },
+            children: [
+              this.ui.Text({
+                text: label,
+                style: {
+                  fontSize: DIMENSIONS.fontSize.xl,
+                  color: COLORS.textPrimary,
+                },
+              }),
+              // Volume control: - button, value, + button
+              this.ui.View({
+                style: {
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                },
+                children: [
+                  // Decrease button
+                  this.ui.Pressable({
+                    onClick: () => {
+                      if (this.onSettingChange) {
+                        const currentSettings = this.settingsValue;
+                        const currentValue = currentSettings[settingKey] || 0;
+                        const newValue = Math.max(0, currentValue - 10);
+                        this.onSettingChange(settingId, newValue);
+                      }
+                    },
+                    style: {
+                      width: 40,
+                      height: 40,
+                      backgroundColor: COLORS.surface,
+                      borderRadius: 5,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 15,
+                    },
+                    children: this.ui.Text({
+                      text: '-',
+                      style: {
+                        fontSize: DIMENSIONS.fontSize.xl,
+                        color: COLORS.textPrimary,
+                        textAlign: 'center',
+                        fontWeight: 'bold',
+                      },
+                    }),
+                  }),
+                  // Volume display
+                  this.ui.Text({
+                    text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
+                      const settings = pd?.settings;
+                      this.settingsValue = settings;
+                      const volume = settings?.[settingKey];
+                      return `${volume !== undefined && volume !== null && typeof volume === 'number' ? Math.round(volume) : 0}%`;
+                    }),
+                    style: {
+                      fontSize: DIMENSIONS.fontSize.xl,
+                      color: COLORS.success,
+                      width: 70,
+                      textAlign: 'center',
+                    },
+                  }),
+                  // Increase button
+                  this.ui.Pressable({
+                    onClick: () => {
+                      if (this.onSettingChange) {
+                        const currentSettings = this.settingsValue;
+                        const currentValue = currentSettings[settingKey] || 0;
+                        const newValue = Math.min(100, currentValue + 10);
+                        this.onSettingChange(settingId, newValue);
+                      }
+                    },
+                    style: {
+                      width: 40,
+                      height: 40,
+                      backgroundColor: COLORS.surface,
+                      borderRadius: 5,
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginLeft: 15,
+                    },
+                    children: this.ui.Text({
+                      text: '+',
+                      style: {
+                        fontSize: DIMENSIONS.fontSize.xl,
+                        color: COLORS.textPrimary,
+                        textAlign: 'center',
+                        fontWeight: 'bold',
+                      },
+                    }),
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+    }
+
+    /**
+     * Create toggle button control
+     */
+    private createToggleControl(
+      label: string,
+      settingKey: 'musicEnabled' | 'sfxEnabled',
+      settingId: string
+    ): UINodeType {
+      return this.ui.View({
+        style: {
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 30,
+        },
+        children: [
+          this.ui.Text({
+            text: label,
+            style: {
+              fontSize: DIMENSIONS.fontSize.xl,
+              color: COLORS.textPrimary,
+            },
+          }),
+
+          // Toggle button
+          this.ui.Pressable({
+            onClick: () => {
+              console.log(`[SettingsScreen] Toggle clicked - settingKey: ${settingKey}, settingId: ${settingId}`);
+              if (this.onSettingChange) {
+                const currentSettings = this.settingsValue;
+                console.log(`[SettingsScreen] Current settings:`, currentSettings);
+                const currentValue = currentSettings[settingKey];
+                const newValue = !currentValue;
+                console.log(`[SettingsScreen] Toggle value: ${currentValue} -> ${newValue}`);
+
+                // Just call the callback - let the parent handle updating the binding
+                // The binding update will trigger a re-render automatically
+                this.onSettingChange(settingId, newValue);
+              }
+            },
+            style: {
+              position: 'relative',
+              width: 120,
+              height: 40,
+            },
+            children: [
+              // Button background image (standard or green based on state)
+              this.ui.Image({
+                source: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
+                  const settings = pd?.settings;
+                  return this.ui.assetIdToImageSource?.(settings?.[settingKey] ? 'green-button' : 'standard-button') ?? null;
+                }),
+                style: {
+                  position: 'absolute',
+                  width: 120,
+                  height: 40,
+                },
+              }),
+              // Button text centered
+              this.ui.View({
+                style: {
+                  position: 'absolute',
+                  width: 120,
+                  height: 40,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                },
+                children: this.ui.Text({
+                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
+                    const settings = pd?.settings;
+                    return settings?.[settingKey] ? 'ON' : 'OFF';
+                  }),
+                  style: {
+                    fontSize: DIMENSIONS.fontSize.md,
+                    color: COLORS.textPrimary,
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    textAlignVertical: 'center',
+                  },
+                }),
+              }),
+            ],
+          }),
+        ],
+      });
+    }
+
+    dispose(): void {
+      // Cleanup
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\LeaderboardScreen.ts ====================
+
+  /**
+   * Leaderboard Screen Component
+   * Displays top players by experience and fastest Cluck Norris completion time
+   */
+
+
+  export interface LeaderboardEntry {
+    playerName: string;
+    score: number; // XP for experience leaderboard, time in seconds for speed leaderboard
+    level?: number; // Only for experience leaderboard
+  }
+
+  export interface LeaderboardData {
+    topExperience: LeaderboardEntry[];
+    fastestCluckNorris: LeaderboardEntry[];
+  }
+
+  export interface LeaderboardScreenProps {
+    ui: UIMethodMappings;
+    onNavigate?: (screen: string) => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  export class LeaderboardScreen {
+    private ui: UIMethodMappings;
+    private onNavigate?: (screen: string) => void;
+    private playSfx?: (sfxId: string) => void;
+
+    constructor(props: LeaderboardScreenProps) {
+      this.ui = props.ui;
+      this.onNavigate = props.onNavigate;
+      this.playSfx = props.playSfx;
+    }
+
+    /**
+     * Format all leaderboard entries as a single text string
+     */
+    private formatLeaderboardText(leaderboardType: 'experience' | 'speed'): any {
+      return this.ui.bindingManager.derive([BindingType.LeaderboardData], (data: LeaderboardData | null) => {
+        if (!data) return '';
+        const entries = leaderboardType === 'experience' ? data.topExperience : data.fastestCluckNorris;
+        if (!entries || entries.length === 0) return 'No entries yet...';
+
+        const lines: string[] = [];
+        for (let i = 0; i < 10; i++) {
+          const rank = i + 1;
+          const rankEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}.`;
+
+          if (entries[i]) {
+            const entry = entries[i];
+            let scoreText = '';
+            if (leaderboardType === 'speed') {
+              scoreText = this.formatTime(entry.score);
+            } else {
+              scoreText = entry.level ? `Lv${entry.level} ${entry.score}XP` : `${entry.score}XP`;
+            }
+            lines.push(`${rankEmoji} ${entry.playerName} - ${scoreText}`);
+          } else {
+            lines.push(`${rankEmoji} ---`);
+          }
+        }
+        return lines.join('\n');
+      });
+    }
+
+    /**
+     * Format time in seconds to readable format
+     */
+    private formatTime(seconds: number): string {
+      const mins = Math.floor(seconds / 60);
+      const secs = Math.floor(seconds % 60);
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    /**
+     * Create a single leaderboard panel with text column
+     */
+    private createLeaderboardPanel(
+      title: string,
+      leaderboardType: 'experience' | 'speed',
+      left: number
+    ): UINodeType {
+      const panelWidth = 450;
+      const panelHeight = 580;
+
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          left: left,
+          top: 70,
+          width: panelWidth,
+          height: panelHeight,
+        },
+        children: [
+          // Title
+          this.ui.View({
+            style: {
+              width: panelWidth,
+              height: 50,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              borderRadius: 10,
+            },
+            children: this.ui.Text({
+              text: title,
+              style: {
+                fontSize: DIMENSIONS.fontSize.xl,
+                fontWeight: 'bold',
+                color: COLORS.primary,
+                textAlign: 'center',
+              },
+            }),
+          }),
+          // All entries as a single text column
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              top: 70,
+              left: 25,
+              width: panelWidth - 50,
+              height: panelHeight - 80,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              borderRadius: 10,
+              padding: 15,
+            },
+            children: this.ui.Text({
+              text: this.formatLeaderboardText(leaderboardType),
+              numberOfLines: 10,
+              style: {
+                fontSize: DIMENSIONS.fontSize.md,
+                color: COLORS.textPrimary,
+                lineHeight: 40,
+              },
+            }),
+          }),
+        ],
+      });
+    }
+
+    createUI(): UINodeType {
+      return this.ui.View({
+        style: {
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        },
+        children: [
+          // Background
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('background') || null,
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              top: 0,
+              left: 0,
+            },
+          }),
+          // Cards Container image as background
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.('cards-container') || null,
+            style: {
+              position: 'absolute',
+              left: 40,
+              top: 40,
+              width: 980,
+              height: 640,
+            },
+          }),
+          // Leaderboard panels - pre-created with reactive data
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              left: 70,
+              top: 0,
+              width: 920,
+              height: 720,
+            },
+            children: [
+              // Experience Leaderboard (left)
+              this.createLeaderboardPanel(
+                '🏆 Top Experience',
+                'experience',
+                0
+              ),
+              // Speed Leaderboard (right)
+              this.createLeaderboardPanel(
+                '⚡ Fastest Cluck Norris',
+                'speed',
+                460
+              ),
+            ],
+          }),
+          // Sidebar with common side menu
+          createSideMenu(this.ui, {
+            title: 'Leaderboard',
+            customTextContent: [],
+            buttons: [],
+            bottomButton: {
+              label: 'Back',
+              onClick: () => {
+                if (this.onNavigate) this.onNavigate('menu');
+              },
+              disabled: false,
+            },
+            playSfx: this.playSfx,
+          }),
+        ],
+      });
+    }
+
+    dispose(): void {
+      // Nothing to clean up
+    }
+  }
+
+  // ==================== bloombeasts\ui\screens\common\MissionCompletePopup.ts ====================
+
+  /**
+   * Unified Mission Complete Popup Component
+   * Works on both Horizon and Web platforms
+   * Exactly mimics the UI from bloombeasts/screens/missions/MissionCompletePopup.ts
+   */
+
+
+  export interface MissionCompletePopupProps {
+    mission: {
+      id: string;
+      name: string;
+      affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky';
+    };
+    rewards: {
+      xpGained: number;
+      beastXP: number;
+      coinsReceived?: number;
+      completionTimeSeconds: number;
+      cardsReceived: any[];
+      itemsReceived: Array<{
+        itemId: string;
+        quantity: number;
+        emoji?: string;
+        name?: string;
+      }>;
+      bonusRewards?: string[];
+    } | null; // null for mission failed
+    chestOpened: boolean;
+    onClaimRewards?: () => void;
+    onContinue?: () => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Unified Mission Complete Popup using common Popup component
+   */
+  export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionCompletePopupProps): UINodeType {
+    const { mission, rewards, chestOpened, onClaimRewards, onContinue, playSfx } = props;
+    const isFailed = !rewards;
+
+    // Create content for the popup
+    const content: UINodeType[] = [
+      // Chest or lose image
+      ui.View({
+        style: {
+          width: '100%',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginTop: 10,
+          marginBottom: 20,
+        },
+        children: isFailed
+          ? ui.Image({
+              source: ui.assetIdToImageSource?.('lose-image') || null,
+              style: {
+                width: chestImageMissionCompleteDimensions.width,
+                height: chestImageMissionCompleteDimensions.height,
+              },
+            })
+          : ui.Image({
+              source: ui.assetIdToImageSource?.(
+                chestOpened
+                  ? `${mission.affinity || 'Forest'}-chest-opened`.toLowerCase()
+                  : `${mission.affinity || 'Forest'}-chest-closed`.toLowerCase()
+              ) || null,
+              style: {
+                width: chestImageMissionCompleteDimensions.width,
+                height: chestImageMissionCompleteDimensions.height,
+              },
+            }),
+      }),
+
+      // Info text
+      ui.View({
+        style: {
+          width: '100%',
+          paddingLeft: 20,
+          paddingRight: 20,
+        },
+        children: isFailed
+          ? createFailedInfo(ui)
+          : chestOpened
+          ? createDetailedRewards(ui, rewards)
+          : createBasicInfo(ui, rewards),
+      }),
+    ];
+
+    // Create button
+    const popupButton: PopupButton = {
+      label: isFailed ? 'CONTINUE' : chestOpened ? 'CONTINUE' : 'CLAIM REWARDS',
+      onClick: () => {
+        console.log('[MissionCompletePopup] Button clicked, isFailed:', isFailed, 'chestOpened:', chestOpened);
+        if (isFailed || chestOpened) {
+          console.log('[MissionCompletePopup] Calling onContinue');
+          onContinue?.();
+        } else {
+          console.log('[MissionCompletePopup] Calling onClaimRewards');
+          onClaimRewards?.();
+        }
+      },
+      type: 'long',
+      color: 'green',
+    };
+
+    return createPopup({
+      ui,
+      title: isFailed ? 'MISSION FAILED' : 'MISSION COMPLETE!',
+      titleColor: isFailed ? '#FF4444' : '#FFD700',
+      content,
+      buttons: [popupButton],
+      playSfx,
+      width: missionCompleteCardDimensions.width,
+      height: missionCompleteCardDimensions.height,
+    });
+  }
+
+  /**
+   * Create failed mission info text
+   */
+  function createFailedInfo(ui: UIMethodMappings): UINodeType {
+    return ui.View({
+      style: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+      },
+      children: [
+        ui.Text({
+          text: 'Better luck next time!\n\nKeep training your beasts\nand try again.',
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            lineHeight: 20,
+            color: COLORS.textPrimary,
+            textAlign: 'center',
+          },
+        }),
+      ],
+    });
+  }
+
+  /**
+   * Create basic info (before chest opened)
+   */
+  function createBasicInfo(ui: UIMethodMappings, rewards: any): UINodeType {
+    const minutes = Math.floor(rewards.completionTimeSeconds / 60);
+    const seconds = rewards.completionTimeSeconds % 60;
+    const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
+    const lines = [`Time: ${timeString}`, '', `Player XP: +${rewards.xpGained}`, `Beast XP: +${rewards.beastXP}`];
+
+    // Add coins if present
+    if (rewards.coinsReceived) {
+      lines.push(`Coins: +${rewards.coinsReceived}`);
+    }
+
+    // Add bonus rewards if present
+    if (rewards.bonusRewards && rewards.bonusRewards.length > 0) {
+      lines.push('');
+      rewards.bonusRewards.forEach((bonus: string) => {
+        lines.push(bonus);
+      });
+    }
+
+    return ui.View({
+      style: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+      },
+      children: lines.map((line, index) =>
+        ui.Text({
+          text: line,
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            color: line.includes('Boost:') ? '#FFD700' : COLORS.textPrimary,
+            textAlign: 'center',
+            marginBottom: 5,
+          },
+        })
+      ),
+    });
+  }
+
+  /**
+   * Create detailed rewards (after chest opened)
+   */
+  function createDetailedRewards(ui: UIMethodMappings, rewards: any): UINodeType {
+    const elements: UINodeType[] = [];
+
+    // Coins received
+    if (rewards.coinsReceived) {
+      elements.push(
+        ui.Text({
+          text: `🪙 ${rewards.coinsReceived} Coins`,
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            color: '#FFD700',
+            textAlign: 'center',
+            marginBottom: 10,
+            fontWeight: 'bold',
+          },
+        })
+      );
+    }
+
+    // Bonus rewards (boosts)
+    if (rewards.bonusRewards && rewards.bonusRewards.length > 0) {
+      rewards.bonusRewards.forEach((bonus: string) => {
+        elements.push(
+          ui.Text({
+            text: bonus,
+            style: {
+              fontSize: DIMENSIONS.fontSize.sm,
+              color: '#FFD700',
+              textAlign: 'center',
+              marginBottom: 5,
+            },
+          })
+        );
+      });
+      elements.push(
+        ui.View({
+          style: { height: 10 },
+        })
+      );
+    }
+
+    // Cards received
+    if (rewards.cardsReceived && rewards.cardsReceived.length > 0) {
+      elements.push(
+        ui.Text({
+          text: 'Cards Received:',
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            color: '#FFD700',
+            textAlign: 'center',
+            marginBottom: 5,
+            fontWeight: 'bold',
+          },
+        })
+      );
+
+      rewards.cardsReceived.forEach((card: any, index: number) => {
+        elements.push(
+          ui.Text({
+            text: `• ${card.name}`,
+            style: {
+              fontSize: DIMENSIONS.fontSize.sm,
+              color: COLORS.textPrimary,
+              textAlign: 'center',
+              marginBottom: 5,
+            },
+          })
+        );
+      });
+
+      // Extra spacing
+      elements.push(
+        ui.View({
+          style: { height: 10 },
+        })
+      );
+    }
+
+    // Items received
+    if (rewards.itemsReceived && rewards.itemsReceived.length > 0) {
+      elements.push(
+        ui.Text({
+          text: 'Items Received:',
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            color: '#FFD700',
+            textAlign: 'center',
+            marginBottom: 5,
+            fontWeight: 'bold',
+          },
+        })
+      );
+
+      rewards.itemsReceived.forEach((itemReward: any, index: number) => {
+        const emoji = itemReward.emoji || '';
+        const itemName = itemReward.name || itemReward.itemId;
+        elements.push(
+          ui.Text({
+            text: `${emoji} ${itemName} x${itemReward.quantity}`,
+            style: {
+              fontSize: DIMENSIONS.fontSize.sm,
+              color: COLORS.textPrimary,
+              textAlign: 'center',
+              marginBottom: 5,
+            },
+          })
+        );
+      });
+
+      // Extra spacing
+      elements.push(
+        ui.View({
+          style: { height: 10 },
+        })
+      );
+    }
+
+    return ui.View({
+      style: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+      },
+      children: elements,
+    });
+  }
+
+  // ==================== bloombeasts\ui\screens\common\ButtonPopup.ts ====================
+
+  /**
+   * Button Popup Component
+   * Simple popup that shows buttons for user choices
+   */
+
+
+  export interface ButtonPopupProps {
+    title: string;
+    message?: string;
+    buttons: {
+      text: string;
+      onClick: () => void;
+      color?: 'default' | 'red' | 'green';
+    }[];
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Create a button popup using the common Popup component
+   */
+  export function createButtonPopup(ui: UIMethodMappings, props: ButtonPopupProps): any {
+    const { title, message, buttons, playSfx } = props;
+
+    // Convert button format to PopupButton format
+    const popupButtons: PopupButton[] = buttons.map((button) => ({
+      label: button.text,
+      onClick: button.onClick,
+      color: (button.color as ButtonColor) || 'default',
+    }));
+
+    return createPopup({
+      ui,
+      title,
+      description: message,
+      buttons: popupButtons,
+      playSfx,
+      width: 450,
+      height: 280,
+    });
+  }
+
+  // ==================== bloombeasts\engine\systems\GameEngine.ts ====================
+
+  /**
+   * Game Engine - Main game controller and state manager
+   */
+
+
+  export interface MatchOptions {
+    player1Name?: string;
+    player2Name?: string;
+    turnTimeLimit?: number;
+    maxTurns?: number;
+  }
+
+  export class GameEngine {
+    private gameState: GameState | null = null;
+    private combatSystem: CombatSystem;
+    private abilityProcessor: AbilityProcessor;
+    private levelingSystem: LevelingSystem;
+    private cardDatabase: Map<string, AnyCard> | null = null;
+    private catalogManager: any;
+
+    constructor(catalogManager: any) {
+      // Don't create game state yet - it will be created when startMatch() is called
+      // This allows GameEngine to be constructed before asset catalogs are loaded
+      this.combatSystem = new CombatSystem();
+      this.abilityProcessor = new AbilityProcessor();
+      this.levelingSystem = new LevelingSystem();
+      this.catalogManager = catalogManager;
+    }
+
+    /**
+     * Ensure game state exists - throws error if called before startMatch()
+     */
+    private ensureGameState(): GameState {
+      if (!this.gameState) {
+        throw new Error('GameEngine: Game state not initialized. Call startMatch() first.');
+      }
+      return this.gameState;
+    }
+
+    /**
+     * Get game state (with non-null assertion for internal use)
+     * Only use this after you're certain startMatch() has been called
+     */
+    private get state(): GameState {
+      return this.gameState!;
+    }
+
+    /**
+     * Build card database from all card definitions
+     * Called lazily on first access
+     */
+    private buildCardDatabase(): Map<string, AnyCard> {
+      const db = new Map<string, AnyCard>();
+      const allCards = this.catalogManager.getAllCardData();
+      allCards.forEach((card: any) => {
+        if (card && card.id && card.type) {
+          db.set(card.id, card as AnyCard);
+        }
+      });
+      return db;
+    }
+
+    /**
+     * Get card database, building it lazily if needed
+     */
+    private getCardDatabase(): Map<string, AnyCard> {
+      if (!this.cardDatabase) {
+        this.cardDatabase = this.buildCardDatabase();
+      }
+      return this.cardDatabase;
+    }
+
+    /**
+     * Create initial game state
+     */
+    private createInitialState(): GameState {
+      return {
+        turn: 1,
+        phase: 'Setup',
+        battleState: BattlePhase.Setup,
+        activePlayer: 0,
+        players: [
+          this.createPlayer('Player 1'),
+          this.createPlayer('Player 2'),
+        ],
+        habitatZone: null,
+        turnHistory: [],
+      };
+    }
+
+    /**
+     * Create a new player
+     */
+    private createPlayer(name: string): Player {
+      // Create player with empty deck - real deck is set when startMatch() is called
+      // This allows GameEngine to be constructed before asset catalogs are loaded
+      return {
+        name,
+        health: STARTING_HEALTH,
+        currentNectar: 0,
+        deck: [],  // Empty deck initially - populated by startMatch()
+        hand: [],
+        field: Array(FIELD_SIZE).fill(null),
+        trapZone: Array(FIELD_SIZE).fill(null),
+        buffZone: [null, null],
+        graveyard: [],
+        summonsThisTurn: 0,
+      };
+    }
+
+    /**
+     * Start a new match
+     */
+    public async startMatch(
+      player1Deck: DeckList,
+      player2Deck: DeckList,
+      options: MatchOptions = {}
+    ): Promise<void> {
+      Logger.debug('Starting new match...');
+
+      // Create initial game state now that catalogs are loaded
+      if (!this.gameState) {
+        this.gameState = this.createInitialState();
+      }
+
+      // Set player names
+      if (options.player1Name) {
+        this.state.players[0].name = options.player1Name;
+      }
+      if (options.player2Name) {
+        this.state.players[1].name = options.player2Name;
+      }
+
+      // Load decks
+      this.state.players[0].deck = [...player1Deck.cards];
+      this.state.players[1].deck = [...player2Deck.cards];
+
+      // Shuffle decks
+      this.shuffleDeck(this.state.players[0]);
+      this.shuffleDeck(this.state.players[1]);
+
+      // Draw initial hands
+      this.drawCards(this.state.players[0], 5);
+      this.drawCards(this.state.players[1], 5);
+
+      // Transition to first player's turn
+      this.state.phase = 'Main';
+      this.state.battleState = BattlePhase.Player1StartOfTurn;
+      await this.transitionState();
+    }
+
+    /**
+     * State machine transition logic
+     */
+    private async transitionState(): Promise<void> {
+      // Check for win condition before any state processing
+      if (this.checkForBattleEnd()) {
+        this.state.battleState = BattlePhase.Finished;
+        return;
+      }
+
+      const currentState = this.state.battleState;
+      Logger.debug(`Transitioning from state: ${currentState}`);
+
+      switch (currentState) {
+        case BattlePhase.Player1StartOfTurn:
+          await this.processPlayerStartOfTurn(0);
+          this.state.battleState = BattlePhase.Player1Playing;
+          break;
+
+        case BattlePhase.Player1Playing:
+          // This state waits for player input (endTurn call)
+          break;
+
+        case BattlePhase.Player1EndOfTurn:
+          await this.processPlayerEndOfTurn(0);
+          this.state.battleState = BattlePhase.Player2StartOfTurn;
+          await this.transitionState();
+          break;
+
+        case BattlePhase.Player2StartOfTurn:
+          await this.processPlayerStartOfTurn(1);
+          this.state.battleState = BattlePhase.Player2Playing;
+          break;
+
+        case BattlePhase.Player2Playing:
+          // This state waits for player input (endTurn call)
+          break;
+
+        case BattlePhase.Player2EndOfTurn:
+          await this.processPlayerEndOfTurn(1);
+          // Increment turn counter after both players have played
+          this.state.turn++;
+          this.state.battleState = BattlePhase.Player1StartOfTurn;
+          await this.transitionState();
+          break;
+
+        case BattlePhase.Finished:
+          // Battle has ended
+          const result = this.combatSystem.checkWinCondition(this.state);
+          this.endMatch(result);
+          break;
+      }
+    }
+
+    /**
+     * Process player start of turn
+     */
+    private async processPlayerStartOfTurn(playerIndex: 0 | 1): Promise<void> {
+      this.state.activePlayer = playerIndex;
+      const activePlayer = this.state.players[playerIndex];
+      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
+
+      Logger.debug(`Turn ${this.state.turn}: ${activePlayer.name}'s turn begins`);
+
+      // Reset turn counters
+      activePlayer.summonsThisTurn = 0;
+
+      // Draw card (except first turn for player 1)
+      if (!(this.state.turn === 1 && playerIndex === 0)) {
+        this.drawCards(activePlayer, 1);
+      }
+
+      // Gain nectar
+      activePlayer.currentNectar = Math.min(MAX_NECTAR, this.state.turn);
+
+      // Remove summoning sickness from all beasts
+      for (const beast of activePlayer.field) {
+        if (beast) {
+          beast.summoningSickness = false;
+        }
+      }
+
+      // Counter effects removed
+
+      // Check for death
+      if (this.checkForBattleEnd()) {
+        this.state.battleState = BattlePhase.Finished;
+        return;
+      }
+
+      // Trigger start of turn abilities based on state
+      await this.triggerStateBasedAbilities(playerIndex, 'start');
+
+      // Set phase to main
+      this.state.phase = 'Main';
+    }
+
+    /**
+     * Process player end of turn
+     */
+    private async processPlayerEndOfTurn(playerIndex: 0 | 1): Promise<void> {
+      const activePlayer = this.state.players[playerIndex];
+      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
+
+      // Trigger end of turn abilities based on state
+      await this.triggerStateBasedAbilities(playerIndex, 'end');
+
+      // Clear temporary effects
+      for (const beast of activePlayer.field) {
+        if (beast) {
+          this.clearTemporaryEffects(beast);
+        }
+      }
+
+      // Check for death after end of turn effects
+      if (this.checkForBattleEnd()) {
+        this.state.battleState = BattlePhase.Finished;
+        return;
+      }
+    }
+
+    /**
+     * Check if battle should end (player health <= 0)
+     */
+    private checkForBattleEnd(): boolean {
+      const player1 = this.state.players[0];
+      const player2 = this.state.players[1];
+
+      return player1.health <= 0 || player2.health <= 0;
+    }
+
+    /**
+     * End current turn
+     */
+    public async endTurn(): Promise<void> {
+      const state = this.ensureGameState();
+
+      // Determine which end of turn state to transition to
+      if (state.battleState === BattlePhase.Player1Playing) {
+        state.battleState = BattlePhase.Player1EndOfTurn;
+      } else if (state.battleState === BattlePhase.Player2Playing) {
+        state.battleState = BattlePhase.Player2EndOfTurn;
+      } else {
+        Logger.error(`Unexpected state during endTurn: ${state.battleState}`);
+        return;
+      }
+
+      // Continue state transitions
+      await this.transitionState();
+    }
+
+    /**
+     * Summon a beast to the field
+     */
+    public summonBeast(
+      player: Player,
+      beastCard: AnyCard,
+      position: number
+    ): boolean {
+      if (position < 0 || position > 2) {
+        Logger.error('Invalid field position');
+        return false;
+      }
+
+      if (player.field[position] !== null) {
+        Logger.error('Field position already occupied');
+        return false;
+      }
+
+      if (player.summonsThisTurn >= 1) {
+        Logger.error('Already summoned this turn');
+        return false;
+      }
+
+      // Create beast instance
+      const instance: BloomBeastInstance = {
+        instanceId: `${beastCard.id}-${Date.now()}`,
+        cardId: beastCard.id,
+        name: beastCard.name,
+        affinity: (beastCard as any).affinity || 'Generic',
+        currentLevel: 1,
+        currentXP: 0,
+        baseAttack: (beastCard as any).baseAttack || 0,
+        baseHealth: (beastCard as any).baseHealth || 0,
+        currentAttack: (beastCard as any).baseAttack || 0,
+        currentHealth: (beastCard as any).baseHealth || 0,
+        maxHealth: (beastCard as any).baseHealth || 0,
+        statusEffects: [],
+        summoningSickness: true,
+        slotIndex: position,
+      };
+
+      // Place on field
+      player.field[position] = instance;
+      player.summonsThisTurn++;
+
+      // Apply WhileOnField buff card stat modifications to the newly summoned beast
+      this.applyWhileOnFieldBuffStats(instance, player);
+
+      // Trigger summon abilities on the summoned beast
+      this.triggerSummonAbilities(instance);
+
+      // Trigger OnAllySummon abilities on other beasts
+      this.triggerAllySummonAbilities(instance, player);
+
+      return true;
+    }
+
+    /**
+     * Play a card from hand
+     */
+    public async playCard(
+      player: Player,
+      cardIndex: number,
+      target?: any
+    ): Promise<boolean> {
+      if (cardIndex < 0 || cardIndex >= player.hand.length) {
+        Logger.error('Invalid card index');
+        return false;
+      }
+
+      const card = player.hand[cardIndex];
+
+      // Check nectar cost
+      if (card.cost > player.currentNectar) {
+        Logger.error('Not enough nectar');
+        return false;
+      }
+
+      // Pay cost
+      player.currentNectar -= card.cost;
+
+      // Remove from hand
+      player.hand.splice(cardIndex, 1);
+
+      // Handle based on card type
+      switch (card.type) {
+        case 'Bloom':
+          // Check for traps before playing
+          await this.checkTraps('OnBloomPlay', player, { bloomCard: card });
+
+          // Find empty field position
+          const emptyPos = player.field.findIndex(slot => slot === null);
+          if (emptyPos !== -1) {
+            return this.summonBeast(player, card, emptyPos);
+          }
+          player.graveyard.push(card);
+          break;
+
+        case 'Habitat':
+          // Check for traps before playing
+          const trapData = { habitatCard: card, countered: false };
+          await this.checkTraps('OnHabitatPlay', player, trapData);
+
+          // Only apply habitat if not countered
+          if (!trapData.countered) {
+            // Replace current habitat
+            if (this.state.habitatZone) {
+              player.graveyard.push(this.state.habitatZone);
+            }
+            this.state.habitatZone = card;
+            Logger.debug(`Played habitat: ${card.name}`);
+            // Apply habitat effects
+            this.applyHabitatEffects();
+          } else {
+            // Countered - send to graveyard
+            player.graveyard.push(card);
+          }
+          break;
+
+        case 'Magic':
+          // Execute magic card effect immediately
+          this.processMagicCard(card as MagicCard, player, target);
+          player.graveyard.push(card);
+          Logger.debug(`Played magic card: ${card.name}`);
+          break;
+
+        case 'Trap':
+          // Place trap card face-down in trap zone
+          const emptyTrapSlot = player.trapZone.findIndex(slot => slot === null);
+          if (emptyTrapSlot !== -1) {
+            player.trapZone[emptyTrapSlot] = card;
+            Logger.debug(`Set trap card: ${card.name}`);
+          } else {
+            // No trap slots available, send to graveyard
+            Logger.debug('No trap slots available');
+            player.graveyard.push(card);
+          }
+          break;
+
+        case 'Buff':
+          // Place buff card in buff zone
+          const emptyBuffSlot = player.buffZone.findIndex(slot => slot === null);
+          if (emptyBuffSlot !== -1) {
+            player.buffZone[emptyBuffSlot] = card;
+            Logger.debug(`Played buff card: ${card.name}`);
+            // Apply any OnSummon effects immediately
+            this.applyBuffCardEffects(card as any, player);
+          } else {
+            // No buff slots available, send to graveyard
+            Logger.debug('No buff slots available');
+            player.graveyard.push(card);
+          }
+          break;
+      }
+
+      return true;
+    }
+
+    /**
+     * Process magic card effects using structured effects
+     */
+    private processMagicCard(card: MagicCard, player: Player, target?: any): void {
+      const opponent = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+
+      // Process each ability in the magic card (usually just one with OnSummon trigger)
+      for (const ability of card.abilities) {
+        // Magic cards typically have OnSummon trigger - process their effects immediately
+        if (ability.trigger === AbilityTrigger.OnSummon || !ability.trigger) {
+          // Type guard: only process structured abilities with effects
+          if (!('effects' in ability)) continue;
+
+          // Process each effect in the ability
+          for (const effect of ability.effects) {
+            switch (effect.type) {
+              case EffectType.GainResource:
+                if (effect.resource === ResourceType.Nectar) {
+                  player.currentNectar = Math.min(MAX_NECTAR, player.currentNectar + effect.value);
+                }
+                break;
+
+              case EffectType.DrawCards:
+                this.drawCards(player, effect.value);
+                break;
+
+              // Counter effects removed
+
+              // Add more effect types as needed
+              default:
+                Logger.debug(`Unhandled magic card effect type: ${effect.type}`);
+            }
+          }
+        }
+      }
+    }
+
+    /**
+     * Apply habitat zone effects
+     */
+    private applyHabitatEffects(): void {
+      if (!this.state.habitatZone) return;
+
+      const habitat = this.state.habitatZone as HabitatCard;
+      const activePlayer = this.state.players[this.state.activePlayer];
+      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+
+      // Process each ability in the habitat card
+      for (const ability of habitat.abilities) {
+        // Apply on-play effects immediately (OnSummon trigger)
+        if (ability.trigger === AbilityTrigger.OnSummon) {
+          // Type guard: only process structured abilities with effects
+          if (!('effects' in ability)) continue;
+
+          for (const effect of ability.effects) {
+            this.processHabitatEffect(effect, activePlayer, opposingPlayer);
+          }
+        }
+        // Note: WhileOnField abilities are handled elsewhere during combat/ability processing
+      }
+
+      // Count ongoing WhileOnField abilities for logging
+      const ongoingCount = habitat.abilities.filter(a => a.trigger === AbilityTrigger.WhileOnField).length;
+      Logger.debug(`Habitat ${habitat.name} active with ${ongoingCount} ongoing abilities`);
+    }
+
+    /**
+     * Process a single habitat effect
+     */
+    private processHabitatEffect(effect: AbilityEffect, activePlayer: Player, opposingPlayer: Player): void {
+      switch (effect.type) {
+        // Counter effects removed
+
+        // Ongoing effects like stat boosts are handled by the AbilityProcessor during combat
+        case EffectType.ModifyStats:
+          Logger.debug(`Habitat provides ongoing stat modifications`);
+          break;
+
+        default:
+          Logger.debug(`Unhandled habitat effect type: ${effect.type}`);
+      }
+    }
+
+    /**
+     * Apply buff card effects when played
+     */
+    private applyBuffCardEffects(buffCard: any, player: Player): void {
+      const opponent = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+
+      // Process each ability in the buff card
+      for (const ability of buffCard.abilities) {
+        // Apply on-play effects immediately (OnSummon trigger)
+        if (ability.trigger === AbilityTrigger.OnSummon) {
+          // Type guard: only process structured abilities with effects
+          if (!('effects' in ability)) continue;
+
+          for (const effect of ability.effects) {
+            this.processBuffEffect(effect, player, opponent);
+          }
+        }
+
+        // Apply WhileOnField stat modifications to all existing beasts
+        if (ability.trigger === AbilityTrigger.WhileOnField) {
+          // Type guard: only process structured abilities with effects
+          if (!('effects' in ability)) continue;
+
+          for (const effect of ability.effects) {
+            if (effect.type === EffectType.ModifyStats) {
+              // Apply to all beasts that match the target
+              const targetPlayers = effect.target === AbilityTarget.AllAllies || effect.target === AbilityTarget.AllUnits
+                ? [player]
+                : [];
+
+              for (const targetPlayer of targetPlayers) {
+                for (const beast of targetPlayer.field) {
+                  if (!beast) continue;
+
+                  // Apply the stat modification
+                  if (effect.stat === StatType.Health) {
+                    beast.currentHealth += effect.value;
+                    beast.maxHealth += effect.value;
+                    Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Health to ${beast.name}`);
+                  } else if (effect.stat === StatType.Attack) {
+                    beast.currentAttack += effect.value;
+                    Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Attack to ${beast.name}`);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Count ongoing abilities for logging
+      const ongoingCount = buffCard.abilities.filter((a: any) =>
+        a.trigger === AbilityTrigger.WhileOnField ||
+        a.trigger === AbilityTrigger.OnOwnStartOfTurn ||
+        a.trigger === AbilityTrigger.OnOwnEndOfTurn
+      ).length;
+      Logger.debug(`Buff ${buffCard.name} active with ${ongoingCount} ongoing/triggered abilities`);
+    }
+
+    /**
+     * Process a single buff effect
+     */
+    private processBuffEffect(effect: AbilityEffect, player: Player, opponent: Player): void {
+      switch (effect.type) {
+        case EffectType.GainResource:
+          if (effect.resource === ResourceType.Nectar) {
+            player.currentNectar = Math.min(MAX_NECTAR, player.currentNectar + effect.value);
+            Logger.debug(`Buff grants ${effect.value} Nectar`);
+          }
+          break;
+
+        case EffectType.ModifyStats:
+          Logger.debug(`Buff provides stat modifications (handled by AbilityProcessor during combat)`);
+          break;
+
+        case EffectType.DrawCards:
+          this.drawCards(player, effect.value);
+          break;
+
+        // Ongoing effects like stat boosts are handled by the AbilityProcessor
+        default:
+          Logger.debug(`Buff effect type ${effect.type} (handled by AbilityProcessor if ongoing)`);
+      }
+    }
+
+    /**
+     * Apply WhileOnField buff card stat modifications to a beast
+     */
+    private applyWhileOnFieldBuffStats(beast: BloomBeastInstance, player: Player): void {
+      // Check all buff cards in the player's buff zone
+      for (const buffCard of player.buffZone) {
+        if (!buffCard) continue;
+
+        // Process each ability in the buff card
+        for (const ability of buffCard.abilities) {
+          // Only process WhileOnField abilities
+          if (ability.trigger !== AbilityTrigger.WhileOnField) continue;
+
+          // Type guard: only process structured abilities with effects
+          if (!('effects' in ability)) continue;
+
+          // Process each effect
+          for (const effect of ability.effects) {
+            if (effect.type !== EffectType.ModifyStats) continue;
+
+            // Check if this effect applies to this beast
+            const applies =
+              effect.target === AbilityTarget.AllAllies ||
+              effect.target === AbilityTarget.AllUnits;
+
+            if (!applies) continue;
+
+            // Apply the stat modification
+            if (effect.stat === StatType.Health) {
+              beast.currentHealth += effect.value;
+              beast.maxHealth += effect.value;
+              Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Health to ${beast.name}`);
+            } else if (effect.stat === StatType.Attack) {
+              beast.currentAttack += effect.value;
+              Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Attack to ${beast.name}`);
+            }
+          }
+        }
+      }
+    }
+
+    /**
+     * Draw cards from deck
+     */
+    private drawCards(player: Player, count: number): void {
+      for (let i = 0; i < count; i++) {
+        if (player.deck.length > 0) {
+          const card = player.deck.pop();
+          if (card) {
+            player.hand.push(card);
+          }
+        }
+      }
+    }
+
+    /**
+     * Shuffle a player's deck
+     */
+    private shuffleDeck(player: Player): void {
+      for (let i = player.deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [player.deck[i], player.deck[j]] = [player.deck[j], player.deck[i]];
+      }
+    }
+
+    /**
+     * Trigger state-based abilities
+     */
+    private async triggerStateBasedAbilities(playerIndex: 0 | 1, phase: 'start' | 'end'): Promise<void> {
+      const activePlayer = this.state.players[playerIndex];
+      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
+
+      // Trigger abilities based on phase
+      if (phase === 'start') {
+        // Trigger OnOwnStartOfTurn for active player's beasts
+        for (const beast of activePlayer.field) {
+          if (beast) {
+            await this.triggerBeastAbility(beast, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
+          }
+        }
+
+        // Trigger OnOwnStartOfTurn for active player's buff cards
+        for (const buffCard of activePlayer.buffZone) {
+          if (buffCard) {
+            await this.triggerBuffCardAbility(buffCard, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
+          }
+        }
+      } else {
+        // Trigger OnOwnEndOfTurn for active player's beasts
+        for (const beast of activePlayer.field) {
+          if (beast) {
+            await this.triggerBeastAbility(beast, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
+          }
+        }
+
+        // Trigger OnOwnEndOfTurn for active player's buff cards
+        for (const buffCard of activePlayer.buffZone) {
+          if (buffCard) {
+            await this.triggerBuffCardAbility(buffCard, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
+          }
+        }
+      }
+    }
+
+    /**
+     * Trigger all abilities for a beast that match a specific trigger
+     */
+    private async triggerBeastAbility(
+      beast: BloomBeastInstance,
+      trigger: string,
+      controllingPlayer: Player,
+      opposingPlayer: Player
+    ): Promise<void> {
+      const cardDef = this.getCardDefinition(beast.cardId);
+      if (!cardDef || cardDef.type !== 'Bloom') return;
+
+      const beastCard = cardDef as BloomBeastCard;
+      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
+
+      // Process each ability with this trigger
+      for (const ability of abilities) {
+        const results = this.abilityProcessor.processAbility(ability, {
+          source: beast,
+          sourceCard: beastCard,
+          trigger,
+          gameState: this.state,
+          controllingPlayer,
+          opposingPlayer,
+        });
+
+        // Apply ability results to game state
+        this.applyAbilityResults(results);
+
+        // Check for battle end after ability effects
+        if (this.checkForBattleEnd()) {
+          this.state.battleState = BattlePhase.Finished;
+        }
+      }
+    }
+
+    /**
+     * Trigger all abilities for a buff card that match a specific trigger
+     */
+    private async triggerBuffCardAbility(
+      buffCard: any,
+      trigger: string,
+      controllingPlayer: Player,
+      opposingPlayer: Player
+    ): Promise<void> {
+      // Process each ability in the buff card
+      for (const ability of buffCard.abilities) {
+        if (ability.trigger === trigger) {
+          // Type guard: only process structured abilities with effects
+          if (!('effects' in ability)) continue;
+
+          // Process each effect in the ability
+          for (const effect of ability.effects) {
+            this.processBuffEffect(effect, controllingPlayer, opposingPlayer);
+          }
+        }
+      }
+    }
+
+    /**
+     * Trigger summon abilities
+     */
+    private triggerSummonAbilities(beast: BloomBeastInstance): void {
+      const activePlayer = this.state.players[this.state.activePlayer];
+      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+
+      // Get the card definition to access abilities
+      const cardDef = this.getCardDefinition(beast.cardId);
+      if (!cardDef || cardDef.type !== 'Bloom') return;
+
+      const beastCard = cardDef as BloomBeastCard;
+      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, 'OnSummon');
+
+      // Process each OnSummon ability
+      for (const ability of abilities) {
+        const results = this.abilityProcessor.processAbility(ability, {
+          source: beast,
+          sourceCard: beastCard,
+          trigger: 'OnSummon',
+          gameState: this.state,
+          controllingPlayer: activePlayer,
+          opposingPlayer: opposingPlayer,
+        });
+
+        // Apply ability results to game state
+        this.applyAbilityResults(results);
+      }
+    }
+
+    /**
+     * Trigger OnAllySummon abilities on other beasts when a new ally is summoned
+     */
+    private triggerAllySummonAbilities(summonedBeast: BloomBeastInstance, controllingPlayer: Player): void {
+      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+
+      // Get the summoned beast's card definition for checking affinity condition
+      const summonedCardDef = this.getCardDefinition(summonedBeast.cardId);
+
+      // Check all other beasts on the same side
+      for (const beast of controllingPlayer.field) {
+        if (!beast || beast.instanceId === summonedBeast.instanceId) continue;
+
+        const cardDef = this.getCardDefinition(beast.cardId);
+        if (!cardDef || cardDef.type !== 'Bloom') continue;
+
+        const beastCard = cardDef as BloomBeastCard;
+        const abilities = this.getAbilitiesWithTrigger(beast, beastCard, 'OnAllySummon');
+
+        // Process each OnAllySummon ability
+        for (const ability of abilities) {
+          const results = this.abilityProcessor.processAbility(ability, {
+            source: beast,
+            sourceCard: beastCard,
+            trigger: 'OnAllySummon',
+            target: summonedBeast,  // Pass the summoned beast as target for condition checking
+            gameState: this.state,
+            controllingPlayer,
+            opposingPlayer,
+          });
+
+          // Apply ability results to game state
+          this.applyAbilityResults(results);
+        }
+      }
+    }
+
+    // Counter effects removed to reduce game complexity
+
+    /**
+     * Clear temporary effects from a beast and revert stat modifications
+     */
+    private clearTemporaryEffects(beast: BloomBeastInstance): void {
+      if (!beast.temporaryEffects) return;
+
+      // Process effects that are expiring and revert their stat modifications
+      beast.temporaryEffects = beast.temporaryEffects.filter(effect => {
+        if (effect.turnsRemaining !== undefined) {
+          effect.turnsRemaining--;
+
+          // If effect is expiring, revert its stat changes
+          if (effect.turnsRemaining <= 0 && effect.type === 'stat-mod') {
+            const statMod = effect as any;
+
+            // Revert attack modifications
+            if (statMod.stat === 'attack' || statMod.stat === 'both') {
+              beast.currentAttack = Math.max(0, beast.currentAttack - statMod.value);
+            }
+
+            // Revert health modifications (but don't reduce below current if it would "kill" the beast)
+            if (statMod.stat === 'health' || statMod.stat === 'both') {
+              // Only reduce current health if the beast had been healed by this effect
+              if (statMod.value > 0) {
+                beast.currentHealth = Math.max(1, Math.min(beast.maxHealth, beast.currentHealth - statMod.value));
+              }
+              // If it was a debuff (negative), restore health
+              else if (statMod.value < 0) {
+                beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth - statMod.value);
+              }
+            }
+
+            Logger.debug(`Cleared temporary ${statMod.stat} modification (${statMod.value}) from ${beast.instanceId}`);
+            return false; // Remove this effect
+          }
+
+          return effect.turnsRemaining > 0;
+        }
+        return false;
+      });
+    }
+
+    /**
+     * Get card definition by ID
+     */
+    private getCardDefinition(cardId: string): AnyCard | null {
+      return this.getCardDatabase().get(cardId) || null;
+    }
+
+    /**
+     * Get all current abilities for a beast based on its level
+     * Takes into account ability upgrades from leveling
+     */
+    private getCurrentAbilities(beast: BloomBeastInstance, beastCard: BloomBeastCard): any[] {
+      const { abilities } = this.levelingSystem.getCurrentAbilities(beastCard, beast.currentLevel);
+      return abilities;
+    }
+
+    /**
+     * Get abilities for a beast that match a specific trigger
+     */
+    private getAbilitiesWithTrigger(beast: BloomBeastInstance, beastCard: BloomBeastCard, trigger: string): any[] {
+      const abilities = this.getCurrentAbilities(beast, beastCard);
+      return abilities.filter(ability => ability.trigger === trigger);
+    }
+
+    /**
+     * Check if a beast has a specific attack modification
+     */
+    private hasAttackModification(
+      beast: BloomBeastInstance,
+      modification: 'attack-first' | 'cannot-counterattack' | 'double-damage' | 'triple-damage' | 'attack-twice' | 'instant-destroy' | 'piercing' | 'lifesteal'
+    ): boolean {
+      const cardDef = this.getCardDefinition(beast.cardId);
+      if (!cardDef || cardDef.type !== 'Bloom') return false;
+
+      const beastCard = cardDef as BloomBeastCard;
+      const abilities = this.getCurrentAbilities(beast, beastCard);
+
+      // Check all abilities for the attack modification
+      for (const ability of abilities) {
+        // Only StructuredAbility has effects
+        if (!ability || !('effects' in ability)) continue;
+
+        // Check if any effect is an AttackModification with the specified modification
+        for (const effect of ability.effects) {
+          if (effect.type === EffectType.AttackModification && (effect as any).modification === modification) {
+            // Check condition if present
+            const attackModEffect = effect as any;
+            if (attackModEffect.condition) {
+              // TODO: Implement condition checking
+              // For now, if there's a condition we need to evaluate it
+              // Example: Dewdrop Drake only has attack-first when it's the only unit on field
+              Logger.debug(`Attack modification '${modification}' has condition, assuming true for now`);
+            }
+            return true;
+          }
+        }
+      }
+
+      return false;
+    }
+
+
+    /**
+     * End the match
+     */
+    private endMatch(result: any): void {
+      Logger.debug('Match ended!', result);
+      // TODO: Handle match end, rewards, etc.
+    }
+
+    /**
+     * Execute attack from one beast to another or to player
+     */
+    public async executeAttack(
+      attackingPlayer: Player,
+      attackerIndex: number,
+      targetType: 'beast' | 'player',
+      targetIndex?: number
+    ): Promise<boolean> {
+      if (attackerIndex < 0 || attackerIndex >= attackingPlayer.field.length) {
+        Logger.error('Invalid attacker index');
+        return false;
+      }
+
+      const attacker = attackingPlayer.field[attackerIndex];
+      if (!attacker) {
+        Logger.error('No beast at attacker position');
+        return false;
+      }
+
+      if (attacker.summoningSickness) {
+        Logger.error('Beast has summoning sickness');
+        return false;
+      }
+
+      const defendingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+
+      // Check for traps on attack
+      const attackData = { attackNegated: false };
+      await this.checkTraps('OnAttack', attackingPlayer, attackData);
+
+      // If attack was negated by trap, return
+      if (attackData.attackNegated) {
+        Logger.debug('Attack was negated by a trap');
+        return false;
+      }
+
+      // Trigger OnAttack abilities
+      this.triggerCombatAbilities('OnAttack', attacker, attackingPlayer, defendingPlayer);
+
+      if (targetType === 'beast' && targetIndex !== undefined) {
+        const defender = defendingPlayer.field[targetIndex];
+        if (!defender) {
+          Logger.error('No beast at defender position');
+          return false;
+        }
+
+        // Check for attack modifications
+        const attackerHasFirstStrike = this.hasAttackModification(attacker, 'attack-first');
+        const attackerCannotBeCountered = this.hasAttackModification(attacker, 'cannot-counterattack');
+
+        const attackerDamage = attacker.currentAttack;
+        const defenderDamage = defender.currentAttack;
+
+        Logger.debug(`Combat: ${attacker.cardId} (${attackerDamage} ATK) vs ${defender.cardId} (${defenderDamage} ATK)${attackerHasFirstStrike ? ' [ATTACK-FIRST]' : ''}${attackerCannotBeCountered ? ' [NO-COUNTER]' : ''}`);
+
+        // Handle attack-first mechanic
+        if (attackerHasFirstStrike) {
+          // Attacker deals damage first
+          defender.currentHealth = Math.max(0, defender.currentHealth - attackerDamage);
+          Logger.debug(`${attacker.cardId} attacked first for ${attackerDamage} damage. ${defender.cardId} HP: ${defender.currentHealth}/${defender.maxHealth}`);
+
+          // Trigger OnDamage abilities on defender
+          this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer, undefined, attacker);
+
+          // Check if defender died from first strike
+          if (defender.currentHealth <= 0) {
+            Logger.debug(`${defender.cardId} was destroyed by first strike! No counter-attack.`);
+            this.triggerCombatAbilities('OnDestroy', defender, defendingPlayer, attackingPlayer);
+            const index = defendingPlayer.field.indexOf(defender);
+            if (index !== -1) {
+              defendingPlayer.field[index] = null;
+              defendingPlayer.graveyard.push(defender as any);
+            }
+
+            // Check for battle end immediately
+            if (this.checkForBattleEnd()) {
+              this.state.battleState = BattlePhase.Finished;
+              await this.transitionState();
+            }
+            return true; // Combat ends, defender died before counter-attacking
+          }
+
+          // Defender survived, now counter-attacks (unless attacker has cannot-counterattack)
+          if (!attackerCannotBeCountered) {
+            attacker.currentHealth = Math.max(0, attacker.currentHealth - defenderDamage);
+            Logger.debug(`${defender.cardId} countered for ${defenderDamage} damage. ${attacker.cardId} HP: ${attacker.currentHealth}/${attacker.maxHealth}`);
+
+            // Trigger OnDamage abilities on attacker
+            this.triggerCombatAbilities('OnDamage', attacker, attackingPlayer, defendingPlayer, undefined, defender);
+
+            // Check if attacker died from counter
+            if (attacker.currentHealth <= 0) {
+              Logger.debug(`${attacker.cardId} was destroyed by counter-attack!`);
+              this.triggerCombatAbilities('OnDestroy', attacker, attackingPlayer, defendingPlayer);
+              const index = attackingPlayer.field.indexOf(attacker);
+              if (index !== -1) {
+                attackingPlayer.field[index] = null;
+                attackingPlayer.graveyard.push(attacker as any);
+              }
+
+              // Check for battle end
+              if (this.checkForBattleEnd()) {
+                this.state.battleState = BattlePhase.Finished;
+                await this.transitionState();
+              }
+            }
+          } else {
+            Logger.debug(`${defender.cardId} cannot counter-attack (attacker has cannot-counterattack)`);
+          }
+        } else {
+          // Normal simultaneous damage
+          defender.currentHealth = Math.max(0, defender.currentHealth - attackerDamage);
+
+          // Counter-attack happens unless prevented
+          if (!attackerCannotBeCountered) {
+            attacker.currentHealth = Math.max(0, attacker.currentHealth - defenderDamage);
+            Logger.debug(`Simultaneous combat: ${attacker.cardId} dealt ${attackerDamage}, ${defender.cardId} dealt ${defenderDamage}`);
+          } else {
+            Logger.debug(`${attacker.cardId} dealt ${attackerDamage} damage, ${defender.cardId} cannot counter`);
+          }
+
+          // Trigger OnDamage abilities
+          this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer, undefined, attacker);
+          if (!attackerCannotBeCountered) {
+            this.triggerCombatAbilities('OnDamage', attacker, attackingPlayer, defendingPlayer, undefined, defender);
+          }
+
+          // Check for deaths
+          let defenderDied = false;
+          if (defender.currentHealth <= 0) {
+            defenderDied = true;
+            Logger.debug(`${defender.cardId} was destroyed!`);
+            this.triggerCombatAbilities('OnDestroy', defender, defendingPlayer, attackingPlayer);
+            const index = defendingPlayer.field.indexOf(defender);
+            if (index !== -1) {
+              defendingPlayer.field[index] = null;
+              defendingPlayer.graveyard.push(defender as any);
+            }
+          }
+
+          if (attacker.currentHealth <= 0) {
+            Logger.debug(`${attacker.cardId} was destroyed!`);
+            this.triggerCombatAbilities('OnDestroy', attacker, attackingPlayer, defendingPlayer);
+            const index = attackingPlayer.field.indexOf(attacker);
+            if (index !== -1) {
+              attackingPlayer.field[index] = null;
+              attackingPlayer.graveyard.push(attacker as any);
+            }
+          }
+
+          // Check for battle end after any death
+          if (this.checkForBattleEnd()) {
+            this.state.battleState = BattlePhase.Finished;
+            await this.transitionState();
+          }
+        }
+      } else if (targetType === 'player') {
+        // Direct attack to player
+        const damage = attacker.currentAttack;
+        defendingPlayer.health = Math.max(0, defendingPlayer.health - damage);
+        Logger.debug(`${attacker.cardId} attacked player for ${damage} damage`);
+
+        // Check if player was defeated
+        if (defendingPlayer.health <= 0) {
+          Logger.debug(`${defendingPlayer.name} was defeated!`);
+          this.state.battleState = BattlePhase.Finished;
+          await this.transitionState();
+        }
+      }
+
+      // Always check for battle end after any damage
+      if (this.checkForBattleEnd()) {
+        this.state.battleState = BattlePhase.Finished;
+        await this.transitionState();
+      }
+
+      return true;
+    }
+
+    /**
+     * Trigger combat-related abilities
+     */
+    private triggerCombatAbilities(
+      trigger: 'OnAttack' | 'OnDamage' | 'OnDestroy',
+      beast: BloomBeastInstance,
+      controllingPlayer: Player,
+      opposingPlayer: Player,
+      target?: BloomBeastInstance,
+      attacker?: BloomBeastInstance
+    ): void {
+      const cardDef = this.getCardDefinition(beast.cardId);
+      if (!cardDef || cardDef.type !== 'Bloom') return;
+
+      const beastCard = cardDef as BloomBeastCard;
+      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
+
+      // Process each ability with this trigger
+      for (const ability of abilities) {
+        const results = this.abilityProcessor.processAbility(ability, {
+          source: beast,
+          sourceCard: beastCard,
+          trigger,
+          target,
+          attacker,
+          gameState: this.state,
+          controllingPlayer,
+          opposingPlayer,
+        });
+
+        // Apply ability results to game state
+        this.applyAbilityResults(results);
+      }
+    }
+
+    /**
+     * Check and trigger traps based on an event
+     * Only triggers the FIRST matching trap (in order)
+     */
+    private async checkTraps(
+      triggerType: 'OnBloomPlay' | 'OnHabitatPlay' | 'OnAttack' | 'OnDamage',
+      triggeringPlayer: Player,
+      data?: any
+    ): Promise<void> {
+      const opposingPlayer = triggeringPlayer === this.state.players[0]
+        ? this.state.players[1]
+        : this.state.players[0];
+
+      // Check opponent's traps - only activate FIRST matching trap
+      for (let i = 0; i < opposingPlayer.trapZone.length; i++) {
+        const trapCard = opposingPlayer.trapZone[i];
+        if (!trapCard || trapCard.type !== 'Trap') continue;
+
+        const trap = trapCard as TrapCard;
+        let shouldTrigger = false;
+
+        // Check if trap activation condition matches the trigger
+        switch (triggerType) {
+          case 'OnBloomPlay':
+            shouldTrigger = trap.activation.trigger === TrapTrigger.OnBloomPlay;
+            break;
+          case 'OnHabitatPlay':
+            shouldTrigger = trap.activation.trigger === TrapTrigger.OnHabitatPlay;
+            break;
+          case 'OnAttack':
+            shouldTrigger = trap.activation.trigger === TrapTrigger.OnAttack;
+            break;
+          case 'OnDamage':
+            shouldTrigger = trap.activation.trigger === TrapTrigger.OnDamage;
+            break;
+        }
+
+        if (shouldTrigger) {
+          Logger.debug(`Trap activated: ${trap.name}`);
+
+          // Process trap effect
+          await this.processTrapEffect(trap, opposingPlayer, triggeringPlayer, data);
+
+          // Remove trap from zone and send to graveyard
+          opposingPlayer.trapZone[i] = null;
+          opposingPlayer.graveyard.push(trap);
+
+          // Only activate ONE trap per event
+          return;
+        }
+      }
+    }
+
+    /**
+     * Process trap card effect using structured effects
+     */
+    private async processTrapEffect(
+      trap: TrapCard,
+      trapOwner: Player,
+      opponent: Player,
+      data?: any
+    ): Promise<void> {
+      // Process each ability in the trap card (usually just one with OnSummon trigger)
+      for (const ability of trap.abilities) {
+        // Trap abilities trigger when activated (OnSummon for immediate effects)
+        if (ability.trigger === AbilityTrigger.OnSummon || !ability.trigger) {
+          // Type guard: only process structured abilities with effects
+          if (!('effects' in ability)) continue;
+
+          // Process each effect in the ability
+          for (const effect of ability.effects) {
+            switch (effect.type) {
+              case EffectType.NullifyEffect:
+                // Counter/nullify the triggering effect
+                if (data && data.habitatCard) {
+                  Logger.debug(`Habitat countered by ${trap.name}`);
+                  data.countered = true;
+                }
+                if (data && data.attackNegated !== undefined) {
+                  data.attackNegated = true;
+                  Logger.debug(`Attack negated by ${trap.name}`);
+                }
+                break;
+
+              case EffectType.DealDamage:
+                // Deal damage based on target
+                if (effect.target === AbilityTarget.AllEnemies) {
+                  for (const beast of opponent.field) {
+                    if (beast) {
+                      const damage = typeof effect.value === 'number' ? effect.value : 0;
+                      beast.currentHealth = Math.max(0, beast.currentHealth - damage);
+                      if (beast.currentHealth <= 0) {
+                        const index = opponent.field.indexOf(beast);
+                        if (index !== -1) {
+                          opponent.field[index] = null;
+                          opponent.graveyard.push(beast as any);
+                        }
+                      }
+                    }
+                  }
+                } else if (effect.target === AbilityTarget.Opponent) {
+                  const damage = typeof effect.value === 'number' ? effect.value : 0;
+                  opponent.health = Math.max(0, opponent.health - damage);
+                }
+                break;
+
+              case EffectType.DrawCards:
+                this.drawCards(trapOwner, effect.value);
+                break;
+
+              // Add more effect types as needed
+              default:
+                Logger.debug(`Unhandled trap effect type: ${effect.type}`);
+            }
+          }
+        }
+      }
+    }
+
+    /**
+     * Apply ability results to game state
+     */
+    private applyAbilityResults(results: any[]): void {
+      for (const result of results) {
+        if (!result.success) continue;
+
+        // Apply modified units back to the field
+        if (result.modifiedUnits && result.modifiedUnits.length > 0) {
+          for (const modifiedUnit of result.modifiedUnits) {
+            // Find and update the unit in both players' fields
+            for (const player of this.state.players) {
+              const index = player.field.findIndex(
+                u => u && u.instanceId === modifiedUnit.instanceId
+              );
+              if (index !== -1) {
+                player.field[index] = modifiedUnit;
+                break;
+              }
+            }
+          }
+        }
+
+        // Apply modified state
+        if (result.modifiedState) {
+          if (result.modifiedState.players) {
+            this.state.players = result.modifiedState.players;
+          }
+          if (result.modifiedState.drawCardsQueued !== undefined) {
+            const playerIndex = result.modifiedState.drawForPlayerIndex ?? this.state.activePlayer;
+            const player = this.state.players[playerIndex];
+            this.drawCards(player, result.modifiedState.drawCardsQueued);
+          }
+        }
+
+        // Log the result message if available
+        if (result.message) {
+          Logger.debug(result.message);
+        }
+      }
+
+      // Always check for battle end after applying ability results
+      if (this.checkForBattleEnd()) {
+        this.state.battleState = BattlePhase.Finished;
+        // Don't transition immediately here as we might be in the middle of processing
+        // The next game loop iteration will handle the transition
+      }
+    }
+
+    /**
+     * Get current game state
+     */
+    public getState(): GameState | null {
+      return this.gameState;
+    }
+
+    /**
+     * Reset for new game
+     */
+    public reset(): void {
+      // Reset to null - will be recreated on next startMatch()
+      this.gameState = null;
+      this.combatSystem.reset();
+    }
   }
 
   // ==================== bloombeasts\systems\CardCollectionManager.ts ====================
@@ -4424,9 +12614,9 @@ namespace BloomBeasts {
               baseAttack: cardDef.baseAttack || 0,
               baseHealth: cardDef.baseHealth || 0,
               abilities: abilities.abilities,
-              level: level, // Include computed level for beast instance
+              level: level, // Include computed level for beast instance (added to Card interface)
               levelingConfig: {} as any, // Not used in battle
-            } as any;
+            };
 
             deckCards.push(bloomCard);
           } else {
@@ -4640,1807 +12830,6 @@ namespace BloomBeasts {
 
   }
 
-  // ==================== bloombeasts\engine\utils\StatModifierManager.ts ====================
-
-  /**
-   * StatModifierManager - Centralized stat modification management
-   *
-   * This utility handles all stat modifications in a consistent way across the game.
-   * It tracks different sources of modifications and calculates final stats.
-   */
-
-
-  export class StatModifierManager {
-    /**
-     * Add a stat modifier to a beast
-     */
-    static addModifier(
-      beast: BloomBeastInstance,
-      source: StatModifierSource,
-      sourceId: string,
-      stat: 'attack' | 'health' | 'maxHealth',
-      value: number,
-      duration?: 'permanent' | 'end-of-turn' | 'while-active',
-      turnsRemaining?: number
-    ): void {
-      if (!beast.statModifiers) {
-        beast.statModifiers = [];
-      }
-
-      const modifier: StatModifier = {
-        source,
-        sourceId,
-        stat,
-        value,
-        duration,
-        turnsRemaining
-      };
-
-      beast.statModifiers.push(modifier);
-      Logger.debug(`Added ${stat} modifier: ${value > 0 ? '+' : ''}${value} from ${source} (${sourceId})`);
-
-      // Recalculate stats after adding modifier
-      this.recalculateStats(beast);
-    }
-
-    /**
-     * Remove all modifiers from a specific source
-     */
-    static removeModifiersBySource(
-      beast: BloomBeastInstance,
-      source: StatModifierSource,
-      sourceId?: string
-    ): void {
-      if (!beast.statModifiers) return;
-
-      const before = beast.statModifiers.length;
-
-      if (sourceId) {
-        beast.statModifiers = beast.statModifiers.filter(
-          m => !(m.source === source && m.sourceId === sourceId)
-        );
-      } else {
-        beast.statModifiers = beast.statModifiers.filter(m => m.source !== source);
-      }
-
-      const removed = before - beast.statModifiers.length;
-      if (removed > 0) {
-        Logger.debug(`Removed ${removed} modifier(s) from ${source}${sourceId ? ` (${sourceId})` : ''}`);
-        this.recalculateStats(beast);
-      }
-    }
-
-    /**
-     * Update modifiers for end of turn (decrement turns remaining, remove expired)
-     */
-    static updateEndOfTurn(beast: BloomBeastInstance): void {
-      if (!beast.statModifiers) return;
-
-      const before = beast.statModifiers.length;
-
-      beast.statModifiers = beast.statModifiers.filter(modifier => {
-        // Remove end-of-turn effects
-        if (modifier.duration === 'end-of-turn') {
-          Logger.debug(`Removing end-of-turn modifier: ${modifier.stat} ${modifier.value > 0 ? '+' : ''}${modifier.value}`);
-          return false;
-        }
-
-        // Decrement turns remaining for temporary effects
-        if (modifier.turnsRemaining !== undefined) {
-          modifier.turnsRemaining--;
-          if (modifier.turnsRemaining <= 0) {
-            Logger.debug(`Removing expired temporary modifier: ${modifier.stat} ${modifier.value > 0 ? '+' : ''}${modifier.value}`);
-            return false;
-          }
-        }
-
-        return true;
-      });
-
-      const removed = before - beast.statModifiers.length;
-      if (removed > 0) {
-        this.recalculateStats(beast);
-      }
-    }
-
-    /**
-     * Recalculate all current stats from base + modifiers
-     */
-    static recalculateStats(beast: BloomBeastInstance): void {
-      // Store current health percentage to maintain damage
-      const healthPercent = beast.maxHealth > 0 ? beast.currentHealth / beast.maxHealth : 1;
-
-      // Start with base stats
-      let calculatedAttack = beast.baseAttack;
-      let calculatedMaxHealth = beast.baseHealth;
-
-      // Apply all modifiers
-      if (beast.statModifiers) {
-        for (const modifier of beast.statModifiers) {
-          if (modifier.stat === 'attack') {
-            calculatedAttack += modifier.value;
-          } else if (modifier.stat === 'maxHealth' || modifier.stat === 'health') {
-            calculatedMaxHealth += modifier.value;
-          }
-        }
-      }
-
-      // Ensure stats don't go below minimum values
-      calculatedAttack = Math.max(0, calculatedAttack);
-      calculatedMaxHealth = Math.max(1, calculatedMaxHealth);
-
-      // Update current stats
-      const oldMaxHealth = beast.maxHealth;
-      beast.currentAttack = calculatedAttack;
-      beast.maxHealth = calculatedMaxHealth;
-
-      // Adjust current health proportionally if max health changed
-      if (oldMaxHealth !== calculatedMaxHealth && oldMaxHealth > 0) {
-        beast.currentHealth = Math.max(1, Math.min(
-          Math.floor(calculatedMaxHealth * healthPercent),
-          calculatedMaxHealth
-        ));
-      }
-
-      // Ensure current health doesn't exceed max health
-      beast.currentHealth = Math.min(beast.currentHealth, beast.maxHealth);
-    }
-
-    /**
-     * Get total modifier value for a specific stat from all sources
-     */
-    static getTotalModifier(beast: BloomBeastInstance, stat: 'attack' | 'health' | 'maxHealth'): number {
-      if (!beast.statModifiers) return 0;
-
-      return beast.statModifiers
-        .filter(m => m.stat === stat || (m.stat === 'health' && stat === 'maxHealth'))
-        .reduce((sum, m) => sum + m.value, 0);
-    }
-
-    /**
-     * Get modifiers from a specific source
-     */
-    static getModifiersBySource(
-      beast: BloomBeastInstance,
-      source: StatModifierSource,
-      sourceId?: string
-    ): StatModifier[] {
-      if (!beast.statModifiers) return [];
-
-      return beast.statModifiers.filter(m => {
-        if (sourceId) {
-          return m.source === source && m.sourceId === sourceId;
-        }
-        return m.source === source;
-      });
-    }
-
-    /**
-     * Clear all modifiers (useful when beast is destroyed or returned to hand)
-     */
-    static clearAllModifiers(beast: BloomBeastInstance): void {
-      beast.statModifiers = [];
-      this.recalculateStats(beast);
-    }
-
-    /**
-     * Initialize a beast's stat system (call when beast is created/summoned)
-     */
-    static initializeStatSystem(beast: BloomBeastInstance): void {
-      if (!beast.statModifiers) {
-        beast.statModifiers = [];
-      }
-
-      // Ensure baseAttack and baseHealth are set
-      if (beast.baseAttack === undefined) {
-        beast.baseAttack = beast.currentAttack;
-      }
-      if (beast.baseHealth === undefined) {
-        beast.baseHealth = beast.maxHealth;
-      }
-
-      // Recalculate to ensure consistency
-      this.recalculateStats(beast);
-    }
-  }
-
-  // ==================== bloombeasts\screens\missions\BattleStateManager.ts ====================
-
-  /**
-   * BattleStateManager - Handles battle state and game rules
-   *
-   * Responsibilities:
-   * - Card playing logic (validation, field management)
-   * - Combat resolution (attack calculations, damage dealing)
-   * - Ability and effect processing
-   * - Trigger management (OnSummon, OnAttack, OnDamage, OnDestroy, StartOfTurn, EndOfTurn)
-   * - Trap activation
-   * - Buff and debuff application
-   * - Win/loss conditions
-   */
-
-
-  export interface PlayCardResult {
-    success: boolean;
-    message?: string;
-    isTrap?: boolean;
-  }
-
-  export interface AttackResult {
-    success: boolean;
-    damage?: number;
-    message?: string;
-  }
-
-  export interface AbilityResult {
-    success: boolean;
-    message?: string;
-  }
-
-  export class BattleStateManager {
-
-    /**
-     * Play a card from a player's hand
-     */
-    playCard(
-      cardIndex: number,
-      player: Player,
-      opponent: Player,
-      gameState: GameState,
-      targetIndex?: number
-    ): PlayCardResult {
-      // Validate card index
-      if (cardIndex < 0 || cardIndex >= player.hand.length) {
-        Logger.error(`Invalid card index: ${cardIndex}`);
-        return { success: false, message: 'Invalid card index' };
-      }
-
-      const card: any = player.hand[cardIndex];
-
-      // Check if player has enough nectar
-      if (card.cost > player.currentNectar) {
-        Logger.debug('Not enough nectar to play this card');
-        return { success: false, message: 'Not enough nectar' };
-      }
-
-      // Handle different card types
-      switch (card.type) {
-        case 'Bloom':
-          return this.playBloomCard(cardIndex, player, opponent);
-
-        case 'Magic':
-          return this.playMagicCard(cardIndex, player, opponent, targetIndex);
-
-        case 'Trap':
-          return this.playTrapCard(cardIndex, player);
-
-        case 'Buff':
-          return this.playBuffCard(cardIndex, player);
-
-        case 'Habitat':
-          return this.playHabitatCard(cardIndex, player, opponent, gameState);
-
-        default:
-          Logger.debug(`Cannot play card type: ${card.type}`);
-          return { success: false, message: 'Invalid card type' };
-      }
-    }
-
-    /**
-     * Play a Bloom Beast card
-     */
-    private playBloomCard(cardIndex: number, player: Player, opponent: Player): PlayCardResult {
-      // Check if field has space (max 3 beasts)
-      if (player.field.length >= 3) {
-        Logger.debug('Field is full');
-        return { success: false, message: 'Field is full' };
-      }
-
-      const bloomCard: any = player.hand.splice(cardIndex, 1)[0];
-      player.currentNectar -= bloomCard.cost;
-
-      // Create BloomBeastInstance for the field
-      const beastInstance: any = {
-        cardId: bloomCard.id,
-        instanceId: bloomCard.instanceId || `${bloomCard.id}-${Date.now()}`,
-        currentLevel: (bloomCard as any).level || 1,
-        currentXP: 0,
-        baseAttack: bloomCard.baseAttack,
-        baseHealth: bloomCard.baseHealth,
-        currentAttack: bloomCard.baseAttack,
-        currentHealth: bloomCard.baseHealth,
-        maxHealth: bloomCard.baseHealth,
-        counters: [],
-        statusEffects: [],
-        slotIndex: player.field.length,
-        summoningSickness: true,
-        usedAbilityThisTurn: false,
-        statModifiers: [],
-        // Store original card data for display
-        type: 'Bloom',
-        name: bloomCard.name,
-        affinity: bloomCard.affinity,
-        cost: bloomCard.cost,
-        ability: bloomCard.abilities && bloomCard.abilities.length > 0 ? bloomCard.abilities[0] : undefined,
-      };
-
-      // Initialize stat system
-      StatModifierManager.initializeStatSystem(beastInstance);
-
-      player.field.push(beastInstance);
-
-      // Apply buff effects and process OnSummon trigger
-      this.applyStatBuffEffects(player);
-      this.processOnSummonTrigger(beastInstance, player, opponent);
-
-      Logger.debug(`Played ${bloomCard.name} - Nectar: ${player.currentNectar}`);
-      return { success: true, message: `Played ${bloomCard.name}` };
-    }
-
-    /**
-     * Play a Magic card
-     */
-    private playMagicCard(cardIndex: number, player: Player, opponent: Player, targetIndex?: number): PlayCardResult {
-      const magicCard: any = player.hand.splice(cardIndex, 1)[0];
-      player.currentNectar -= magicCard.cost;
-
-      // Get the target beast if targetIndex is provided
-      let target = null;
-      if (targetIndex !== undefined && targetIndex >= 0 && targetIndex < opponent.field.length) {
-        target = opponent.field[targetIndex];
-        Logger.debug(`Magic card targeting opponent beast at index ${targetIndex}: ${target?.name}`);
-      }
-
-      // Process magic card effects immediately
-      // Magic cards use the structured ability system with abilities array
-      if (magicCard.abilities && Array.isArray(magicCard.abilities)) {
-        for (const ability of magicCard.abilities) {
-          if (ability.effects && Array.isArray(ability.effects)) {
-            for (const effect of ability.effects) {
-              this.processMagicEffect(effect, player, opponent, { target });
-            }
-          }
-        }
-      }
-
-      player.graveyard.push(magicCard);
-
-      Logger.debug(`Played magic card: ${magicCard.name}`);
-      return { success: true, message: `Played ${magicCard.name}` };
-    }
-
-    /**
-     * Play a Trap card
-     */
-    private playTrapCard(cardIndex: number, player: Player): PlayCardResult {
-      // Check if trap zone has space (max 3 traps)
-      if (player.trapZone.length >= 3) {
-        Logger.debug('Trap zone is full');
-        return { success: false, message: 'Trap zone is full' };
-      }
-
-      const trapCard: any = player.hand.splice(cardIndex, 1)[0];
-      player.currentNectar -= trapCard.cost;
-      player.trapZone.push(trapCard);
-
-      Logger.debug(`Set trap: ${trapCard.name}`);
-      return { success: true, message: `Set ${trapCard.name}`, isTrap: true };
-    }
-
-    /**
-     * Play a Buff card
-     */
-    private playBuffCard(cardIndex: number, player: Player): PlayCardResult {
-      // Check if buff zone has space (max 2 buffs)
-      if (player.buffZone.length >= 2) {
-        Logger.debug('Buff zone is full');
-        return { success: false, message: 'Buff zone is full' };
-      }
-
-      const buffCard: any = player.hand.splice(cardIndex, 1)[0];
-      player.currentNectar -= buffCard.cost;
-      player.buffZone.push(buffCard);
-
-      // Apply initial stat buff effects immediately
-      this.applyStatBuffEffects(player);
-
-      Logger.debug(`Played buff: ${buffCard.name}`);
-      return { success: true, message: `Played ${buffCard.name}` };
-    }
-
-    /**
-     * Play a Habitat card
-     */
-    private playHabitatCard(
-      cardIndex: number,
-      player: Player,
-      opponent: Player,
-      gameState: GameState
-    ): PlayCardResult {
-      const habitatCard: any = player.hand.splice(cardIndex, 1)[0];
-      player.currentNectar -= habitatCard.cost;
-
-      // Set habitat zone
-      gameState.habitatZone = habitatCard;
-
-      // Process on-play effects
-      if (habitatCard.onPlayEffects && Array.isArray(habitatCard.onPlayEffects)) {
-        for (const effect of habitatCard.onPlayEffects) {
-          this.processHabitatEffect(effect, player, opponent);
-        }
-      }
-
-      Logger.debug(`Played habitat: ${habitatCard.name}`);
-      return { success: true, message: `Played ${habitatCard.name}` };
-    }
-
-    /**
-     * Attack an opponent beast with a player beast
-     */
-    attackBeast(
-      attackerIndex: number,
-      targetIndex: number,
-      player: Player,
-      opponent: Player,
-      onTrapCallback?: (trapName: string) => void
-    ): AttackResult {
-      // Validate indices
-      if (attackerIndex < 0 || attackerIndex >= player.field.length) {
-        return { success: false, message: 'Invalid attacker' };
-      }
-      if (targetIndex < 0 || targetIndex >= opponent.field.length) {
-        return { success: false, message: 'Invalid target' };
-      }
-
-      const attacker: any = player.field[attackerIndex];
-      const target: any = opponent.field[targetIndex];
-
-      // Check if attacker can attack
-      if (attacker.summoningSickness) {
-        Logger.debug('Beast has summoning sickness and cannot attack');
-        return { success: false, message: 'Summoning sickness' };
-      }
-
-      Logger.debug(`${attacker.name} attacks ${target.name}!`);
-
-      // Process OnAttack trigger
-      this.processOnAttackTrigger(attacker, player, opponent);
-
-      // Check for trap activation - pass the attacking beast
-      this.checkAndActivateTraps(opponent, attacker, 'attack', onTrapCallback);
-
-      // Deal damage to each other
-      const attackerDamage = attacker.currentAttack || 0;
-      const targetDamage = target.currentAttack || 0;
-
-      target.currentHealth -= attackerDamage;
-      attacker.currentHealth -= targetDamage;
-
-      // Process OnDamage triggers
-      if (attackerDamage > 0) {
-        this.processOnDamageTrigger(target, opponent, player);
-      }
-      if (targetDamage > 0) {
-        this.processOnDamageTrigger(attacker, player, opponent);
-      }
-
-      // Remove dead beasts
-      if (target.currentHealth <= 0) {
-        this.processOnDestroyTrigger(target, opponent, player);
-        opponent.field.splice(targetIndex, 1);
-        Logger.debug(`${target.name} was defeated!`);
-      }
-      if (attacker.currentHealth <= 0) {
-        this.processOnDestroyTrigger(attacker, player, opponent);
-        player.field.splice(attackerIndex, 1);
-        Logger.debug(`${attacker.name} was defeated!`);
-      }
-
-      // Mark beast as having attacked
-      if (attacker.currentHealth > 0) {
-        attacker.summoningSickness = true;
-      }
-
-      return { success: true, damage: attackerDamage };
-    }
-
-    /**
-     * Attack opponent player directly
-     */
-    attackPlayer(
-      attackerIndex: number,
-      player: Player,
-      opponent: Player,
-      onTrapCallback?: (trapName: string) => void
-    ): AttackResult {
-      // Validate index
-      if (attackerIndex < 0 || attackerIndex >= player.field.length) {
-        return { success: false, message: 'Invalid attacker' };
-      }
-
-      // Can only attack player directly if opponent has no beasts
-      if (opponent.field.length > 0) {
-        Logger.debug('Cannot attack player directly while opponent has beasts');
-        return { success: false, message: 'Must attack beasts first' };
-      }
-
-      const attacker: any = player.field[attackerIndex];
-
-      // Check if attacker can attack
-      if (attacker.summoningSickness) {
-        Logger.debug('Beast has summoning sickness and cannot attack');
-        return { success: false, message: 'Summoning sickness' };
-      }
-
-      const damage = attacker.currentAttack || 0;
-
-      // Process OnAttack trigger
-      this.processOnAttackTrigger(attacker, player, opponent);
-
-      // Check for trap activation - pass the attacking beast
-      this.checkAndActivateTraps(opponent, attacker, 'attack', onTrapCallback);
-
-      opponent.health -= damage;
-
-      Logger.debug(`${attacker.name} attacks opponent for ${damage} damage!`);
-
-      // Mark beast as having attacked
-      attacker.summoningSickness = true;
-
-      return { success: true, damage };
-    }
-
-    /**
-     * Use a beast's ability
-     */
-    useAbility(
-      beastIndex: number,
-      player: Player,
-      opponent: Player,
-      gameState: GameState
-    ): AbilityResult {
-      // Validate beast index
-      if (beastIndex < 0 || beastIndex >= player.field.length) {
-        return { success: false, message: 'Invalid beast index' };
-      }
-
-      const beast: any = player.field[beastIndex];
-      if (!beast) {
-        return { success: false, message: 'No beast at this position' };
-      }
-
-      // Check if beast has summoning sickness
-      if (beast.summoningSickness) {
-        return { success: false, message: 'Beast has summoning sickness' };
-      }
-
-      // Check if beast has an ability
-      if (!beast.ability) {
-        return { success: false, message: 'Beast has no ability' };
-      }
-
-      // Check if ability was already used this turn
-      if (beast.usedAbilityThisTurn) {
-        return { success: false, message: 'Ability already used this turn' };
-      }
-
-      const ability = beast.ability as any;
-
-      // Check and pay costs
-      if (ability.cost) {
-        const costResult = this.payAbilityCost(ability.cost, player, gameState);
-        if (!costResult.success) {
-          return costResult;
-        }
-      }
-
-      // Process ability effects
-      if (ability.effects && Array.isArray(ability.effects)) {
-        for (const effect of ability.effects) {
-          this.processAbilityEffect(effect, beast, player, opponent);
-        }
-      }
-
-      // Mark ability as used this turn
-      beast.usedAbilityThisTurn = true;
-
-      Logger.debug(`Activated ability: ${ability.name}`);
-      return { success: true, message: `Used ${ability.name}` };
-    }
-
-    /**
-     * Pay the cost for an ability
-     */
-    private payAbilityCost(cost: any, player: Player, gameState: GameState): AbilityResult {
-      switch (cost.type) {
-        case 'nectar':
-          const nectarCost = cost.value || 1;
-          if (player.currentNectar < nectarCost) {
-            return { success: false, message: 'Not enough nectar' };
-          }
-          player.currentNectar -= nectarCost;
-          break;
-
-        case 'discard':
-          const discardCost = cost.value || 1;
-          if (player.hand.length < discardCost) {
-            return { success: false, message: 'Not enough cards to discard' };
-          }
-          for (let i = 0; i < discardCost; i++) {
-            const card = player.hand.pop();
-            if (card) player.graveyard.push(card);
-          }
-          break;
-
-        case 'remove-counter':
-          const habitat = gameState.habitatZone as any;
-          if (!habitat || !habitat.counters || !Array.isArray(habitat.counters)) {
-            return { success: false, message: 'No habitat on field' };
-          }
-          const counterCost = cost.value || 1;
-          const removedCount = Math.min(counterCost, habitat.counters.length);
-          if (removedCount < counterCost) {
-            return { success: false, message: 'No counters available on habitat' };
-          }
-          habitat.counters.splice(0, removedCount);
-          Logger.debug(`Removed ${removedCount} counter(s) from ${habitat.name}`);
-          break;
-      }
-
-      return { success: true };
-    }
-
-    /**
-     * Process a single ability effect
-     */
-    processAbilityEffect(effect: any, source: any, player: any, opponent: any): void {
-      switch (effect.type) {
-        case 'modify-stats':
-          if (effect.target === 'self') {
-            // Determine duration based on effect.duration or default to end-of-turn
-            const duration = effect.duration || 'end-of-turn';
-            const turnsRemaining = duration === 'end-of-turn' ? 1 : undefined;
-
-            if (effect.stat === 'attack') {
-              StatModifierManager.addModifier(
-                source,
-                StatModifierSource.Ability,
-                source.ability?.name || 'ability',
-                'attack',
-                effect.value || 0,
-                duration,
-                turnsRemaining
-              );
-            } else if (effect.stat === 'health') {
-              StatModifierManager.addModifier(
-                source,
-                StatModifierSource.Ability,
-                source.ability?.name || 'ability',
-                'maxHealth',
-                effect.value || 0,
-                duration,
-                turnsRemaining
-              );
-            }
-          }
-          break;
-
-        case 'heal':
-          if (effect.target === 'self') {
-            const healAmount = effect.value || 0;
-            source.currentHealth = Math.min(source.maxHealth, source.currentHealth + healAmount);
-          }
-          break;
-
-        case 'damage':
-          const damageTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition);
-          damageTargets.forEach((target: any) => {
-            if (target.currentHealth !== undefined) {
-              // It's a beast
-              target.currentHealth -= effect.value || 0;
-              if (target.currentHealth <= 0) {
-                const ownerField = player.field.includes(target) ? player.field : opponent.field;
-                const owner = player.field.includes(target) ? player : opponent;
-                const otherPlayer = player.field.includes(target) ? opponent : player;
-                const index = ownerField.indexOf(target);
-                if (index > -1) {
-                  this.processOnDestroyTrigger(target, owner, otherPlayer);
-                  ownerField.splice(index, 1);
-                  Logger.debug(`${target.name} was destroyed by ${source.name}'s ability!`);
-                }
-              }
-            } else if (target.health !== undefined) {
-              // It's a player
-              target.health -= effect.value || 0;
-              Logger.debug(`${effect.value} damage dealt to ${target.name}`);
-            }
-          });
-          break;
-
-        case 'immunity':
-          if (effect.target === 'self') {
-            if (!source.statusEffects) source.statusEffects = [];
-            const immunityEffect = {
-              type: 'immunity',
-              immuneTo: effect.immuneTo || 'all',
-              duration: effect.duration || 'permanent'
-            };
-            source.statusEffects.push(immunityEffect);
-            Logger.debug(`${source.name} gained immunity to ${effect.immuneTo || 'all'}`);
-          }
-          break;
-
-        case 'apply-counter':
-          // Handle counter application (on habitat or beasts)
-          if (!source.counters) {
-            source.counters = [];
-          }
-          const existingCounter = source.counters.find((c: any) => c.type === effect.counter);
-          if (existingCounter) {
-            existingCounter.amount += effect.value || 1;
-          } else {
-            source.counters.push({
-              type: effect.counter,
-              amount: effect.value || 1,
-            });
-          }
-          Logger.debug(`Added ${effect.value || 1} ${effect.counter} counter(s) to ${source.name}`);
-          break;
-
-        case 'draw-cards':
-        case 'DrawCards':
-          // Draw cards from deck to hand
-          const abilityDrawCount = effect.value || 1;
-          for (let i = 0; i < abilityDrawCount; i++) {
-            if (player.deck.length > 0) {
-              const card = player.deck.pop();
-              if (card) {
-                player.hand.push(card);
-                Logger.debug(`Drew card: ${card.name}`);
-              }
-            } else {
-              Logger.debug('Deck is empty - cannot draw');
-            }
-          }
-          break;
-
-        default:
-          Logger.debug(`Unknown effect type: ${effect.type}`);
-      }
-    }
-
-    /**
-     * Process a magic card effect
-     */
-    processMagicEffect(effect: any, player: any, opponent: any, context?: { attacker?: any, target?: any }): void {
-      switch (effect.type) {
-        case 'deal-damage':
-          const damageTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
-          damageTarget.forEach((target: any) => {
-            if (target.currentHealth !== undefined) {
-              target.currentHealth -= effect.value || 0;
-              if (target.currentHealth <= 0) {
-                const ownerField = player.field.includes(target) ? player.field : opponent.field;
-                const owner = player.field.includes(target) ? player : opponent;
-                const otherPlayer = player.field.includes(target) ? opponent : player;
-                const index = ownerField.indexOf(target);
-                if (index > -1) {
-                  this.processOnDestroyTrigger(target, owner, otherPlayer);
-                  ownerField.splice(index, 1);
-                }
-              }
-            } else if (target.health !== undefined) {
-              target.health -= effect.value || 0;
-            }
-          });
-          break;
-
-        case 'heal':
-          const healTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
-          healTarget.forEach((target: any) => {
-            if (target.currentHealth !== undefined && target.maxHealth !== undefined) {
-              target.currentHealth = Math.min(target.maxHealth, target.currentHealth + (effect.value || 0));
-            } else if (target.health !== undefined && target.maxHealth !== undefined) {
-              target.health = Math.min(target.maxHealth, target.health + (effect.value || 0));
-            }
-          });
-          break;
-
-        case 'draw-cards':
-        case 'DrawCards':
-          // Draw cards from deck to hand
-          const drawCount = effect.value || 1;
-          for (let i = 0; i < drawCount; i++) {
-            if (player.deck.length > 0) {
-              const card = player.deck.pop();
-              if (card) {
-                player.hand.push(card);
-                Logger.debug(`Drew card: ${card.name}`);
-              }
-            } else {
-              Logger.debug('Deck is empty - cannot draw');
-            }
-          }
-          break;
-
-        case 'destroy':
-          const destroyTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
-          destroyTarget.forEach((target: any) => {
-            if (target.currentHealth !== undefined) {
-              const ownerField = player.field.includes(target) ? player.field : opponent.field;
-              const owner = player.field.includes(target) ? player : opponent;
-              const otherPlayer = player.field.includes(target) ? opponent : player;
-              const index = ownerField.indexOf(target);
-              if (index > -1) {
-                this.processOnDestroyTrigger(target, owner, otherPlayer);
-                ownerField.splice(index, 1);
-              }
-            }
-          });
-          break;
-
-        case 'modify-stats':
-          const statTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
-          const magicDuration = effect.duration || 'permanent';
-          statTarget.forEach((target: any) => {
-            if (target.currentAttack !== undefined) {
-              if (effect.stat === 'attack' || effect.stat === 'both') {
-                StatModifierManager.addModifier(
-                  target,
-                  StatModifierSource.Magic,
-                  'magic-card',
-                  'attack',
-                  effect.value || 0,
-                  magicDuration
-                );
-              }
-              if (effect.stat === 'health' || effect.stat === 'both') {
-                StatModifierManager.addModifier(
-                  target,
-                  StatModifierSource.Magic,
-                  'magic-card',
-                  'maxHealth',
-                  effect.value || 0,
-                  magicDuration
-                );
-              }
-            }
-          });
-          break;
-
-        case 'gain-resource':
-          if (effect.resource === 'nectar') {
-            player.currentNectar += effect.value || 1;
-            Logger.debug(`Gained ${effect.value || 1} nectar`);
-          }
-          break;
-
-        case 'remove-counter':
-          const removeTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
-          removeTargets.forEach((target: any) => {
-            if (target.counters && Array.isArray(target.counters)) {
-              if (effect.counter) {
-                target.counters = target.counters.filter((c: any) => c.type !== effect.counter);
-                Logger.debug(`Removed ${effect.counter} counters from ${target.name || 'target'}`);
-              } else {
-                const counterCount = target.counters.length;
-                target.counters = [];
-                Logger.debug(`Removed all counters from ${target.name || 'target'} (${counterCount} counters)`);
-              }
-            }
-          });
-          break;
-
-        default:
-          Logger.debug(`Unhandled magic effect type: ${effect.type}`);
-      }
-    }
-
-    /**
-     * Process a habitat card effect
-     */
-    processHabitatEffect(effect: any, player: any, opponent: any): void {
-      switch (effect.type) {
-        case 'gain-resource':
-          if (effect.resource === 'nectar') {
-            player.currentNectar += effect.value || 1;
-          }
-          break;
-
-        case 'modify-stats':
-          if (effect.affinity) {
-            player.field.forEach((beast: any) => {
-              if (beast.affinity === effect.affinity) {
-                const habitatDuration = effect.duration || 'while-active';
-                if (effect.stat === 'attack' || effect.stat === 'both') {
-                  StatModifierManager.addModifier(
-                    beast,
-                    StatModifierSource.Habitat,
-                    'habitat',
-                    'attack',
-                    effect.value || 0,
-                    habitatDuration
-                  );
-                }
-                if (effect.stat === 'health' || effect.stat === 'both') {
-                  StatModifierManager.addModifier(
-                    beast,
-                    StatModifierSource.Habitat,
-                    'habitat',
-                    'maxHealth',
-                    effect.value || 0,
-                    habitatDuration
-                  );
-                }
-              }
-            });
-          }
-          break;
-
-        case 'draw-cards':
-        case 'DrawCards':
-          // Draw cards from deck to hand
-          const habitatDrawCount = effect.value || 1;
-          for (let i = 0; i < habitatDrawCount; i++) {
-            if (player.deck.length > 0) {
-              const card = player.deck.pop();
-              if (card) {
-                player.hand.push(card);
-                Logger.debug(`Drew card: ${card.name}`);
-              }
-            } else {
-              Logger.debug('Deck is empty - cannot draw');
-            }
-          }
-          break;
-
-        case 'remove-counter':
-          const removeTargetsHabitat = this.getEffectTargets(effect.target, player, opponent, effect.condition);
-          removeTargetsHabitat.forEach((target: any) => {
-            if (target.counters && Array.isArray(target.counters)) {
-              if (effect.counter) {
-                target.counters = target.counters.filter((c: any) => c.type !== effect.counter);
-                Logger.debug(`Removed ${effect.counter} counters from ${target.name || 'target'}`);
-              } else {
-                const counterCount = target.counters.length;
-                target.counters = [];
-                Logger.debug(`Removed all counters from ${target.name || 'target'} (${counterCount} counters)`);
-              }
-            }
-          });
-          break;
-
-        case 'deal-damage':
-          const damageTargetsHabitat = this.getEffectTargets(effect.target, player, opponent, effect.condition);
-          damageTargetsHabitat.forEach((target: any) => {
-            if (target.currentHealth !== undefined) {
-              target.currentHealth -= effect.value || 0;
-              if (target.currentHealth <= 0) {
-                const ownerField = player.field.includes(target) ? player.field : opponent.field;
-                const owner = player.field.includes(target) ? player : opponent;
-                const otherPlayer = player.field.includes(target) ? opponent : player;
-                const index = ownerField.indexOf(target);
-                if (index > -1) {
-                  this.processOnDestroyTrigger(target, owner, otherPlayer);
-                  ownerField.splice(index, 1);
-                }
-              }
-            } else if (target.health !== undefined) {
-              target.health -= effect.value || 0;
-            }
-          });
-          break;
-
-        default:
-          Logger.debug(`Unhandled habitat effect type: ${effect.type}`);
-      }
-    }
-
-    /**
-     * Get effect targets based on target type
-     */
-    private getEffectTargets(targetType: string, player: any, opponent: any, condition?: any, context?: { attacker?: any, target?: any }): any[] {
-      let targets: any[] = [];
-
-      switch (targetType) {
-        case 'all-enemies':
-          targets = [...opponent.field];
-          break;
-        case 'all-allies':
-          targets = [...player.field];
-          break;
-        case 'random-enemy':
-          const randomEnemy = pickRandom(opponent.field);
-          targets = randomEnemy ? [randomEnemy] : [];
-          break;
-        case 'opponent-gardener':
-          targets = [opponent];
-          break;
-        case 'player-gardener':
-          targets = [player];
-          break;
-        case 'all-units':
-          targets = [...player.field, ...opponent.field];
-          break;
-        case 'attacker':
-          // For trap cards - the attacker who triggered the trap
-          targets = context?.attacker ? [context.attacker] : [];
-          break;
-        case 'target':
-          // For targeted spells - specific target selected by player
-          targets = context?.target ? [context.target] : [];
-          break;
-        default:
-          targets = [];
-      }
-
-      // Apply condition filtering if provided
-      if (condition) {
-        targets = targets.filter(target => this.checkCondition(target, condition));
-      }
-
-      return targets;
-    }
-
-    /**
-     * Check if a target passes a condition
-     */
-    private checkCondition(target: any, condition: any): boolean {
-      if (!condition || !condition.type) return true;
-
-      switch (condition.type) {
-        case 'affinity-matches':
-          return target.affinity === condition.value;
-
-        case 'affinity-not-matches':
-          return target.affinity !== condition.value;
-
-        case 'health-below':
-          if (target.currentHealth === undefined) return false;
-          const comparison = condition.comparison || 'less';
-          if (comparison === 'less') {
-            return target.currentHealth < (condition.value || 0);
-          } else if (comparison === 'less-equal') {
-            return target.currentHealth <= (condition.value || 0);
-          }
-          return false;
-
-        case 'health-above':
-          if (target.currentHealth === undefined) return false;
-          return target.currentHealth > (condition.value || 0);
-
-        case 'is-damaged':
-          return target.currentHealth !== undefined &&
-                 target.maxHealth !== undefined &&
-                 target.currentHealth < target.maxHealth;
-
-        case 'is-wilting':
-          if (target.currentHealth === undefined || target.maxHealth === undefined) return false;
-          return target.currentHealth < (target.maxHealth / 2);
-
-        case 'cost-above':
-          return target.cost > (condition.value || 0);
-
-        case 'cost-below':
-          return target.cost < (condition.value || 0);
-
-        case 'has-counter':
-          if (!target.counters || !Array.isArray(target.counters)) return false;
-          if (condition.value) {
-            return target.counters.some((c: any) => c.type === condition.value);
-          }
-          return target.counters.length > 0;
-
-        default:
-          Logger.debug(`Unknown condition type: ${condition.type}`);
-          return true;
-      }
-    }
-
-    /**
-     * Process OnSummon triggers for a beast that was just summoned
-     */
-    processOnSummonTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.ability) return;
-
-      const ability = beast.ability as any;
-
-      // Check if ability has OnSummon trigger
-      if (ability.trigger === 'OnSummon') {
-        Logger.debug(`OnSummon trigger activated for ${beast.name}!`);
-
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            this.processAbilityEffect(effect, beast, owner, opponent);
-          }
-        }
-      }
-
-      // Also check for Passive abilities that apply on summon
-      if (ability.trigger === 'Passive') {
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            if (effect.type === 'remove-summoning-sickness') {
-              beast.summoningSickness = false;
-              Logger.debug(`${beast.name} can attack immediately (Passive: RemoveSummoningSickness)!`);
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * Process OnAttack triggers for a beast that is attacking
-     */
-    processOnAttackTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.ability) return;
-
-      const ability = beast.ability as any;
-
-      if (ability.trigger === 'OnAttack') {
-        Logger.debug(`OnAttack trigger activated for ${beast.name}!`);
-
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            this.processAbilityEffect(effect, beast, owner, opponent);
-          }
-        }
-      }
-    }
-
-    /**
-     * Process OnDamage triggers for a beast that took damage
-     */
-    processOnDamageTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.ability) return;
-
-      const ability = beast.ability as any;
-
-      if (ability.trigger === 'OnDamage') {
-        Logger.debug(`OnDamage trigger activated for ${beast.name}!`);
-
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            this.processAbilityEffect(effect, beast, owner, opponent);
-          }
-        }
-      }
-    }
-
-    /**
-     * Process OnDestroy triggers for a beast that is about to be destroyed
-     */
-    processOnDestroyTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.ability) return;
-
-      const ability = beast.ability as any;
-
-      if (ability.trigger === 'OnDestroy') {
-        Logger.debug(`OnDestroy trigger activated for ${beast.name}!`);
-
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            this.processAbilityEffect(effect, beast, owner, opponent);
-          }
-        }
-      }
-    }
-
-    /**
-     * Process StartOfTurn triggers for all beasts on the field
-     */
-    processStartOfTurnTriggers(player: any, opponent: any): void {
-      player.field.forEach((beast: any) => {
-        if (!beast || !beast.ability) return;
-
-        const ability = beast.ability as any;
-
-        if (ability.trigger === 'StartOfTurn') {
-          Logger.debug(`StartOfTurn trigger activated for ${beast.name}!`);
-
-          if (ability.effects && Array.isArray(ability.effects)) {
-            for (const effect of ability.effects) {
-              this.processAbilityEffect(effect, beast, player, opponent);
-            }
-          }
-        }
-      });
-    }
-
-    /**
-     * Process EndOfTurn triggers for all beasts on the field
-     */
-    processEndOfTurnTriggers(player: any, opponent: any): void {
-      player.field.forEach((beast: any) => {
-        if (!beast) return;
-
-        // Update stat modifiers (remove expired effects)
-        StatModifierManager.updateEndOfTurn(beast);
-
-        // Process ability triggers
-        if (beast.ability) {
-          const ability = beast.ability as any;
-
-          if (ability.trigger === 'EndOfTurn') {
-            Logger.debug(`EndOfTurn trigger activated for ${beast.name}!`);
-
-            if (ability.effects && Array.isArray(ability.effects)) {
-              for (const effect of ability.effects) {
-                this.processAbilityEffect(effect, beast, player, opponent);
-              }
-            }
-          }
-        }
-      });
-    }
-
-    /**
-     * Check and activate traps based on trigger event
-     */
-    checkAndActivateTraps(
-      defender: any,
-      attacker: any,
-      triggerType: string,
-      onTrapCallback?: (trapName: string) => void
-    ): void {
-      if (!defender.trapZone || defender.trapZone.length === 0) return;
-
-      for (let i = defender.trapZone.length - 1; i >= 0; i--) {
-        const trap: any = defender.trapZone[i];
-
-        // Check the activation trigger correctly - trap cards have activation.trigger property
-        const trapTrigger = trap.activation?.trigger || trap.trigger;
-
-        // Map triggerType to expected trap trigger values
-        let shouldActivate = false;
-        if (triggerType === 'attack') {
-          // OnAttack trigger should activate on attack
-          shouldActivate = trapTrigger === 'OnAttack' || trapTrigger === 'OnPlayerAttack';
-        }
-
-        if (shouldActivate) {
-          Logger.debug(`Trap activated: ${trap.name}!`);
-
-          if (onTrapCallback) {
-            onTrapCallback(trap.name);
-          }
-
-          // Process trap effects using the abilities structure
-          // Pass context with attacker information for trap effects that target the attacker
-          if (trap.abilities && Array.isArray(trap.abilities)) {
-            for (const ability of trap.abilities) {
-              if (ability.effects && Array.isArray(ability.effects)) {
-                for (const effect of ability.effects) {
-                  this.processMagicEffect(effect, defender, attacker, { attacker: attacker });
-                }
-              }
-            }
-          }
-
-          // Remove trap from zone
-          const activatedTrap = defender.trapZone.splice(i, 1)[0];
-          defender.graveyard.push(activatedTrap);
-
-          // Only activate ONE trap per event
-          break;
-        }
-      }
-    }
-
-    /**
-     * Apply stat modification effects from active buff cards
-     * Uses the StatModifierManager to properly track buff zone modifications
-     *
-     * This should be called when:
-     * 1. A buff is played
-     * 2. A new beast is summoned (to apply existing buffs)
-     * 3. A buff is removed from the buff zone
-     */
-    applyStatBuffEffects(player: any): void {
-      // First, remove all existing buff-zone modifiers from all beasts
-      player.field.forEach((beast: any) => {
-        StatModifierManager.removeModifiersBySource(beast, StatModifierSource.BuffZone);
-      });
-
-      // Now apply current buff effects to all beasts
-      if (!player.buffZone || player.buffZone.length === 0) return;
-
-      player.buffZone.forEach((buff: any) => {
-        if (!buff.ongoingEffects) return;
-
-        buff.ongoingEffects.forEach((effect: any) => {
-          if (effect.type === 'modify-stats' && effect.target === 'all-allies') {
-            player.field.forEach((beast: any) => {
-              if (effect.stat === 'attack') {
-                StatModifierManager.addModifier(
-                  beast,
-                  StatModifierSource.BuffZone,
-                  buff.id || buff.name,
-                  'attack',
-                  effect.value || 0,
-                  'while-active'
-                );
-              } else if (effect.stat === 'health') {
-                StatModifierManager.addModifier(
-                  beast,
-                  StatModifierSource.BuffZone,
-                  buff.id || buff.name,
-                  'maxHealth',
-                  effect.value || 0,
-                  'while-active'
-                );
-              }
-            });
-          }
-        });
-      });
-    }
-
-    /**
-     * Apply start-of-turn effects from active buff cards
-     */
-    applyBuffStartOfTurnEffects(player: any, opponent: any): void {
-      if (!player.buffZone || player.buffZone.length === 0) return;
-
-      player.buffZone.forEach((buff: any) => {
-        if (!buff.ongoingEffects) return;
-
-        buff.ongoingEffects.forEach((effect: any) => {
-          switch (effect.type) {
-            case 'gain-resource':
-              if (effect.resource === 'nectar') {
-                player.currentNectar += effect.value || 1;
-                Logger.debug(`${buff.name}: Gained ${effect.value || 1} nectar`);
-              }
-              break;
-
-            case 'heal':
-              if (effect.target === 'all-allies') {
-                player.field.forEach((beast: any) => {
-                  if (beast.currentHealth < beast.maxHealth) {
-                    beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth + (effect.value || 1));
-                  }
-                });
-                Logger.debug(`${buff.name}: Healed all beasts for ${effect.value || 1} HP`);
-              }
-              break;
-          }
-        });
-      });
-    }
-  }
-
-  // ==================== bloombeasts\ui\types\bindings.ts ====================
-
-  /**
-   * Binding Type Declarations
-   *
-   * These are type-only declarations for reactive data bindings.
-   * Actual implementations are provided by the platform via UIMethodMappings.
-   */
-
-  /**
-   * Base class for value bindings
-   */
-  declare class ValueBindingBase<T> {
-    protected _key: string;
-    protected _isInitialized: boolean;
-  }
-
-  /**
-   * Reactive data binding
-   * Matches Horizon's Binding API (no get() or subscribe() methods)
-   */
-  declare class Binding<T = any> extends ValueBindingBase<T> {
-    constructor(value: T);
-    set(value: T | ((prev: T) => T)): void;
-    derive<U>(fn: (value: T) => U): Binding<U>;
-    static derive<T extends any[], R>(
-      bindings: { [K in keyof T]: Binding<T[K]> },
-      deriveFn: (...values: T) => R
-    ): Binding<R>;
-  }
-
-  /**
-   * Platform async methods interface
-   * Provides setTimeout, setInterval, clearTimeout, clearInterval
-   *
-   * For web: Uses standard window.setTimeout, etc.
-   * For Horizon: Uses component.async.setTimeout, etc.
-   */
-  export interface AsyncMethods {
-    /**
-     * Sets a timer which executes a function once the timer expires
-     */
-    setTimeout: (callback: (...args: any[]) => void, timeout?: number) => number;
-
-    /**
-     * Cancels a timeout previously established by setTimeout
-     */
-    clearTimeout: (id: number) => void;
-
-    /**
-     * Repeatedly calls a function with a fixed time delay between calls
-     */
-    setInterval: (callback: (...args: any[]) => void, timeout?: number) => number;
-
-    /**
-     * Cancels a timed, repeating action established by setInterval
-     */
-    clearInterval: (id: number) => void;
-  }
-
-  // ==================== bloombeasts\screens\missions\OpponentAI.ts ====================
-
-  /**
-   * OpponentAI - Handles AI decision making for opponent players
-   *
-   * Responsibilities:
-   * - Card play decisions (which cards to play, when to play them)
-   * - Attack decisions (target selection, when to attack)
-   * - Resource management (nectar spending)
-   * - Turn sequencing with delays for UI visibility
-   */
-
-
-  export interface AICallbacks {
-    async: AsyncMethods;
-    onAction?: (action: string) => void;
-    onRender?: () => void;
-  }
-
-  export interface AIDecision {
-    type: 'play-card' | 'attack-beast' | 'attack-player' | 'end-turn';
-    cardIndex?: number;
-    attackerIndex?: number;
-    targetIndex?: number;
-    card?: any;
-  }
-
-  export class OpponentAI {
-    private callbacks: AICallbacks;
-    private async: AsyncMethods;
-
-    constructor(callbacks: AICallbacks) {
-      this.callbacks = callbacks;
-      this.async = callbacks.async;
-    }
-
-    /**
-     * Execute a full AI turn
-     * @param opponent The AI player
-     * @param player The human player
-     * @param gameState Current game state (for habitat zone, turn number, etc.)
-     * @param effectProcessors Functions to process various effects
-     * @param shouldStopGetter Function that returns true if AI should stop processing
-     */
-    async executeTurn(
-      opponent: Player,
-      player: Player,
-      gameState: any,
-      effectProcessors: {
-        processOnSummonTrigger: (beast: any, owner: any, opponent: any) => void;
-        processOnAttackTrigger: (beast: any, owner: any, opponent: any) => void;
-        processOnDamageTrigger: (beast: any, owner: any, opponent: any) => void;
-        processOnDestroyTrigger: (beast: any, owner: any, opponent: any) => void;
-        processMagicEffect: (effect: any, player: any, opponent: any) => void;
-        processHabitatEffect: (effect: any, player: any, opponent: any) => void;
-        applyStatBuffEffects: (player: any) => void;
-      },
-      shouldStopGetter?: () => boolean
-    ): Promise<void> {
-      const delay = (ms: number) => new Promise(resolve => this.async.setTimeout(resolve, ms));
-
-      // Play cards phase
-      const cardDecisions = this.decideCardPlays(opponent, player, gameState);
-      for (const decision of cardDecisions) {
-        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
-
-        await this.executeCardPlay(
-          decision,
-          opponent,
-          player,
-          gameState,
-          effectProcessors
-        );
-        if (this.callbacks.onRender) this.callbacks.onRender();
-
-        // Longer delay for non-Bloom cards to show popup
-        const delayTime = decision.card?.type === 'Bloom' ? 1200 : 3500;
-        await delay(delayTime);
-
-        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
-      }
-
-      // Attack phase
-      const attackDecisions = this.decideAttacks(opponent, player);
-      for (const decision of attackDecisions) {
-        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
-
-        await this.executeAttack(
-          decision,
-          opponent,
-          player,
-          effectProcessors
-        );
-        if (this.callbacks.onRender) this.callbacks.onRender();
-        await delay(1000);
-
-        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
-
-        // Check if player was defeated during attack
-        if (player.health <= 0) {
-          return; // Stop turn processing
-        }
-      }
-
-      Logger.debug('Opponent turn ended');
-    }
-
-    /**
-     * Decide which cards to play this turn
-     */
-    private decideCardPlays(opponent: Player, player: Player, gameState: any): AIDecision[] {
-      const decisions: AIDecision[] = [];
-
-      // Simple greedy AI: Play cards from hand if affordable and field has space
-      for (let i = opponent.hand.length - 1; i >= 0; i--) {
-        const card: any = opponent.hand[i];
-
-        if (card.cost <= opponent.currentNectar) {
-          if (card.type === 'Bloom' && opponent.field.length < 3) {
-            decisions.push({
-              type: 'play-card',
-              cardIndex: i,
-              card: card,
-            });
-            opponent.currentNectar -= card.cost; // Deduct for decision calculation
-          } else if (card.type === 'Magic') {
-            decisions.push({
-              type: 'play-card',
-              cardIndex: i,
-              card: card,
-            });
-            opponent.currentNectar -= card.cost;
-          } else if (card.type === 'Trap' && opponent.trapZone.length < 3) {
-            decisions.push({
-              type: 'play-card',
-              cardIndex: i,
-              card: card,
-            });
-            opponent.currentNectar -= card.cost;
-          } else if (card.type === 'Buff' && opponent.buffZone.length < 2) {
-            decisions.push({
-              type: 'play-card',
-              cardIndex: i,
-              card: card,
-            });
-            opponent.currentNectar -= card.cost;
-          } else if (card.type === 'Habitat' && !gameState.habitatZone) {
-            decisions.push({
-              type: 'play-card',
-              cardIndex: i,
-              card: card,
-            });
-            opponent.currentNectar -= card.cost;
-          }
-        }
-      }
-
-      return decisions;
-    }
-
-    /**
-     * Execute a card play decision
-     */
-    private async executeCardPlay(
-      decision: AIDecision,
-      opponent: Player,
-      player: Player,
-      gameState: any,
-      effectProcessors: any
-    ): Promise<void> {
-      if (decision.cardIndex === undefined) return;
-
-      const card: any = opponent.hand[decision.cardIndex];
-      if (!card) return;
-
-      const playedCard: any = opponent.hand.splice(decision.cardIndex, 1)[0];
-      // Note: Nectar already deducted in decision phase
-
-      switch (playedCard.type) {
-        case 'Bloom':
-          const beastInstance: any = {
-            cardId: playedCard.id,
-            instanceId: playedCard.instanceId || `${playedCard.id}-${Date.now()}`,
-            currentLevel: 1 as any,
-            currentXP: 0,
-            baseAttack: playedCard.baseAttack,
-            baseHealth: playedCard.baseHealth,
-            currentAttack: playedCard.baseAttack,
-            currentHealth: playedCard.baseHealth,
-            maxHealth: playedCard.baseHealth,
-            counters: [],
-            statusEffects: [],
-            slotIndex: opponent.field.length,
-            summoningSickness: true,
-            usedAbilityThisTurn: false,
-            statModifiers: [],
-            // Store original card data for display
-            type: 'Bloom',
-            name: playedCard.name,
-            affinity: playedCard.affinity,
-            cost: playedCard.cost,
-            ability: playedCard.abilities && playedCard.abilities.length > 0 ? playedCard.abilities[0] : undefined,
-          };
-
-          // Initialize stat system (beasts need this even before buffs are applied)
-          opponent.field.push(beastInstance);
-          effectProcessors.applyStatBuffEffects(opponent);
-          effectProcessors.processOnSummonTrigger(beastInstance, opponent, player);
-
-          Logger.debug(`Opponent played ${playedCard.name}`);
-          if (this.callbacks.onAction) this.callbacks.onAction('play-card');
-          break;
-
-        case 'Magic':
-          if (playedCard.effects && Array.isArray(playedCard.effects)) {
-            for (const effect of playedCard.effects) {
-              effectProcessors.processMagicEffect(effect, opponent, player);
-            }
-          }
-          opponent.graveyard.push(playedCard);
-          Logger.debug(`Opponent played magic card: ${playedCard.name}`);
-          if (this.callbacks.onAction) {
-            this.callbacks.onAction(`play-magic-card:${JSON.stringify(playedCard)}`);
-          }
-          break;
-
-        case 'Trap':
-          opponent.trapZone.push(playedCard);
-          Logger.debug(`Opponent set trap: ${playedCard.name}`);
-          if (this.callbacks.onAction) {
-            this.callbacks.onAction(`play-trap-card:${JSON.stringify(playedCard)}`);
-          }
-          break;
-
-        case 'Buff':
-          opponent.buffZone.push(playedCard);
-          effectProcessors.applyStatBuffEffects(opponent);
-          Logger.debug(`Opponent played buff: ${playedCard.name}`);
-          if (this.callbacks.onAction) {
-            this.callbacks.onAction(`play-buff-card:${JSON.stringify(playedCard)}`);
-          }
-          break;
-
-        case 'Habitat':
-          gameState.habitatZone = playedCard;
-          if (playedCard.onPlayEffects && Array.isArray(playedCard.onPlayEffects)) {
-            for (const effect of playedCard.onPlayEffects) {
-              effectProcessors.processHabitatEffect(effect, opponent, player);
-            }
-          }
-          Logger.debug(`Opponent played habitat: ${playedCard.name}`);
-          if (this.callbacks.onAction) {
-            this.callbacks.onAction(`play-habitat-card:${JSON.stringify(playedCard)}`);
-          }
-          break;
-      }
-    }
-
-    /**
-     * Decide which beasts should attack
-     */
-    private decideAttacks(opponent: Player, player: Player): AIDecision[] {
-      const decisions: AIDecision[] = [];
-
-      // Attack with all beasts that can attack
-      for (let index = 0; index < opponent.field.length; index++) {
-        const beast: any = opponent.field[index];
-
-        if (beast && !beast.summoningSickness) {
-          if (player.field.length > 0) {
-            // Attack a random player beast
-            const target: any = pickRandom(player.field);
-            const targetIndex = target ? player.field.indexOf(target) : -1;
-
-            if (target && targetIndex >= 0) {
-              decisions.push({
-                type: 'attack-beast',
-                attackerIndex: index,
-                targetIndex: targetIndex,
-              });
-            }
-          } else {
-            // Attack player directly
-            decisions.push({
-              type: 'attack-player',
-              attackerIndex: index,
-            });
-          }
-        }
-      }
-
-      return decisions;
-    }
-
-    /**
-     * Execute an attack decision
-     */
-    private async executeAttack(
-      decision: AIDecision,
-      opponent: Player,
-      player: Player,
-      effectProcessors: any
-    ): Promise<void> {
-      if (decision.attackerIndex === undefined) return;
-
-      const attacker: any = opponent.field[decision.attackerIndex];
-      if (!attacker) return;
-
-      if (decision.type === 'attack-beast' && decision.targetIndex !== undefined) {
-        const target: any = player.field[decision.targetIndex];
-        if (!target) return;
-
-        Logger.debug(`Opponent's ${attacker.name} attacks ${target.name}`);
-
-        effectProcessors.processOnAttackTrigger(attacker, opponent, player);
-
-        if (this.callbacks.onAction) {
-          this.callbacks.onAction(`attack-beast-opponent-${decision.attackerIndex}-player-${decision.targetIndex}`);
-        }
-
-        // Deal damage to each other
-        const opponentBeastDamage = attacker.currentAttack || 0;
-        const playerBeastDamage = target.currentAttack || 0;
-
-        target.currentHealth -= opponentBeastDamage;
-        attacker.currentHealth -= playerBeastDamage;
-
-        // Process OnDamage triggers
-        if (opponentBeastDamage > 0) {
-          effectProcessors.processOnDamageTrigger(target, player, opponent);
-        }
-        if (playerBeastDamage > 0) {
-          effectProcessors.processOnDamageTrigger(attacker, opponent, player);
-        }
-
-        // Remove dead beasts
-        if (target.currentHealth <= 0) {
-          effectProcessors.processOnDestroyTrigger(target, player, opponent);
-          player.field.splice(decision.targetIndex, 1);
-          Logger.debug(`${target.name} was defeated!`);
-        }
-        if (attacker.currentHealth <= 0) {
-          effectProcessors.processOnDestroyTrigger(attacker, opponent, player);
-          opponent.field.splice(decision.attackerIndex, 1);
-          Logger.debug(`Opponent's ${attacker.name} was defeated!`);
-        }
-
-      } else if (decision.type === 'attack-player') {
-        const damage = attacker.currentAttack || 0;
-
-        effectProcessors.processOnAttackTrigger(attacker, opponent, player);
-
-        const previousHealth = player.health;
-        player.health -= damage;
-        Logger.debug(`Opponent's ${attacker.name} attacks you directly for ${damage} damage!`);
-
-        // Check for low health threshold (10%)
-        const healthPercentage = (player.health / (player.maxHealth || 30)) * 100;
-        if (healthPercentage <= 10 && previousHealth > player.health) {
-          if (this.callbacks.onAction) {
-            this.callbacks.onAction('player-low-health');
-          }
-        }
-
-        if (this.callbacks.onAction) {
-          this.callbacks.onAction(`attack-player-opponent-${decision.attackerIndex}`);
-        }
-      }
-    }
-  }
-
   // ==================== bloombeasts\screens\missions\types.ts ====================
 
   /**
@@ -6464,7 +12853,12 @@ namespace BloomBeasts {
     bonusXPChance: number;        // Chance for bonus XP (0-1)
     bonusXPAmount: number;        // Amount of bonus XP if triggered
     cardRewards: CardReward[];    // Possible card rewards
-    itemRewards?: ItemReward[];   // Possible item rewards
+    coinRewards?: {               // Coin rewards
+      minAmount: number;
+      maxAmount: number;
+      dropChance: number;
+    };
+    itemRewards?: ItemReward[];   // Possible item rewards (serums, etc)
   }
 
   export interface CardReward {
@@ -6500,7 +12894,6 @@ namespace BloomBeasts {
     // Mission specifics (all optional now)
     objectives?: MissionObjective[];
     turnLimit?: number;           // Optional turn limit
-    specialRules?: SpecialRule[]; // Special battle rules
 
     // Rewards
     rewards: MissionRewards;
@@ -6511,14 +12904,6 @@ namespace BloomBeasts {
     bestScore?: number;
     lastPlayed?: Date;
     unlocked: boolean;
-  }
-
-  export interface SpecialRule {
-    id: string;
-    name: string;
-    description: string;
-    effect: 'double-xp' | 'no-abilities' | 'fast-nectar' |
-            'burn-damage' | 'heal-per-turn' | 'random-effects';
   }
 
   export interface AIProfile {
@@ -6616,20 +13001,11 @@ namespace BloomBeasts {
           dropChance: 1.0,
         },
       ],
-      itemRewards: [
-        {
-          itemId: 'token',
-          minAmount: 5,
-          maxAmount: 15,
-          dropChance: 0.8,
-        },
-        {
-          itemId: 'diamond',
-          minAmount: 1,
-          maxAmount: 3,
-          dropChance: 0.3,
-        },
-      ],
+      coinRewards: {
+        minAmount: 50,
+        maxAmount: 150,
+        dropChance: 1.0,
+      },
     },
 
     timesCompleted: 0,
@@ -7242,42 +13618,67 @@ namespace BloomBeasts {
   // ==================== bloombeasts\screens\missions\definitions\mission17.ts ====================
 
   /**
-   * Mission 17: The Bloom Master
-   * Final Boss Mission
+   * Mission 17: Cluck Norris
+   * Boss Mission
    */
 
 
-  // Create the ultimate deck with cards from all affinities
-  const getMasterDeck = () => {
-    const allDecks = getAllStarterDecks();
-    const masterCards: any[] = [];
+  // Get Cluck Norris deck - 3 level 9 Cluck Norris beasts
+  const getCluckNorrisDeck = (): DeckList => {
+    // This function will be called after catalogs are loaded
+    // Access the catalog manager through the global game instance
+    const game = (globalThis as any).bloomBeastsGame;
+    if (!game?.catalogManager) {
+      console.error('[mission17] Catalog manager not available');
+      return {
+        name: 'Cluck Norris Deck',
+        affinity: 'Forest',
+        cards: [],
+        totalCards: 0,
+      };
+    }
 
-    // Take the best 7-8 cards from each affinity
-    allDecks.forEach(deck => {
-      masterCards.push(...deck.cards.slice(0, 8));
-    });
+    // Get the Cluck Norris card from the boss catalog
+    const cluckNorrisCard = game.catalogManager.getCard('cluck-norris') as BloomBeastCard;
 
-    // Shuffle and limit to 30 cards
-    const finalCards = masterCards.sort(() => Math.random() - 0.5).slice(0, 30);
+    if (!cluckNorrisCard) {
+      console.error('[mission17] Cluck Norris card not found in catalog');
+      return {
+        name: 'Cluck Norris Deck',
+        affinity: 'Forest',
+        cards: [],
+        totalCards: 0,
+      };
+    }
+
+    // Create 3 instances of Cluck Norris at level 9
+    const cluckNorrisCards: BloomBeastCard[] = [];
+    for (let i = 1; i <= 3; i++) {
+      cluckNorrisCards.push({
+        ...cluckNorrisCard,
+        instanceId: `cluck-norris-${i}`,
+        // Keep base stats at 99/99 as defined in the catalog
+      });
+    }
 
     return {
-      name: 'Bloom Master Deck',
-      affinity: 'Forest' as const, // Uses all affinities but default to Forest
-      cards: finalCards,
-      totalCards: finalCards.length,
+      name: 'Cluck Norris Deck',
+      affinity: 'Forest',
+      cards: cluckNorrisCards,
+      totalCards: cluckNorrisCards.length,
     };
   };
 
   export const mission17: Mission = {
     id: 'mission-17',
-    name: 'Bloom Master',
-    description: 'Face the legendary Bloom Master who commands all four affinities.',
+    name: 'Cluck Norris',
+    description: 'Face the legendary Cluck Norris, the ultimate rooster warrior!',
     difficulty: 'expert',
     level: 17,
     affinity: 'Boss',
-    beastId: 'The Bloom Master',
+    beastId: 'Cluck Norris',
 
-    opponentDeck: () => getMasterDeck(),
+    opponentDeck: () => getCluckNorrisDeck(),
 
     rewards: {
       guaranteedXP: 500,
@@ -7373,6 +13774,7 @@ namespace BloomBeasts {
   export interface RewardResult {
     xpGained: number;
     beastXP: number;              // XP earned by beasts
+    coinsReceived?: number;       // Coins earned
     cardsReceived: (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[];
     itemsReceived: ItemRewardResult[];
     completionTimeSeconds: number; // Time taken to complete mission
@@ -7582,6 +13984,18 @@ namespace BloomBeasts {
         });
       }
 
+      // Generate coin rewards
+      if (rewardConfig.coinRewards) {
+        if (Math.random() < rewardConfig.coinRewards.dropChance) {
+          const amount = Math.floor(
+            Math.random() * (rewardConfig.coinRewards.maxAmount - rewardConfig.coinRewards.minAmount + 1) +
+            rewardConfig.coinRewards.minAmount
+          );
+
+          result.coinsReceived = amount;
+        }
+      }
+
       // Generate item rewards
       if (rewardConfig.itemRewards) {
         rewardConfig.itemRewards.forEach(itemReward => {
@@ -7597,17 +14011,6 @@ namespace BloomBeasts {
             });
           }
         });
-      }
-
-      // Apply special rule rewards (like double rewards for mission 10)
-      if (this.currentMission?.specialRules) {
-        const hasDoubleRewards = this.currentMission.specialRules.some(
-          rule => rule.effect === 'double-xp' || rule.id === 'champions-trial'
-        );
-        if (hasDoubleRewards) {
-          result.xpGained *= 2;
-          result.bonusRewards?.push('Double rewards earned!');
-        }
       }
 
       return result;
@@ -7908,13 +14311,6 @@ namespace BloomBeasts {
         details.push(`  • Defeat the opponent`);
       }
 
-      if (mission.specialRules && mission.specialRules.length > 0) {
-        details.push('');
-        details.push('⚡ Special Rules:');
-        mission.specialRules.forEach(rule => {
-          details.push(`  • ${rule.name}: ${rule.description}`);
-        });
-      }
 
       if (mission.turnLimit) {
         details.push('');
@@ -7997,594 +14393,1264 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\engine\systems\GameEngine.ts ====================
+  // ==================== bloombeasts\battle\types.ts ====================
 
   /**
-   * Game Engine - Main game controller and state manager
+   * Battle System Types
+   *
+   * Core type definitions for the generic battle system.
+   * This system works with any two players (human vs AI, human vs human, AI vs AI).
    */
 
 
-  export interface MatchOptions {
-    player1Name?: string;
-    player2Name?: string;
-    turnTimeLimit?: number;
-    maxTurns?: number;
+  /**
+   * Result of a battle action
+   */
+  export interface BattleActionResult {
+    success: boolean;
+    message?: string;
+    damage?: number;
+    isTrap?: boolean;
   }
 
-  export class GameEngine {
-    private gameState: GameState | null = null;
-    private combatSystem: CombatSystem;
-    private abilityProcessor: AbilityProcessor;
-    private levelingSystem: LevelingSystem;
-    private cardDatabase: Map<string, AnyCard> | null = null;
-    private catalogManager: any;
+  /**
+   * Battle configuration - passed when initializing a battle
+   */
+  export interface BattleConfig {
+    player1: PlayerConfig;
+    player2: PlayerConfig;
+  }
 
-    constructor(catalogManager: any) {
-      // Don't create game state yet - it will be created when startMatch() is called
-      // This allows GameEngine to be constructed before asset catalogs are loaded
-      this.combatSystem = new CombatSystem();
-      this.abilityProcessor = new AbilityProcessor();
-      this.levelingSystem = new LevelingSystem();
-      this.catalogManager = catalogManager;
+  /**
+   * Configuration for a player in a battle
+   */
+  export interface PlayerConfig {
+    id: string;
+    name: string;
+    deck: AnyCard[];
+    health?: number;
+    maxHealth?: number;
+    isAI?: boolean;
+    aiStrategy?: 'default' | 'aggressive' | 'defensive' | 'custom';
+  }
+
+  /**
+   * Current state of an active battle
+   */
+  export interface BattleState {
+    gameState: GameState;
+    isComplete: boolean;
+    winner: 'player1' | 'player2' | null;
+    turn: number;
+  }
+
+  /**
+   * Callbacks for battle events
+   */
+  export interface BattleCallbacks {
+    onTurnStart?: (playerIndex: number) => void;
+    onTurnEnd?: (playerIndex: number) => void;
+    onAction?: (action: string, playerId: string) => void;
+    onBattleEnd?: (winner: 'player1' | 'player2' | null) => void;
+    onRender?: () => void;
+  }
+
+  /**
+   * Result of a completed battle
+   */
+  export interface BattleResult {
+    winner: 'player1' | 'player2' | null;
+    turns: number;
+    player1Health: number;
+    player2Health: number;
+  }
+
+  // ==================== bloombeasts\battle\core\BattleController.ts ====================
+
+  /**
+   * BattleController - Core battle orchestrator
+   *
+   * Generic battle controller that works with any two players.
+   * Handles:
+   * - Battle initialization
+   * - Turn management
+   * - Victory conditions
+   * - Action processing coordination
+   *
+   * This class is platform-agnostic and player-agnostic - it doesn't care
+   * if players are human, AI, or networked.
+   */
+
+
+  export class BattleController {
+    private async: AsyncMethods;
+    private currentBattle: BattleState | null = null;
+    private callbacks: BattleCallbacks;
+
+    constructor(async: AsyncMethods, callbacks: BattleCallbacks = {}) {
+      this.async = async;
+      this.callbacks = callbacks;
     }
 
     /**
-     * Ensure game state exists - throws error if called before startMatch()
+     * Initialize a new battle between two players
      */
-    private ensureGameState(): GameState {
-      if (!this.gameState) {
-        throw new Error('GameEngine: Game state not initialized. Call startMatch() first.');
-      }
-      return this.gameState;
-    }
+    initializeBattle(config: BattleConfig): BattleState {
+      Logger.info('[BattleController] Initializing battle');
 
-    /**
-     * Get game state (with non-null assertion for internal use)
-     * Only use this after you're certain startMatch() has been called
-     */
-    private get state(): GameState {
-      return this.gameState!;
-    }
+      // Create player 1
+      const player1: Player = {
+        id: config.player1.id,
+        name: config.player1.name,
+        health: config.player1.health ?? 30,
+        maxHealth: config.player1.maxHealth ?? 30,
+        deck: [...config.player1.deck], // Copy deck to avoid mutation
+        hand: [],
+        field: [],
+        graveyard: [],
+        trapZone: [],
+        buffZone: [],
+        currentNectar: 1,
+        summonsThisTurn: 0,
+      };
 
-    /**
-     * Build card database from all card definitions
-     * Called lazily on first access
-     */
-    private buildCardDatabase(): Map<string, AnyCard> {
-      const db = new Map<string, AnyCard>();
-      const allCards = this.catalogManager.getAllCardData();
-      allCards.forEach((card: any) => {
-        if (card && card.id && card.type) {
-          db.set(card.id, card as AnyCard);
-        }
-      });
-      return db;
-    }
+      // Create player 2
+      const player2: Player = {
+        id: config.player2.id,
+        name: config.player2.name,
+        health: config.player2.health ?? 30,
+        maxHealth: config.player2.maxHealth ?? 30,
+        deck: [...config.player2.deck], // Copy deck to avoid mutation
+        hand: [],
+        field: [],
+        graveyard: [],
+        trapZone: [],
+        buffZone: [],
+        currentNectar: 1,
+        summonsThisTurn: 0,
+      };
 
-    /**
-     * Get card database, building it lazily if needed
-     */
-    private getCardDatabase(): Map<string, AnyCard> {
-      if (!this.cardDatabase) {
-        this.cardDatabase = this.buildCardDatabase();
-      }
-      return this.cardDatabase;
-    }
-
-    /**
-     * Create initial game state
-     */
-    private createInitialState(): GameState {
-      return {
+      // Create game state
+      const gameState: GameState = {
+        players: [player1, player2],
+        activePlayer: 0,
+        habitatZone: null,
         turn: 1,
         phase: 'Setup',
-        battleState: BattleState.Setup,
-        activePlayer: 0,
-        players: [
-          this.createPlayer('Player 1'),
-          this.createPlayer('Player 2'),
-        ],
-        habitatZone: null,
+        battleState: BattlePhase.Player1StartOfTurn,
         turnHistory: [],
       };
-    }
 
-    /**
-     * Create a new player
-     */
-    private createPlayer(name: string): Player {
-      // Create player with empty deck - real deck is set when startMatch() is called
-      // This allows GameEngine to be constructed before asset catalogs are loaded
-      return {
-        name,
-        health: STARTING_HEALTH,
-        currentNectar: 0,
-        deck: [],  // Empty deck initially - populated by startMatch()
-        hand: [],
-        field: Array(FIELD_SIZE).fill(null),
-        trapZone: Array(FIELD_SIZE).fill(null),
-        buffZone: [null, null],
-        graveyard: [],
-        summonsThisTurn: 0,
-        habitatCounters: new SimpleMap(),
+      // Create battle state
+      this.currentBattle = {
+        gameState,
+        isComplete: false,
+        winner: null,
+        turn: 1,
       };
-    }
-
-    /**
-     * Start a new match
-     */
-    public async startMatch(
-      player1Deck: DeckList,
-      player2Deck: DeckList,
-      options: MatchOptions = {}
-    ): Promise<void> {
-      Logger.debug('Starting new match...');
-
-      // Create initial game state now that catalogs are loaded
-      if (!this.gameState) {
-        this.gameState = this.createInitialState();
-      }
-
-      // Set player names
-      if (options.player1Name) {
-        this.state.players[0].name = options.player1Name;
-      }
-      if (options.player2Name) {
-        this.state.players[1].name = options.player2Name;
-      }
-
-      // Load decks
-      this.state.players[0].deck = [...player1Deck.cards];
-      this.state.players[1].deck = [...player2Deck.cards];
 
       // Shuffle decks
-      this.shuffleDeck(this.state.players[0]);
-      this.shuffleDeck(this.state.players[1]);
+      this.shuffleDeck(player1.deck);
+      this.shuffleDeck(player2.deck);
 
-      // Draw initial hands
-      this.drawCards(this.state.players[0], 5);
-      this.drawCards(this.state.players[1], 5);
+      // Draw initial hands (3 cards each)
+      for (let i = 0; i < 3; i++) {
+        this.drawCard(player1);
+        this.drawCard(player2);
+      }
 
-      // Transition to first player's turn
-      this.state.phase = 'Main';
-      this.state.battleState = BattleState.Player1StartOfTurn;
-      await this.transitionState();
+      Logger.info('[BattleController] Battle initialized');
+      return this.currentBattle;
     }
 
     /**
-     * State machine transition logic
+     * Get the current battle state
      */
-    private async transitionState(): Promise<void> {
-      // Check for win condition before any state processing
-      if (this.checkForBattleEnd()) {
-        this.state.battleState = BattleState.Finished;
-        return;
-      }
-
-      const currentState = this.state.battleState;
-      Logger.debug(`Transitioning from state: ${currentState}`);
-
-      switch (currentState) {
-        case BattleState.Player1StartOfTurn:
-          await this.processPlayerStartOfTurn(0);
-          this.state.battleState = BattleState.Player1Playing;
-          break;
-
-        case BattleState.Player1Playing:
-          // This state waits for player input (endTurn call)
-          break;
-
-        case BattleState.Player1EndOfTurn:
-          await this.processPlayerEndOfTurn(0);
-          this.state.battleState = BattleState.Player2StartOfTurn;
-          await this.transitionState();
-          break;
-
-        case BattleState.Player2StartOfTurn:
-          await this.processPlayerStartOfTurn(1);
-          this.state.battleState = BattleState.Player2Playing;
-          break;
-
-        case BattleState.Player2Playing:
-          // This state waits for player input (endTurn call)
-          break;
-
-        case BattleState.Player2EndOfTurn:
-          await this.processPlayerEndOfTurn(1);
-          // Increment turn counter after both players have played
-          this.state.turn++;
-          this.state.battleState = BattleState.Player1StartOfTurn;
-          await this.transitionState();
-          break;
-
-        case BattleState.Finished:
-          // Battle has ended
-          const result = this.combatSystem.checkWinCondition(this.state);
-          this.endMatch(result);
-          break;
-      }
+    getCurrentBattle(): BattleState | null {
+      return this.currentBattle;
     }
 
     /**
-     * Process player start of turn
+     * Check if battle has ended and determine winner
      */
-    private async processPlayerStartOfTurn(playerIndex: 0 | 1): Promise<void> {
-      this.state.activePlayer = playerIndex;
-      const activePlayer = this.state.players[playerIndex];
-      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
+    checkBattleEnd(): BattleResult | null {
+      if (!this.currentBattle) return null;
 
-      Logger.debug(`Turn ${this.state.turn}: ${activePlayer.name}'s turn begins`);
+      const player1 = this.currentBattle.gameState.players[0];
+      const player2 = this.currentBattle.gameState.players[1];
 
-      // Reset turn counters
-      activePlayer.summonsThisTurn = 0;
-
-      // Draw card (except first turn for player 1)
-      if (!(this.state.turn === 1 && playerIndex === 0)) {
-        this.drawCards(activePlayer, 1);
+      // Check if either player is defeated
+      if (player1.health <= 0 && player2.health <= 0) {
+        // Both died (rare tie case)
+        return {
+          winner: null,
+          turns: this.currentBattle.turn,
+          player1Health: player1.health,
+          player2Health: player2.health,
+        };
+      } else if (player1.health <= 0) {
+        // Player 1 lost
+        return {
+          winner: 'player2',
+          turns: this.currentBattle.turn,
+          player1Health: player1.health,
+          player2Health: player2.health,
+        };
+      } else if (player2.health <= 0) {
+        // Player 2 lost
+        return {
+          winner: 'player1',
+          turns: this.currentBattle.turn,
+          player1Health: player1.health,
+          player2Health: player2.health,
+        };
       }
 
-      // Gain nectar
-      activePlayer.currentNectar = Math.min(MAX_NECTAR, this.state.turn);
+      // Check deck-out condition (no cards left to draw)
+      if (player1.deck.length === 0 && player1.hand.length === 0 && player1.field.every(b => !b)) {
+        return {
+          winner: 'player2',
+          turns: this.currentBattle.turn,
+          player1Health: player1.health,
+          player2Health: player2.health,
+        };
+      }
+      if (player2.deck.length === 0 && player2.hand.length === 0 && player2.field.every(b => !b)) {
+        return {
+          winner: 'player1',
+          turns: this.currentBattle.turn,
+          player1Health: player1.health,
+          player2Health: player2.health,
+        };
+      }
 
-      // Remove summoning sickness from all beasts
-      for (const beast of activePlayer.field) {
+      return null;
+    }
+
+    /**
+     * Mark battle as complete
+     */
+    completeBattle(winner: 'player1' | 'player2' | null): void {
+      if (!this.currentBattle) return;
+
+      this.currentBattle.isComplete = true;
+      this.currentBattle.winner = winner;
+
+      if (this.callbacks.onBattleEnd) {
+        this.callbacks.onBattleEnd(winner);
+      }
+
+      Logger.info(`[BattleController] Battle complete. Winner: ${winner || 'tie'}`);
+    }
+
+    /**
+     * Start a player's turn
+     */
+    startTurn(playerIndex: number): void {
+      if (!this.currentBattle) return;
+
+      const gameState = this.currentBattle.gameState;
+      gameState.activePlayer = playerIndex as 0 | 1;
+
+      const player = gameState.players[playerIndex];
+      const opponent = gameState.players[1 - playerIndex];
+
+      // Draw a card at start of turn
+      this.drawCard(player);
+
+      // Increase nectar (max 10)
+      player.currentNectar = Math.min(10, this.currentBattle.turn);
+
+      // Reset summoning sickness and ability usage for player's beasts
+      player.field.forEach((beast: any) => {
         if (beast) {
           beast.summoningSickness = false;
+          beast.usedAbilityThisTurn = false;
         }
+      });
+
+      if (this.callbacks.onTurnStart) {
+        this.callbacks.onTurnStart(playerIndex);
       }
 
-      // Process counter effects (burn, freeze, etc.)
-      await this.processCounterEffects(activePlayer);
+      if (this.callbacks.onRender) {
+        this.callbacks.onRender();
+      }
+    }
 
-      // Check for death after counter effects
-      if (this.checkForBattleEnd()) {
-        this.state.battleState = BattleState.Finished;
+    /**
+     * End a player's turn
+     */
+    endTurn(playerIndex: number): void {
+      if (!this.currentBattle) return;
+
+      if (this.callbacks.onTurnEnd) {
+        this.callbacks.onTurnEnd(playerIndex);
+      }
+
+      // Increment turn counter when player 2 ends their turn
+      if (playerIndex === 1) {
+        this.currentBattle.turn++;
+      }
+    }
+
+    /**
+     * Draw a card from player's deck
+     */
+    private drawCard(player: Player): void {
+      if (player.deck.length === 0) {
+        Logger.debug(`[BattleController] No cards left in deck for ${player.name}`);
         return;
       }
 
-      // Trigger start of turn abilities based on state
-      await this.triggerStateBasedAbilities(playerIndex, 'start');
-
-      // Set phase to main
-      this.state.phase = 'Main';
-    }
-
-    /**
-     * Process player end of turn
-     */
-    private async processPlayerEndOfTurn(playerIndex: 0 | 1): Promise<void> {
-      const activePlayer = this.state.players[playerIndex];
-      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
-
-      // Trigger end of turn abilities based on state
-      await this.triggerStateBasedAbilities(playerIndex, 'end');
-
-      // Clear temporary effects
-      for (const beast of activePlayer.field) {
-        if (beast) {
-          this.clearTemporaryEffects(beast);
-        }
-      }
-
-      // Check for death after end of turn effects
-      if (this.checkForBattleEnd()) {
-        this.state.battleState = BattleState.Finished;
-        return;
+      const card = player.deck.shift();
+      if (card) {
+        player.hand.push(card);
+        Logger.debug(`[BattleController] ${player.name} drew a card: ${card.name}`);
       }
     }
 
     /**
-     * Check if battle should end (player health <= 0)
+     * Shuffle a deck
      */
-    private checkForBattleEnd(): boolean {
-      const player1 = this.state.players[0];
-      const player2 = this.state.players[1];
-
-      return player1.health <= 0 || player2.health <= 0;
+    private shuffleDeck(deck: AnyCard[]): void {
+      shuffle(deck);
     }
 
     /**
-     * End current turn
+     * Clean up battle resources
      */
-    public async endTurn(): Promise<void> {
-      const state = this.ensureGameState();
-
-      // Determine which end of turn state to transition to
-      if (state.battleState === BattleState.Player1Playing) {
-        state.battleState = BattleState.Player1EndOfTurn;
-      } else if (state.battleState === BattleState.Player2Playing) {
-        state.battleState = BattleState.Player2EndOfTurn;
-      } else {
-        Logger.error(`Unexpected state during endTurn: ${state.battleState}`);
-        return;
-      }
-
-      // Continue state transitions
-      await this.transitionState();
+    dispose(): void {
+      this.currentBattle = null;
+      Logger.info('[BattleController] Battle controller disposed');
     }
+  }
 
+  // ==================== bloombeasts\engine\utils\StatModifierManager.ts ====================
+
+  /**
+   * StatModifierManager - Centralized stat modification management
+   *
+   * This utility handles all stat modifications in a consistent way across the game.
+   * It tracks different sources of modifications and calculates final stats.
+   */
+
+
+  export class StatModifierManager {
     /**
-     * Summon a beast to the field
+     * Add a stat modifier to a beast
      */
-    public summonBeast(
-      player: Player,
-      beastCard: AnyCard,
-      position: number
-    ): boolean {
-      if (position < 0 || position > 2) {
-        Logger.error('Invalid field position');
-        return false;
+    static addModifier(
+      beast: BloomBeastInstance,
+      source: StatModifierSource,
+      sourceId: string,
+      stat: 'attack' | 'health' | 'maxHealth',
+      value: number,
+      duration?: 'permanent' | 'end-of-turn' | 'while-active',
+      turnsRemaining?: number
+    ): void {
+      if (!beast.statModifiers) {
+        beast.statModifiers = [];
       }
 
-      if (player.field[position] !== null) {
-        Logger.error('Field position already occupied');
-        return false;
-      }
-
-      if (player.summonsThisTurn >= 1) {
-        Logger.error('Already summoned this turn');
-        return false;
-      }
-
-      // Create beast instance
-      const instance: BloomBeastInstance = {
-        instanceId: `${beastCard.id}-${Date.now()}`,
-        cardId: beastCard.id,
-        name: beastCard.name,
-        affinity: (beastCard as any).affinity || 'Generic',
-        currentLevel: 1,
-        currentXP: 0,
-        baseAttack: (beastCard as any).baseAttack || 0,
-        baseHealth: (beastCard as any).baseHealth || 0,
-        currentAttack: (beastCard as any).baseAttack || 0,
-        currentHealth: (beastCard as any).baseHealth || 0,
-        maxHealth: (beastCard as any).baseHealth || 0,
-        statusEffects: [],
-        counters: [],
-        summoningSickness: true,
-        slotIndex: position,
+      const modifier: StatModifier = {
+        source,
+        sourceId,
+        stat,
+        value,
+        duration,
+        turnsRemaining
       };
 
-      // Place on field
-      player.field[position] = instance;
-      player.summonsThisTurn++;
+      beast.statModifiers.push(modifier);
+      Logger.debug(`Added ${stat} modifier: ${value > 0 ? '+' : ''}${value} from ${source} (${sourceId})`);
 
-      // Apply WhileOnField buff card stat modifications to the newly summoned beast
-      this.applyWhileOnFieldBuffStats(instance, player);
-
-      // Trigger summon abilities on the summoned beast
-      this.triggerSummonAbilities(instance);
-
-      // Trigger OnAllySummon abilities on other beasts
-      this.triggerAllySummonAbilities(instance, player);
-
-      return true;
+      // Recalculate stats after adding modifier
+      this.recalculateStats(beast);
     }
 
     /**
-     * Play a card from hand
+     * Remove all modifiers from a specific source
      */
-    public async playCard(
-      player: Player,
+    static removeModifiersBySource(
+      beast: BloomBeastInstance,
+      source: StatModifierSource,
+      sourceId?: string
+    ): void {
+      if (!beast.statModifiers) return;
+
+      const before = beast.statModifiers.length;
+
+      if (sourceId) {
+        beast.statModifiers = beast.statModifiers.filter(
+          m => !(m.source === source && m.sourceId === sourceId)
+        );
+      } else {
+        beast.statModifiers = beast.statModifiers.filter(m => m.source !== source);
+      }
+
+      const removed = before - beast.statModifiers.length;
+      if (removed > 0) {
+        Logger.debug(`Removed ${removed} modifier(s) from ${source}${sourceId ? ` (${sourceId})` : ''}`);
+        this.recalculateStats(beast);
+      }
+    }
+
+    /**
+     * Update modifiers for end of turn (decrement turns remaining, remove expired)
+     */
+    static updateEndOfTurn(beast: BloomBeastInstance): void {
+      if (!beast.statModifiers) return;
+
+      const before = beast.statModifiers.length;
+
+      beast.statModifiers = beast.statModifiers.filter(modifier => {
+        // Remove end-of-turn effects
+        if (modifier.duration === 'end-of-turn') {
+          Logger.debug(`Removing end-of-turn modifier: ${modifier.stat} ${modifier.value > 0 ? '+' : ''}${modifier.value}`);
+          return false;
+        }
+
+        // Decrement turns remaining for temporary effects
+        if (modifier.turnsRemaining !== undefined) {
+          modifier.turnsRemaining--;
+          if (modifier.turnsRemaining <= 0) {
+            Logger.debug(`Removing expired temporary modifier: ${modifier.stat} ${modifier.value > 0 ? '+' : ''}${modifier.value}`);
+            return false;
+          }
+        }
+
+        return true;
+      });
+
+      const removed = before - beast.statModifiers.length;
+      if (removed > 0) {
+        this.recalculateStats(beast);
+      }
+    }
+
+    /**
+     * Recalculate all current stats from base + modifiers
+     */
+    static recalculateStats(beast: BloomBeastInstance): void {
+      // Store current health percentage to maintain damage
+      const healthPercent = beast.maxHealth > 0 ? beast.currentHealth / beast.maxHealth : 1;
+
+      // Start with base stats
+      let calculatedAttack = beast.baseAttack;
+      let calculatedMaxHealth = beast.baseHealth;
+
+      // Apply all modifiers
+      if (beast.statModifiers) {
+        for (const modifier of beast.statModifiers) {
+          if (modifier.stat === 'attack') {
+            calculatedAttack += modifier.value;
+          } else if (modifier.stat === 'maxHealth' || modifier.stat === 'health') {
+            calculatedMaxHealth += modifier.value;
+          }
+        }
+      }
+
+      // Ensure stats don't go below minimum values
+      calculatedAttack = Math.max(0, calculatedAttack);
+      calculatedMaxHealth = Math.max(1, calculatedMaxHealth);
+
+      // Update current stats
+      const oldMaxHealth = beast.maxHealth;
+      beast.currentAttack = calculatedAttack;
+      beast.maxHealth = calculatedMaxHealth;
+
+      // Adjust current health proportionally if max health changed
+      if (oldMaxHealth !== calculatedMaxHealth && oldMaxHealth > 0) {
+        beast.currentHealth = Math.max(1, Math.min(
+          Math.floor(calculatedMaxHealth * healthPercent),
+          calculatedMaxHealth
+        ));
+      }
+
+      // Ensure current health doesn't exceed max health
+      beast.currentHealth = Math.min(beast.currentHealth, beast.maxHealth);
+    }
+
+    /**
+     * Get total modifier value for a specific stat from all sources
+     */
+    static getTotalModifier(beast: BloomBeastInstance, stat: 'attack' | 'health' | 'maxHealth'): number {
+      if (!beast.statModifiers) return 0;
+
+      return beast.statModifiers
+        .filter(m => m.stat === stat || (m.stat === 'health' && stat === 'maxHealth'))
+        .reduce((sum, m) => sum + m.value, 0);
+    }
+
+    /**
+     * Get modifiers from a specific source
+     */
+    static getModifiersBySource(
+      beast: BloomBeastInstance,
+      source: StatModifierSource,
+      sourceId?: string
+    ): StatModifier[] {
+      if (!beast.statModifiers) return [];
+
+      return beast.statModifiers.filter(m => {
+        if (sourceId) {
+          return m.source === source && m.sourceId === sourceId;
+        }
+        return m.source === source;
+      });
+    }
+
+    /**
+     * Clear all modifiers (useful when beast is destroyed or returned to hand)
+     */
+    static clearAllModifiers(beast: BloomBeastInstance): void {
+      beast.statModifiers = [];
+      this.recalculateStats(beast);
+    }
+
+    /**
+     * Initialize a beast's stat system (call when beast is created/summoned)
+     */
+    static initializeStatSystem(beast: BloomBeastInstance): void {
+      if (!beast.statModifiers) {
+        beast.statModifiers = [];
+      }
+
+      // Ensure baseAttack and baseHealth are set
+      if (beast.baseAttack === undefined) {
+        beast.baseAttack = beast.currentAttack;
+      }
+      if (beast.baseHealth === undefined) {
+        beast.baseHealth = beast.maxHealth;
+      }
+
+      // Recalculate to ensure consistency
+      this.recalculateStats(beast);
+    }
+  }
+
+  // ==================== bloombeasts\battle\core\BattleRules.ts ====================
+
+  /**
+   * BattleStateManager - Handles battle state and game rules
+   *
+   * Responsibilities:
+   * - Card playing logic (validation, field management)
+   * - Combat resolution (attack calculations, damage dealing)
+   * - Ability and effect processing
+   * - Trigger management (OnSummon, OnAttack, OnDamage, OnDestroy, StartOfTurn, EndOfTurn)
+   * - Trap activation
+   * - Buff and debuff application
+   * - Win/loss conditions
+   */
+
+
+  export interface PlayCardResult {
+    success: boolean;
+    message?: string;
+    isTrap?: boolean;
+  }
+
+  export interface AttackResult {
+    success: boolean;
+    damage?: number;
+    message?: string;
+  }
+
+  export interface AbilityResult {
+    success: boolean;
+    message?: string;
+  }
+
+  export class BattleStateManager {
+
+    /**
+     * Play a card from a player's hand
+     */
+    playCard(
       cardIndex: number,
-      target?: any
-    ): Promise<boolean> {
+      player: Player,
+      opponent: Player,
+      gameState: GameState,
+      targetIndex?: number
+    ): PlayCardResult {
+      // Validate card index
       if (cardIndex < 0 || cardIndex >= player.hand.length) {
-        Logger.error('Invalid card index');
-        return false;
+        Logger.error(`Invalid card index: ${cardIndex}`);
+        return { success: false, message: 'Invalid card index' };
       }
 
-      const card = player.hand[cardIndex];
+      const card: any = player.hand[cardIndex];
 
-      // Check nectar cost
+      // Check if player has enough nectar
       if (card.cost > player.currentNectar) {
-        Logger.error('Not enough nectar');
-        return false;
+        Logger.debug('Not enough nectar to play this card');
+        return { success: false, message: 'Not enough nectar' };
       }
 
-      // Pay cost
-      player.currentNectar -= card.cost;
-
-      // Remove from hand
-      player.hand.splice(cardIndex, 1);
-
-      // Handle based on card type
+      // Handle different card types
       switch (card.type) {
         case 'Bloom':
-          // Check for traps before playing
-          await this.checkTraps('OnBloomPlay', player, { bloomCard: card });
-
-          // Find empty field position
-          const emptyPos = player.field.findIndex(slot => slot === null);
-          if (emptyPos !== -1) {
-            return this.summonBeast(player, card, emptyPos);
-          }
-          player.graveyard.push(card);
-          break;
-
-        case 'Habitat':
-          // Check for traps before playing
-          const trapData = { habitatCard: card, countered: false };
-          await this.checkTraps('OnHabitatPlay', player, trapData);
-
-          // Only apply habitat if not countered
-          if (!trapData.countered) {
-            // Replace current habitat
-            if (this.state.habitatZone) {
-              player.graveyard.push(this.state.habitatZone);
-            }
-            this.state.habitatZone = card;
-            Logger.debug(`Played habitat: ${card.name}`);
-            // Apply habitat effects
-            this.applyHabitatEffects();
-          } else {
-            // Countered - send to graveyard
-            player.graveyard.push(card);
-          }
-          break;
+          return this.playBloomCard(cardIndex, player, opponent);
 
         case 'Magic':
-          // Execute magic card effect immediately
-          this.processMagicCard(card as MagicCard, player, target);
-          player.graveyard.push(card);
-          Logger.debug(`Played magic card: ${card.name}`);
-          break;
+          return this.playMagicCard(cardIndex, player, opponent, targetIndex);
 
         case 'Trap':
-          // Place trap card face-down in trap zone
-          const emptyTrapSlot = player.trapZone.findIndex(slot => slot === null);
-          if (emptyTrapSlot !== -1) {
-            player.trapZone[emptyTrapSlot] = card;
-            Logger.debug(`Set trap card: ${card.name}`);
-          } else {
-            // No trap slots available, send to graveyard
-            Logger.debug('No trap slots available');
-            player.graveyard.push(card);
-          }
-          break;
+          return this.playTrapCard(cardIndex, player);
 
         case 'Buff':
-          // Place buff card in buff zone
-          const emptyBuffSlot = player.buffZone.findIndex(slot => slot === null);
-          if (emptyBuffSlot !== -1) {
-            player.buffZone[emptyBuffSlot] = card;
-            Logger.debug(`Played buff card: ${card.name}`);
-            // Apply any OnSummon effects immediately
-            this.applyBuffCardEffects(card as any, player);
-          } else {
-            // No buff slots available, send to graveyard
-            Logger.debug('No buff slots available');
-            player.graveyard.push(card);
-          }
-          break;
-      }
+          return this.playBuffCard(cardIndex, player);
 
-      return true;
+        case 'Habitat':
+          return this.playHabitatCard(cardIndex, player, opponent, gameState);
+
+        default:
+          Logger.debug(`Cannot play card type: ${card.type}`);
+          return { success: false, message: 'Invalid card type' };
+      }
     }
 
     /**
-     * Process magic card effects using structured effects
+     * Play a Bloom Beast card
      */
-    private processMagicCard(card: MagicCard, player: Player, target?: any): void {
-      const opponent = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+    private playBloomCard(cardIndex: number, player: Player, opponent: Player): PlayCardResult {
+      // Check if field has space (max 3 beasts)
+      if (player.field.length >= 3) {
+        Logger.debug('Field is full');
+        return { success: false, message: 'Field is full' };
+      }
 
-      // Process each ability in the magic card (usually just one with OnSummon trigger)
-      for (const ability of card.abilities) {
-        // Magic cards typically have OnSummon trigger - process their effects immediately
-        if (ability.trigger === AbilityTrigger.OnSummon || !ability.trigger) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
+      const bloomCard: any = player.hand.splice(cardIndex, 1)[0];
+      player.currentNectar -= bloomCard.cost;
 
-          // Process each effect in the ability
-          for (const effect of ability.effects) {
-            switch (effect.type) {
-              case EffectType.GainResource:
-                if (effect.resource === ResourceType.Nectar) {
-                  player.currentNectar = Math.min(MAX_NECTAR, player.currentNectar + effect.value);
-                }
-                break;
+      // Create BloomBeastInstance for the field
+      const beastInstance: any = {
+        cardId: bloomCard.id,
+        instanceId: bloomCard.instanceId || `${bloomCard.id}-${Date.now()}`,
+        currentLevel: (bloomCard as any).level || 1,
+        currentXP: 0,
+        baseAttack: bloomCard.baseAttack,
+        baseHealth: bloomCard.baseHealth,
+        currentAttack: bloomCard.baseAttack,
+        currentHealth: bloomCard.baseHealth,
+        maxHealth: bloomCard.baseHealth,
+        statusEffects: [],
+        slotIndex: player.field.length,
+        summoningSickness: true,
+        usedAbilityThisTurn: false,
+        statModifiers: [],
+        // Store original card data for display
+        type: 'Bloom',
+        name: bloomCard.name,
+        affinity: bloomCard.affinity,
+        cost: bloomCard.cost,
+        ability: bloomCard.abilities && bloomCard.abilities.length > 0 ? bloomCard.abilities[0] : undefined,
+      };
 
-              case EffectType.DrawCards:
-                this.drawCards(player, effect.value);
-                break;
+      // Initialize stat system
+      StatModifierManager.initializeStatSystem(beastInstance);
 
-              case EffectType.RemoveCounter:
-                // Remove counters based on target
-                if (effect.target === AbilityTarget.AllUnits) {
-                  // Remove from all beasts on both sides
-                  for (const beast of player.field) {
-                    if (beast) {
-                      if (effect.counter) {
-                        // Remove specific counter type
-                        beast.counters = beast.counters.filter(c => c.type !== effect.counter);
-                      } else {
-                        // Remove all counters
-                        beast.counters = [];
-                      }
-                    }
-                  }
-                  for (const beast of opponent.field) {
-                    if (beast) {
-                      if (effect.counter) {
-                        beast.counters = beast.counters.filter(c => c.type !== effect.counter);
-                      } else {
-                        beast.counters = [];
-                      }
-                    }
-                  }
-                }
-                break;
+      player.field.push(beastInstance);
 
-              // Add more effect types as needed
-              default:
-                Logger.debug(`Unhandled magic card effect type: ${effect.type}`);
+      // Apply buff effects and process OnSummon trigger
+      this.applyStatBuffEffects(player);
+      this.processOnSummonTrigger(beastInstance, player, opponent);
+
+      Logger.debug(`Played ${bloomCard.name} - Nectar: ${player.currentNectar}`);
+      return { success: true, message: `Played ${bloomCard.name}` };
+    }
+
+    /**
+     * Play a Magic card
+     */
+    private playMagicCard(cardIndex: number, player: Player, opponent: Player, targetIndex?: number): PlayCardResult {
+      const magicCard: any = player.hand.splice(cardIndex, 1)[0];
+      player.currentNectar -= magicCard.cost;
+
+      // Get the target beast if targetIndex is provided
+      let target = null;
+      if (targetIndex !== undefined && targetIndex >= 0 && targetIndex < opponent.field.length) {
+        target = opponent.field[targetIndex];
+        Logger.debug(`Magic card targeting opponent beast at index ${targetIndex}: ${target?.name}`);
+      }
+
+      // Process magic card effects immediately
+      // Magic cards use the structured ability system with abilities array
+      if (magicCard.abilities && Array.isArray(magicCard.abilities)) {
+        for (const ability of magicCard.abilities) {
+          if (ability.effects && Array.isArray(ability.effects)) {
+            for (const effect of ability.effects) {
+              this.processMagicEffect(effect, player, opponent, { target });
             }
           }
         }
       }
+
+      player.graveyard.push(magicCard);
+
+      Logger.debug(`Played magic card: ${magicCard.name}`);
+      return { success: true, message: `Played ${magicCard.name}` };
     }
 
     /**
-     * Apply habitat zone effects
+     * Play a Trap card
      */
-    private applyHabitatEffects(): void {
-      if (!this.state.habitatZone) return;
-
-      const habitat = this.state.habitatZone as HabitatCard;
-      const activePlayer = this.state.players[this.state.activePlayer];
-      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
-
-      // Process each ability in the habitat card
-      for (const ability of habitat.abilities) {
-        // Apply on-play effects immediately (OnSummon trigger)
-        if (ability.trigger === AbilityTrigger.OnSummon) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          for (const effect of ability.effects) {
-            this.processHabitatEffect(effect, activePlayer, opposingPlayer);
-          }
-        }
-        // Note: WhileOnField abilities are handled elsewhere during combat/ability processing
+    private playTrapCard(cardIndex: number, player: Player): PlayCardResult {
+      // Check if trap zone has space (max 3 traps)
+      if (player.trapZone.length >= 3) {
+        Logger.debug('Trap zone is full');
+        return { success: false, message: 'Trap zone is full' };
       }
 
-      // Count ongoing WhileOnField abilities for logging
-      const ongoingCount = habitat.abilities.filter(a => a.trigger === AbilityTrigger.WhileOnField).length;
-      Logger.debug(`Habitat ${habitat.name} active with ${ongoingCount} ongoing abilities`);
+      const trapCard: any = player.hand.splice(cardIndex, 1)[0];
+      player.currentNectar -= trapCard.cost;
+      player.trapZone.push(trapCard);
+
+      Logger.debug(`Set trap: ${trapCard.name}`);
+      return { success: true, message: `Set ${trapCard.name}`, isTrap: true };
     }
 
     /**
-     * Process a single habitat effect
+     * Play a Buff card
      */
-    private processHabitatEffect(effect: AbilityEffect, activePlayer: Player, opposingPlayer: Player): void {
+    private playBuffCard(cardIndex: number, player: Player): PlayCardResult {
+      // Check if buff zone has space (max 2 buffs)
+      if (player.buffZone.length >= 2) {
+        Logger.debug('Buff zone is full');
+        return { success: false, message: 'Buff zone is full' };
+      }
+
+      const buffCard: any = player.hand.splice(cardIndex, 1)[0];
+      player.currentNectar -= buffCard.cost;
+      player.buffZone.push(buffCard);
+
+      // Apply initial stat buff effects immediately
+      this.applyStatBuffEffects(player);
+
+      Logger.debug(`Played buff: ${buffCard.name}`);
+      return { success: true, message: `Played ${buffCard.name}` };
+    }
+
+    /**
+     * Play a Habitat card
+     */
+    private playHabitatCard(
+      cardIndex: number,
+      player: Player,
+      opponent: Player,
+      gameState: GameState
+    ): PlayCardResult {
+      const habitatCard: any = player.hand.splice(cardIndex, 1)[0];
+      player.currentNectar -= habitatCard.cost;
+
+      // Set habitat zone
+      gameState.habitatZone = habitatCard;
+
+      // Process on-play effects
+      if (habitatCard.onPlayEffects && Array.isArray(habitatCard.onPlayEffects)) {
+        for (const effect of habitatCard.onPlayEffects) {
+          this.processHabitatEffect(effect, player, opponent);
+        }
+      }
+
+      Logger.debug(`Played habitat: ${habitatCard.name}`);
+      return { success: true, message: `Played ${habitatCard.name}` };
+    }
+
+    /**
+     * Attack an opponent beast with a player beast
+     */
+    attackBeast(
+      attackerIndex: number,
+      targetIndex: number,
+      player: Player,
+      opponent: Player,
+      onTrapCallback?: (trapName: string) => void
+    ): AttackResult {
+      // Validate indices
+      if (attackerIndex < 0 || attackerIndex >= player.field.length) {
+        return { success: false, message: 'Invalid attacker' };
+      }
+      if (targetIndex < 0 || targetIndex >= opponent.field.length) {
+        return { success: false, message: 'Invalid target' };
+      }
+
+      const attacker: any = player.field[attackerIndex];
+      const target: any = opponent.field[targetIndex];
+
+      // Check if attacker can attack
+      if (attacker.summoningSickness) {
+        Logger.debug('Beast has summoning sickness and cannot attack');
+        return { success: false, message: 'Summoning sickness' };
+      }
+
+      Logger.debug(`${attacker.name} attacks ${target.name}!`);
+
+      // Process OnAttack trigger
+      this.processOnAttackTrigger(attacker, player, opponent);
+
+      // Check for trap activation - pass the attacking beast
+      this.checkAndActivateTraps(opponent, attacker, 'attack', onTrapCallback);
+
+      // Deal damage to each other
+      const attackerDamage = attacker.currentAttack || 0;
+      const targetDamage = target.currentAttack || 0;
+
+      target.currentHealth -= attackerDamage;
+      attacker.currentHealth -= targetDamage;
+
+      // Process OnDamage triggers
+      if (attackerDamage > 0) {
+        this.processOnDamageTrigger(target, opponent, player);
+      }
+      if (targetDamage > 0) {
+        this.processOnDamageTrigger(attacker, player, opponent);
+      }
+
+      // Remove dead beasts
+      if (target.currentHealth <= 0) {
+        this.processOnDestroyTrigger(target, opponent, player);
+        opponent.field.splice(targetIndex, 1);
+        Logger.debug(`${target.name} was defeated!`);
+      }
+      if (attacker.currentHealth <= 0) {
+        this.processOnDestroyTrigger(attacker, player, opponent);
+        player.field.splice(attackerIndex, 1);
+        Logger.debug(`${attacker.name} was defeated!`);
+      }
+
+      // Mark beast as having attacked
+      if (attacker.currentHealth > 0) {
+        attacker.summoningSickness = true;
+      }
+
+      return { success: true, damage: attackerDamage };
+    }
+
+    /**
+     * Attack opponent player directly
+     */
+    attackPlayer(
+      attackerIndex: number,
+      player: Player,
+      opponent: Player,
+      onTrapCallback?: (trapName: string) => void
+    ): AttackResult {
+      // Validate index
+      if (attackerIndex < 0 || attackerIndex >= player.field.length) {
+        return { success: false, message: 'Invalid attacker' };
+      }
+
+      // Can only attack player directly if opponent has no beasts
+      if (opponent.field.length > 0) {
+        Logger.debug('Cannot attack player directly while opponent has beasts');
+        return { success: false, message: 'Must attack beasts first' };
+      }
+
+      const attacker: any = player.field[attackerIndex];
+
+      // Check if attacker can attack
+      if (attacker.summoningSickness) {
+        Logger.debug('Beast has summoning sickness and cannot attack');
+        return { success: false, message: 'Summoning sickness' };
+      }
+
+      const damage = attacker.currentAttack || 0;
+
+      // Process OnAttack trigger
+      this.processOnAttackTrigger(attacker, player, opponent);
+
+      // Check for trap activation - pass the attacking beast
+      this.checkAndActivateTraps(opponent, attacker, 'attack', onTrapCallback);
+
+      opponent.health -= damage;
+
+      Logger.debug(`${attacker.name} attacks opponent for ${damage} damage!`);
+
+      // Mark beast as having attacked
+      attacker.summoningSickness = true;
+
+      return { success: true, damage };
+    }
+
+    /**
+     * Use a beast's ability
+     */
+    useAbility(
+      beastIndex: number,
+      player: Player,
+      opponent: Player,
+      gameState: GameState
+    ): AbilityResult {
+      // Validate beast index
+      if (beastIndex < 0 || beastIndex >= player.field.length) {
+        return { success: false, message: 'Invalid beast index' };
+      }
+
+      const beast: any = player.field[beastIndex];
+      if (!beast) {
+        return { success: false, message: 'No beast at this position' };
+      }
+
+      // Check if beast has summoning sickness
+      if (beast.summoningSickness) {
+        return { success: false, message: 'Beast has summoning sickness' };
+      }
+
+      // Check if beast has an ability
+      if (!beast.ability) {
+        return { success: false, message: 'Beast has no ability' };
+      }
+
+      // Check if ability was already used this turn
+      if (beast.usedAbilityThisTurn) {
+        return { success: false, message: 'Ability already used this turn' };
+      }
+
+      const ability = beast.ability as any;
+
+      // Check and pay costs
+      if (ability.cost) {
+        const costResult = this.payAbilityCost(ability.cost, player, gameState);
+        if (!costResult.success) {
+          return costResult;
+        }
+      }
+
+      // Process ability effects
+      if (ability.effects && Array.isArray(ability.effects)) {
+        for (const effect of ability.effects) {
+          this.processAbilityEffect(effect, beast, player, opponent);
+        }
+      }
+
+      // Mark ability as used this turn
+      beast.usedAbilityThisTurn = true;
+
+      Logger.debug(`Activated ability: ${ability.name}`);
+      return { success: true, message: `Used ${ability.name}` };
+    }
+
+    /**
+     * Pay the cost for an ability
+     */
+    private payAbilityCost(cost: any, player: Player, gameState: GameState): AbilityResult {
+      switch (cost.type) {
+        case 'nectar':
+          const nectarCost = cost.value || 1;
+          if (player.currentNectar < nectarCost) {
+            return { success: false, message: 'Not enough nectar' };
+          }
+          player.currentNectar -= nectarCost;
+          break;
+
+        case 'discard':
+          const discardCost = cost.value || 1;
+          if (player.hand.length < discardCost) {
+            return { success: false, message: 'Not enough cards to discard' };
+          }
+          for (let i = 0; i < discardCost; i++) {
+            const card = player.hand.pop();
+            if (card) player.graveyard.push(card);
+          }
+          break;
+      }
+
+      return { success: true };
+    }
+
+    /**
+     * Process a single ability effect
+     */
+    processAbilityEffect(effect: any, source: any, player: any, opponent: any): void {
       switch (effect.type) {
-        case EffectType.RemoveCounter:
-          // Remove counters from all units
-          if (effect.target === AbilityTarget.AllUnits) {
-            for (const beast of activePlayer.field) {
-              if (beast) {
-                if (effect.counter) {
-                  beast.counters = beast.counters.filter(c => c.type !== effect.counter);
-                } else {
-                  beast.counters = [];
-                }
-              }
-            }
-            for (const beast of opposingPlayer.field) {
-              if (beast) {
-                if (effect.counter) {
-                  beast.counters = beast.counters.filter(c => c.type !== effect.counter);
-                } else {
-                  beast.counters = [];
-                }
-              }
+        case 'modify-stats':
+          if (effect.target === 'self') {
+            // Determine duration based on effect.duration or default to end-of-turn
+            const duration = effect.duration || 'end-of-turn';
+            const turnsRemaining = duration === 'end-of-turn' ? 1 : undefined;
+
+            if (effect.stat === 'attack') {
+              StatModifierManager.addModifier(
+                source,
+                StatModifierSource.Ability,
+                source.ability?.name || 'ability',
+                'attack',
+                effect.value || 0,
+                duration,
+                turnsRemaining
+              );
+            } else if (effect.stat === 'health') {
+              StatModifierManager.addModifier(
+                source,
+                StatModifierSource.Ability,
+                source.ability?.name || 'ability',
+                'maxHealth',
+                effect.value || 0,
+                duration,
+                turnsRemaining
+              );
             }
           }
           break;
 
-        // Ongoing effects like stat boosts are handled by the AbilityProcessor during combat
-        case EffectType.ModifyStats:
-          Logger.debug(`Habitat provides ongoing stat modifications`);
+        case 'heal':
+          if (effect.target === 'self') {
+            const healAmount = effect.value || 0;
+            source.currentHealth = Math.min(source.maxHealth, source.currentHealth + healAmount);
+          }
+          break;
+
+        case 'damage':
+          const damageTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+          damageTargets.forEach((target: any) => {
+            if (target.currentHealth !== undefined) {
+              // It's a beast
+              target.currentHealth -= effect.value || 0;
+              if (target.currentHealth <= 0) {
+                const ownerField = player.field.includes(target) ? player.field : opponent.field;
+                const owner = player.field.includes(target) ? player : opponent;
+                const otherPlayer = player.field.includes(target) ? opponent : player;
+                const index = ownerField.indexOf(target);
+                if (index > -1) {
+                  this.processOnDestroyTrigger(target, owner, otherPlayer);
+                  ownerField.splice(index, 1);
+                  Logger.debug(`${target.name} was destroyed by ${source.name}'s ability!`);
+                }
+              }
+            } else if (target.health !== undefined) {
+              // It's a player
+              target.health -= effect.value || 0;
+              Logger.debug(`${effect.value} damage dealt to ${target.name}`);
+            }
+          });
+          break;
+
+        case 'immunity':
+          if (effect.target === 'self') {
+            if (!source.statusEffects) source.statusEffects = [];
+            const immunityEffect = {
+              type: 'immunity',
+              immuneTo: effect.immuneTo || 'all',
+              duration: effect.duration || 'permanent'
+            };
+            source.statusEffects.push(immunityEffect);
+            Logger.debug(`${source.name} gained immunity to ${effect.immuneTo || 'all'}`);
+          }
+          break;
+
+        case 'draw-cards':
+        case 'DrawCards':
+          // Draw cards from deck to hand
+          const abilityDrawCount = effect.value || 1;
+          for (let i = 0; i < abilityDrawCount; i++) {
+            if (player.deck.length > 0) {
+              const card = player.deck.pop();
+              if (card) {
+                player.hand.push(card);
+                Logger.debug(`Drew card: ${card.name}`);
+              }
+            } else {
+              Logger.debug('Deck is empty - cannot draw');
+            }
+          }
+          break;
+
+        default:
+          Logger.debug(`Unknown effect type: ${effect.type}`);
+      }
+    }
+
+    /**
+     * Process a magic card effect
+     */
+    processMagicEffect(effect: any, player: any, opponent: any, context?: { attacker?: any, target?: any }): void {
+      switch (effect.type) {
+        case 'deal-damage':
+          const damageTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
+          damageTarget.forEach((target: any) => {
+            if (target.currentHealth !== undefined) {
+              target.currentHealth -= effect.value || 0;
+              if (target.currentHealth <= 0) {
+                const ownerField = player.field.includes(target) ? player.field : opponent.field;
+                const owner = player.field.includes(target) ? player : opponent;
+                const otherPlayer = player.field.includes(target) ? opponent : player;
+                const index = ownerField.indexOf(target);
+                if (index > -1) {
+                  this.processOnDestroyTrigger(target, owner, otherPlayer);
+                  ownerField.splice(index, 1);
+                }
+              }
+            } else if (target.health !== undefined) {
+              target.health -= effect.value || 0;
+            }
+          });
+          break;
+
+        case 'heal':
+          const healTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
+          healTarget.forEach((target: any) => {
+            if (target.currentHealth !== undefined && target.maxHealth !== undefined) {
+              target.currentHealth = Math.min(target.maxHealth, target.currentHealth + (effect.value || 0));
+            } else if (target.health !== undefined && target.maxHealth !== undefined) {
+              target.health = Math.min(target.maxHealth, target.health + (effect.value || 0));
+            }
+          });
+          break;
+
+        case 'draw-cards':
+        case 'DrawCards':
+          // Draw cards from deck to hand
+          const drawCount = effect.value || 1;
+          for (let i = 0; i < drawCount; i++) {
+            if (player.deck.length > 0) {
+              const card = player.deck.pop();
+              if (card) {
+                player.hand.push(card);
+                Logger.debug(`Drew card: ${card.name}`);
+              }
+            } else {
+              Logger.debug('Deck is empty - cannot draw');
+            }
+          }
+          break;
+
+        case 'destroy':
+          const destroyTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
+          destroyTarget.forEach((target: any) => {
+            if (target.currentHealth !== undefined) {
+              const ownerField = player.field.includes(target) ? player.field : opponent.field;
+              const owner = player.field.includes(target) ? player : opponent;
+              const otherPlayer = player.field.includes(target) ? opponent : player;
+              const index = ownerField.indexOf(target);
+              if (index > -1) {
+                this.processOnDestroyTrigger(target, owner, otherPlayer);
+                ownerField.splice(index, 1);
+              }
+            }
+          });
+          break;
+
+        case 'modify-stats':
+          const statTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
+          const magicDuration = effect.duration || 'permanent';
+          statTarget.forEach((target: any) => {
+            if (target.currentAttack !== undefined) {
+              if (effect.stat === 'attack' || effect.stat === 'both') {
+                StatModifierManager.addModifier(
+                  target,
+                  StatModifierSource.Magic,
+                  'magic-card',
+                  'attack',
+                  effect.value || 0,
+                  magicDuration
+                );
+              }
+              if (effect.stat === 'health' || effect.stat === 'both') {
+                StatModifierManager.addModifier(
+                  target,
+                  StatModifierSource.Magic,
+                  'magic-card',
+                  'maxHealth',
+                  effect.value || 0,
+                  magicDuration
+                );
+              }
+            }
+          });
+          break;
+
+        case 'gain-resource':
+          if (effect.resource === 'nectar') {
+            player.currentNectar += effect.value || 1;
+            Logger.debug(`Gained ${effect.value || 1} nectar`);
+          }
+          break;
+
+        default:
+          Logger.debug(`Unhandled magic effect type: ${effect.type}`);
+      }
+    }
+
+    /**
+     * Process a habitat card effect
+     */
+    processHabitatEffect(effect: any, player: any, opponent: any): void {
+      switch (effect.type) {
+        case 'gain-resource':
+          if (effect.resource === 'nectar') {
+            player.currentNectar += effect.value || 1;
+          }
+          break;
+
+        case 'modify-stats':
+          if (effect.affinity) {
+            player.field.forEach((beast: any) => {
+              if (beast.affinity === effect.affinity) {
+                const habitatDuration = effect.duration || 'while-active';
+                if (effect.stat === 'attack' || effect.stat === 'both') {
+                  StatModifierManager.addModifier(
+                    beast,
+                    StatModifierSource.Habitat,
+                    'habitat',
+                    'attack',
+                    effect.value || 0,
+                    habitatDuration
+                  );
+                }
+                if (effect.stat === 'health' || effect.stat === 'both') {
+                  StatModifierManager.addModifier(
+                    beast,
+                    StatModifierSource.Habitat,
+                    'habitat',
+                    'maxHealth',
+                    effect.value || 0,
+                    habitatDuration
+                  );
+                }
+              }
+            });
+          }
+          break;
+
+        case 'draw-cards':
+        case 'DrawCards':
+          // Draw cards from deck to hand
+          const habitatDrawCount = effect.value || 1;
+          for (let i = 0; i < habitatDrawCount; i++) {
+            if (player.deck.length > 0) {
+              const card = player.deck.pop();
+              if (card) {
+                player.hand.push(card);
+                Logger.debug(`Drew card: ${card.name}`);
+              }
+            } else {
+              Logger.debug('Deck is empty - cannot draw');
+            }
+          }
+          break;
+
+        case 'deal-damage':
+          const damageTargetsHabitat = this.getEffectTargets(effect.target, player, opponent, effect.condition);
+          damageTargetsHabitat.forEach((target: any) => {
+            if (target.currentHealth !== undefined) {
+              target.currentHealth -= effect.value || 0;
+              if (target.currentHealth <= 0) {
+                const ownerField = player.field.includes(target) ? player.field : opponent.field;
+                const owner = player.field.includes(target) ? player : opponent;
+                const otherPlayer = player.field.includes(target) ? opponent : player;
+                const index = ownerField.indexOf(target);
+                if (index > -1) {
+                  this.processOnDestroyTrigger(target, owner, otherPlayer);
+                  ownerField.splice(index, 1);
+                }
+              }
+            } else if (target.health !== undefined) {
+              target.health -= effect.value || 0;
+            }
+          });
           break;
 
         default:
@@ -8593,873 +15659,754 @@ namespace BloomBeasts {
     }
 
     /**
-     * Apply buff card effects when played
+     * Get effect targets based on target type
      */
-    private applyBuffCardEffects(buffCard: any, player: Player): void {
-      const opponent = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+    private getEffectTargets(targetType: string, player: any, opponent: any, condition?: any, context?: { attacker?: any, target?: any }): any[] {
+      let targets: any[] = [];
 
-      // Process each ability in the buff card
-      for (const ability of buffCard.abilities) {
-        // Apply on-play effects immediately (OnSummon trigger)
-        if (ability.trigger === AbilityTrigger.OnSummon) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          for (const effect of ability.effects) {
-            this.processBuffEffect(effect, player, opponent);
-          }
-        }
-
-        // Apply WhileOnField stat modifications to all existing beasts
-        if (ability.trigger === AbilityTrigger.WhileOnField) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          for (const effect of ability.effects) {
-            if (effect.type === EffectType.ModifyStats) {
-              // Apply to all beasts that match the target
-              const targetPlayers = effect.target === AbilityTarget.AllAllies || effect.target === AbilityTarget.AllUnits
-                ? [player]
-                : [];
-
-              for (const targetPlayer of targetPlayers) {
-                for (const beast of targetPlayer.field) {
-                  if (!beast) continue;
-
-                  // Apply the stat modification
-                  if (effect.stat === StatType.Health) {
-                    beast.currentHealth += effect.value;
-                    beast.maxHealth += effect.value;
-                    Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Health to ${beast.name}`);
-                  } else if (effect.stat === StatType.Attack) {
-                    beast.currentAttack += effect.value;
-                    Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Attack to ${beast.name}`);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Count ongoing abilities for logging
-      const ongoingCount = buffCard.abilities.filter((a: any) =>
-        a.trigger === AbilityTrigger.WhileOnField ||
-        a.trigger === AbilityTrigger.OnOwnStartOfTurn ||
-        a.trigger === AbilityTrigger.OnOwnEndOfTurn
-      ).length;
-      Logger.debug(`Buff ${buffCard.name} active with ${ongoingCount} ongoing/triggered abilities`);
-    }
-
-    /**
-     * Process a single buff effect
-     */
-    private processBuffEffect(effect: AbilityEffect, player: Player, opponent: Player): void {
-      switch (effect.type) {
-        case EffectType.GainResource:
-          if (effect.resource === ResourceType.Nectar) {
-            player.currentNectar = Math.min(MAX_NECTAR, player.currentNectar + effect.value);
-            Logger.debug(`Buff grants ${effect.value} Nectar`);
-          }
+      switch (targetType) {
+        case 'all-enemies':
+          targets = [...opponent.field];
           break;
-
-        case EffectType.ModifyStats:
-          Logger.debug(`Buff provides stat modifications (handled by AbilityProcessor during combat)`);
+        case 'all-allies':
+          targets = [...player.field];
           break;
-
-        case EffectType.DrawCards:
-          this.drawCards(player, effect.value);
+        case 'random-enemy':
+          const randomEnemy = pickRandom(opponent.field);
+          targets = randomEnemy ? [randomEnemy] : [];
           break;
-
-        // Ongoing effects like stat boosts are handled by the AbilityProcessor
+        case 'opponent':
+          targets = [opponent];
+          break;
+        case 'player':
+          targets = [player];
+          break;
+        case 'all-units':
+          targets = [...player.field, ...opponent.field];
+          break;
+        case 'attacker':
+          // For trap cards - the attacker who triggered the trap
+          targets = context?.attacker ? [context.attacker] : [];
+          break;
+        case 'target':
+          // For targeted spells - specific target selected by player
+          targets = context?.target ? [context.target] : [];
+          break;
         default:
-          Logger.debug(`Buff effect type ${effect.type} (handled by AbilityProcessor if ongoing)`);
+          targets = [];
+      }
+
+      // Apply condition filtering if provided
+      if (condition) {
+        targets = targets.filter(target => this.checkCondition(target, condition));
+      }
+
+      return targets;
+    }
+
+    /**
+     * Check if a target passes a condition
+     */
+    private checkCondition(target: any, condition: any): boolean {
+      if (!condition || !condition.type) return true;
+
+      switch (condition.type) {
+        case 'affinity-matches':
+          return target.affinity === condition.value;
+
+        case 'affinity-not-matches':
+          return target.affinity !== condition.value;
+
+        case 'health-below':
+          if (target.currentHealth === undefined) return false;
+          const comparison = condition.comparison || 'less';
+          if (comparison === 'less') {
+            return target.currentHealth < (condition.value || 0);
+          } else if (comparison === 'less-equal') {
+            return target.currentHealth <= (condition.value || 0);
+          }
+          return false;
+
+        case 'health-above':
+          if (target.currentHealth === undefined) return false;
+          return target.currentHealth > (condition.value || 0);
+
+        case 'is-damaged':
+          return target.currentHealth !== undefined &&
+                 target.maxHealth !== undefined &&
+                 target.currentHealth < target.maxHealth;
+
+        case 'is-wilting':
+          if (target.currentHealth === undefined || target.maxHealth === undefined) return false;
+          return target.currentHealth < (target.maxHealth / 2);
+
+        case 'cost-above':
+          return target.cost > (condition.value || 0);
+
+        case 'cost-below':
+          return target.cost < (condition.value || 0);
+
+        default:
+          Logger.debug(`Unknown condition type: ${condition.type}`);
+          return true;
       }
     }
 
     /**
-     * Apply WhileOnField buff card stat modifications to a beast
+     * Process OnSummon triggers for a beast that was just summoned
      */
-    private applyWhileOnFieldBuffStats(beast: BloomBeastInstance, player: Player): void {
-      // Check all buff cards in the player's buff zone
-      for (const buffCard of player.buffZone) {
-        if (!buffCard) continue;
+    processOnSummonTrigger(beast: any, owner: any, opponent: any): void {
+      if (!beast.ability) return;
 
-        // Process each ability in the buff card
-        for (const ability of buffCard.abilities) {
-          // Only process WhileOnField abilities
-          if (ability.trigger !== AbilityTrigger.WhileOnField) continue;
+      const ability = beast.ability as any;
 
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
+      // Check if ability has OnSummon trigger
+      if (ability.trigger === 'OnSummon') {
+        Logger.debug(`OnSummon trigger activated for ${beast.name}!`);
 
-          // Process each effect
+        if (ability.effects && Array.isArray(ability.effects)) {
           for (const effect of ability.effects) {
-            if (effect.type !== EffectType.ModifyStats) continue;
-
-            // Check if this effect applies to this beast
-            const applies =
-              effect.target === AbilityTarget.AllAllies ||
-              effect.target === AbilityTarget.AllUnits;
-
-            if (!applies) continue;
-
-            // Apply the stat modification
-            if (effect.stat === StatType.Health) {
-              beast.currentHealth += effect.value;
-              beast.maxHealth += effect.value;
-              Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Health to ${beast.name}`);
-            } else if (effect.stat === StatType.Attack) {
-              beast.currentAttack += effect.value;
-              Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Attack to ${beast.name}`);
-            }
+            this.processAbilityEffect(effect, beast, owner, opponent);
           }
         }
       }
-    }
 
-    /**
-     * Draw cards from deck
-     */
-    private drawCards(player: Player, count: number): void {
-      for (let i = 0; i < count; i++) {
-        if (player.deck.length > 0) {
-          const card = player.deck.pop();
-          if (card) {
-            player.hand.push(card);
-          }
-        }
-      }
-    }
-
-    /**
-     * Shuffle a player's deck
-     */
-    private shuffleDeck(player: Player): void {
-      for (let i = player.deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [player.deck[i], player.deck[j]] = [player.deck[j], player.deck[i]];
-      }
-    }
-
-    /**
-     * Trigger state-based abilities
-     */
-    private async triggerStateBasedAbilities(playerIndex: 0 | 1, phase: 'start' | 'end'): Promise<void> {
-      const activePlayer = this.state.players[playerIndex];
-      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
-
-      // Trigger abilities based on phase
-      if (phase === 'start') {
-        // Trigger OnOwnStartOfTurn for active player's beasts
-        for (const beast of activePlayer.field) {
-          if (beast) {
-            await this.triggerBeastAbility(beast, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
-          }
-        }
-
-        // Trigger OnOwnStartOfTurn for active player's buff cards
-        for (const buffCard of activePlayer.buffZone) {
-          if (buffCard) {
-            await this.triggerBuffCardAbility(buffCard, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
-          }
-        }
-      } else {
-        // Trigger OnOwnEndOfTurn for active player's beasts
-        for (const beast of activePlayer.field) {
-          if (beast) {
-            await this.triggerBeastAbility(beast, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
-          }
-        }
-
-        // Trigger OnOwnEndOfTurn for active player's buff cards
-        for (const buffCard of activePlayer.buffZone) {
-          if (buffCard) {
-            await this.triggerBuffCardAbility(buffCard, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
-          }
-        }
-      }
-    }
-
-    /**
-     * Trigger all abilities for a beast that match a specific trigger
-     */
-    private async triggerBeastAbility(
-      beast: BloomBeastInstance,
-      trigger: string,
-      controllingPlayer: Player,
-      opposingPlayer: Player
-    ): Promise<void> {
-      const cardDef = this.getCardDefinition(beast.cardId);
-      if (!cardDef || cardDef.type !== 'Bloom') return;
-
-      const beastCard = cardDef as BloomBeastCard;
-      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
-
-      // Process each ability with this trigger
-      for (const ability of abilities) {
-        const results = this.abilityProcessor.processAbility(ability, {
-          source: beast,
-          sourceCard: beastCard,
-          trigger,
-          gameState: this.state,
-          controllingPlayer,
-          opposingPlayer,
-        });
-
-        // Apply ability results to game state
-        this.applyAbilityResults(results);
-
-        // Check for battle end after ability effects
-        if (this.checkForBattleEnd()) {
-          this.state.battleState = BattleState.Finished;
-        }
-      }
-    }
-
-    /**
-     * Trigger all abilities for a buff card that match a specific trigger
-     */
-    private async triggerBuffCardAbility(
-      buffCard: any,
-      trigger: string,
-      controllingPlayer: Player,
-      opposingPlayer: Player
-    ): Promise<void> {
-      // Process each ability in the buff card
-      for (const ability of buffCard.abilities) {
-        if (ability.trigger === trigger) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          // Process each effect in the ability
+      // Also check for Passive abilities that apply on summon
+      if (ability.trigger === 'Passive') {
+        if (ability.effects && Array.isArray(ability.effects)) {
           for (const effect of ability.effects) {
-            this.processBuffEffect(effect, controllingPlayer, opposingPlayer);
-          }
-        }
-      }
-    }
-
-    /**
-     * Trigger summon abilities
-     */
-    private triggerSummonAbilities(beast: BloomBeastInstance): void {
-      const activePlayer = this.state.players[this.state.activePlayer];
-      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
-
-      // Get the card definition to access abilities
-      const cardDef = this.getCardDefinition(beast.cardId);
-      if (!cardDef || cardDef.type !== 'Bloom') return;
-
-      const beastCard = cardDef as BloomBeastCard;
-      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, 'OnSummon');
-
-      // Process each OnSummon ability
-      for (const ability of abilities) {
-        const results = this.abilityProcessor.processAbility(ability, {
-          source: beast,
-          sourceCard: beastCard,
-          trigger: 'OnSummon',
-          gameState: this.state,
-          controllingPlayer: activePlayer,
-          opposingPlayer: opposingPlayer,
-        });
-
-        // Apply ability results to game state
-        this.applyAbilityResults(results);
-      }
-    }
-
-    /**
-     * Trigger OnAllySummon abilities on other beasts when a new ally is summoned
-     */
-    private triggerAllySummonAbilities(summonedBeast: BloomBeastInstance, controllingPlayer: Player): void {
-      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
-
-      // Get the summoned beast's card definition for checking affinity condition
-      const summonedCardDef = this.getCardDefinition(summonedBeast.cardId);
-
-      // Check all other beasts on the same side
-      for (const beast of controllingPlayer.field) {
-        if (!beast || beast.instanceId === summonedBeast.instanceId) continue;
-
-        const cardDef = this.getCardDefinition(beast.cardId);
-        if (!cardDef || cardDef.type !== 'Bloom') continue;
-
-        const beastCard = cardDef as BloomBeastCard;
-        const abilities = this.getAbilitiesWithTrigger(beast, beastCard, 'OnAllySummon');
-
-        // Process each OnAllySummon ability
-        for (const ability of abilities) {
-          const results = this.abilityProcessor.processAbility(ability, {
-            source: beast,
-            sourceCard: beastCard,
-            trigger: 'OnAllySummon',
-            target: summonedBeast,  // Pass the summoned beast as target for condition checking
-            gameState: this.state,
-            controllingPlayer,
-            opposingPlayer,
-          });
-
-          // Apply ability results to game state
-          this.applyAbilityResults(results);
-        }
-      }
-    }
-
-    /**
-     * Process counter effects (burn, freeze, etc.)
-     */
-    private async processCounterEffects(player: Player): Promise<void> {
-      for (const beast of player.field) {
-        if (!beast) continue;
-
-        // Process burn counters
-        const burnCounter = beast.counters.find(c => c.type === 'Burn');
-        if (burnCounter && burnCounter.amount > 0) {
-          beast.currentHealth = Math.max(0, beast.currentHealth - burnCounter.amount);
-          Logger.debug(`${beast.instanceId} took ${burnCounter.amount} burn damage`);
-        }
-
-        // Process freeze counters (reduce by 1 each turn)
-        const freezeCounter = beast.counters.find(c => c.type === 'Freeze');
-        if (freezeCounter && freezeCounter.amount > 0) {
-          freezeCounter.amount--;
-          if (freezeCounter.amount === 0) {
-            beast.counters = beast.counters.filter(c => c.type !== 'Freeze');
-          }
-        }
-
-        // Remove dead beasts
-        if (beast.currentHealth <= 0) {
-          const index = player.field.indexOf(beast);
-          if (index !== -1) {
-            player.field[index] = null;
-            player.graveyard.push(beast as any);
-          }
-        }
-      }
-    }
-
-    /**
-     * Clear temporary effects from a beast and revert stat modifications
-     */
-    private clearTemporaryEffects(beast: BloomBeastInstance): void {
-      if (!beast.temporaryEffects) return;
-
-      // Process effects that are expiring and revert their stat modifications
-      beast.temporaryEffects = beast.temporaryEffects.filter(effect => {
-        if (effect.turnsRemaining !== undefined) {
-          effect.turnsRemaining--;
-
-          // If effect is expiring, revert its stat changes
-          if (effect.turnsRemaining <= 0 && effect.type === 'stat-mod') {
-            const statMod = effect as any;
-
-            // Revert attack modifications
-            if (statMod.stat === 'attack' || statMod.stat === 'both') {
-              beast.currentAttack = Math.max(0, beast.currentAttack - statMod.value);
+            if (effect.type === 'remove-summoning-sickness') {
+              beast.summoningSickness = false;
+              Logger.debug(`${beast.name} can attack immediately (Passive: RemoveSummoningSickness)!`);
             }
-
-            // Revert health modifications (but don't reduce below current if it would "kill" the beast)
-            if (statMod.stat === 'health' || statMod.stat === 'both') {
-              // Only reduce current health if the beast had been healed by this effect
-              if (statMod.value > 0) {
-                beast.currentHealth = Math.max(1, Math.min(beast.maxHealth, beast.currentHealth - statMod.value));
-              }
-              // If it was a debuff (negative), restore health
-              else if (statMod.value < 0) {
-                beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth - statMod.value);
-              }
-            }
-
-            Logger.debug(`Cleared temporary ${statMod.stat} modification (${statMod.value}) from ${beast.instanceId}`);
-            return false; // Remove this effect
           }
-
-          return effect.turnsRemaining > 0;
         }
-        return false;
+      }
+    }
+
+    /**
+     * Process OnAttack triggers for a beast that is attacking
+     */
+    processOnAttackTrigger(beast: any, owner: any, opponent: any): void {
+      if (!beast.ability) return;
+
+      const ability = beast.ability as any;
+
+      if (ability.trigger === 'OnAttack') {
+        Logger.debug(`OnAttack trigger activated for ${beast.name}!`);
+
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            this.processAbilityEffect(effect, beast, owner, opponent);
+          }
+        }
+      }
+    }
+
+    /**
+     * Process OnDamage triggers for a beast that took damage
+     */
+    processOnDamageTrigger(beast: any, owner: any, opponent: any): void {
+      if (!beast.ability) return;
+
+      const ability = beast.ability as any;
+
+      if (ability.trigger === 'OnDamage') {
+        Logger.debug(`OnDamage trigger activated for ${beast.name}!`);
+
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            this.processAbilityEffect(effect, beast, owner, opponent);
+          }
+        }
+      }
+    }
+
+    /**
+     * Process OnDestroy triggers for a beast that is about to be destroyed
+     */
+    processOnDestroyTrigger(beast: any, owner: any, opponent: any): void {
+      if (!beast.ability) return;
+
+      const ability = beast.ability as any;
+
+      if (ability.trigger === 'OnDestroy') {
+        Logger.debug(`OnDestroy trigger activated for ${beast.name}!`);
+
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            this.processAbilityEffect(effect, beast, owner, opponent);
+          }
+        }
+      }
+    }
+
+    /**
+     * Process StartOfTurn triggers for all beasts on the field
+     */
+    processStartOfTurnTriggers(player: any, opponent: any): void {
+      player.field.forEach((beast: any) => {
+        if (!beast || !beast.ability) return;
+
+        const ability = beast.ability as any;
+
+        if (ability.trigger === 'StartOfTurn') {
+          Logger.debug(`StartOfTurn trigger activated for ${beast.name}!`);
+
+          if (ability.effects && Array.isArray(ability.effects)) {
+            for (const effect of ability.effects) {
+              this.processAbilityEffect(effect, beast, player, opponent);
+            }
+          }
+        }
       });
     }
 
     /**
-     * Get card definition by ID
+     * Process EndOfTurn triggers for all beasts on the field
      */
-    private getCardDefinition(cardId: string): AnyCard | null {
-      return this.getCardDatabase().get(cardId) || null;
-    }
+    processEndOfTurnTriggers(player: any, opponent: any): void {
+      player.field.forEach((beast: any) => {
+        if (!beast) return;
 
-    /**
-     * Get all current abilities for a beast based on its level
-     * Takes into account ability upgrades from leveling
-     */
-    private getCurrentAbilities(beast: BloomBeastInstance, beastCard: BloomBeastCard): any[] {
-      const { abilities } = this.levelingSystem.getCurrentAbilities(beastCard, beast.currentLevel);
-      return abilities;
-    }
+        // Update stat modifiers (remove expired effects)
+        StatModifierManager.updateEndOfTurn(beast);
 
-    /**
-     * Get abilities for a beast that match a specific trigger
-     */
-    private getAbilitiesWithTrigger(beast: BloomBeastInstance, beastCard: BloomBeastCard, trigger: string): any[] {
-      const abilities = this.getCurrentAbilities(beast, beastCard);
-      return abilities.filter(ability => ability.trigger === trigger);
-    }
+        // Process ability triggers
+        if (beast.ability) {
+          const ability = beast.ability as any;
 
-    /**
-     * Check if a beast has a specific attack modification
-     */
-    private hasAttackModification(
-      beast: BloomBeastInstance,
-      modification: 'attack-first' | 'cannot-counterattack' | 'double-damage' | 'triple-damage' | 'attack-twice' | 'instant-destroy' | 'piercing' | 'lifesteal'
-    ): boolean {
-      const cardDef = this.getCardDefinition(beast.cardId);
-      if (!cardDef || cardDef.type !== 'Bloom') return false;
+          if (ability.trigger === 'EndOfTurn') {
+            Logger.debug(`EndOfTurn trigger activated for ${beast.name}!`);
 
-      const beastCard = cardDef as BloomBeastCard;
-      const abilities = this.getCurrentAbilities(beast, beastCard);
-
-      // Check all abilities for the attack modification
-      for (const ability of abilities) {
-        // Only StructuredAbility has effects
-        if (!ability || !('effects' in ability)) continue;
-
-        // Check if any effect is an AttackModification with the specified modification
-        for (const effect of ability.effects) {
-          if (effect.type === EffectType.AttackModification && (effect as any).modification === modification) {
-            // Check condition if present
-            const attackModEffect = effect as any;
-            if (attackModEffect.condition) {
-              // TODO: Implement condition checking
-              // For now, if there's a condition we need to evaluate it
-              // Example: Dewdrop Drake only has attack-first when it's the only unit on field
-              Logger.debug(`Attack modification '${modification}' has condition, assuming true for now`);
-            }
-            return true;
-          }
-        }
-      }
-
-      return false;
-    }
-
-
-    /**
-     * End the match
-     */
-    private endMatch(result: any): void {
-      Logger.debug('Match ended!', result);
-      // TODO: Handle match end, rewards, etc.
-    }
-
-    /**
-     * Execute attack from one beast to another or to player
-     */
-    public async executeAttack(
-      attackingPlayer: Player,
-      attackerIndex: number,
-      targetType: 'beast' | 'player',
-      targetIndex?: number
-    ): Promise<boolean> {
-      if (attackerIndex < 0 || attackerIndex >= attackingPlayer.field.length) {
-        Logger.error('Invalid attacker index');
-        return false;
-      }
-
-      const attacker = attackingPlayer.field[attackerIndex];
-      if (!attacker) {
-        Logger.error('No beast at attacker position');
-        return false;
-      }
-
-      if (attacker.summoningSickness) {
-        Logger.error('Beast has summoning sickness');
-        return false;
-      }
-
-      const defendingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
-
-      // Check for traps on attack
-      const attackData = { attackNegated: false };
-      await this.checkTraps('OnAttack', attackingPlayer, attackData);
-
-      // If attack was negated by trap, return
-      if (attackData.attackNegated) {
-        Logger.debug('Attack was negated by a trap');
-        return false;
-      }
-
-      // Trigger OnAttack abilities
-      this.triggerCombatAbilities('OnAttack', attacker, attackingPlayer, defendingPlayer);
-
-      if (targetType === 'beast' && targetIndex !== undefined) {
-        const defender = defendingPlayer.field[targetIndex];
-        if (!defender) {
-          Logger.error('No beast at defender position');
-          return false;
-        }
-
-        // Check for attack modifications
-        const attackerHasFirstStrike = this.hasAttackModification(attacker, 'attack-first');
-        const attackerCannotBeCountered = this.hasAttackModification(attacker, 'cannot-counterattack');
-
-        const attackerDamage = attacker.currentAttack;
-        const defenderDamage = defender.currentAttack;
-
-        Logger.debug(`Combat: ${attacker.cardId} (${attackerDamage} ATK) vs ${defender.cardId} (${defenderDamage} ATK)${attackerHasFirstStrike ? ' [ATTACK-FIRST]' : ''}${attackerCannotBeCountered ? ' [NO-COUNTER]' : ''}`);
-
-        // Handle attack-first mechanic
-        if (attackerHasFirstStrike) {
-          // Attacker deals damage first
-          defender.currentHealth = Math.max(0, defender.currentHealth - attackerDamage);
-          Logger.debug(`${attacker.cardId} attacked first for ${attackerDamage} damage. ${defender.cardId} HP: ${defender.currentHealth}/${defender.maxHealth}`);
-
-          // Trigger OnDamage abilities on defender
-          this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer, undefined, attacker);
-
-          // Check if defender died from first strike
-          if (defender.currentHealth <= 0) {
-            Logger.debug(`${defender.cardId} was destroyed by first strike! No counter-attack.`);
-            this.triggerCombatAbilities('OnDestroy', defender, defendingPlayer, attackingPlayer);
-            const index = defendingPlayer.field.indexOf(defender);
-            if (index !== -1) {
-              defendingPlayer.field[index] = null;
-              defendingPlayer.graveyard.push(defender as any);
-            }
-
-            // Check for battle end immediately
-            if (this.checkForBattleEnd()) {
-              this.state.battleState = BattleState.Finished;
-              await this.transitionState();
-            }
-            return true; // Combat ends, defender died before counter-attacking
-          }
-
-          // Defender survived, now counter-attacks (unless attacker has cannot-counterattack)
-          if (!attackerCannotBeCountered) {
-            attacker.currentHealth = Math.max(0, attacker.currentHealth - defenderDamage);
-            Logger.debug(`${defender.cardId} countered for ${defenderDamage} damage. ${attacker.cardId} HP: ${attacker.currentHealth}/${attacker.maxHealth}`);
-
-            // Trigger OnDamage abilities on attacker
-            this.triggerCombatAbilities('OnDamage', attacker, attackingPlayer, defendingPlayer, undefined, defender);
-
-            // Check if attacker died from counter
-            if (attacker.currentHealth <= 0) {
-              Logger.debug(`${attacker.cardId} was destroyed by counter-attack!`);
-              this.triggerCombatAbilities('OnDestroy', attacker, attackingPlayer, defendingPlayer);
-              const index = attackingPlayer.field.indexOf(attacker);
-              if (index !== -1) {
-                attackingPlayer.field[index] = null;
-                attackingPlayer.graveyard.push(attacker as any);
-              }
-
-              // Check for battle end
-              if (this.checkForBattleEnd()) {
-                this.state.battleState = BattleState.Finished;
-                await this.transitionState();
+            if (ability.effects && Array.isArray(ability.effects)) {
+              for (const effect of ability.effects) {
+                this.processAbilityEffect(effect, beast, player, opponent);
               }
             }
-          } else {
-            Logger.debug(`${defender.cardId} cannot counter-attack (attacker has cannot-counterattack)`);
-          }
-        } else {
-          // Normal simultaneous damage
-          defender.currentHealth = Math.max(0, defender.currentHealth - attackerDamage);
-
-          // Counter-attack happens unless prevented
-          if (!attackerCannotBeCountered) {
-            attacker.currentHealth = Math.max(0, attacker.currentHealth - defenderDamage);
-            Logger.debug(`Simultaneous combat: ${attacker.cardId} dealt ${attackerDamage}, ${defender.cardId} dealt ${defenderDamage}`);
-          } else {
-            Logger.debug(`${attacker.cardId} dealt ${attackerDamage} damage, ${defender.cardId} cannot counter`);
-          }
-
-          // Trigger OnDamage abilities
-          this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer, undefined, attacker);
-          if (!attackerCannotBeCountered) {
-            this.triggerCombatAbilities('OnDamage', attacker, attackingPlayer, defendingPlayer, undefined, defender);
-          }
-
-          // Check for deaths
-          let defenderDied = false;
-          if (defender.currentHealth <= 0) {
-            defenderDied = true;
-            Logger.debug(`${defender.cardId} was destroyed!`);
-            this.triggerCombatAbilities('OnDestroy', defender, defendingPlayer, attackingPlayer);
-            const index = defendingPlayer.field.indexOf(defender);
-            if (index !== -1) {
-              defendingPlayer.field[index] = null;
-              defendingPlayer.graveyard.push(defender as any);
-            }
-          }
-
-          if (attacker.currentHealth <= 0) {
-            Logger.debug(`${attacker.cardId} was destroyed!`);
-            this.triggerCombatAbilities('OnDestroy', attacker, attackingPlayer, defendingPlayer);
-            const index = attackingPlayer.field.indexOf(attacker);
-            if (index !== -1) {
-              attackingPlayer.field[index] = null;
-              attackingPlayer.graveyard.push(attacker as any);
-            }
-          }
-
-          // Check for battle end after any death
-          if (this.checkForBattleEnd()) {
-            this.state.battleState = BattleState.Finished;
-            await this.transitionState();
           }
         }
-      } else if (targetType === 'player') {
-        // Direct attack to player
-        const damage = attacker.currentAttack;
-        defendingPlayer.health = Math.max(0, defendingPlayer.health - damage);
-        Logger.debug(`${attacker.cardId} attacked player for ${damage} damage`);
-
-        // Check if player was defeated
-        if (defendingPlayer.health <= 0) {
-          Logger.debug(`${defendingPlayer.name} was defeated!`);
-          this.state.battleState = BattleState.Finished;
-          await this.transitionState();
-        }
-      }
-
-      // Always check for battle end after any damage
-      if (this.checkForBattleEnd()) {
-        this.state.battleState = BattleState.Finished;
-        await this.transitionState();
-      }
-
-      return true;
+      });
     }
 
     /**
-     * Trigger combat-related abilities
+     * Check and activate traps based on trigger event
      */
-    private triggerCombatAbilities(
-      trigger: 'OnAttack' | 'OnDamage' | 'OnDestroy',
-      beast: BloomBeastInstance,
-      controllingPlayer: Player,
-      opposingPlayer: Player,
-      target?: BloomBeastInstance,
-      attacker?: BloomBeastInstance
+    checkAndActivateTraps(
+      defender: any,
+      attacker: any,
+      triggerType: string,
+      onTrapCallback?: (trapName: string) => void
     ): void {
-      const cardDef = this.getCardDefinition(beast.cardId);
-      if (!cardDef || cardDef.type !== 'Bloom') return;
+      if (!defender.trapZone || defender.trapZone.length === 0) return;
 
-      const beastCard = cardDef as BloomBeastCard;
-      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
+      for (let i = defender.trapZone.length - 1; i >= 0; i--) {
+        const trap: any = defender.trapZone[i];
 
-      // Process each ability with this trigger
-      for (const ability of abilities) {
-        const results = this.abilityProcessor.processAbility(ability, {
-          source: beast,
-          sourceCard: beastCard,
-          trigger,
-          target,
-          attacker,
-          gameState: this.state,
-          controllingPlayer,
-          opposingPlayer,
-        });
+        // Check the activation trigger correctly - trap cards have activation.trigger property
+        const trapTrigger = trap.activation?.trigger || trap.trigger;
 
-        // Apply ability results to game state
-        this.applyAbilityResults(results);
-      }
-    }
-
-    /**
-     * Check and trigger traps based on an event
-     * Only triggers the FIRST matching trap (in order)
-     */
-    private async checkTraps(
-      triggerType: 'OnBloomPlay' | 'OnHabitatPlay' | 'OnAttack' | 'OnDamage',
-      triggeringPlayer: Player,
-      data?: any
-    ): Promise<void> {
-      const opposingPlayer = triggeringPlayer === this.state.players[0]
-        ? this.state.players[1]
-        : this.state.players[0];
-
-      // Check opponent's traps - only activate FIRST matching trap
-      for (let i = 0; i < opposingPlayer.trapZone.length; i++) {
-        const trapCard = opposingPlayer.trapZone[i];
-        if (!trapCard || trapCard.type !== 'Trap') continue;
-
-        const trap = trapCard as TrapCard;
-        let shouldTrigger = false;
-
-        // Check if trap activation condition matches the trigger
-        switch (triggerType) {
-          case 'OnBloomPlay':
-            shouldTrigger = trap.activation.trigger === TrapTrigger.OnBloomPlay;
-            break;
-          case 'OnHabitatPlay':
-            shouldTrigger = trap.activation.trigger === TrapTrigger.OnHabitatPlay;
-            break;
-          case 'OnAttack':
-            shouldTrigger = trap.activation.trigger === TrapTrigger.OnAttack;
-            break;
-          case 'OnDamage':
-            shouldTrigger = trap.activation.trigger === TrapTrigger.OnDamage;
-            break;
+        // Map triggerType to expected trap trigger values
+        let shouldActivate = false;
+        if (triggerType === 'attack') {
+          // OnAttack trigger should activate on attack
+          shouldActivate = trapTrigger === 'OnAttack' || trapTrigger === 'OnPlayerAttack';
         }
 
-        if (shouldTrigger) {
-          Logger.debug(`Trap activated: ${trap.name}`);
+        if (shouldActivate) {
+          Logger.debug(`Trap activated: ${trap.name}!`);
 
-          // Process trap effect
-          await this.processTrapEffect(trap, opposingPlayer, triggeringPlayer, data);
+          if (onTrapCallback) {
+            onTrapCallback(trap.name);
+          }
 
-          // Remove trap from zone and send to graveyard
-          opposingPlayer.trapZone[i] = null;
-          opposingPlayer.graveyard.push(trap);
+          // Process trap effects using the abilities structure
+          // Pass context with attacker information for trap effects that target the attacker
+          if (trap.abilities && Array.isArray(trap.abilities)) {
+            for (const ability of trap.abilities) {
+              if (ability.effects && Array.isArray(ability.effects)) {
+                for (const effect of ability.effects) {
+                  this.processMagicEffect(effect, defender, attacker, { attacker: attacker });
+                }
+              }
+            }
+          }
+
+          // Remove trap from zone
+          const activatedTrap = defender.trapZone.splice(i, 1)[0];
+          defender.graveyard.push(activatedTrap);
 
           // Only activate ONE trap per event
-          return;
+          break;
         }
       }
     }
 
     /**
-     * Process trap card effect using structured effects
+     * Apply stat modification effects from active buff cards
+     * Uses the StatModifierManager to properly track buff zone modifications
+     *
+     * This should be called when:
+     * 1. A buff is played
+     * 2. A new beast is summoned (to apply existing buffs)
+     * 3. A buff is removed from the buff zone
      */
-    private async processTrapEffect(
-      trap: TrapCard,
-      trapOwner: Player,
-      opponent: Player,
-      data?: any
-    ): Promise<void> {
-      // Process each ability in the trap card (usually just one with OnSummon trigger)
-      for (const ability of trap.abilities) {
-        // Trap abilities trigger when activated (OnSummon for immediate effects)
-        if (ability.trigger === AbilityTrigger.OnSummon || !ability.trigger) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
+    applyStatBuffEffects(player: any): void {
+      // First, remove all existing buff-zone modifiers from all beasts
+      player.field.forEach((beast: any) => {
+        StatModifierManager.removeModifiersBySource(beast, StatModifierSource.BuffZone);
+      });
 
-          // Process each effect in the ability
-          for (const effect of ability.effects) {
-            switch (effect.type) {
-              case EffectType.NullifyEffect:
-                // Counter/nullify the triggering effect
-                if (data && data.habitatCard) {
-                  Logger.debug(`Habitat countered by ${trap.name}`);
-                  data.countered = true;
-                }
-                if (data && data.attackNegated !== undefined) {
-                  data.attackNegated = true;
-                  Logger.debug(`Attack negated by ${trap.name}`);
-                }
-                break;
+      // Now apply current buff effects to all beasts
+      if (!player.buffZone || player.buffZone.length === 0) return;
 
-              case EffectType.DealDamage:
-                // Deal damage based on target
-                if (effect.target === AbilityTarget.AllEnemies) {
-                  for (const beast of opponent.field) {
-                    if (beast) {
-                      const damage = typeof effect.value === 'number' ? effect.value : 0;
-                      beast.currentHealth = Math.max(0, beast.currentHealth - damage);
-                      if (beast.currentHealth <= 0) {
-                        const index = opponent.field.indexOf(beast);
-                        if (index !== -1) {
-                          opponent.field[index] = null;
-                          opponent.graveyard.push(beast as any);
-                        }
-                      }
-                    }
-                  }
-                } else if (effect.target === AbilityTarget.OpponentGardener) {
-                  const damage = typeof effect.value === 'number' ? effect.value : 0;
-                  opponent.health = Math.max(0, opponent.health - damage);
-                }
-                break;
+      player.buffZone.forEach((buff: any) => {
+        if (!buff.ongoingEffects) return;
 
-              case EffectType.DrawCards:
-                this.drawCards(trapOwner, effect.value);
-                break;
-
-              // Add more effect types as needed
-              default:
-                Logger.debug(`Unhandled trap effect type: ${effect.type}`);
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * Apply ability results to game state
-     */
-    private applyAbilityResults(results: any[]): void {
-      for (const result of results) {
-        if (!result.success) continue;
-
-        // Apply modified units back to the field
-        if (result.modifiedUnits && result.modifiedUnits.length > 0) {
-          for (const modifiedUnit of result.modifiedUnits) {
-            // Find and update the unit in both players' fields
-            for (const player of this.state.players) {
-              const index = player.field.findIndex(
-                u => u && u.instanceId === modifiedUnit.instanceId
-              );
-              if (index !== -1) {
-                player.field[index] = modifiedUnit;
-                break;
+        buff.ongoingEffects.forEach((effect: any) => {
+          if (effect.type === 'modify-stats' && effect.target === 'all-allies') {
+            player.field.forEach((beast: any) => {
+              if (effect.stat === 'attack') {
+                StatModifierManager.addModifier(
+                  beast,
+                  StatModifierSource.BuffZone,
+                  buff.id || buff.name,
+                  'attack',
+                  effect.value || 0,
+                  'while-active'
+                );
+              } else if (effect.stat === 'health') {
+                StatModifierManager.addModifier(
+                  beast,
+                  StatModifierSource.BuffZone,
+                  buff.id || buff.name,
+                  'maxHealth',
+                  effect.value || 0,
+                  'while-active'
+                );
               }
+            });
+          }
+        });
+      });
+    }
+
+    /**
+     * Apply start-of-turn effects from active buff cards
+     */
+    applyBuffStartOfTurnEffects(player: any, opponent: any): void {
+      if (!player.buffZone || player.buffZone.length === 0) return;
+
+      player.buffZone.forEach((buff: any) => {
+        if (!buff.ongoingEffects) return;
+
+        buff.ongoingEffects.forEach((effect: any) => {
+          switch (effect.type) {
+            case 'gain-resource':
+              if (effect.resource === 'nectar') {
+                player.currentNectar += effect.value || 1;
+                Logger.debug(`${buff.name}: Gained ${effect.value || 1} nectar`);
+              }
+              break;
+
+            case 'heal':
+              if (effect.target === 'all-allies') {
+                player.field.forEach((beast: any) => {
+                  if (beast.currentHealth < beast.maxHealth) {
+                    beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth + (effect.value || 1));
+                  }
+                });
+                Logger.debug(`${buff.name}: Healed all beasts for ${effect.value || 1} HP`);
+              }
+              break;
+          }
+        });
+      });
+    }
+  }
+
+  // ==================== bloombeasts\battle\ai\OpponentAI.ts ====================
+
+  /**
+   * OpponentAI - Handles AI decision making for opponent players
+   *
+   * Responsibilities:
+   * - Card play decisions (which cards to play, when to play them)
+   * - Attack decisions (target selection, when to attack)
+   * - Resource management (nectar spending)
+   * - Turn sequencing with delays for UI visibility
+   */
+
+
+  export interface AICallbacks {
+    async: AsyncMethods;
+    onAction?: (action: string) => void;
+    onRender?: () => void;
+  }
+
+  export interface AIDecision {
+    type: 'play-card' | 'attack-beast' | 'attack-player' | 'end-turn';
+    cardIndex?: number;
+    attackerIndex?: number;
+    targetIndex?: number;
+    card?: any;
+  }
+
+  export class OpponentAI {
+    private callbacks: AICallbacks;
+    private async: AsyncMethods;
+
+    constructor(callbacks: AICallbacks) {
+      this.callbacks = callbacks;
+      this.async = callbacks.async;
+    }
+
+    /**
+     * Execute a full AI turn
+     * @param opponent The AI player
+     * @param player The human player
+     * @param gameState Current game state (for habitat zone, turn number, etc.)
+     * @param effectProcessors Functions to process various effects
+     * @param shouldStopGetter Function that returns true if AI should stop processing
+     */
+    async executeTurn(
+      opponent: Player,
+      player: Player,
+      gameState: any,
+      effectProcessors: {
+        processOnSummonTrigger: (beast: any, owner: any, opponent: any) => void;
+        processOnAttackTrigger: (beast: any, owner: any, opponent: any) => void;
+        processOnDamageTrigger: (beast: any, owner: any, opponent: any) => void;
+        processOnDestroyTrigger: (beast: any, owner: any, opponent: any) => void;
+        processMagicEffect: (effect: any, player: any, opponent: any) => void;
+        processHabitatEffect: (effect: any, player: any, opponent: any) => void;
+        applyStatBuffEffects: (player: any) => void;
+      },
+      shouldStopGetter?: () => boolean
+    ): Promise<void> {
+      const delay = (ms: number) => new Promise(resolve => this.async.setTimeout(resolve, ms));
+
+      // Play cards phase
+      const cardDecisions = this.decideCardPlays(opponent, player, gameState);
+      for (const decision of cardDecisions) {
+        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
+
+        await this.executeCardPlay(
+          decision,
+          opponent,
+          player,
+          gameState,
+          effectProcessors
+        );
+        if (this.callbacks.onRender) this.callbacks.onRender();
+
+        // Longer delay for non-Bloom cards to show popup
+        const delayTime = decision.card?.type === 'Bloom' ? 1200 : 3500;
+        await delay(delayTime);
+
+        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
+      }
+
+      // Attack phase
+      const attackDecisions = this.decideAttacks(opponent, player);
+      for (const decision of attackDecisions) {
+        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
+
+        await this.executeAttack(
+          decision,
+          opponent,
+          player,
+          effectProcessors
+        );
+        if (this.callbacks.onRender) this.callbacks.onRender();
+        await delay(1000);
+
+        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
+
+        // Check if player was defeated during attack
+        if (player.health <= 0) {
+          return; // Stop turn processing
+        }
+      }
+
+      Logger.debug('Opponent turn ended');
+    }
+
+    /**
+     * Decide which cards to play this turn
+     */
+    private decideCardPlays(opponent: Player, player: Player, gameState: any): AIDecision[] {
+      const decisions: AIDecision[] = [];
+
+      // Simple greedy AI: Play cards from hand if affordable and field has space
+      for (let i = opponent.hand.length - 1; i >= 0; i--) {
+        const card: any = opponent.hand[i];
+
+        if (card.cost <= opponent.currentNectar) {
+          if (card.type === 'Bloom' && opponent.field.length < 3) {
+            decisions.push({
+              type: 'play-card',
+              cardIndex: i,
+              card: card,
+            });
+            opponent.currentNectar -= card.cost; // Deduct for decision calculation
+          } else if (card.type === 'Magic') {
+            decisions.push({
+              type: 'play-card',
+              cardIndex: i,
+              card: card,
+            });
+            opponent.currentNectar -= card.cost;
+          } else if (card.type === 'Trap' && opponent.trapZone.length < 3) {
+            decisions.push({
+              type: 'play-card',
+              cardIndex: i,
+              card: card,
+            });
+            opponent.currentNectar -= card.cost;
+          } else if (card.type === 'Buff' && opponent.buffZone.length < 2) {
+            decisions.push({
+              type: 'play-card',
+              cardIndex: i,
+              card: card,
+            });
+            opponent.currentNectar -= card.cost;
+          } else if (card.type === 'Habitat' && !gameState.habitatZone) {
+            decisions.push({
+              type: 'play-card',
+              cardIndex: i,
+              card: card,
+            });
+            opponent.currentNectar -= card.cost;
+          }
+        }
+      }
+
+      return decisions;
+    }
+
+    /**
+     * Execute a card play decision
+     */
+    private async executeCardPlay(
+      decision: AIDecision,
+      opponent: Player,
+      player: Player,
+      gameState: any,
+      effectProcessors: any
+    ): Promise<void> {
+      if (decision.cardIndex === undefined) return;
+
+      const card: any = opponent.hand[decision.cardIndex];
+      if (!card) return;
+
+      const playedCard: any = opponent.hand.splice(decision.cardIndex, 1)[0];
+      // Note: Nectar already deducted in decision phase
+
+      switch (playedCard.type) {
+        case 'Bloom':
+          const beastInstance: any = {
+            cardId: playedCard.id,
+            instanceId: playedCard.instanceId || `${playedCard.id}-${Date.now()}`,
+            currentLevel: 1 as any,
+            currentXP: 0,
+            baseAttack: playedCard.baseAttack,
+            baseHealth: playedCard.baseHealth,
+            currentAttack: playedCard.baseAttack,
+            currentHealth: playedCard.baseHealth,
+            maxHealth: playedCard.baseHealth,
+            statusEffects: [],
+            slotIndex: opponent.field.length,
+            summoningSickness: true,
+            usedAbilityThisTurn: false,
+            statModifiers: [],
+            // Store original card data for display
+            type: 'Bloom',
+            name: playedCard.name,
+            affinity: playedCard.affinity,
+            cost: playedCard.cost,
+            ability: playedCard.abilities && playedCard.abilities.length > 0 ? playedCard.abilities[0] : undefined,
+          };
+
+          // Initialize stat system (beasts need this even before buffs are applied)
+          opponent.field.push(beastInstance);
+          effectProcessors.applyStatBuffEffects(opponent);
+          effectProcessors.processOnSummonTrigger(beastInstance, opponent, player);
+
+          Logger.debug(`Opponent played ${playedCard.name}`);
+          if (this.callbacks.onAction) this.callbacks.onAction('play-card');
+          break;
+
+        case 'Magic':
+          if (playedCard.effects && Array.isArray(playedCard.effects)) {
+            for (const effect of playedCard.effects) {
+              effectProcessors.processMagicEffect(effect, opponent, player);
             }
           }
-        }
-
-        // Apply modified state
-        if (result.modifiedState) {
-          if (result.modifiedState.players) {
-            this.state.players = result.modifiedState.players;
+          opponent.graveyard.push(playedCard);
+          Logger.debug(`Opponent played magic card: ${playedCard.name}`);
+          if (this.callbacks.onAction) {
+            this.callbacks.onAction(`play-magic-card:${JSON.stringify(playedCard)}`);
           }
-          if (result.modifiedState.habitatCounters) {
-            this.state.habitatCounters = result.modifiedState.habitatCounters;
-          }
-          if (result.modifiedState.drawCardsQueued !== undefined) {
-            const playerIndex = result.modifiedState.drawForPlayerIndex ?? this.state.activePlayer;
-            const player = this.state.players[playerIndex];
-            this.drawCards(player, result.modifiedState.drawCardsQueued);
-          }
-        }
+          break;
 
-        // Log the result message if available
-        if (result.message) {
-          Logger.debug(result.message);
-        }
-      }
+        case 'Trap':
+          opponent.trapZone.push(playedCard);
+          Logger.debug(`Opponent set trap: ${playedCard.name}`);
+          if (this.callbacks.onAction) {
+            this.callbacks.onAction(`play-trap-card:${JSON.stringify(playedCard)}`);
+          }
+          break;
 
-      // Always check for battle end after applying ability results
-      if (this.checkForBattleEnd()) {
-        this.state.battleState = BattleState.Finished;
-        // Don't transition immediately here as we might be in the middle of processing
-        // The next game loop iteration will handle the transition
+        case 'Buff':
+          opponent.buffZone.push(playedCard);
+          effectProcessors.applyStatBuffEffects(opponent);
+          Logger.debug(`Opponent played buff: ${playedCard.name}`);
+          if (this.callbacks.onAction) {
+            this.callbacks.onAction(`play-buff-card:${JSON.stringify(playedCard)}`);
+          }
+          break;
+
+        case 'Habitat':
+          gameState.habitatZone = playedCard;
+          if (playedCard.onPlayEffects && Array.isArray(playedCard.onPlayEffects)) {
+            for (const effect of playedCard.onPlayEffects) {
+              effectProcessors.processHabitatEffect(effect, opponent, player);
+            }
+          }
+          Logger.debug(`Opponent played habitat: ${playedCard.name}`);
+          if (this.callbacks.onAction) {
+            this.callbacks.onAction(`play-habitat-card:${JSON.stringify(playedCard)}`);
+          }
+          break;
       }
     }
 
     /**
-     * Get current game state
+     * Decide which beasts should attack
      */
-    public getState(): GameState | null {
-      return this.gameState;
+    private decideAttacks(opponent: Player, player: Player): AIDecision[] {
+      const decisions: AIDecision[] = [];
+
+      // Attack with all beasts that can attack
+      for (let index = 0; index < opponent.field.length; index++) {
+        const beast: any = opponent.field[index];
+
+        if (beast && !beast.summoningSickness) {
+          if (player.field.length > 0) {
+            // Attack a random player beast
+            const target: any = pickRandom(player.field);
+            const targetIndex = target ? player.field.indexOf(target) : -1;
+
+            if (target && targetIndex >= 0) {
+              decisions.push({
+                type: 'attack-beast',
+                attackerIndex: index,
+                targetIndex: targetIndex,
+              });
+            }
+          } else {
+            // Attack player directly
+            decisions.push({
+              type: 'attack-player',
+              attackerIndex: index,
+            });
+          }
+        }
+      }
+
+      return decisions;
     }
 
     /**
-     * Reset for new game
+     * Execute an attack decision
      */
-    public reset(): void {
-      // Reset to null - will be recreated on next startMatch()
-      this.gameState = null;
-      this.combatSystem.reset();
+    private async executeAttack(
+      decision: AIDecision,
+      opponent: Player,
+      player: Player,
+      effectProcessors: any
+    ): Promise<void> {
+      if (decision.attackerIndex === undefined) return;
+
+      const attacker: any = opponent.field[decision.attackerIndex];
+      if (!attacker) return;
+
+      if (decision.type === 'attack-beast' && decision.targetIndex !== undefined) {
+        const target: any = player.field[decision.targetIndex];
+        if (!target) return;
+
+        Logger.debug(`Opponent's ${attacker.name} attacks ${target.name}`);
+
+        effectProcessors.processOnAttackTrigger(attacker, opponent, player);
+
+        if (this.callbacks.onAction) {
+          this.callbacks.onAction(`attack-beast-opponent-${decision.attackerIndex}-player-${decision.targetIndex}`);
+        }
+
+        // Deal damage to each other
+        const opponentBeastDamage = attacker.currentAttack || 0;
+        const playerBeastDamage = target.currentAttack || 0;
+
+        target.currentHealth -= opponentBeastDamage;
+        attacker.currentHealth -= playerBeastDamage;
+
+        // Process OnDamage triggers
+        if (opponentBeastDamage > 0) {
+          effectProcessors.processOnDamageTrigger(target, player, opponent);
+        }
+        if (playerBeastDamage > 0) {
+          effectProcessors.processOnDamageTrigger(attacker, opponent, player);
+        }
+
+        // Remove dead beasts
+        if (target.currentHealth <= 0) {
+          effectProcessors.processOnDestroyTrigger(target, player, opponent);
+          player.field.splice(decision.targetIndex, 1);
+          Logger.debug(`${target.name} was defeated!`);
+        }
+        if (attacker.currentHealth <= 0) {
+          effectProcessors.processOnDestroyTrigger(attacker, opponent, player);
+          opponent.field.splice(decision.attackerIndex, 1);
+          Logger.debug(`Opponent's ${attacker.name} was defeated!`);
+        }
+
+      } else if (decision.type === 'attack-player') {
+        const damage = attacker.currentAttack || 0;
+
+        effectProcessors.processOnAttackTrigger(attacker, opponent, player);
+
+        const previousHealth = player.health;
+        player.health -= damage;
+        Logger.debug(`Opponent's ${attacker.name} attacks you directly for ${damage} damage!`);
+
+        // Check for low health threshold (10%)
+        const healthPercentage = (player.health / (player.maxHealth || 30)) * 100;
+        if (healthPercentage <= 10 && previousHealth > player.health) {
+          if (this.callbacks.onAction) {
+            this.callbacks.onAction('player-low-health');
+          }
+        }
+
+        if (this.callbacks.onAction) {
+          this.callbacks.onAction(`attack-player-opponent-${decision.attackerIndex}`);
+        }
+      }
     }
   }
 
   // ==================== bloombeasts\screens\missions\MissionBattleUI.ts ====================
 
   /**
-   * Mission Battle UI - Handles the mission battle screen and integration with game engine
+   * Mission Battle UI - Mission-specific wrapper around the generic battle system
+   *
+   * This class adds mission-specific functionality on top of the generic BattleController:
+   * - Mission setup (special rules, opponent configuration)
+   * - Reward calculation
+   * - Progress tracking
+   * - Mission objectives
+   *
+   * The core battle logic is handled by the generic BattleController.
    */
 
 
@@ -9475,18 +16422,27 @@ namespace BloomBeasts {
     private missionManager: MissionManager;
     private gameEngine: GameEngine;
     private async: AsyncMethods;
-    private currentBattle: BattleUIState | null = null;
-    private renderCallback: (() => void) | null = null;
-    private opponentActionCallback: ((action: string) => void) | null = null;
-    private playerLowHealthTriggered: boolean = false; // Track if low health sound already played
+
+    // Battle system components
+    private battleController: BattleController;
     private battleStateManager: BattleStateManager;
     private opponentAI: OpponentAI;
-    private shouldStopAI: boolean = false; // Flag to stop AI turn processing
+
+    // Current state
+    private currentBattle: BattleUIState | null = null;
+    private shouldStopAI: boolean = false;
+
+    // Callbacks
+    private renderCallback: (() => void) | null = null;
+    private opponentActionCallback: ((action: string) => void) | null = null;
+    private playerLowHealthTriggered: boolean = false;
 
     constructor(missionManager: MissionManager, gameEngine: GameEngine, async: AsyncMethods) {
       this.missionManager = missionManager;
       this.gameEngine = gameEngine;
       this.async = async;
+
+      // Initialize battle components
       this.battleStateManager = new BattleStateManager();
       this.opponentAI = new OpponentAI({
         async,
@@ -9497,6 +16453,21 @@ namespace BloomBeasts {
           if (this.renderCallback) this.renderCallback();
         },
       });
+
+      // Initialize battle controller with callbacks
+      const battleCallbacks: BattleCallbacks = {
+        onTurnStart: (playerIndex: number) => {
+          Logger.debug(`[MissionBattleUI] Turn started for player ${playerIndex}`);
+        },
+        onTurnEnd: (playerIndex: number) => {
+          Logger.debug(`[MissionBattleUI] Turn ended for player ${playerIndex}`);
+        },
+        onRender: () => {
+          if (this.renderCallback) this.renderCallback();
+        },
+      };
+
+      this.battleController = new BattleController(async, battleCallbacks);
     }
 
     /**
@@ -9516,9 +16487,9 @@ namespace BloomBeasts {
     /**
      * Initialize a mission battle
      */
-    initializeBattle(playerDeckCards: AnyCard[]): BattleUIState | null {
-      // Reset AI stop flag for new battle
+    initializeBattle(playerDeckCards: AnyCard[], playerName?: string): BattleUIState | null {
       this.shouldStopAI = false;
+      this.playerLowHealthTriggered = false;
 
       const mission = this.missionManager.getCurrentMission();
       if (!mission) {
@@ -9526,90 +16497,47 @@ namespace BloomBeasts {
         return null;
       }
 
-      // Create player
-      const player: Player = {
-        id: 'player',
-        name: 'Player',
-        health: 1,
-        maxHealth: 30,
-        deck: playerDeckCards,
-        hand: [],
-        field: [],
-        graveyard: [],
-        trapZone: [],
-        buffZone: [],
-        currentNectar: 1,
-        summonsThisTurn: 0,
-        habitatCounters: new SimpleMap(),
-      };
-
-      console.log('playerDeckCards', playerDeckCards);
-
-      // Resolve the opponent deck (handles both DeckList and factory functions)
+      // Resolve the opponent deck
       const opponentDeck = resolveDeck(mission.opponentDeck);
-      console.log('opponentDeck.cards', opponentDeck.cards);
 
-      // Create AI opponent with mission-specific configuration
-      // IMPORTANT: Create a copy of the deck cards to avoid mutation
-      const opponentDeckCopy = [...opponentDeck.cards];
-      console.log('opponentDeckCopy', opponentDeckCopy);
-
-      const opponent: Player = {
-        id: 'opponent',
-        name: mission.opponentAI?.name || 'Opponent',
-        health: 1,
-        maxHealth: 1,
-        deck: opponentDeckCopy,
-        hand: [],
-        field: [],
-        graveyard: [],
-        trapZone: [],
-        buffZone: [],
-        currentNectar: 1,
-        summonsThisTurn: 0,
-        habitatCounters: new SimpleMap(),
+      // Configure battle
+      const battleConfig: BattleConfig = {
+        player1: {
+          id: 'player',
+          name: playerName ?? 'Player',  // Use player's actual name from PlayerData
+          deck: playerDeckCards,
+          health: 30,
+          maxHealth: 30,
+        },
+        player2: {
+          id: 'opponent',
+          name: mission.name,  // Use mission name as opponent name (e.g., "Rootling")
+          deck: opponentDeck.cards,
+          health: 30,
+          maxHealth: 30,
+          isAI: true,
+        },
       };
 
-      // Apply special rules that affect starting conditions
-      mission.specialRules?.forEach(rule => {
-        // Check by rule ID for specific effects
-        if (rule.id === 'masters-domain') {
-          opponent.health = 40;
-          opponent.maxHealth = 40;
-        }
-      });
+      // Initialize battle using generic battle controller
+      const battle = this.battleController.initializeBattle(battleConfig);
 
-      // Initialize game state
-      // Note: Game initialization is handled inline here rather than in GameEngine
-      // to allow mission-specific customization (special rules, starting conditions, etc.)
-      const gameState: GameState = {
-        players: [player, opponent],
-        activePlayer: 0,
-        habitatZone: null,
-        turn: 1,
-        phase: 'Setup',
-        battleState: BattleState.Player1StartOfTurn,  // Start with Player 1's turn
-        turnHistory: [],
-      };
-
+      // Create mission-specific state
       this.currentBattle = {
         mission,
-        gameState,
+        gameState: battle.gameState,
         progress: this.missionManager.getProgress(),
         isComplete: false,
         rewards: null,
       };
 
-      // Shuffle decks (simple shuffle)
-      this.shuffleDeck(player.deck);
-      this.shuffleDeck(opponent.deck);
+      return this.currentBattle;
+    }
 
-      // Draw initial hands (3 cards each)
-      for (let i = 0; i < 3; i++) {
-        this.drawCard(player);
-        this.drawCard(opponent);
-      }
-
+    /**
+     * Get current battle state
+     */
+    getCurrentBattle(): BattleUIState | null {
       return this.currentBattle;
     }
 
@@ -9622,166 +16550,88 @@ namespace BloomBeasts {
         return;
       }
 
-      let result: any = {
-        success: false,
-        damage: data?.damage || 0,
-      };
+      let result: any = { success: false, damage: data?.damage || 0 };
 
-      // Handle different action types
+      // Handle different action types using BattleStateManager
+      const player = this.currentBattle.gameState.players[0];
+      const opponent = this.currentBattle.gameState.players[1];
+
       if (action.startsWith('play-card-')) {
-        // Extract card index and optional target from action
-        // Format: 'play-card-X' or 'play-card-X-target-Y'
         const parts = action.substring('play-card-'.length).split('-target-');
         const cardIndex = parseInt(parts[0], 10);
         const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
+        result = this.battleStateManager.playCard(cardIndex, player, opponent, this.currentBattle.gameState, targetIndex);
 
-        console.log('[MissionBattleUI] Playing card:', { cardIndex, targetIndex });
-        result = this.playCard(cardIndex, targetIndex);
       } else if (action.startsWith('use-ability-')) {
-        // Extract beast index (e.g., 'use-ability-0' -> 0)
         const beastIndex = parseInt(action.substring('use-ability-'.length), 10);
-        result = this.useAbility(beastIndex);
+        result = this.battleStateManager.useAbility(beastIndex, player, opponent, this.currentBattle.gameState);
+
       } else if (action === 'auto-attack-all') {
-        // New auto-attack action: each beast attacks the opposite lane
-        result = await this.autoAttackAll(data?.onAttackAnimation);
+        result = await this.autoAttackAll(player, opponent, data?.onAttackAnimation);
+
       } else if (action.startsWith('attack-beast-')) {
-        // Extract attacker and target indices (e.g., 'attack-beast-0-1' -> attacker=0, target=1)
         const parts = action.substring('attack-beast-'.length).split('-');
         const attackerIndex = parseInt(parts[0], 10);
         const targetIndex = parseInt(parts[1], 10);
-        result = this.attackBeast(attackerIndex, targetIndex);
+        result = this.battleStateManager.attackBeast(attackerIndex, targetIndex, player, opponent, (trapName: string) => {
+          if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
+        });
+
       } else if (action.startsWith('attack-player-')) {
-        // Extract attacker index (e.g., 'attack-player-0' -> attacker=0)
         const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
-        result = this.attackPlayer(attackerIndex);
+        result = this.battleStateManager.attackPlayer(attackerIndex, player, opponent, (trapName: string) => {
+          if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
+        });
+
       } else if (action === 'end-turn') {
         result = await this.endPlayerTurn();
-      } else {
-        // Fallback for any unhandled action types
-        // Note: All current actions are handled by the specific handlers above
-        result = {
-          success: true,
-          damage: data?.damage || 0,
-        };
       }
 
-      // Update mission progress based on the action
+      // Update mission progress
       this.updateMissionProgress(action, result);
 
       // Check for battle end
-      if (this.checkBattleEnd()) {
+      const battleResult = this.battleController.checkBattleEnd();
+      if (battleResult) {
         this.endBattle();
       }
     }
 
     /**
-     * Play a card from the player's hand
+     * Auto-attack with all beasts
      */
-    private playCard(cardIndex: number, targetIndex?: number): any {
-      if (!this.currentBattle || !this.currentBattle.gameState) {
-        return { success: false, message: 'No active battle' };
-      }
-
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
-
-      return this.battleStateManager.playCard(cardIndex, player, opponent, this.currentBattle.gameState, targetIndex);
-    }
-
-    /**
-     * Attack an opponent beast with a player beast
-     */
-    private attackBeast(attackerIndex: number, targetIndex: number): any {
-      if (!this.currentBattle || !this.currentBattle.gameState) {
-        return { success: false, message: 'No active battle' };
-      }
-
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
-
-      return this.battleStateManager.attackBeast(attackerIndex, targetIndex, player, opponent, (trapName: string) => {
-        if (this.opponentActionCallback) {
-          this.opponentActionCallback('trap-activated');
-        }
-      });
-    }
-
-    /**
-     * Attack opponent player directly with a beast
-     */
-    private attackPlayer(attackerIndex: number): any {
-      if (!this.currentBattle || !this.currentBattle.gameState) {
-        return { success: false, message: 'No active battle' };
-      }
-
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
-
-      return this.battleStateManager.attackPlayer(attackerIndex, player, opponent, (trapName: string) => {
-        if (this.opponentActionCallback) {
-          this.opponentActionCallback('trap-activated');
-        }
-      });
-    }
-
-    /**
-     * Auto-attack all: Each beast attacks the opposite lane
-     * If no opposing beast, attack the opponent's health directly
-     */
-    private async autoAttackAll(onAttackAnimation?: (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => Promise<void>): Promise<any> {
-      if (!this.currentBattle || !this.currentBattle.gameState) {
-        return { success: false, message: 'No active battle' };
-      }
-
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
-
+    private async autoAttackAll(
+      player: Player,
+      opponent: Player,
+      onAttackAnimation?: (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => Promise<void>
+    ): Promise<any> {
       let anyAttackSucceeded = false;
       const results: any[] = [];
 
-      // Loop through all 3 field positions
       for (let i = 0; i < 3; i++) {
         const attackerBeast = player.field[i];
-
-        // Skip if no beast at this position
-        if (!attackerBeast) {
-          continue;
-        }
-
-        // Skip if beast has summoning sickness
-        if (attackerBeast.summoningSickness) {
-          Logger.debug(`Beast at position ${i} has summoning sickness, skipping`);
-          continue;
-        }
+        if (!attackerBeast || attackerBeast.summoningSickness) continue;
 
         const opposingBeast = opponent.field[i];
 
         if (opposingBeast) {
-          // Attack the opposing beast
-          if (onAttackAnimation) {
-            await onAttackAnimation(i, 'beast', i);
-          }
-          const result = this.attackBeast(i, i);
+          if (onAttackAnimation) await onAttackAnimation(i, 'beast', i);
+          const result = this.battleStateManager.attackBeast(i, i, player, opponent, (trapName: string) => {
+            if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
+          });
           results.push(result);
-          if (result.success) {
-            anyAttackSucceeded = true;
-          }
+          if (result.success) anyAttackSucceeded = true;
         } else {
-          // No opposing beast, attack player directly
-          if (onAttackAnimation) {
-            await onAttackAnimation(i, 'health');
-          }
-          const result = this.attackPlayer(i);
+          if (onAttackAnimation) await onAttackAnimation(i, 'health');
+          const result = this.battleStateManager.attackPlayer(i, player, opponent, (trapName: string) => {
+            if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
+          });
           results.push(result);
-          if (result.success) {
-            anyAttackSucceeded = true;
-          }
+          if (result.success) anyAttackSucceeded = true;
         }
 
-        // Check for battle end after each attack
-        if (this.checkBattleEnd()) {
-          break;
-        }
+        const battleResult = this.battleController.checkBattleEnd();
+        if (battleResult) break;
       }
 
       return {
@@ -9792,21 +16642,6 @@ namespace BloomBeasts {
     }
 
     /**
-     * Activate a beast's ability
-     */
-    private useAbility(beastIndex: number): any {
-      if (!this.currentBattle || !this.currentBattle.gameState) {
-        return { success: false, message: 'No active battle' };
-      }
-
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
-
-      return this.battleStateManager.useAbility(beastIndex, player, opponent, this.currentBattle.gameState);
-    }
-
-
-    /**
      * End player's turn and start opponent's turn
      */
     private async endPlayerTurn(): Promise<any> {
@@ -9814,458 +16649,152 @@ namespace BloomBeasts {
         return { success: false };
       }
 
-      const gameState = this.currentBattle.gameState;
+      const player = this.currentBattle.gameState.players[0];
+      const opponent = this.currentBattle.gameState.players[1];
 
-      // Remove summoning sickness and reset ability usage for all player beasts
-      const player = gameState.players[0];
-      const opponent = gameState.players[1];
+      // Process end-of-turn effects
       player.field.forEach((beast: any) => {
         if (beast) {
           beast.summoningSickness = false;
-          beast.usedAbilityThisTurn = false; // Reset ability usage
+          beast.usedAbilityThisTurn = false;
         }
       });
-
-      // Process EndOfTurn triggers for player beasts before ending turn
       this.battleStateManager.processEndOfTurnTriggers(player, opponent);
 
       // Switch to opponent turn
-      gameState.activePlayer = 1;
+      this.currentBattle.gameState.activePlayer = 1;
 
-      // Process opponent AI turn with delays for visibility
+      // Process opponent AI turn
       await this.processOpponentTurn();
 
-      // Switch back to player
-      gameState.activePlayer = 0;
-      gameState.turn++;
+      // Switch back to player and increment turn
+      this.currentBattle.gameState.activePlayer = 0;
+      this.currentBattle.gameState.turn++;
 
-      // Apply deathmatch damage after turn 30 (prevents stalemate)
-      // Damage escalates every 5 turns: 30-34 = 1 dmg, 35-39 = 2 dmg, 40-44 = 3 dmg, etc.
-      if (gameState.turn >= 30) {
-        const opponent = gameState.players[1];
-        const deathmatchDamage = Math.floor((gameState.turn - 30) / 5) + 1;
-        Logger.debug(`Deathmatch! Both players lose ${deathmatchDamage} health`);
-        player.health -= deathmatchDamage;
-        opponent.health -= deathmatchDamage;
+      // Start player's new turn
+      this.battleController.startTurn(0);
 
-        // Check if either player died from deathmatch damage
-        if (player.health <= 0 || opponent.health <= 0) {
-          // Trigger render to show the damage
-          if (this.renderCallback) this.renderCallback();
-          // Battle will end after this function returns
-        }
-      }
-
-      // Draw a card for player at start of their turn
-      this.drawCard(player);
-
-      // Increase player nectar (max 10)
-      player.currentNectar = Math.min(10, gameState.turn);
-
-      // Apply buff card start-of-turn effects (Swift Wind, Nature's Blessing)
+      // Process start-of-turn buff effects
       this.battleStateManager.applyBuffStartOfTurnEffects(player, opponent);
-
-      // Process StartOfTurn triggers for player beasts
       this.battleStateManager.processStartOfTurnTriggers(player, opponent);
-
-      // Reapply stat buffs to all beasts (Battle Fury, Mystic Shield)
       this.battleStateManager.applyStatBuffEffects(player);
-
-      // Reset summoning counter
-      player.summonsThisTurn = 0;
 
       return { success: true };
     }
 
     /**
-     * Draw a card from the deck
-     */
-    private drawCard(player: Player): void {
-      if (player.deck.length > 0) {
-        const card = player.deck.pop();
-        if (card) {
-          player.hand.push(card);
-          Logger.debug(`Drew card: ${card.name}`);
-        }
-      } else {
-        Logger.debug('Deck is empty - cannot draw');
-      }
-    }
-
-    /**
-     * Process opponent AI turn (simplified) with delays for visibility
+     * Process opponent's AI turn
      */
     private async processOpponentTurn(): Promise<void> {
       if (!this.currentBattle || !this.currentBattle.gameState) return;
 
-      const opponent = this.currentBattle.gameState.players[1];
       const player = this.currentBattle.gameState.players[0];
+      const opponent = this.currentBattle.gameState.players[1];
 
       // Helper function for delays
       const delay = (ms: number) => new Promise(resolve => this.async.setTimeout(resolve, ms));
 
-      // Draw a card
-      this.drawCard(opponent);
+      // Draw a card for opponent
+      if (opponent.deck.length > 0) {
+        const card = opponent.deck.shift();
+        if (card) opponent.hand.push(card);
+      }
       if (this.renderCallback) this.renderCallback();
       await delay(800);
-      if (this.shouldStopAI) return; // Stop if battle ended
+      if (this.shouldStopAI) return;
 
       // Increase opponent nectar
       opponent.currentNectar = Math.min(10, this.currentBattle.gameState.turn);
       if (this.renderCallback) this.renderCallback();
       await delay(500);
-      if (this.shouldStopAI) return; // Stop if battle ended
+      if (this.shouldStopAI) return;
 
-      // Apply buff card start-of-turn effects for opponent (Swift Wind, Nature's Blessing)
+      // Apply start-of-turn buff effects
       this.battleStateManager.applyBuffStartOfTurnEffects(opponent, player);
-
-      // Process StartOfTurn triggers for opponent beasts
       this.battleStateManager.processStartOfTurnTriggers(opponent, player);
-
-      // Reapply stat buffs to all opponent beasts (Battle Fury, Mystic Shield)
       this.battleStateManager.applyStatBuffEffects(opponent);
 
-      // Remove summoning sickness from beasts that were already on the field at start of turn
-      // (Don't remove from beasts that will be summoned this turn)
+      // Remove summoning sickness
       opponent.field.forEach((beast: any) => {
         if (beast) {
           beast.summoningSickness = false;
-          beast.usedAbilityThisTurn = false; // Reset ability usage
+          beast.usedAbilityThisTurn = false;
         }
       });
 
-      // Delegate to OpponentAI for decision making and execution
-      await this.opponentAI.executeTurn(opponent, player, this.currentBattle.gameState, {
-        processOnSummonTrigger: this.battleStateManager.processOnSummonTrigger.bind(this.battleStateManager),
-        processOnAttackTrigger: this.battleStateManager.processOnAttackTrigger.bind(this.battleStateManager),
-        processOnDamageTrigger: this.battleStateManager.processOnDamageTrigger.bind(this.battleStateManager),
-        processOnDestroyTrigger: this.battleStateManager.processOnDestroyTrigger.bind(this.battleStateManager),
-        processMagicEffect: this.battleStateManager.processMagicEffect.bind(this.battleStateManager),
-        processHabitatEffect: this.battleStateManager.processHabitatEffect.bind(this.battleStateManager),
-        applyStatBuffEffects: this.battleStateManager.applyStatBuffEffects.bind(this.battleStateManager),
-      }, () => this.shouldStopAI); // Pass shouldStopAI getter
-
-      if (this.shouldStopAI) return; // Stop if battle ended
-
-      // Check if player health reached 0 during AI turn - end battle immediately
-      if (player.health <= 0) {
-        this.endBattle();
-        return; // Stop opponent turn processing
-      }
-
-      // Check if player health dropped below 10% threshold (for low health sound)
-      const maxHealth = player.maxHealth || 30;
-      const healthPercentage = (player.health / maxHealth) * 100;
-      if (healthPercentage <= 10 && !this.playerLowHealthTriggered) {
-        this.playerLowHealthTriggered = true;
-        if (this.opponentActionCallback) this.opponentActionCallback('player-low-health');
-      }
+      // Use AI to execute opponent turn with proper effect processors
+      await this.opponentAI.executeTurn(
+        opponent,
+        player,
+        this.currentBattle.gameState,
+        {
+          processOnSummonTrigger: this.battleStateManager.processOnSummonTrigger.bind(this.battleStateManager),
+          processOnAttackTrigger: this.battleStateManager.processOnAttackTrigger.bind(this.battleStateManager),
+          processOnDamageTrigger: this.battleStateManager.processOnDamageTrigger.bind(this.battleStateManager),
+          processOnDestroyTrigger: this.battleStateManager.processOnDestroyTrigger.bind(this.battleStateManager),
+          processMagicEffect: this.battleStateManager.processMagicEffect.bind(this.battleStateManager),
+          processHabitatEffect: this.battleStateManager.processHabitatEffect.bind(this.battleStateManager),
+          applyStatBuffEffects: this.battleStateManager.applyStatBuffEffects.bind(this.battleStateManager),
+        },
+        () => this.shouldStopAI
+      );
     }
 
     /**
-     * Shuffle a deck using Fisher-Yates algorithm
-     */
-    private shuffleDeck(deck: any[]): void {
-      shuffle(deck);
-    }
-
-    /**
-     * Update mission progress based on game events
+     * Update mission progress based on action
      */
     private updateMissionProgress(action: string, result: any): void {
       if (!this.currentBattle) return;
 
-      // Handle play-card actions as summons
-      if (action.startsWith('play-card-')) {
-        if (result.success) {
-          this.missionManager.updateProgress('beast-summoned', {});
-        }
-        return;
-      }
-
-      switch (action) {
-        case 'end-turn':
-          this.missionManager.updateProgress('turn-end', {});
-          this.applyTurnBasedEffects();
-          break;
-
-        case 'attack':
-          if (result.damage) {
-            this.missionManager.updateProgress('damage-dealt', {
-              amount: result.damage,
-            });
-          }
-          break;
-
-        case 'summon':
-          if (result.success) {
-            this.missionManager.updateProgress('beast-summoned', {});
-          }
-          break;
-
-        case 'use-ability':
-          if (result.success) {
-            this.missionManager.updateProgress('ability-used', {});
-          }
-          break;
-      }
-
-      // Update health tracking
-      if (this.currentBattle.gameState) {
-        const player = this.currentBattle.gameState.players[0];
-        const opponent = this.currentBattle.gameState.players[1];
-
-        if (player && opponent) {
-          this.missionManager.updateProgress('health-update', {
-            playerHealth: player.health,
-            opponentHealth: opponent.health,
-          });
-        }
-      }
+      // Track objectives, etc.
+      // Implementation depends on mission objectives system
     }
 
     /**
-     * Apply mission-specific turn-based effects
-     */
-    private applyTurnBasedEffects(): void {
-      if (!this.currentBattle || !this.currentBattle.gameState) return;
-
-      const mission = this.currentBattle.mission;
-      const gameState = this.currentBattle.gameState;
-
-      mission.specialRules?.forEach(rule => {
-        switch (rule.effect) {
-          case 'burn-damage':
-            // Apply burn damage to all units
-            gameState.players.forEach(player => {
-              player.field.forEach(beast => {
-                if (beast && beast.currentHealth > 0) {
-                  beast.currentHealth = Math.max(0, beast.currentHealth - 2);
-                }
-              });
-            });
-            break;
-
-          case 'fast-nectar':
-            // Give both players extra nectar
-            gameState.players.forEach(player => {
-              if (player.permanentNectar !== undefined) {
-                player.permanentNectar = Math.min(10, player.permanentNectar + 1);
-              }
-            });
-            break;
-
-          case 'heal-per-turn':
-            // Heal all beasts or regenerate player health based on rule
-            if (rule.id === 'natural-cycle') {
-              // Regenerate player health
-              gameState.players.forEach(player => {
-                const maxHp = player.maxHealth || 30;
-                if (player.health < maxHp) {
-                  player.health = Math.min(maxHp, player.health + 1);
-                }
-              });
-            } else {
-              // Heal all beasts
-              gameState.players.forEach(player => {
-                player.field.forEach(beast => {
-                  if (beast && beast.currentHealth > 0 && beast.currentHealth < beast.maxHealth) {
-                    beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth + 1);
-                  }
-                });
-              });
-            }
-            break;
-
-          case 'random-effects':
-            // Apply various random effects based on rule ID
-            if (rule.id === 'elemental-flux' && gameState.turn % 3 === 0) {
-              // Apply periodic buffs to Fire and Water beasts every 3 turns
-              gameState.players.forEach(player => {
-                player.field.forEach(beast => {
-                  if (beast && (beast.affinity === 'Fire' || beast.affinity === 'Water')) {
-                    // Buff Fire and Water affinity beasts
-                    beast.currentAttack = (beast.currentAttack || 0) + 1;
-                    beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth + 1);
-                    Logger.debug(`${beast.name} buffed by Elemental Flux (+1/+1)`);
-                  }
-                });
-              });
-            }
-            break;
-        }
-      });
-    }
-
-    /**
-     * Check if the battle has ended
+     * Check if battle has ended
      */
     private checkBattleEnd(): boolean {
-      if (!this.currentBattle || !this.currentBattle.gameState) return false;
-
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
-
-      if (!player || !opponent) return false;
-
-      // Check for defeat
-      if (player.health <= 0) {
-        return true;
-      }
-
-      // Check for victory
-      if (opponent.health <= 0) {
-        this.missionManager.updateProgress('opponent-defeated', {});
-        return true;
-      }
-
-      // Check turn limit
-      if (this.currentBattle.mission.turnLimit &&
-          this.currentBattle.gameState.turn >= this.currentBattle.mission.turnLimit) {
-        return true;
-      }
-
-      return false;
+      return this.battleController.checkBattleEnd() !== null;
     }
 
     /**
-     * End the battle and process rewards
+     * End the battle and calculate rewards
      */
     private endBattle(): void {
       if (!this.currentBattle) return;
 
-      // Stop AI turn processing immediately
+      const battleResult = this.battleController.checkBattleEnd();
+      if (!battleResult) return;
+
       this.shouldStopAI = true;
+      this.currentBattle.isComplete = true;
 
-      const player = this.currentBattle.gameState?.players[0];
-      const opponent = this.currentBattle.gameState?.players[1];
-
-      if (player && opponent && opponent.health <= 0 && player.health > 0) {
-        // Victory!
-        const rewards = this.missionManager.completeMission();
-
-        if (rewards) {
-          this.currentBattle.isComplete = true;
-          this.currentBattle.rewards = rewards;
-          Logger.debug('Mission Complete!', rewards);
-        }
+      // Calculate rewards for victory
+      if (battleResult.winner === 'player1') {
+        this.currentBattle.rewards = this.missionManager.completeMission();
+        this.battleController.completeBattle('player1');
       } else {
-        // Defeat - player health reached 0 or other loss condition
-        Logger.debug('Mission Failed - Player Defeated');
-        this.currentBattle.isComplete = true;
-        this.currentBattle.rewards = null; // No rewards for losing
+        this.currentBattle.rewards = null;
+        this.battleController.completeBattle('player2');
       }
+
+      Logger.info(`[MissionBattleUI] Battle ended. Winner: ${battleResult.winner}`);
     }
 
     /**
-     * Get current battle display
+     * Stop AI processing (when battle ends or is forfeit)
      */
-    getBattleDisplay(): string[] | null {
-      if (!this.currentBattle || !this.currentBattle.gameState) {
-        return null;
-      }
-
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
-
-      if (!player || !opponent) return null;
-
-      const display: string[] = [
-        `=== ${this.currentBattle.mission.name} ===`,
-        '',
-        `Turn: ${this.currentBattle.gameState.turn}`,
-        '',
-        'Player:',
-        `  Health: ${player.health}/${player.maxHealth}`,
-        `  Nectar: ${player.currentNectar}`,
-        `  Hand: ${player.hand.length} cards`,
-        `  Field: ${player.field.length} beasts`,
-        '',
-        `${opponent.name}:`,
-        `  Health: ${opponent.health}/${opponent.maxHealth}`,
-        `  Nectar: ${opponent.currentNectar}`,
-        `  Hand: ${opponent.hand.length} cards`,
-        `  Field: ${opponent.field.length} beasts`,
-      ];
-
-      // Add objective progress
-      const progressDisplay = this.missionManager.getProgress();
-      if (progressDisplay && this.currentBattle.mission.objectives) {
-        display.push('');
-        display.push('Objectives:');
-
-        this.currentBattle.mission.objectives.forEach(obj => {
-          const key = `${obj.type}-${obj.target || 0}`;
-          const progress = progressDisplay.objectiveProgress.get(key) || 0;
-          const target = obj.target || 1;
-          const status = progress >= target ? '✅' : '⬜';
-          display.push(`  ${status} ${obj.description}`);
-        });
-      }
-
-      // Add special rules reminder
-      if (this.currentBattle.mission.specialRules &&
-          this.currentBattle.mission.specialRules.length > 0) {
-        display.push('');
-        display.push('Active Effects:');
-        this.currentBattle.mission.specialRules.forEach(rule => {
-          display.push(`  • ${rule.name}`);
-        });
-      }
-
-      return display;
+    stopAI(): void {
+      this.shouldStopAI = true;
     }
 
     /**
-     * Get reward display
+     * Clean up resources
      */
-    getRewardDisplay(): string[] | null {
-      if (!this.currentBattle || !this.currentBattle.rewards) {
-        return null;
-      }
-
-      const rewards = this.currentBattle.rewards;
-      const display: string[] = [
-        '🎉 MISSION COMPLETE! 🎉',
-        '',
-        '=== Rewards ===',
-        `XP Gained: ${rewards.xpGained}`,
-      ];
-
-      if (rewards.cardsReceived.length > 0) {
-        display.push('');
-        display.push('Cards Received:');
-        rewards.cardsReceived.forEach(card => {
-          display.push(`  • ${card.name} (${card.type})`);
-        });
-      }
-
-      if (rewards.bonusRewards && rewards.bonusRewards.length > 0) {
-        display.push('');
-        display.push('Bonus Rewards:');
-        rewards.bonusRewards.forEach(bonus => {
-          display.push(`  • ${bonus}`);
-        });
-      }
-
-      return display;
-    }
-
-    /**
-     * Get current battle state
-     */
-    getCurrentBattle(): BattleUIState | null {
-      return this.currentBattle;
-    }
-
-    /**
-     * Clear the current battle
-     */
-    clearBattle(): void {
-      this.shouldStopAI = true; // Stop any ongoing AI processing
+    dispose(): void {
+      this.stopAI();
+      this.battleController.dispose();
       this.currentBattle = null;
-      this.renderCallback = null; // Clear callback to prevent race conditions
-      this.playerLowHealthTriggered = false; // Reset low health flag
     }
   }
 
@@ -10467,6 +16996,1764 @@ namespace BloomBeasts {
     return LEGACY_SOUND_ID_MAP[soundId] || soundId;
   }
 
+  // ==================== bloombeasts\BloomBeastsGame.ts ====================
+
+  /**
+   * BloomBeastsGame - Unified Game Controller
+   *
+   * This is the main entry point for the game that works across all platforms (web, horizon).
+   * Platform-specific code should be minimal - just implement the PlatformConfig callbacks.
+   *
+   * The game is fully platform-agnostic - it doesn't even import UI methods directly,
+   * but receives them from the platform configuration.
+   */
+
+
+  /**
+   * XP thresholds for player leveling (cumulative)
+   * Formula: XP = 100 * (2.0 ^ (level - 1))
+   */
+  const XP_THRESHOLDS = [
+    0,      // Level 1
+    100,    // Level 2: 100 XP
+    300,    // Level 3: 300 XP total
+    700,    // Level 4: 700 XP total
+    1500,   // Level 5: 1500 XP total
+    3100,   // Level 6: 3100 XP total
+    6300,   // Level 7: 6300 XP total
+    12700,  // Level 8: 12700 XP total
+    25500,  // Level 9: 25500 XP total
+  ];
+
+  /**
+   * Calculate player level from total XP (derived data)
+   */
+  function getPlayerLevel(totalXP: number): number {
+    for (let level = 9; level >= 1; level--) {
+      if (totalXP >= XP_THRESHOLDS[level - 1]) {
+        return level;
+      }
+    }
+    return 1;
+  }
+
+  // UINode type - represents a UI node returned by UI components
+  export type UINode = any;
+
+  /**
+   * Read-only binding interface (for derived bindings)
+   */
+  export interface ReadonlyBindingInterface<T> {
+    get(): T;
+    subscribe(callback: () => void): void;
+  }
+
+  /**
+   * Binding interface - platform-agnostic reactive data binding
+   * Each platform provides its own implementation
+   */
+  export interface BindingInterface<T> {
+    get(): T;
+    set(value: T): void;
+    subscribe(callback: () => void): void;
+    derive<U>(fn: (value: T) => U): ReadonlyBindingInterface<U>;
+  }
+
+  /**
+   * Binding constructor type
+   */
+  export type BindingConstructor = {
+    new <T>(value: T): BindingInterface<T>;
+    derive<T extends any[], R>(
+      bindings: any[],
+      deriveFn: (...values: T) => R
+    ): ReadonlyBindingInterface<R>;
+  };
+
+  /**
+   * Style properties - platform-agnostic style definitions
+   * These match Horizon's styling but work on web too
+   */
+  export interface StyleProps {
+    width?: number;
+    height?: number;
+    backgroundColor?: string;
+    borderRadius?: number;
+    padding?: number;
+    margin?: number;
+    flexDirection?: 'row' | 'column';
+    justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
+    alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
+    position?: 'relative' | 'absolute';
+    top?: number;
+    left?: number;
+    right?: number;
+    bottom?: number;
+    opacity?: number;
+    // Add more as needed
+  }
+
+  /**
+   * Common props for all UI components
+   */
+  export interface BaseUIProps {
+    style?: StyleProps;
+    children?: UINode | UINode[];
+  }
+
+  /**
+   * View component props
+   */
+  export interface ViewProps extends BaseUIProps {}
+
+  /**
+   * Text component props
+   */
+  export interface TextProps extends BaseUIProps {
+    text?: string;
+    fontSize?: number;
+    fontWeight?: 'normal' | 'bold';
+    color?: string;
+    textAlign?: 'left' | 'center' | 'right';
+  }
+
+  /**
+   * Image component props
+   */
+  export interface ImageProps extends BaseUIProps {
+    imageId?: string | any; // Single image asset ID (or binding)
+    binding?: any; // BaseBinding<string> for animations, derived values, etc.
+    width?: number;
+    height?: number;
+  }
+
+  /**
+   * Pressable (button) component props
+   */
+  export interface PressableProps extends BaseUIProps {
+    onPress?: () => void;
+    id?: string;
+  }
+
+  /**
+   * Platform-specific UI method mappings
+   * Each platform provides its own implementation of these methods
+   * Screens receive this object and use it to create UI elements
+   */
+  export interface UIMethodMappings {
+    // Core UI components
+    View: (props: any) => any;
+    Text: (props: any) => any;
+    Image: (props: any) => any;
+    Pressable: (props: any) => any;
+    ScrollView?: (props: any) => any;
+
+    // UINode utilities for conditional rendering
+    // Matches Horizon's actual signature
+    UINode?: any;
+
+    // Centralized binding manager - ONLY way to create/access bindings
+    bindingManager: BindingManager;
+
+    // Platform-specific helpers
+    assetIdToImageSource?: (assetId: string) => any; // Convert asset ID to ImageSource (Horizon) or string (Web)
+  }
+
+  /**
+   * Player item in inventory
+   */
+  export interface PlayerItem {
+    itemId: string;
+    quantity: number;
+  }
+
+  /**
+   * Player data structure - persisted to platform storage
+   * This is the canonical save data format
+   *
+   * Note: Player level is derived from totalXP and not stored directly
+   */
+  export interface PlayerData {
+    // Identity and progression
+    name: string;
+    totalXP: number; // Level is derived from this via getPlayerLevel()
+
+    // Currency
+    coins: number;
+
+    // Card collection and deck (SINGLE SOURCE OF TRUTH)
+    cards: {
+      collected: CardInstance[]; // All owned card instances
+      deck: string[]; // Card instance IDs in player's deck
+    };
+
+    // Mission tracking
+    missions: {
+      completedMissions: { [missionId: string]: number }; // Mission ID -> completion count
+    };
+
+    // Item inventory (only special items like serums)
+    items: PlayerItem[];
+
+    // Boost upgrades (0-6 levels per boost)
+    boosts: {
+      [boostId: string]: number; // Boost ID -> upgrade level (0-6)
+    };
+
+    // UI preferences (not persisted on all platforms)
+    settings?: SoundSettings;
+  }
+
+  /**
+   * Platform configuration - implement these callbacks for your platform
+   *
+   * TypeScript ensures ALL assets from the catalog are provided!
+   *
+   * Example for Web:
+   * {
+   *   setPlayerData: (data) => localStorage.setItem('playerData', JSON.stringify(data)),
+   *   getPlayerData: () => JSON.parse(localStorage.getItem('playerData') || 'null'),
+   *   imageAssets: {
+   *     [ImageAssetIds.CARD_ROOTLING]: '/shared/images/cards/Forest/Rootling.png',
+   *     [ImageAssetIds.CARD_EMBERLING]: '/shared/images/cards/Fire/Emberling.png',
+   *     // ... TypeScript enforces all assets are provided!
+   *   },
+   *   soundAssets: {
+   *     [SoundAssetIds.MUSIC_BACKGROUND]: '/shared/sounds/BackgroundMusic.mp3',
+   *     // ... TypeScript enforces all assets are provided!
+   *   },
+   *   getUIMethodMappings: () => ({ View, Text, Image, Pressable, Binding }),
+   *   render: (uiNode) => renderer.render(uiNode)
+   * }
+   *
+   * Example for Horizon:
+   * {
+   *   setPlayerData: (data) => persistentVar.set(data),
+   *   getPlayerData: () => persistentVar.get(),
+   *   imageAssets: {
+   *     [ImageAssetIds.CARD_ROOTLING]: ImageSource.fromTextureAsset(new hz.Asset(BigInt('123'))),
+   *     [ImageAssetIds.CARD_EMBERLING]: ImageSource.fromTextureAsset(new hz.Asset(BigInt('456'))),
+   *     // ... TypeScript enforces all assets are provided!
+   *   },
+   *   soundAssets: {
+   *     [SoundAssetIds.MUSIC_BACKGROUND]: new hz.Asset(BigInt('789')),
+   *     // ... TypeScript enforces all assets are provided!
+   *   },
+   *   getUIMethodMappings: () => ({ View: hz.View, Text: hz.Text, ... }),
+   *   render: (uiNode) => horizonComponent.update(uiNode)
+   * }
+   */
+  export interface PlatformConfig {
+    /**
+     * Save player data to persistent storage
+     * For web: localStorage
+     * For horizon: Persistent Variables API
+     */
+    setPlayerData: (data: PlayerData) => void;
+
+    /**
+     * Load player data from persistent storage
+     * Platform must ensure valid PlayerData is returned (create default if none exists)
+     */
+    getPlayerData: () => PlayerData | null;
+
+    /**
+     * Get an image asset by ID
+     * Platform queries AssetCatalogManager and returns the asset in platform format
+     *
+     * For web: Returns string path from catalog (e.g., '/assets/cards/fire/beast.png')
+     * For horizon: Converts catalog horizonAssetId to ImageSource object
+     */
+    getImageAsset: (assetId: string) => any;
+
+    /**
+     * Asset catalog manager instance
+     * Provides access to all game asset metadata and card definitions
+     */
+    catalogManager: any; // AssetCatalogManager instance
+
+    /**
+     * Get platform-specific UI method implementations
+     *
+     * For web: Returns web-specific View, Text, Image, Pressable
+     * For horizon: Returns hz.View, hz.Text, hz.Image, hz.Pressable
+     */
+    getUIMethodMappings: () => UIMethodMappings;
+
+    /**
+     * Platform-specific async methods (setTimeout, setInterval, etc.)
+     *
+     * For web: Standard window.setTimeout, window.setInterval, etc.
+     * For horizon: component.async.setTimeout, component.async.setInterval, etc.
+     */
+    async: AsyncMethods;
+
+    /**
+     * Render the UI tree
+     * Called whenever the UI needs to be updated
+     *
+     * For web: renderer.render(uiNode)
+     * For horizon: component.update(uiNode) or similar
+     */
+    render: (uiNode: UINode) => void;
+
+    /**
+     * Audio callbacks (optional)
+     * Implement if your platform supports audio
+     */
+    playSound?: (assetId: string, loop: boolean, volume: number) => void;
+    stopSound?: (assetId?: string) => void;
+    setMusicVolume?: (volume: number) => void;
+    setSfxVolume?: (volume: number) => void;
+    setMusicEnabled?: (enabled: boolean) => void;
+    setSfxEnabled?: (enabled: boolean) => void;
+
+    /**
+     * World Variables (optional)
+     * Implement if your platform supports world variables (e.g., Horizon)
+     *
+     * For Horizon: Use world.getVariable() and world.setVariable()
+     * For web: Use mock data or skip
+     */
+    getWorldVariable?: (variableGroup: string, variableName: string) => any;
+    setWorldVariable?: (variableGroup: string, variableName: string, value: any) => void;
+
+    /**
+     * Network Events (optional)
+     * Implement if your platform supports network events (e.g., Horizon)
+     *
+     * For Horizon: Use world.sendNetworkEvent()
+     * For web: Use mock/skip
+     */
+    sendNetworkEvent?: (eventName: string, data: any) => void;
+  }
+
+  /**
+   * Main game class - handles all game logic and UI orchestration
+   */
+  export class BloomBeastsGame {
+    // Platform configuration
+    private platform: PlatformConfig;
+
+    // Platform-specific UI methods
+    private UI: UIMethodMappings;
+
+    // Platform-specific async methods
+    private asyncMethods: AsyncMethods;
+
+    // Platform-provided asset getters
+    private platformGetImageAsset: (assetId: string) => any;
+
+    // Core game systems
+    private gameEngine: GameEngine;
+    private missionManager: MissionManager;
+    private missionUI: MissionSelectionUI;
+    private battleUI: MissionBattleUI;
+    private cardCollectionManager: CardCollectionManager;
+
+    // Sound and display state
+    private currentMusic: string | null = null;
+    private battleDisplayManager: BattleDisplayManager;
+
+    // Player data state - SINGLE SOURCE OF TRUTH (no duplicates!)
+    // Starts as null to indicate data hasn't loaded yet (prevents race conditions)
+    private playerData: PlayerData | null = null;
+
+    // Game state
+    private isInitializing: boolean = true;  // Prevent renders during initialization
+    private currentBattleId: string | null = null;
+    private battleStartTime: number | null = null;  // Track battle start time for leaderboard
+
+
+    // Screen instances
+    private menuScreen: MenuScreen;
+    private cardsScreen: CardsScreen;
+    private upgradeScreen: UpgradeScreen;
+    private missionScreen: MissionScreen;
+    private battleScreen: BattleScreen;
+    private settingsScreen: SettingsScreen;
+    private leaderboardScreen: LeaderboardScreen;
+
+    // UI tree (created once, updated reactively)
+    // Public so platform wrappers can access it (needed for Horizon's initializeUI)
+    public uiTree: UINode | null = null;
+
+    constructor(config: PlatformConfig) {
+      this.platform = config;
+
+      // Get platform-specific async methods
+      this.asyncMethods = config.async;
+
+      // Store platform-provided asset getters
+      this.platformGetImageAsset = config.getImageAsset;
+
+      // Initialize card utils and deck builder with catalog manager
+      setCatalogManagerForUtils(config.catalogManager);
+      setCatalogManagerForDeckBuilder(config.catalogManager);
+
+      // Initialize core systems
+      this.gameEngine = new GameEngine(config.catalogManager);
+      this.missionManager = new MissionManager(config.catalogManager);
+      this.missionUI = new MissionSelectionUI(this.missionManager);
+      this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine, this.asyncMethods);
+      this.cardCollectionManager = new CardCollectionManager(config.catalogManager);
+      this.battleDisplayManager = new BattleDisplayManager(config.catalogManager);
+
+      // Get platform-specific UI methods and add bindingManager to them
+      this.UI = config.getUIMethodMappings() as UIMethodMappings;
+
+      // Create screen instances (pass UI methods and playerData binding)
+      this.menuScreen = new MenuScreen({
+        ui: this.UI,
+        onButtonClick: this.handleButtonClick.bind(this),
+        onNavigate: this.navigate.bind(this),
+        onRenderNeeded: this.triggerRender.bind(this),
+        playSfx: this.playSfx.bind(this)
+      });
+
+      this.cardsScreen = new CardsScreen({
+        ui: this.UI,
+        onCardSelect: this.handleCardSelect.bind(this),
+        onNavigate: this.navigate.bind(this),
+        onRenderNeeded: this.triggerRender.bind(this),
+        playSfx: this.playSfx.bind(this)
+      });
+
+      this.upgradeScreen = new UpgradeScreen({
+        ui: this.UI,
+        onNavigate: this.navigate.bind(this),
+        onUpgrade: this.handleUpgrade.bind(this),
+        playSfx: this.playSfx.bind(this)
+      });
+
+      this.missionScreen = new MissionScreen({
+        ui: this.UI,
+        onMissionSelect: this.handleMissionSelect.bind(this),
+        onNavigate: this.navigate.bind(this),
+        onRenderNeeded: this.triggerRender.bind(this),
+        playSfx: this.playSfx.bind(this)
+      });
+
+      this.battleScreen = new BattleScreen({
+        ui: this.UI,
+        async: this.asyncMethods,
+        onAction: this.handleBattleAction.bind(this),
+        onNavigate: this.navigate.bind(this),
+        onRenderNeeded: this.triggerRender.bind(this),
+        onShowCardDetail: this.showCardDetailPopup.bind(this),
+        playSfx: this.playSfx.bind(this)
+      });
+
+      this.settingsScreen = new SettingsScreen({
+        ui: this.UI,
+        onSettingChange: this.handleSettingsChange.bind(this),
+        onNavigate: this.navigate.bind(this),
+        onRenderNeeded: this.triggerRender.bind(this),
+        playSfx: this.playSfx.bind(this)
+      });
+
+      this.leaderboardScreen = new LeaderboardScreen({
+        ui: this.UI,
+        onNavigate: this.navigate.bind(this),
+        playSfx: this.playSfx.bind(this)
+      });
+
+      // All screens are now created, enable rendering
+      this.isInitializing = false;
+
+      // Create UI tree once (it's reactive via bindings)
+      this.uiTree = this.createUI();
+    }
+
+    /**
+     * Get an image asset by ID
+     * Delegates to platform-specific implementation
+     */
+    getImageAsset(assetId: string): any {
+      return this.platformGetImageAsset(assetId);
+    }
+
+    /**
+     * Get platform async methods (setTimeout, setInterval, etc.)
+     * Screens can use this to access platform-specific async operations
+     */
+    get async(): AsyncMethods {
+      return this.asyncMethods;
+    }
+
+    /**
+     * Initialize the game
+     * Call this after construction to load data and show initial screen
+     */
+    async initialize(): Promise<void> {
+      console.log('[BloomBeastsGame] Initializing...');
+
+      // Load saved game data (initializes starting cards if needed)
+      await this.loadGameData();
+
+      // Update bindings from loaded data
+      console.log('[BloomBeastsGame] About to call updateBindingsFromGameState...');
+      await this.updateBindingsFromGameState();
+      console.log('[BloomBeastsGame] updateBindingsFromGameState completed');
+
+      // Trigger initial render
+      console.log('[BloomBeastsGame] About to trigger render...');
+      this.triggerRender();
+
+      // Start menu music
+      console.log('[BloomBeastsGame] Starting menu music...');
+      this.playMusic('music-background', true);
+      console.log('[BloomBeastsGame] Navigating to menu...');
+      this.navigate('menu');
+      console.log('[BloomBeastsGame] Initialize complete!');
+    }
+
+    /**
+     * Get current player level (derived from totalXP)
+     */
+    private get playerLevel(): number {
+      return getPlayerLevel(this.playerData?.totalXP ?? 0);
+    }
+
+    /**
+     * Load game data from platform storage
+     * Platform is responsible for creating default data if none exists
+     */
+    private async loadGameData(): Promise<void> {
+      const savedData = this.platform.getPlayerData?.();
+
+      if (!savedData || Object.keys(savedData).length === 0) {
+        throw new Error('Platform must provide valid PlayerData (either loaded or newly created)');
+      }
+
+      // Use platform-provided data directly
+      this.playerData = savedData;
+      Logger.info(`[BloomBeastsGame] Loaded player data for "${this.playerData.name}" with ${savedData.cards.collected.length} cards`);
+
+      Logger.info(`[BloomBeastsGame] Restored deck with ${this.playerData.cards.deck.length} cards`);
+
+      // Apply sound settings to platform
+      if (this.playerData.settings) {
+        this.platform.setMusicVolume?.(this.playerData.settings!.musicVolume / 100);
+        this.platform.setSfxVolume?.(this.playerData.settings!.sfxVolume / 100);
+        this.platform.setMusicEnabled?.(this.playerData.settings!.musicEnabled);
+        this.platform.setSfxEnabled?.(this.playerData.settings!.sfxEnabled);
+      }
+
+      // Load completed missions into MissionManager
+      this.missionManager.loadCompletedMissions(this.playerData.missions.completedMissions);
+
+      // Initialize starting cards if collection is empty
+      if (this.playerData.cards.collected.length === 0) {
+        Logger.info('[BloomBeastsGame] Initializing starting card collection');
+        await this.initializeStartingCollection();
+      }
+
+      // Save to ensure data persists
+      await this.saveGameData();
+    }
+
+    /**
+     * Save game data to platform storage
+     */
+    private async saveGameData(): Promise<void> {
+      if (!this.playerData) {
+        Logger.warn('[BloomBeastsGame] Cannot save null player data');
+        return;
+      }
+      this.platform.setPlayerData?.(this.playerData);
+      Logger.debug('[BloomBeastsGame] Player data saved');
+    }
+
+    /**
+     * Play background music
+     */
+    private playMusic(musicId: string, loop: boolean = true): void {
+      // Don't restart music if it's already playing
+      if (this.currentMusic === musicId) {
+        return;
+      }
+
+      this.currentMusic = musicId;
+
+      if (this.playerData?.settings?.musicEnabled) {
+        const volume = this.playerData.settings.musicVolume / 100;
+        this.platform.playSound?.(musicId, loop, volume);
+      }
+    }
+
+    /**
+     * Stop background music
+     */
+    private stopMusic(): void {
+      this.currentMusic = null;
+      this.platform.stopSound?.();
+    }
+
+    /**
+     * Play sound effect
+     */
+    private playSfx(sfxId: string): void {
+      if (this.playerData?.settings?.sfxEnabled) {
+        const volume = this.playerData.settings.sfxVolume / 100;
+        this.platform.playSound?.(sfxId, false, volume);
+      }
+    }
+
+    /**
+     * Set music volume (0-100)
+     */
+    private setMusicVolume(volume: number): void {
+      if (!this.playerData?.settings) return;
+      this.playerData.settings.musicVolume = Math.max(0, Math.min(100, volume));
+      if (this.playerData.settings.musicEnabled) {
+        this.platform.setMusicVolume?.(this.playerData.settings.musicVolume / 100);
+      }
+    }
+
+    /**
+     * Set SFX volume (0-100)
+     */
+    private setSfxVolume(volume: number): void {
+      if (!this.playerData?.settings) return;
+      this.playerData.settings.sfxVolume = Math.max(0, Math.min(100, volume));
+      if (this.playerData.settings.sfxEnabled) {
+        this.platform.setSfxVolume?.(this.playerData.settings.sfxVolume / 100);
+      }
+    }
+
+    /**
+     * Toggle music on/off
+     */
+    private toggleMusic(enabled: boolean): void {
+      console.log('[BloomBeastsGame] toggleMusic called:', { enabled, currentMusic: this.currentMusic });
+      if (!this.playerData?.settings) return;
+      this.playerData.settings.musicEnabled = enabled;
+
+      // Notify platform
+      this.platform.setMusicEnabled?.(enabled);
+
+      if (enabled && this.currentMusic) {
+        // Resume music - force replay even if it's the same track
+        const musicToResume = this.currentMusic;
+        const volume = this.playerData.settings.musicVolume / 100;
+        console.log('[BloomBeastsGame] Resuming music:', { musicToResume, volume, platformHasPlaySound: !!this.platform.playSound });
+        this.platform.playSound?.(musicToResume, true, volume);
+      } else if (!enabled) {
+        // Stop music playback but keep track of current music for resume
+        // Don't call stopMusic() as it clears this.currentMusic
+        console.log('[BloomBeastsGame] Stopping music, keeping currentMusic:', this.currentMusic);
+        this.platform.stopSound?.();
+      } else {
+        console.log('[BloomBeastsGame] Music enabled but no currentMusic set');
+      }
+    }
+
+    /**
+     * Toggle SFX on/off
+     */
+    private toggleSfx(enabled: boolean): void {
+      if (!this.playerData?.settings) return;
+      this.playerData.settings.sfxEnabled = enabled;
+
+      // Notify platform
+      this.platform.setSfxEnabled?.(enabled);
+    }
+
+    /**
+     * Add XP to player (level is automatically derived)
+     */
+    private addXP(amount: number): void {
+      if (!this.playerData) return;
+      this.playerData.totalXP += amount;
+      Logger.debug(`[BloomBeastsGame] Added ${amount} XP (total: ${this.playerData.totalXP}, level: ${this.playerLevel})`);
+
+      // Submit experience to leaderboard
+      this.submitLeaderboardScore('experience', this.playerData.totalXP);
+    }
+
+    /**
+     * Get the quantity of a specific item from player's items array
+     */
+    private getItemQuantity(itemId: string): number {
+      if (!this.playerData) return 0;
+      const item = this.playerData.items.find(i => i.itemId === itemId);
+      return item ? item.quantity : 0;
+    }
+
+    /**
+     * Track mission completion
+     */
+    private trackMissionCompletion(missionId: string): void {
+      if (!this.playerData) return;
+      const currentCount = this.playerData.missions.completedMissions[missionId] || 0;
+      this.playerData.missions.completedMissions[missionId] = currentCount + 1;
+      Logger.debug(`[BloomBeastsGame] Mission ${missionId} completed ${currentCount + 1} times`);
+    }
+
+    /**
+     * Add items to player's inventory
+     */
+    private addItems(itemId: string, quantity: number): void {
+      if (!this.playerData) return;
+      const existingItem = this.playerData.items.find(i => i.itemId === itemId);
+
+      if (existingItem) {
+        existingItem.quantity += quantity;
+      } else {
+        this.playerData.items.push({
+          itemId,
+          quantity,
+        });
+      }
+      Logger.debug(`[BloomBeastsGame] Added ${quantity}x ${itemId} to inventory`);
+    }
+
+    /**
+     * Initialize a new game with starter cards
+     */
+    private async initializeStartingCollection(): Promise<void> {
+      if (!this.playerData) return;
+      this.playerData.cards.deck = await this.cardCollectionManager.initializeStartingCollection(
+        this.playerData.cards.collected,
+        this.playerData.cards.deck
+      );
+      await this.saveGameData();
+    }
+
+    /**
+     * Update bindings from current game state
+     * This syncs the UI bindings with the actual game state
+     */
+    private async updateBindingsFromGameState(): Promise<void> {
+      // Update player data binding (screens derive what they need from this)
+      this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
+
+      // Update missions binding (still separate as it includes availability logic)
+      this.missionUI.setPlayerLevel(this.playerLevel);
+      const missionList = this.missionUI.getMissionList();
+      const displayMissions: MissionDisplay[] = missionList.map(m => ({
+        id: m.mission.id,
+        name: m.mission.name,
+        level: m.mission.level,
+        difficulty: m.mission.difficulty,
+        isAvailable: m.isAvailable,
+        isCompleted: m.completionCount > 0,
+        description: m.mission.description,
+        affinity: m.mission.affinity,
+        beastId: m.mission.beastId,
+      }));
+
+      // Debug: Log first 3 missions
+      console.log('[BloomBeastsGame] First 3 display missions:', displayMissions.slice(0, 3).map(m => ({id: m.id, isAvailable: m.isAvailable})));
+
+      this.UI.bindingManager.setBinding(BindingType.Missions, displayMissions);
+    }
+
+    /**
+     * Navigate to a different screen
+     */
+    private navigate(screen: string): void {
+      this.UI.bindingManager.setBinding(BindingType.CurrentScreen, screen);
+
+      // Load leaderboard data when navigating to leaderboard screen
+      if (screen === 'leaderboard') {
+        this.loadLeaderboardData();
+      }
+
+      this.triggerRender();
+    }
+
+    /**
+     * Trigger a render
+     * Notifies the platform to render (bindings update automatically)
+     */
+    private triggerRender(): void {
+      // Skip rendering during initialization to prevent errors
+      if (this.isInitializing) {
+        return;
+      }
+
+      // Just notify platform - UI tree is reactive via bindings
+      // No need to recreate the entire tree!
+      this.platform.render(this.uiTree);
+    }
+
+    /**
+     * Handle button clicks
+     */
+    private async handleButtonClick(buttonId: string): Promise<void> {
+      // console.log('[BloomBeastsGame] Button clicked:', buttonId);
+
+      // Play button sound
+      this.playSfx('sfx-menu-button-select');
+
+      // Handle navigation buttons
+      switch (buttonId) {
+        case 'play':
+        case 'btn-missions':
+          this.navigate('missions');
+          break;
+        case 'cards':
+        case 'btn-cards':
+          this.navigate('cards');
+          break;
+        case 'upgrades':
+        case 'btn-upgrades':
+          this.navigate('upgrades');
+          break;
+        case 'missions':
+          this.navigate('missions');
+          break;
+        case 'settings':
+        case 'btn-settings':
+          this.navigate('settings');
+          break;
+        case 'shop':
+          // console.log('Shop coming soon!');
+          break;
+        case 'btn-back':
+          this.navigate('menu');
+          break;
+        case 'forfeit':
+          // Show forfeit confirmation popup
+          this.showForfeitConfirmation();
+          break;
+        default:
+          // console.log('Unhandled button:', buttonId);
+      }
+    }
+
+    /**
+     * Show forfeit confirmation popup
+     */
+    private showForfeitConfirmation(): void {
+      this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, {
+        title: 'Are you sure?',
+        message: 'You will lose this battle.',
+        buttons: [
+          {
+            text: 'Yes',
+            onClick: () => {
+              this.handleForfeit();
+            },
+            color: 'red',
+          },
+          {
+            text: 'No',
+            onClick: () => {
+              this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, null);
+            },
+            color: 'default',
+          },
+        ],
+        playSfx: this.playSfx.bind(this),
+      });
+    }
+
+    /**
+     * Show card detail popup for a duration, then close and execute callback
+     */
+    private showCardDetailPopup(card: any, durationMs: number, callback?: () => void): void {
+      console.log('[BloomBeastsGame] Showing card detail popup:', card.name, 'for', durationMs, 'ms');
+
+      // Set the card detail popup
+      this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, {
+        cardDetail: {
+          card: card,
+          stats: null,
+        },
+        onButtonClick: () => {
+          // Close button clicked
+          this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, null);
+        },
+        playSfx: this.playSfx.bind(this)
+      });
+      this.triggerRender();
+
+      // After duration, close the popup and execute callback
+      this.asyncMethods.setTimeout(() => {
+        this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, null);
+        this.triggerRender();
+        callback?.();
+      }, durationMs);
+    }
+
+    /**
+     * Handle forfeit - player gives up
+     */
+    private handleForfeit(): void {
+      // Close popup
+      this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, null);
+
+      // Play lose sound
+      this.playSfx('sfx-lose');
+
+      // End battle as a loss
+      const currentBattle = this.battleUI.getCurrentBattle();
+      if (currentBattle) {
+        const defeatState = {
+          ...currentBattle,
+          isComplete: true,
+          rewards: null, // No rewards for forfeit
+          mission: currentBattle.mission,
+        };
+        this.handleBattleComplete(defeatState);
+      }
+    }
+
+    /**
+     * Handle card selection
+     */
+    private async handleCardSelect(cardId: string): Promise<void> {
+      // console.log('[BloomBeastsGame] Card selected:', cardId);
+      if (!this.playerData) return;
+
+      // Play menu button sound
+      this.playSfx('sfx-menu-button-select');
+
+      const cardEntry = this.playerData.cards.collected.find(c => c.id === cardId);
+
+      if (!cardEntry) {
+        return;
+      }
+
+      // Check if card is in deck
+      const isInDeck = this.playerData.cards.deck.includes(cardId);
+
+      // Toggle card in/out of deck
+      if (isInDeck) {
+        await this.removeCardFromDeck(cardId);
+      } else {
+        await this.addCardToDeck(cardId);
+      }
+    }
+
+    /**
+     * Add card to player's deck
+     */
+    private async addCardToDeck(cardId: string): Promise<void> {
+      if (!this.playerData) return;
+      if (this.playerData.cards.deck.length >= DECK_SIZE) {
+        Logger.warn(`Deck is full (${DECK_SIZE} cards)`);
+        return;
+      }
+
+      if (!this.playerData.cards.deck.includes(cardId)) {
+        this.playerData.cards.deck.push(cardId);
+        await this.saveGameData();
+        await this.updateBindingsFromGameState();
+      }
+    }
+
+    /**
+     * Remove card from player's deck
+     */
+    private async removeCardFromDeck(cardId: string): Promise<void> {
+      if (!this.playerData) return;
+      const index = this.playerData.cards.deck.indexOf(cardId);
+      if (index > -1) {
+        this.playerData.cards.deck.splice(index, 1);
+        await this.saveGameData();
+        await this.updateBindingsFromGameState();
+      }
+    }
+
+    /**
+     * Handle mission selection
+     */
+    private async handleMissionSelect(missionId: string): Promise<void> {
+      Logger.info(`Mission selected: ${missionId}`);
+      if (!this.playerData) return;
+
+      // Play menu button sound
+      this.playSfx('sfx-menu-button-select');
+
+      // Check if player has cards in deck
+      if (this.playerData.cards.deck.length === 0) {
+        Logger.warn('No cards in deck');
+        // TODO: Show dialog or message to user
+        return;
+      }
+
+      // Get player's deck cards
+      const playerDeckCards = this.cardCollectionManager.getPlayerDeckCards(
+        this.playerData.cards.deck,
+        this.playerData.cards.collected
+      );
+
+      if (playerDeckCards.length === 0) {
+        Logger.error('Failed to load deck cards');
+        return;
+      }
+
+      // Start the mission
+      const success = this.missionUI.startMission(missionId);
+
+      if (success) {
+        // console.log('[BloomBeastsGame] Mission started successfully');
+        // Initialize battle with player's deck cards and name
+        const battleState = this.battleUI.initializeBattle(playerDeckCards, this.playerData.name);
+        // console.log('[BloomBeastsGame] battleState:', battleState);
+
+        if (battleState) {
+          // console.log('[BloomBeastsGame] Battle state is valid, initializing...');
+          this.currentBattleId = missionId;
+          this.battleStartTime = Date.now();  // Track start time for leaderboard
+
+          // Create battle display from battle state
+          const battleDisplay = this.battleDisplayManager.createBattleDisplay(
+            battleState,
+            null  // No attack animation
+          );
+          // console.log('[BloomBeastsGame] battleDisplay:', battleDisplay);
+
+          // Update battle display binding
+          if (battleDisplay) {
+            // console.log('[BloomBeastsGame] Setting battle display binding...');
+            this.UI.bindingManager.setBinding(BindingType.BattleDisplay, battleDisplay);
+          } else {
+            console.error('[BloomBeastsGame] battleDisplay is null!');
+          }
+
+          // Navigate to battle screen
+          // console.log('[BloomBeastsGame] Navigating to battle screen');
+          this.UI.bindingManager.setBinding(BindingType.CurrentScreen, 'battle');
+
+          // Trigger re-render to show battle screen
+          // console.log('[BloomBeastsGame] Triggering re-render');
+          this.triggerRender();
+
+          // Play battle music
+          this.playMusic('music-battle', true);
+
+          Logger.info('Battle initialized successfully');
+        } else {
+          console.error('[BloomBeastsGame] battleState is null or undefined!');
+        }
+      } else {
+        Logger.warn('Mission is not available');
+      }
+    }
+
+    /**
+     * Handle settings changes
+     */
+    private handleSettingsChange(settingId: string, value: any): void {
+      console.log('[BloomBeastsGame] Settings changed:', settingId, value);
+      if (!this.playerData) return;
+      console.log('[BloomBeastsGame] Current soundSettings before change:', this.playerData.settings);
+
+      // Play button sound for toggles (not sliders)
+      if (settingId === 'musicEnabled' || settingId === 'sfxEnabled') {
+        this.playSfx('sfx-menu-button-select');
+      }
+
+      // Apply settings via sound manager
+      switch (settingId) {
+        case 'musicVolume':
+          console.log('[BloomBeastsGame] Matched case: musicVolume');
+          this.setMusicVolume(value);
+          break;
+        case 'sfxVolume':
+          console.log('[BloomBeastsGame] Matched case: sfxVolume');
+          this.setSfxVolume(value);
+          break;
+        case 'musicEnabled':
+          console.log('[BloomBeastsGame] Matched case: musicEnabled');
+          this.toggleMusic(value);
+          break;
+        case 'sfxEnabled':
+          console.log('[BloomBeastsGame] Matched case: sfxEnabled');
+          this.toggleSfx(value);
+          break;
+      }
+
+      console.log('[BloomBeastsGame] Current soundSettings after change:', this.playerData.settings);
+
+      // Save settings and update binding
+      this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
+      this.saveGameData();
+
+      // Trigger re-render to update UI
+      this.triggerRender();
+    }
+
+    /**
+     * Handle upgrade purchase
+     */
+    private handleUpgrade(boostId: string): void {
+      if (!this.playerData) return;
+
+      // Get current boost level
+      const currentLevel = this.playerData.boosts?.[boostId] || 0;
+
+      // Check if already at max level
+      if (currentLevel >= 6) {
+        console.log('[BloomBeastsGame] Boost already at max level:', boostId);
+        return;
+      }
+
+      // Get cost for next level based on current level
+      const costs = UPGRADE_COSTS[boostId];
+      if (!costs) {
+        console.log('[BloomBeastsGame] Unknown boost ID:', boostId);
+        return;
+      }
+
+      const cost = costs[currentLevel];
+
+      // Check if player has enough coins
+      if (this.playerData.coins < cost) {
+        console.log('[BloomBeastsGame] Not enough coins:', this.playerData.coins, 'need:', cost);
+        return;
+      }
+
+      // Deduct coins
+      this.playerData.coins -= cost;
+
+      // Initialize boosts if not present
+      if (!this.playerData.boosts) {
+        this.playerData.boosts = {
+          [COIN_BOOST.id]: 0,
+          [EXP_BOOST.id]: 0,
+          [LUCK_BOOST.id]: 0,
+          [ROOSTER.id]: 0
+        };
+      }
+
+      // Increment boost level
+      this.playerData.boosts[boostId] = currentLevel + 1;
+
+      console.log('[BloomBeastsGame] Upgraded boost:', boostId, 'to level', this.playerData.boosts[boostId], 'for', cost, 'coins');
+
+      // Play success sound
+      this.playSfx('sfx-menu-button-select');
+
+      // Save and update
+      this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
+      this.saveGameData();
+      this.triggerRender();
+    }
+
+    /**
+     * Handle battle actions
+     */
+    private async handleBattleAction(action: string): Promise<void> {
+      // Handle forfeit button - show confirmation popup
+      if (action === 'btn-forfeit' || action === 'forfeit') {
+        this.showForfeitConfirmation();
+        return;
+      }
+
+      // Handle back button - navigate to menu
+      if (action === 'btn-back') {
+        this.navigate('menu');
+        return;
+      }
+
+      // Process the action through the battle UI
+      if (!this.battleUI) {
+        Logger.warn('Battle UI not initialized');
+        return;
+      }
+
+      // Beast and opponent clicks are now just for viewing details (no selection)
+      if (action.startsWith('view-field-card-player-') || action.startsWith('view-field-card-opponent-')) {
+        // Just return - card details will be shown by the UI layer if needed
+        return;
+      }
+
+      // Play sound effects and show animations based on action type
+      if (action === 'auto-attack-all') {
+        // Handle auto-attack with animations
+        this.playSfx('sfx-attack');
+
+        // Process action with animation callback
+        await this.battleUI.processPlayerAction(action, {
+          onAttackAnimation: async (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => {
+            if (targetType === 'beast' && targetIndex !== undefined) {
+              await this.showAttackAnimation('player', attackerIndex, 'opponent', targetIndex);
+            } else {
+              await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
+            }
+          }
+        });
+
+        // Get updated state and render
+        const updatedState = this.battleUI.getCurrentBattle();
+        if (updatedState) {
+          if (updatedState.isComplete) {
+            await this.handleBattleComplete(updatedState);
+            return;
+          }
+
+          const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
+            updatedState,
+            null
+          );
+          if (updatedDisplay) {
+            this.UI.bindingManager.setBinding(BindingType.BattleDisplay, updatedDisplay);
+            this.triggerRender();
+          }
+        }
+        return;
+      } else if (action.startsWith('attack-beast-')) {
+        this.playSfx('sfx-attack');
+        // Animation already shown above
+      } else if (action.startsWith('attack-player-')) {
+        this.playSfx('sfx-attack');
+        // Extract attacker index and show animation for direct health attack
+        const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
+        await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
+      } else if (action.startsWith('play-card-')) {
+        this.playSfx('sfx-play-card');
+      } else if (action.startsWith('activate-trap-')) {
+        this.playSfx('sfx-trap-card-activated');
+      } else if (action === 'end-turn') {
+        this.playSfx('sfx-menu-button-select');
+      }
+
+      // Process action
+      await this.battleUI.processPlayerAction(action, {});
+
+      // Get updated battle state
+      const updatedState = this.battleUI.getCurrentBattle();
+      if (updatedState) {
+        // Check if battle ended FIRST - never render after completion
+        if (updatedState.isComplete) {
+          await this.handleBattleComplete(updatedState);
+          return;
+        }
+
+        // Create updated battle display with fresh state
+        const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
+          updatedState,
+          null  // No attack animation
+        );
+
+        // Update battle display binding - this should trigger UI refresh
+        if (updatedDisplay) {
+          // console.log('[BloomBeastsGame] Updating battle display with health:', {
+          //   playerHealth: updatedDisplay.playerHealth,
+          //   opponentHealth: updatedDisplay.opponentHealth
+          // });
+          this.UI.bindingManager.setBinding(BindingType.BattleDisplay, updatedDisplay);
+          this.triggerRender();
+        }
+      }
+    }
+
+    /**
+     * Handle battle completion (victory or defeat)
+     */
+    private async handleBattleComplete(battleState: any): Promise<void> {
+      // console.log('[BloomBeastsGame] Handling battle completion...');
+      if (!this.playerData) return;
+
+      // Capture playerData in local const for TypeScript null safety in callbacks
+      const playerData = this.playerData;
+
+      // Stop all timers immediately
+      if (this.battleScreen) {
+        this.battleScreen.cleanup();
+      }
+
+      // Keep battle visible in background while popup shows
+      // Battle display will be cleared when user clicks Continue
+      const battleId = this.currentBattleId; // Save before clearing
+      this.currentBattleId = null;
+
+      // console.log('[BloomBeastsGame] Battle complete, checking rewards:', {
+      //   hasRewards: !!battleState.rewards,
+      //   rewards: battleState.rewards
+      // });
+
+      if (battleState.rewards) {
+        // Victory!
+        // console.log('[BloomBeastsGame] Mission victory!', battleState.rewards);
+
+        // Apply boost multipliers to rewards
+        const coinBoostLevel = playerData.boosts?.[COIN_BOOST.id] || 0;
+        const expBoostLevel = playerData.boosts?.[EXP_BOOST.id] || 0;
+        const luckBoostLevel = playerData.boosts?.[LUCK_BOOST.id] || 0;
+
+        let coinBoostPercent = 0;
+        let expBoostPercent = 0;
+        let luckBoostPercent = 0;
+
+        // Calculate and apply coin boost
+        if (coinBoostLevel > 0 && COIN_BOOST.values && battleState.rewards.coinsReceived) {
+          coinBoostPercent = COIN_BOOST.values[coinBoostLevel - 1];
+          const multiplier = (coinBoostPercent / 100) + 1;
+          const boostedCoins = Math.floor(battleState.rewards.coinsReceived * multiplier);
+          battleState.rewards.coinsReceived = boostedCoins;
+        }
+
+        // Calculate and apply exp boost
+        if (expBoostLevel > 0 && EXP_BOOST.values) {
+          expBoostPercent = EXP_BOOST.values[expBoostLevel - 1];
+          const multiplier = (expBoostPercent / 100) + 1;
+          const boostedXP = Math.floor(battleState.rewards.xpGained * multiplier);
+          const boostedBeastXP = Math.floor(battleState.rewards.beastXP * multiplier);
+          battleState.rewards.xpGained = boostedXP;
+          battleState.rewards.beastXP = boostedBeastXP;
+        }
+
+        // Calculate luck boost (affects drop chances - already rolled, so no effect on this implementation)
+        if (luckBoostLevel > 0 && LUCK_BOOST.values) {
+          luckBoostPercent = LUCK_BOOST.values[luckBoostLevel - 1];
+          // Luck boost would affect drop chances, but rewards are already generated
+          // This is shown for informational purposes
+        }
+
+        // Add boost info to rewards for display
+        if (!battleState.rewards.bonusRewards) {
+          battleState.rewards.bonusRewards = [];
+        }
+        if (coinBoostPercent > 0) {
+          battleState.rewards.bonusRewards.push(`Coin Boost: +${coinBoostPercent}%`);
+        }
+        if (expBoostPercent > 0) {
+          battleState.rewards.bonusRewards.push(`EXP Boost: +${expBoostPercent}%`);
+        }
+        if (luckBoostPercent > 0) {
+          battleState.rewards.bonusRewards.push(`Luck Boost: +${luckBoostPercent}%`);
+        }
+
+        // Award XP
+        this.addXP(battleState.rewards.xpGained);
+
+        // Award card XP
+        const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
+        this.cardCollectionManager.awardDeckExperience(
+          cardXP,
+          playerData.cards.deck,
+          playerData.cards.collected
+        );
+
+        // Add cards to collection
+        battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
+          this.cardCollectionManager.addCardReward(card, playerData.cards.collected, index);
+        });
+
+        // Add coins
+        if (battleState.rewards.coinsReceived) {
+          playerData.coins += battleState.rewards.coinsReceived;
+        }
+
+        // Add items to inventory
+        if (battleState.rewards.itemsReceived) {
+          battleState.rewards.itemsReceived.forEach((itemReward: any) => {
+            this.addItems(itemReward.itemId, itemReward.quantity);
+          });
+        }
+
+        // Track mission completion
+        if (battleId) {
+          this.trackMissionCompletion(battleId);
+
+          // If this is Cluck Norris mission, submit time to leaderboard
+          if (battleId === 'mission17' && this.battleStartTime) {
+            const completionTime = (Date.now() - this.battleStartTime) / 1000; // Convert to seconds
+            this.submitLeaderboardScore('cluckNorris', completionTime);
+          }
+        }
+
+        // Reset battle start time
+        this.battleStartTime = null;
+
+        // Play win sound
+        this.playSfx('sfx-win');
+
+        // Save game data
+        await this.saveGameData();
+
+        // Show mission complete popup
+        // console.log('[BloomBeastsGame] Setting victory popup...');
+        const popupData = {
+          mission: battleState.mission,
+          rewards: battleState.rewards,
+          chestOpened: false,
+          onClaimRewards: () => {
+            // console.log('[BloomBeastsGame] Claim rewards clicked');
+            // Chest animation could go here
+            const current = this.UI.bindingManager.getSnapshot(BindingType.MissionCompletePopup);
+            if (current) {
+              const updatedData = {
+                ...current,
+                chestOpened: true
+              };
+              this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, updatedData);
+              // console.log('[BloomBeastsGame] Chest opened, triggering render');
+              this.triggerRender();
+            }
+          },
+          onContinue: () => {
+            // console.log('[BloomBeastsGame] Victory continue clicked');
+            // Clear battle display and close popup
+            this.UI.bindingManager.setBinding(BindingType.BattleDisplay, null);
+            this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, null);
+            this.navigate('missions');
+          },
+          playSfx: this.playSfx.bind(this)
+        };
+
+        // Set both tracked value and binding
+        this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, popupData);
+        // console.log('[BloomBeastsGame] Victory popup set');
+        this.triggerRender();
+        // console.log('[BloomBeastsGame] Render triggered after victory popup');
+      } else {
+        // Defeat
+        // console.log('[BloomBeastsGame] Mission failed!');
+
+        // Reset battle start time
+        this.battleStartTime = null;
+
+        // Play lose sound
+        this.playSfx('sfx-lose');
+
+        // Show mission failed popup
+        const failedPopupProps = {
+          mission: battleState.mission,
+          rewards: null, // null indicates failure
+          chestOpened: false,
+          onContinue: () => {
+            // Clear battle display and close popup
+            this.UI.bindingManager.setBinding(BindingType.BattleDisplay, null);
+            this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, null);
+            this.navigate('missions');
+          },
+          playSfx: this.playSfx.bind(this)
+        };
+        // console.log('[BloomBeastsGame] Setting mission failed popup:', failedPopupProps);
+        this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, failedPopupProps);
+        // console.log('[BloomBeastsGame] After set, mission failed popup set');
+        this.triggerRender();
+        // console.log('[BloomBeastsGame] Render triggered after mission failed');
+      }
+
+      // Resume background music
+      this.playMusic('music-background', true);
+
+      // Note: Navigation happens when user clicks Continue in the popup
+    }
+
+    /**
+     * Load leaderboard data from world variables
+     */
+    private loadLeaderboardData(): void {
+      if (!this.platform.getWorldVariable) {
+        // World variables not supported on this platform, use mock data
+        this.UI.bindingManager.setBinding(BindingType.LeaderboardData, {
+          topExperience: [
+            { playerName: 'Player 1', score: 10000, level: 7 },
+            { playerName: 'Player 2', score: 5000, level: 6 },
+            { playerName: 'Player 3', score: 3000, level: 5 },
+          ],
+          fastestCluckNorris: [
+            { playerName: 'Speed Runner', score: 45 },
+            { playerName: 'Fast Player', score: 60 },
+            { playerName: 'Quick Win', score: 75 },
+          ],
+        });
+        return;
+      }
+
+      try {
+        // Get leaderboard data from world variable
+        const leaderboardData = this.platform.getWorldVariable('BloomBeastsData', 'leaderboard');
+
+        if (leaderboardData) {
+          this.UI.bindingManager.setBinding(BindingType.LeaderboardData, leaderboardData);
+        } else {
+          // No data yet, set empty arrays
+          this.UI.bindingManager.setBinding(BindingType.LeaderboardData, {
+            topExperience: [],
+            fastestCluckNorris: [],
+          });
+        }
+      } catch (error) {
+        console.error('[BloomBeastsGame] Failed to load leaderboard data:', error);
+        this.UI.bindingManager.setBinding(BindingType.LeaderboardData, {
+          topExperience: [],
+          fastestCluckNorris: [],
+        });
+      }
+    }
+
+    /**
+     * Submit player score to leaderboard via network event
+     */
+    private submitLeaderboardScore(type: 'experience' | 'cluckNorris', score: number): void {
+      if (!this.platform.sendNetworkEvent) {
+        // Network events not supported on this platform
+        console.log('[BloomBeastsGame] Network events not supported, skipping leaderboard submission');
+        return;
+      }
+
+      if (!this.playerData) {
+        console.warn('[BloomBeastsGame] Cannot submit score: player data not loaded');
+        return;
+      }
+
+      try {
+        const playerName = this.playerData.name || 'Unknown Player';
+        const eventData = {
+          playerName,
+          type,
+          score,
+          level: type === 'experience' ? getPlayerLevel(this.playerData.totalXP) : undefined,
+        };
+
+        this.platform.sendNetworkEvent('leaderboard_score_submit', eventData);
+        console.log('[BloomBeastsGame] Submitted leaderboard score:', eventData);
+      } catch (error) {
+        console.error('[BloomBeastsGame] Failed to submit leaderboard score:', error);
+      }
+    }
+
+    /**
+     * Create the main UI tree
+     * This is created once and updated reactively via bindings
+     */
+    private createUI(): UINode {
+      const { View } = this.UI;
+
+      // Build main UI with conditional screens
+      const children: any[] = [
+        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'loading'), this.createLoadingScreen()) : null,
+        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'menu'), this.menuScreen.createUI()) : null,
+        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'cards'), this.cardsScreen.createUI()) : null,
+        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'upgrades'), this.upgradeScreen.createUI()) : null,
+        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'missions'), this.missionScreen.createUI()) : null,
+        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'battle'), this.battleScreen.createUI()) : null,
+        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'settings'), this.settingsScreen.createUI()) : null,
+        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'leaderboard'), this.leaderboardScreen.createUI()) : null,
+      ];
+
+      // Add popups (these already use UINode.if)
+      if (this.UI.UINode) {
+        children.push(
+          this.UI.UINode.if(
+            this.UI.bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+              return props !== null;
+            }),
+            createMissionCompletePopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.MissionCompletePopup) || {
+              mission: {
+                id: 'fallback-mission',
+                name: 'Loading...',
+                affinity: 'Forest'
+              },
+              rewards: null,
+              chestOpened: false,
+              onContinue: () => {},
+              playSfx: this.playSfx.bind(this)
+            })
+          )
+        );
+      }
+
+      if (this.UI.UINode) {
+        children.push(
+          this.UI.UINode.if(
+            this.UI.bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+              return props !== null;
+            }),
+            createButtonPopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.ForfeitPopup) || {
+              title: '',
+              message: '',
+              buttons: [],
+              playSfx: this.playSfx.bind(this)
+            })
+          )
+        );
+      }
+
+      if (this.UI.UINode) {
+        children.push(
+          this.UI.UINode.if(
+            this.UI.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+              return props !== null;
+            }),
+            createCardDetailPopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.CardDetailPopup) || {
+              cardDetail: {
+                card: {
+                  id: null, // No ID so CardRenderer returns null for images
+                  name: '',
+                  type: 'Bloom',
+                  level: 1,
+                  experience: 0,
+                  count: 0,
+                  description: ''
+                },
+                buttons: [],
+                isInDeck: false
+              },
+              onButtonClick: () => {},
+              playSfx: this.playSfx.bind(this)
+            })
+          )
+        );
+      }
+
+      return View({
+        style: {
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'blue',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        },
+        children: [
+          // Inner container with aspect ratio that scales content
+          View({
+            style: {
+              width: '100%',
+              height: '100%',
+              position: 'relative',
+              aspectRatio: `${gameDimensions.panelWidth}/${gameDimensions.panelHeight}`
+            },
+            children,
+          })
+        ],
+      });
+    }
+
+    /**
+     * Create the loading screen UI
+     */
+    private createLoadingScreen(): UINode {
+      const { View } = this.UI;
+
+      return View({
+        style: {
+          flex: 1,
+          backgroundColor: '#1a1a2e', // Dark background as fallback
+        },
+        children: [
+          // Note: Background image removed since assets aren't loaded during initialization
+          // The loading screen is only shown briefly before assets load anyway
+
+          // Loading text centered
+          View({
+            style: {
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+            },
+            children: this.UI.Text({
+              text: 'Loading...',
+              style: {
+                fontSize: 32,
+                color: '#ffffff',
+                fontWeight: 'bold',
+                textShadowColor: '#000000',
+                textShadowOffset: { width: 2, height: 2 },
+                textShadowRadius: 4,
+              }
+            })
+          })
+        ]
+      });
+    }
+
+
+    /**
+     * Show attack animation
+     */
+    private async showAttackAnimation(
+      attackerPlayer: 'player' | 'opponent',
+      attackerIndex: number,
+      targetPlayer: 'player' | 'opponent' | 'health',
+      targetIndex?: number
+    ): Promise<void> {
+      const currentState = this.battleUI.getCurrentBattle();
+      if (!currentState) return;
+
+      // Show animation (attacker glows green, target glows red)
+      const displayWithAnimation = this.battleDisplayManager.createBattleDisplay(
+        currentState,
+        {
+          attackerPlayer,
+          attackerIndex,
+          targetPlayer,
+          targetIndex
+        }
+      );
+
+      if (displayWithAnimation) {
+        this.UI.bindingManager.setBinding(BindingType.BattleDisplay, displayWithAnimation);
+        this.triggerRender();
+      }
+
+      // Wait for animation duration
+      await new Promise(resolve => this.asyncMethods.setTimeout(resolve, 500));
+
+      // Clear animation
+      const displayWithoutAnimation = this.battleDisplayManager.createBattleDisplay(
+        currentState,
+        null  // No animation
+      );
+
+      if (displayWithoutAnimation) {
+        this.UI.bindingManager.setBinding(BindingType.BattleDisplay, displayWithoutAnimation);
+        this.triggerRender();
+      }
+    }
+
+    /**
+     * Dispose resources
+     */
+    dispose(): void {
+      this.menuScreen.dispose();
+      // TODO: Dispose other resources
+    }
+  }
+
+  // ==================== bloombeasts\utils\createDefaultPlayerData.ts ====================
+
+  /**
+   * Utility to create default PlayerData structure
+   * Used by platforms when initializing new players
+   */
+
+
+  /**
+   * Create default player data structure
+   * @param name - Player's display name
+   * @returns Default PlayerData with the given name
+   */
+  export function createDefaultPlayerData(name: string): PlayerData {
+    return {
+      name: name,
+      totalXP: 0,
+      coins: 1000, // Starting coins
+      items: [],
+      cards: {
+        collected: [],
+        deck: []
+      },
+      missions: {
+        completedMissions: {}
+      },
+      boosts: {
+        [COIN_BOOST.id]: 0,
+        [EXP_BOOST.id]: 0,
+        [LUCK_BOOST.id]: 0,
+        [ROOSTER.id]: 0
+      },
+      settings: {
+        musicVolume: 10,
+        sfxVolume: 50,
+        musicEnabled: true,
+        sfxEnabled: true
+      }
+    };
+  }
+
   // ==================== bloombeasts\AssetCatalogManager.ts ====================
 
   /**
@@ -10492,7 +18779,7 @@ namespace BloomBeasts {
     id: string;
     type: 'beast' | 'buff' | 'trap' | 'magic' | 'habitat';
     cardType?: 'Bloom' | 'Magic' | 'Trap' | 'Buff'; // Game engine card type
-    affinity?: 'fire' | 'forest' | 'sky' | 'water'; // For beasts and habitats
+    affinity?: 'fire' | 'forest' | 'sky' | 'water' | 'boss'; // For beasts and habitats
     data: {
       id: string;
       name: string;
@@ -10512,7 +18799,6 @@ namespace BloomBeasts {
     id: string;
     type: 'mission';
     affinity?: 'fire' | 'forest' | 'sky' | 'water' | 'boss';
-    missionNumber: number;
     name: string;
     description: string;
     assets: AssetReference[];
@@ -10521,7 +18807,7 @@ namespace BloomBeasts {
   export interface UIAssetEntry {
     id: string;
     type: 'ui';
-    category: 'frame' | 'button' | 'background' | 'icon' | 'chest' | 'container' | 'card-template' | 'other';
+    category: 'frame' | 'button' | 'background' | 'icon' | 'chest' | 'container' | 'card-template' | 'upgrade' | 'other';
     name: string;
     description?: string;
     assets: AssetReference[];
@@ -10529,7 +18815,7 @@ namespace BloomBeasts {
 
   export interface AssetCatalog {
     version: string;
-    category: 'fire' | 'forest' | 'sky' | 'water' | 'buff' | 'trap' | 'magic' | 'common';
+    category: 'fire' | 'forest' | 'sky' | 'water' | 'buff' | 'trap' | 'magic' | 'common' | 'boss';
     description: string;
     data: (CardAssetEntry | MissionAssetEntry | UIAssetEntry)[];
   }
@@ -10785,8346 +19071,107 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\styles\colors.ts ====================
+  // ==================== bloombeasts\catalogs\bossAssets.ts ====================
 
   /**
-   * Shared color palette for BloomBeasts
-   * Used across both Web and Horizon platforms
-   */
-
-  export const COLORS = {
-    // Primary colors
-    background: '#1a1a2e',
-    backgroundDark: '#0f0f1e',
-    primary: '#00d9ff',
-    primaryLight: '#3498db',
-
-    // Text colors
-    textPrimary: '#ffffff',
-    textSecondary: '#aaaaaa',
-    textMuted: '#666666',
-
-    // UI element colors
-    buttonPrimary: '#3498db',
-    buttonDanger: '#e74c3c',
-    buttonSuccess: '#27ae60',
-    buttonDisabled: '#555555',
-    surface: '#2c3e50',
-    disabled: '#555555',
-    error: '#e74c3c',
-
-    // Card/Panel colors
-    cardBackground: '#2c3e50',
-    panelBackground: '#1a1a1a',
-    overlayBackground: 'rgba(0, 0, 0, 0.8)',
-    overlayBackgroundDark: 'rgba(0, 0, 0, 0.9)',
-
-    // Borders
-    borderPrimary: '#00d9ff',
-    borderSuccess: '#27ae60',
-    borderDefault: '#3498db',
-    border: '#3a3a4a',
-
-    // Affinity colors
-    affinity: {
-      fire: '#e74c3c',
-      water: '#3498db',
-      forest: '#27ae60',
-      sky: '#9b59b6',
-      neutral: '#95a5a6',
-    },
-
-    // Status colors
-    success: '#27ae60',
-    warning: '#f39c12',
-    danger: '#e74c3c',
-    info: '#3498db',
-
-    // Rarity colors (for cards)
-    rarity: {
-      common: '#95a5a6',
-      uncommon: '#27ae60',
-      rare: '#3498db',
-      epic: '#9b59b6',
-      legendary: '#f39c12',
-    },
-  } as const;
-
-  // ==================== bloombeasts\ui\styles\dimensions.ts ====================
-
-  /**
-   * Shared dimensions and spacing for BloomBeasts
-   * Used across both Web and Horizon platforms
-   */
-
-  export const DIMENSIONS = {
-    // Panel/Screen dimensions
-    panel: {
-      width: 1280,
-      height: 720,
-    },
-
-    // Button dimensions
-    button: {
-      height: 50,
-      minWidth: 200,
-      padding: 15,
-      borderRadius: 10,
-    },
-
-    buttonSmall: {
-      height: 40,
-      minWidth: 100,
-      padding: 10,
-      borderRadius: 8,
-    },
-
-    // Card dimensions
-    card: {
-      width: 150,
-      height: 200,
-      borderRadius: 10,
-      borderWidth: 2,
-      padding: 10,
-    },
-
-    // Mission card dimensions
-    missionCard: {
-      padding: 15,
-      borderRadius: 10,
-      borderWidth: 2,
-      minHeight: 80,
-    },
-
-    // Dialog/Modal dimensions
-    dialog: {
-      minWidth: 400,
-      maxWidth: 600,
-      padding: 30,
-      borderRadius: 15,
-    },
-
-    // Spacing scale
-    spacing: {
-      xs: 5,
-      sm: 10,
-      md: 15,
-      lg: 20,
-      xl: 30,
-      xxl: 40,
-    },
-
-    // Font sizes
-    fontSize: {
-      xs: 12,
-      sm: 14,
-      md: 18,
-      lg: 20,
-      xl: 24,
-      xxl: 28,
-      title: 36,
-      hero: 72,
-    },
-
-    // Border widths
-    borderWidth: {
-      thin: 1,
-      normal: 2,
-      thick: 3,
-    },
-
-    // Stat badge dimensions
-    statBadge: {
-      padding: 10,
-      borderRadius: 8,
-      borderWidth: 2,
-    },
-  } as const;
-
-  /**
-   * Common gaps for flexbox layouts
-   */
-  export const GAPS = {
-    cards: 15,
-    buttons: 15,
-    missions: 10,
-    stats: 20,
-    sections: 30,
-  } as const;
-
-  // ==================== bloombeasts\ui\constants\dimensions.ts ====================
-
-  // Multi-use card dimensions
-  export const standardCardDimensions = {
-    width: 210,
-    height: 280,
-  };
-
-  export const missionCompleteCardDimensions = {
-    width: 550,
-    height: 330,
-  };
-
-  export const chestImageMissionCompleteDimensions = {
-    width: 160,
-    height: 180,
-  };
-
-  // Multi-use button dimensions
-  export const sideMenuButtonDimensions = {
-    width: 105,
-    height: 36,
-  };
-
-  export const longButtonDimensions = {
-    width: 201,
-    height: 35,
-  };
-
-  // ==================== bloombeasts\ui\screens\ScreenUtils.ts ====================
-
-  /**
-   * Utilities for screen components
-   * Provides type-safe ways to work with dynamic UI components
+   * Boss Assets Catalog
+   * Source of truth for boss cards and assets
+   * Edit this file directly to add/modify boss assets
    */
 
 
-  /**
-   * Type annotation for UINode - since UINode is dynamically loaded, we use 'any' type
-   */
-  export type UINodeType<T = any> = any;
-
-  /**
-   * Extend CardDisplayData with additional UI properties
-   * These are properties used in the UI but not in the core game model
-   */
-  export interface UICardDisplay extends CardDisplayData {
-    // Add emoji based on affinity
-    emoji?: string;
-    // Use level as rarity indicator
-    rarityLevel?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-    // Map attack/defense/health for display
-    attack?: number;
-    defense?: number;
-    health?: number;
-  }
-
-  /**
-   * Convert CardDisplayData to UICardDisplay with additional UI properties
-   */
-  export function toUICard(card: CardDisplayData): UICardDisplay {
-    const uiCard: UICardDisplay = {
-      ...card,
-      attack: card.baseAttack || 0,
-      defense: 0, // Not in CardDisplayData - using 0 as default
-      health: card.baseHealth || 0,
-      emoji: getCardEmoji(card),
-      rarityLevel: getCardRarity(card)
-    };
-    return uiCard;
-  }
-
-  /**
-   * Get emoji based on card affinity
-   */
-  function getCardEmoji(card: CardDisplayData): string {
-    switch (card.affinity?.toLowerCase()) {
-      case 'fire':
-        return '🔥';
-      case 'water':
-        return '💧';
-      case 'forest':
-        return '🌿';
-      case 'sky':
-        return '☁️';
-      default:
-        return '✨';
-    }
-  }
-
-  /**
-   * Determine rarity based on card level
-   */
-  function getCardRarity(card: CardDisplayData): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
-    const level = card.level || 1;
-    if (level >= 10) return 'legendary';
-    if (level >= 7) return 'epic';
-    if (level >= 5) return 'rare';
-    if (level >= 3) return 'uncommon';
-    return 'common';
-  }
-
-  /**
-   * Extend MissionDisplay with UI properties
-   */
-  export interface UIMissionDisplay {
-    id: string;
-    name: string;
-    level: number;
-    difficulty: string;
-    isAvailable: boolean;
-    isCompleted: boolean;
-    description: string;
-    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
-    beastId?: string;
-    // Additional UI properties
-    progress?: number;
-    requirement?: number;
-    rewards?: {
-      tokens?: number;
-      diamonds?: number;
-    };
-  }
-
-  // ==================== bloombeasts\ui\constants\positions.ts ====================
-
-  // Type definitions
-  export interface SimplePosition {
-    x: number;
-    y: number;
-  }
-
-  interface PlayerCardPositions {
-    beastOne: SimplePosition;
-    beastTwo: SimplePosition;
-    beastThree: SimplePosition;
-    buffOne: SimplePosition;
-    buffTwo: SimplePosition;
-    trapOne: SimplePosition;
-    trapTwo: SimplePosition;
-    trapThree: SimplePosition;
-    health: SimplePosition;
-  }
-
-  interface CardTextInfo extends SimplePosition {
-    size: number;
-    textAlign?: 'left' | 'right' | 'center' | 'start' | 'end';
-    textBaseline?: 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom';
-  }
-
-  export interface CardTextPositions {
-    cost: CardTextInfo;
-    affinity: SimplePosition;
-    level: CardTextInfo;
-    experienceBar: SimplePosition;
-    name: CardTextInfo;
-    ability: CardTextInfo;
-    attack: CardTextInfo;
-    health: CardTextInfo;
-    beastImage: SimplePosition;
-    icons: {
-      attack: CardTextInfo;
-      ability: CardTextInfo;
-    };
-  }
-
-  export interface UIButtonPositions {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    spacing: number;
-  }
-
-  export interface UITextSafeZone {
-    x: number;
-    y: number;
-    lineHeight: number;
-  }
-
-  export interface SideMenuPositions {
-    x: number;
-    y: number;
-    headerStartPosition: SimplePosition;
-    textStartPosition: SimplePosition;
-    buttonStartPosition: SimplePosition;
-    playerName: CardTextInfo;
-    playerLevel: CardTextInfo;
-    playerExperienceBar: SimplePosition & { maxWidth: number };
-  }
-
-  export interface BattleBoardAssetPositions {
-    playerOne: PlayerCardPositions;
-    playOneInfoPosition: SimplePosition;
-    playerTwo: PlayerCardPositions;
-    playerTwoInfoPosition: SimplePosition;
-    habitatZone: SimplePosition;
-    cardTextPositions: CardTextPositions;
-  }
-
-
-  /**
-   * Safe zone for UI buttons and interactive elements
-   * This position ensures elements won't be covered by platform-specific UI (status bars, navigation, etc.)
-   */
-  export const uiSafeZoneButtons: UIButtonPositions = {
-    x: 1149,
-    y: 131,
-    width: DIMENSIONS.button.minWidth,
-    height: DIMENSIONS.button.height,
-    spacing: DIMENSIONS.spacing.xxl * 2, // Vertical spacing between stacked buttons
-  };
-
-  /**
-   * Safe zone for text display (titles, counters, etc.)
-   * This area is safe for displaying informational text
-   */
-  export const uiSafeZoneText: UITextSafeZone = {
-    x: 1152,
-    y: 407,
-    lineHeight: DIMENSIONS.spacing.xl, // Vertical spacing between lines of text
-  };
-
-  /**
-   * Side menu positions
-   * The side menu contains player info, text, and buttons
-   */
-  export const sideMenuPositions: SideMenuPositions = {
-    x: 1145,
-    y: 128,
-    headerStartPosition: { x: 1156, y: 139 },
-    textStartPosition: { x: 1162, y: 188 },
-    buttonStartPosition: { x: 1156, y: 369 },
-    playerName: { x: 10, y: 426, textAlign: 'left', textBaseline: 'top', size: DIMENSIONS.fontSize.sm },
-    playerLevel: { x: 64, y: 445, textAlign: 'center', textBaseline: 'top', size: DIMENSIONS.fontSize.xs },
-    playerExperienceBar: { x: 9, y: 445, maxWidth: 109 },
-  };
-
-  /**
-   * Mission complete popup card positions
-   */
-  export const missionCompleteCardPositions = {
-    title: { x: 275, y: 24, size: DIMENSIONS.fontSize.title, textAlign: 'center', textBaseline: 'top' },
-    chestImage: { x: 73, y: 76 },
-    infoText: { x: 245, y: 98, size: DIMENSIONS.fontSize.sm, textAlign: 'left', textBaseline: 'top' },
-    claimRewardButton: { x: 175, y: 271 },
-  };
-
-  // ==================== bloombeasts\ui\screens\common\SideMenu.ts ====================
-
-  /**
-   * Common Side Menu Component
-   * Shared sidebar used across all unified screens (Horizon & Web)
-   */
-
-
-  // SideMenu-specific constants
-  const sideMenuDimensions = {
-    width: 127,
-    height: 465,
-  };
-
-  export interface SideMenuButton {
-      label: string | ValueBindingBase<string>;
-      onClick: () => void;
-      disabled?: boolean | ValueBindingBase<boolean>;
-      yOffset?: number; // Vertical offset from buttonStartPosition
-  }
-
-  export interface SideMenuConfig {
-      /** Title text displayed at headerStartPosition */
-      title?: string | ValueBindingBase<string>;
-      /** Custom content items to display at textStartPosition */
-      customTextContent?: UINodeType[];
-      /** Buttons to display at buttonStartPosition */
-      buttons?: SideMenuButton[];
-      /** Bottom button at headerStartPosition */
-      bottomButton?: SideMenuButton;
-      /** PlayerData binding for deriving player info */
-      playerDataBinding?: any;
-      /** Stats binding for player info (deprecated - use playerDataBinding) */
-      stats?: ValueBindingBase<MenuStats | null> | any;
-      /** Callback for XP bar click */
-      onXPBarClick?: (title: string, message: string) => void;
-  }
-
-  /**
-   * Create a common sidebar used across all screens
-   */
-  export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UINodeType {
-      const children: UINodeType[] = [];
-
-      // Calculate positions relative to sidebar origin (using sideMenuPositions)
-      const headerRelativeX = sideMenuPositions.headerStartPosition.x - sideMenuPositions.x;
-      const headerRelativeY = sideMenuPositions.headerStartPosition.y - sideMenuPositions.y;
-      const textRelativeX = sideMenuPositions.textStartPosition.x - sideMenuPositions.x;
-      const textRelativeY = sideMenuPositions.textStartPosition.y - sideMenuPositions.y;
-      const buttonRelativeX = sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x;
-      const buttonRelativeY = sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y;
-
-      // Title at headerStartPosition (if provided)
-      if (config.title) {
-          children.push(
-              ui.View({
-                  style: {
-                      position: 'absolute',
-                      left: headerRelativeX,
-                      top: headerRelativeY,
-                  },
-                  children: ui.Text({
-                      text: typeof config.title === 'string' ? new ui.Binding(config.title) : config.title,
-                      style: {
-                          fontSize: DIMENSIONS.fontSize.md,
-                          color: COLORS.textPrimary,
-                          fontWeight: 'bold',
-                      },
-                  }),
-              })
-          );
-      }
-
-      // Custom text content at textStartPosition
-      if (config.customTextContent && config.customTextContent.length > 0) {
-          children.push(
-              ui.View({
-                  style: {
-                      position: 'absolute',
-                      left: textRelativeX,
-                      top: textRelativeY,
-                      flexDirection: 'column',
-                  },
-                  children: config.customTextContent,
-              })
-          );
-      }
-
-      // Buttons at buttonStartPosition
-      if (config.buttons && config.buttons.length > 0) {
-          children.push(
-              ui.View({
-                  style: {
-                      position: 'absolute',
-                      left: buttonRelativeX,
-                      top: buttonRelativeY,
-                      flexDirection: 'column',
-                  },
-                  children: config.buttons.map(button =>
-                      createSideMenuButton(
-                          ui,
-                          button.label,
-                          0,
-                          button.yOffset !== undefined ? button.yOffset : 0,
-                          button.onClick,
-                          button.disabled
-                      )
-                  ),
-              })
-          );
-      }
-
-      // Player info at bottom of sidebar (aligned to bottom like web deployment)
-      children.push(
-          ui.View({
-              style: {
-                  position: 'absolute',
-                  left: 0,
-                  top: sideMenuDimensions.height - 40,
-                  width: sideMenuDimensions.width,
-                  height: 50,
-              },
-              children: createPlayerInfo(ui, config.playerDataBinding, config.stats, config.onXPBarClick),
-          })
-      );
-
-      // Bottom button (if provided, at headerStartPosition)
-      if (config.bottomButton) {
-          children.push(
-              createSideMenuButton(
-                  ui,
-                  config.bottomButton.label,
-                  headerRelativeX,
-                  headerRelativeY,
-                  config.bottomButton.onClick,
-                  config.bottomButton.disabled
-              )
-          );
-      }
-
-      return ui.View({
-          style: {
-              position: 'absolute',
-              left: sideMenuPositions.x,
-              top: sideMenuPositions.y,
-              width: sideMenuDimensions.width,
-              height: sideMenuDimensions.height,
-              flexDirection: 'column',
-          },
-          children: [
-              // Sidebar background image
-              ui.Image({
-                  source: ui.Binding.derive(
-                      [ui.assetsLoadedBinding],
-                      (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('side-menu') : null
-                  ),
-                  style: {
-                      position: 'absolute',
-                      width: sideMenuDimensions.width,
-                      height: sideMenuDimensions.height,
-                      top: 0,
-                      left: 0,
-                  },
-              }),
-              // Sidebar content
-              ...children,
-          ],
-      });
-  }
-
-  /**
-   * Create a side menu button with image background
-   */
-  function createSideMenuButton(
-      ui: UIMethodMappings,
-      label: string | ValueBindingBase<string>,
-      x: number,
-      y: number,
-      onClick: () => void,
-      disabled?: boolean | ValueBindingBase<boolean>
-  ): UINodeType {
-      const labelBinding = typeof label === 'string' ? new ui.Binding(label) : label;
-      const disabledValue = typeof disabled === 'boolean' ? disabled : false;
-      const disabledBinding = typeof disabled === 'object' && 'get' in disabled ? disabled : undefined;
-
-      // Create hover state binding for opacity effect
-      const hoverBinding = new ui.Binding(false);
-
-      // Calculate opacity based on hover and disabled state (reactive to binding if present)
-      const opacityBinding = disabledBinding
-          ? ui.Binding.derive(
-              [hoverBinding, disabledBinding],
-              (isHovered: boolean, isDisabled: boolean) => {
-                  if (isDisabled) return 0.5;
-                  return isHovered ? 0.8 : 1.0;
-              }
-          )
-          : ui.Binding.derive(
-              [hoverBinding],
-              (isHovered: boolean) => {
-                  if (disabledValue) return 0.5;
-                  return isHovered ? 0.8 : 1.0;
-              }
-          );
-
-      return ui.Pressable({
-          onClick: onClick,
-          disabled: disabledBinding || disabledValue,
-          onHoverIn: () => {
-              if (!disabledValue) {
-                  hoverBinding.set(true);
-              }
-          },
-          onHoverOut: () => {
-              hoverBinding.set(false);
-          },
-          style: {
-              position: 'absolute',
-              left: x,
-              top: y,
-              width: sideMenuButtonDimensions.width,
-              height: sideMenuButtonDimensions.height,
-          },
-          children: [
-              // Button background image
-              ui.Image({
-                  source: ui.Binding.derive(
-                      [ui.assetsLoadedBinding],
-                      (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('standard-button') : null
-                  ),
-                  style: {
-                      position: 'absolute',
-                      width: sideMenuButtonDimensions.width,
-                      height: sideMenuButtonDimensions.height,
-                      opacity: opacityBinding,
-                  },
-              }),
-              // Button text centered
-              ui.View({
-                  style: {
-                      position: 'absolute',
-                      width: sideMenuButtonDimensions.width,
-                      height: sideMenuButtonDimensions.height,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                  },
-                  children: ui.Text({
-                      text: labelBinding,
-                      style: {
-                          fontSize: DIMENSIONS.fontSize.md,
-                          color: disabledBinding
-                              ? ui.Binding.derive(
-                                  [disabledBinding],
-                                  (isDisabled: boolean) => isDisabled ? '#888' : COLORS.textPrimary
-                              )
-                              : (disabledValue ? '#888' : COLORS.textPrimary),
-                          textAlign: 'center',
-                          fontWeight: 'bold',
-                          textAlignVertical: 'center',
-                      },
-                  }),
-              }),
-          ],
-      });
-  }
-
-  /**
-   * Create player info display (name, level, XP bar)
-   * Positioned using sideMenuPositions
-   */
-  function createPlayerInfo(
-      ui: UIMethodMappings,
-      playerDataBinding: any | undefined,
-      stats: ValueBindingBase<MenuStats | null> | any | undefined,
-      onXPBarClick?: (title: string, message: string) => void
-  ): UINodeType {
-      // Helper to get item quantity
-      const getItemQuantity = (items: any[], itemId: string) => {
-          const item = items?.find((i: any) => i.itemId === itemId);
-          return item ? item.quantity : 0;
-      };
-
-      // Helper to extract MenuStats from PlayerData
-      const extractStats = (pd: any): MenuStats | null => {
-          if (!pd) return null;
-          return {
-              playerLevel: pd.playerLevel || 1,
-              totalXP: pd.totalXP || 0,
-              tokens: getItemQuantity(pd.items || [], 'token'),
-              diamonds: getItemQuantity(pd.items || [], 'diamond'),
-              serums: getItemQuantity(pd.items || [], 'serum'),
-          };
-      };
-
-      // Use playerDataBinding if provided, otherwise use stats
-      // Derive directly from the source binding to avoid nesting
-      const sourceBinding = playerDataBinding || stats;
-
-      // Create derived bindings for reactive values (Horizon best practice)
-      // Derive final values directly from base binding to avoid chaining
-      const xpWidthBinding = sourceBinding.derive((data: any) => {
-          const statsVal = playerDataBinding ? extractStats(data) : data;
-          if (!statsVal) return '0%';
-          const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
-          const currentLevel = statsVal.playerLevel;
-          const totalXP = statsVal.totalXP;
-          const xpForCurrentLevel = xpThresholds[currentLevel - 1];
-          const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
-          const currentXP = totalXP - xpForCurrentLevel;
-          const xpNeeded = xpForNextLevel - xpForCurrentLevel;
-          const xpPercent = Math.min(100, (currentXP / xpNeeded) * 100);
-          return `${xpPercent}%`;
-      });
-
-      const levelTextBinding = sourceBinding.derive((data: any) => {
-          const statsVal = playerDataBinding ? extractStats(data) : data;
-          return statsVal ? `${statsVal.playerLevel}` : '1';
-      });
-
-      return ui.View({
-          style: {
-              position: 'relative',
-          },
-          children: [
-              // Player name
-              ui.View({
-                  style: {
-                      position: 'absolute',
-                      left: sideMenuPositions.playerName.x,
-                      top: 0,
-                  },
-                  children: ui.Text({
-                      text: new ui.Binding('Player'),
-                      style: {
-                          fontSize: sideMenuPositions.playerName.size,
-                          color: COLORS.textPrimary,
-                          textAlign: sideMenuPositions.playerName.textAlign as any,
-                      },
-                  }),
-              }),
-
-              // XP Bar
-              ui.View({
-                  style: {
-                      position: 'absolute',
-                      left: sideMenuPositions.playerExperienceBar.x,
-                      top: 19, // Offset from player name
-                      width: sideMenuPositions.playerExperienceBar.maxWidth,
-                      height: 11,
-                  },
-                  children: (() => {
-                      // Create a variable to hold the current stats value
-                      let currentStats: MenuStats | null = null;
-
-                      // Use a derived binding to keep currentStats updated
-                      // This binding is used in the XP width calculation, so it will be evaluated
-                      const xpWidthWithTracking = ui.Binding.derive(
-                          [sourceBinding],
-                          (data: any) => {
-                              const statsVal = playerDataBinding ? extractStats(data) : data;
-                              currentStats = statsVal; // Track the current value
-                              if (!statsVal) return 0;
-                              const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
-                              const currentLevel = statsVal.playerLevel;
-                              const totalXP = statsVal.totalXP;
-                              const xpForCurrentLevel = xpThresholds[currentLevel - 1];
-                              const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
-                              const currentXP = totalXP - xpForCurrentLevel;
-                              const xpNeeded = xpForNextLevel - xpForCurrentLevel;
-                              const progress = xpNeeded > 0 ? (currentXP / xpNeeded) : 1;
-                              return Math.round(progress * sideMenuPositions.playerExperienceBar.maxWidth);
-                          }
-                      );
-
-                      return ui.Pressable({
-                          onClick: () => {
-                              if (onXPBarClick && currentStats) {
-                                  const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
-                                  const currentLevel = currentStats.playerLevel;
-                                  const totalXP = currentStats.totalXP;
-                                  const xpForCurrentLevel = xpThresholds[currentLevel - 1];
-                                  const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
-                                  const currentXP = totalXP - xpForCurrentLevel;
-                                  const xpNeeded = xpForNextLevel - xpForCurrentLevel;
-                                  const title = `Level ${currentLevel}`;
-                                  const message = `Current XP: ${currentXP} / ${xpNeeded}\n\nTotal XP: ${totalXP}`;
-                                  onXPBarClick(title, message);
-                              }
-                          },
-                          style: {
-                              width: '100%',
-                              height: '100%',
-                          },
-                          children: ui.Image({
-                              source: ui.Binding.derive(
-                                  [ui.assetsLoadedBinding],
-                                  (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('experience-bar') : null
-                              ),
-                              style: {
-                                  width: xpWidthWithTracking,
-                                  height: 11,
-                              },
-                          }),
-                      });
-                  })(),
-              }),
-
-              // Level text (centered on XP bar)
-              ui.View({
-                  style: {
-                      position: 'absolute',
-                      left: sideMenuPositions.playerLevel.x,
-                      top: 19,
-                      width: 20,
-                      height: 11,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                  },
-                  children: ui.Text({
-                      text: levelTextBinding,
-                      style: {
-                          fontSize: sideMenuPositions.playerLevel.size,
-                          color: COLORS.textPrimary,
-                          textAlign: 'center',
-                      },
-                  }),
-              }),
-          ],
-      });
-  }
-
-  /**
-   * Helper: Create a text row component
-   */
-  export function createTextRow(ui: UIMethodMappings, text: string | ValueBindingBase<string>, top: number = 0): UINodeType {
-      return ui.View({
-          style: {
-              position: 'absolute',
-              top: top,
-          },
-          children: ui.Text({
-              text: typeof text === 'string' ? new ui.Binding(text) : text,
-              style: {
-                  fontSize: DIMENSIONS.fontSize.md,
-                  color: COLORS.textPrimary,
-              },
-          }),
-      });
-  }
-
-  /**
-   * Helper: Create a resource row (emoji + count)
-   */
-  export function createResourceRow(ui: UIMethodMappings, 
-      emoji: string,
-      amount: number | ValueBindingBase<number>,
-      top: number = 0
-  ): UINodeType {
-      const amountText = typeof amount === 'number'
-          ? new ui.Binding(`${emoji} ${amount}`)
-          : (amount as any).derive((a: number) => `${emoji} ${a}`);
-
-      return ui.View({
-          style: {
-              position: 'absolute',
-              top: top,
-          },
-          children: ui.Text({
-              text: amountText,
-              style: {
-                  fontSize: 18,
-                  color: COLORS.textPrimary,
-              },
-          }),
-      });
-  }
-
-  // ==================== bloombeasts\ui\bindings\BaseBinding.ts ====================
-
-  /**
-   * Base Binding Class
-   * Platform-agnostic reactive value container
-   */
-
-  export class BaseBinding<T> {
-    protected value: T;
-    protected listeners: Set<() => void> = new Set();
-
-    constructor(initialValue: T) {
-      this.value = initialValue;
-    }
-
-    /**
-     * Get the current value
-     */
-    get(): T {
-      return this.value;
-    }
-
-    /**
-     * Set a new value
-     */
-    set(newValue: T): void {
-      if (this.value !== newValue) {
-        this.value = newValue;
-        this.notifyListeners();
-      }
-    }
-
-    /**
-     * Create a derived binding from this one
-     */
-    derive<R>(fn: (val: T) => R): BaseBinding<R> {
-      const derived = new BaseBinding(fn(this.value));
-
-      // Update derived when source changes
-      this.addListener(() => {
-        derived.set(fn(this.get()));
-      });
-
-      return derived;
-    }
-
-    /**
-     * Add a listener that fires when value changes
-     */
-    addListener(listener: () => void): void {
-      this.listeners.add(listener);
-    }
-
-    /**
-     * Remove a listener
-     */
-    removeListener(listener: () => void): void {
-      this.listeners.delete(listener);
-    }
-
-    /**
-     * Notify all listeners of a change
-     */
-    protected notifyListeners(): void {
-      this.listeners.forEach(listener => listener());
-    }
-
-    /**
-     * Clean up resources (override in subclasses)
-     * Clears all listeners to prevent memory leaks
-     */
-    dispose(): void {
-      this.listeners.clear();
-    }
-
-    /**
-     * Get the number of active listeners (for debugging)
-     */
-    getListenerCount(): number {
-      return this.listeners.size;
-    }
-  }
-
-  // ==================== bloombeasts\ui\bindings\IntervaledBinding.ts ====================
-
-  /**
-   * Intervaled Binding
-   * A binding that updates its value on a fixed interval
-   */
-
-
-  export class IntervaledBinding<T> extends BaseBinding<T> {
-    private intervalId: number | null = null;
-
-    /**
-     * Create an intervaled binding
-     * @param initialValue - Starting value
-     * @param updateFn - Function that computes the next value from current value
-     * @param intervalMs - Interval duration in milliseconds
-     * @param async - Platform-specific async methods (setInterval, clearInterval)
-     */
-    constructor(
-      initialValue: T,
-      private updateFn: (currentValue: T) => T,
-      private intervalMs: number,
-      private async: AsyncMethods
-    ) {
-      super(initialValue);
-      this.startInterval();
-    }
-
-    /**
-     * Start the interval timer
-     */
-    private startInterval(): void {
-      this.intervalId = this.async.setInterval(() => {
-        const newValue = this.updateFn(this.value);
-        this.set(newValue);
-      }, this.intervalMs);
-    }
-
-    /**
-     * Stop the interval and clean up
-     */
-    dispose(): void {
-      if (this.intervalId !== null) {
-        this.async.clearInterval(this.intervalId);
-        this.intervalId = null;
-      }
-      super.dispose();
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\MenuScreen.ts ====================
-
-  /**
-   * Unified Menu Screen Component
-   * Works on both Horizon and Web platforms
-   * Matches the styling from menuScreen.new.ts
-   */
-
-
-  export interface MenuScreenProps {
-    ui: UIMethodMappings;
-    async: AsyncMethods;
-    playerDataBinding: any; // PlayerData binding
-    onButtonClick?: (buttonId: string) => void;
-    onNavigate?: (screen: string) => void;
-    onRenderNeeded?: () => void;
-  }
-
-  /**
-   * Unified Menu Screen that works on both platforms
-   */
-  export class MenuScreen {
-    // UI methods (injected)
-    private ui: UIMethodMappings;
-    private async: AsyncMethods;
-
-    // State bindings
-    private displayedText: any;
-    private playerDataBinding: any;
-    private menuFrameAnimation: BindingInterface<string>;
-    private frameInterval: any;
-
-    // Menu frame IDs
-    private menuFrameIds: string[] = [
-      'menu-frame-1', 'menu-frame-2', 'menu-frame-3', 'menu-frame-4', 'menu-frame-5',
-      'menu-frame-6', 'menu-frame-7', 'menu-frame-8', 'menu-frame-9', 'menu-frame-10',
-    ];
-
-    private quotes: string[] = [
-      'Welcome back, Trainer!',
-    ];
-
-    // Callbacks
-    private onButtonClick?: (buttonId: string) => void;
-    private onNavigate?: (screen: string) => void;
-    private onRenderNeeded?: () => void;
-
-    constructor(props: MenuScreenProps) {
-      this.ui = props.ui;
-      this.async = props.async;
-      this.playerDataBinding = props.playerDataBinding;
-      this.onButtonClick = props.onButtonClick;
-      this.onNavigate = props.onNavigate;
-      this.onRenderNeeded = props.onRenderNeeded;
-
-      // Initialize bindings using injected UI implementation
-      this.displayedText = new this.ui.Binding('');
-
-      // Show the first quote statically
-      this.displayedText.set(this.quotes[0]);
-
-      // Create animated binding for menu frames
-      let frameIndex = 0;
-      this.menuFrameAnimation = new this.ui.Binding<string>(this.menuFrameIds[0]);
-      this.frameInterval = this.async.setInterval(() => {
-        frameIndex = (frameIndex + 1) % this.menuFrameIds.length;
-        this.menuFrameAnimation.set(this.menuFrameIds[frameIndex]);
-        // Trigger a render when the frame changes
-        if (this.onRenderNeeded) {
-          this.onRenderNeeded();
-        }
-      }, 200);
-    }
-
-    /**
-     * Create the unified menu UI - uses common side menu
-     */
-    createUI(): UINodeType {
-      const menuOptions = ['missions', 'cards', 'settings'];
-      const lineHeight = DIMENSIONS.fontSize.lg + 5;
-
-      // Create menu buttons for the side menu
-      const menuButtons = menuOptions.map((option, index) => ({
-        label: this.getMenuLabel(option),
-        onClick: () => {
-          if (this.onButtonClick) {
-            this.onButtonClick(`btn-${option}`);
-          }
-          if (this.onNavigate) {
-            this.onNavigate(option);
-          }
-        },
-        disabled: false,
-        yOffset: index * (sideMenuButtonDimensions.height + GAPS.buttons),
-      }));
-
-      // Create custom text content (quote + resources)
-      // Derive item quantities from playerData
-      const getItemQuantity = (items: any[], itemId: string) => {
-        const item = items?.find((i: any) => i.itemId === itemId);
-        return item ? item.quantity : 0;
-      };
-
-      const tokensText = this.playerDataBinding.derive((pd: any) =>
-        `🪙 ${pd ? getItemQuantity(pd.items, 'token') : 0}`
-      );
-      const diamondsText = this.playerDataBinding.derive((pd: any) =>
-        `💎 ${pd ? getItemQuantity(pd.items, 'diamond') : 0}`
-      );
-      const serumsText = this.playerDataBinding.derive((pd: any) =>
-        `🧪 ${pd ? getItemQuantity(pd.items, 'serum') : 0}`
-      );
-
-      const customTextContent = [
-        this.ui.View({
-          style: {
-            position: 'relative',
-          },
-          children: [
-            // Quote text (lines 0-2)
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                top: 0,
-                width: 110,
-              },
-              children: this.ui.Text({
-                text: this.displayedText,
-                numberOfLines: 3,
-                style: {
-                  fontSize: DIMENSIONS.fontSize.lg,
-                  color: COLORS.textPrimary,
-                  lineHeight: lineHeight,
+  export const bossAssets: AssetCatalog = {
+    version: "1.0.0",
+    category: "boss",
+    description: "Boss cards and assets",
+    data: [
+      {
+        id: "cluck-norris",
+        type: "beast",
+        cardType: "Bloom",
+        affinity: "boss",
+        data: {
+          id: "cluck-norris",
+          name: "Cluck Norris",
+          type: "Bloom",
+          affinity: "Boss",
+          cost: 0,
+          baseAttack: 99,
+          baseHealth: 99,
+          abilities: [
+            {
+              name: "Legendary Rooster",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
+                {
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.Self,
+                  stat: StatType.Attack,
+                  value: 10,
+                  duration: EffectDuration.WhileOnField
                 },
-              }),
-            }),
-
-            // Resources (lines 4-6) - using createTextRow instead of createResourceRow
-            createTextRow(this.ui, tokensText, lineHeight * 4),
-            createTextRow(this.ui, diamondsText, lineHeight * 5),
-            createTextRow(this.ui, serumsText, lineHeight * 6),
-          ],
-        }),
-      ];
-
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [
-          // Background image (full screen)
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => {
-                return assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null;
-              }
-            ),
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              top: 0,
-              left: 0,
-            },
-          }),
-
-          // Main content area with animated character
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-            },
-            children: [
-              // Animated character frame - try without centering first
-              this.ui.Image({
-                  source: this.ui.Binding.derive(
-                    [this.ui.assetsLoadedBinding, this.menuFrameAnimation],
-                    (assetsLoaded: boolean, menuFrameAnimation: string) => {
-                      // console.log('[MenuScreen] Image binding fired:', { assetsLoaded, menuFrameAnimation });
-
-                      if (!assetsLoaded) {
-                        console.log('[MenuScreen] Assets not loaded yet');
-                        return null;
-                      }
-
-                      return this.ui.assetIdToImageSource?.(menuFrameAnimation);
-                    },
-                  ),
-                  style: {
-                    position: 'absolute',
-                    left: 250,
-                    top: 4,
-                    width: 675,
-                    height: 630,
-                  },
-                }),
-            ],
-          }),
-
-          // Side menu (positioned absolutely on top)
-          createSideMenu(this.ui, {
-            customTextContent,
-            buttons: menuButtons,
-            bottomButton: {
-              label: 'Close',
-              onClick: () => {}, // Disabled button
-              disabled: true,
-            },
-            playerDataBinding: this.playerDataBinding,
-            onXPBarClick: (title: string, message: string) => {
-              if (this.onButtonClick) {
-                this.onButtonClick(`show-counter-info:${title}:${message}`);
-              }
-            },
-          }),
-        ],
-      });
-    }
-
-    /**
-     * Get menu label for option
-     */
-    private getMenuLabel(option: string): string {
-      const labels: Record<string, string> = {
-        missions: 'Missions',
-        cards: 'Cards',
-        settings: 'Settings',
-      };
-      return labels[option] || option;
-    }
-
-    /**
-     * Clean up animations
-     */
-    dispose(): void {
-      if (this.frameInterval) {
-        this.async.clearInterval(this.frameInterval);
-      }
-    }
-  }
-
-  // ==================== bloombeasts\ui\constants\emojis.ts ====================
-
-  export const nectarEmoji = '🏵️';
-  export const missionEmoji = '🎯';
-  export const deckEmoji = '🎲';
-  export const playerLevelEmoji = '💪';
-  export const playerExperienceEmoji = '🧪';
-
-  // ==================== bloombeasts\ui\screens\common\CardRenderer.ts ====================
-
-  /**
-   * Common Card Rendering Component
-   * Reusable card display with multi-layer rendering
-   */
-
-
-  export interface CardRendererProps {
-    card: CardDisplayData;
-    isInDeck?: boolean;
-    onClick?: (cardId: string) => void;
-    showDeckIndicator?: boolean;
-  }
-
-  /**
-   * Create a card UI component with proper multi-layer rendering
-   * This follows the standard card format:
-   * - Layer 1: Card artwork (185x185) - beast image for Bloom, card art for others
-   * - Layer 2: Base card frame (210x280) - BaseCard.png
-   * - Layer 3: Type-specific template overlay (MagicCard, TrapCard, etc.)
-   * - Layer 4: Affinity icon (for Bloom cards)
-   * - Layer 5: Experience bar (for Bloom cards with levels)
-   * - Layer 6: Text overlays (name, cost, stats, level, ability)
-   * - Layer 7: Deck indicator (if showDeckIndicator is true)
-   */
-  export function createCardComponent(ui: UIMethodMappings, props: CardRendererProps): UINodeType {
-    const { card, isInDeck = false, onClick, showDeckIndicator = true } = props;
-
-    // Standard card dimensions from shared constants
-    const cardWidth = 210; // standardCardDimensions.width
-    const cardHeight = 280; // standardCardDimensions.height
-    const beastImageWidth = 185; // standardCardBeastImageDimensions.width
-    const beastImageHeight = 185; // standardCardBeastImageDimensions.height
-
-    // Standard card positions (offsets within the card)
-    const positions = {
-      beastImage: { x: 12, y: 13 },
-      cost: { x: 20, y: 10 },
-      affinity: { x: 175, y: 7 },
-      level: { x: 105, y: 182 },
-      experienceBar: { x: 44, y: 182 },
-      name: { x: 105, y: 13 },
-      ability: { x: 21, y: 212 },
-      attack: { x: 20, y: 176 },
-      health: { x: 188, y: 176 },
-    };
-
-    // Extract base card ID for asset lookup
-    // Card IDs may have timestamp suffixes (e.g., "nectar-block-1761200302194-0")
-    // We need to extract the base ID (e.g., "nectar-block") to match catalog IDs
-    const extractBaseId = (id: string | undefined): string => {
-      if (!id) {
-        console.warn('[CardRenderer] Card missing id, using name fallback:', card);
-        // Fallback: use card name converted to kebab-case
-        return card.name.toLowerCase().replace(/\s+/g, '-');
-      }
-      // Remove timestamp pattern: -digits-digits at the end
-      return id.replace(/-\d+-\d+$/, '');
-    };
-
-    // Generate unique image URI keys for this card
-    // Extract base ID from card.id to match asset catalog IDs
-    const baseId = extractBaseId(card.id);
-    const cardImageKey = baseId; // Card images use the base card ID
-    const beastImageKey = baseId; // Beast images use the base card ID
-    const baseCardKey = 'base-card'; // All cards use base-card as the frame
-
-    // Type-specific template overlay
-    // Habitat cards use habitat templates from affinity folders
-    let templateKey = '';
-    if (card.type === 'Habitat' && card.affinity) {
-      // Template key format: affinity-habitat (e.g., 'forest-habitat')
-      templateKey = `${card.affinity.toLowerCase()}-habitat`;
-    } else if (card.type !== 'Bloom') {
-      templateKey = `${card.type.toLowerCase()}-card`;
-    }
-
-    // Affinity icon key format: affinity-icon (e.g., 'forest-icon', 'fire-icon')
-    const affinityKey = card.affinity ? `${card.affinity.toLowerCase()}-icon` : '';
-    const expBarKey = 'experience-bar';
-
-    // Get card description for ability text using the official cardDescriptionGenerator
-    const abilityText = getCardDescription(card);
-
-    // Debug logging for cards without descriptions
-    if ((!abilityText || abilityText.trim() === '') && card.type !== 'Bloom') {
-      console.log(`[CardRenderer] ❌ No description for ${card.name} (${card.type}, id: ${card.id})`);
-      console.log(`  Abilities:`, card.abilities);
-      console.log(`  Generated abilityText: "${abilityText}"`);
-    } else if (card.type !== 'Bloom') {
-      console.log(`[CardRenderer] ✅ ${card.name} (${card.type}): "${abilityText}"`);
-    }
-
-    // Cache assetIdToImageSource to ensure it's captured properly in closures
-    const getImageSource = ui.assetIdToImageSource!;
-
-    const children = [
-        // Layer 1: Card/Beast artwork image (185x185)
-        // For Bloom cards: use beast image
-        // For other cards (Magic/Trap/Buff/Habitat): use card artwork image
-        ui.Image({
-          source: ui.Binding.derive(
-            [ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => {
-              if (!assetsLoaded) return null;
-              const imageKey = card.type === 'Bloom' ? beastImageKey : cardImageKey;
-              if (!imageKey) return null;
-              return getImageSource(imageKey);
-            }
-          ),
-          style: {
-            width: beastImageWidth,
-            height: beastImageHeight,
-            position: 'absolute',
-            top: positions.beastImage.y,
-            left: positions.beastImage.x,
-          },
-        }),
-
-        // Layer 2: Base card frame (210x280) - ALL cards use BaseCard.png
-        ui.Image({
-          source: ui.Binding.derive(
-            [ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? getImageSource(baseCardKey) : null
-          ),
-          style: {
-            width: cardWidth,
-            height: cardHeight,
-            position: 'absolute',
-            top: 0,
-            left: 0,
-          },
-        }),
-
-        // Layer 2.5: Template overlay for non-Bloom cards (Magic/Trap/Buff/Habitat)
-        ...(templateKey ? [
-          ui.Image({
-            source: ui.Binding.derive(
-              [ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? getImageSource(templateKey) : null
-            ),
-            style: {
-              width: cardWidth,
-              height: cardHeight,
-              position: 'absolute',
-              top: 0,
-              left: 0,
-            },
-          })
-        ] : []),
-
-        // Layer 3: Affinity icon (for Bloom cards)
-        ...(card.type === 'Bloom' && card.affinity && affinityKey ? [
-          ui.Image({
-            source: ui.Binding.derive(
-              [ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? getImageSource(affinityKey) : null
-            ),
-            style: {
-              width: 30,
-              height: 30,
-              position: 'absolute',
-              top: positions.affinity.y,
-              left: positions.affinity.x,
-            },
-          })
-        ] : []),
-
-        // Layer 4: Experience bar (for Bloom cards with level)
-        ...(card.type === 'Bloom' && card.level ? [
-          ui.Image({
-            source: ui.Binding.derive(
-              [ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? getImageSource(expBarKey) : null
-            ),
-            style: {
-              width: 120,
-              height: 20,
-              position: 'absolute',
-              top: positions.experienceBar.y,
-              left: positions.experienceBar.x,
-            },
-          })
-        ] : []),
-
-        // Layer 5: Text overlays
-        // Card name
-        ui.Text({
-          text: new ui.Binding(card.name || ''),
-          style: {
-            position: 'absolute',
-            top: positions.name.y,
-            left: 0,
-            width: cardWidth,
-            fontSize: DIMENSIONS.fontSize.md,
-            color: COLORS.textPrimary,
-            textAlign: 'center',
-          },
-        }),
-
-        // Cost (top-left)
-        ...(card.cost !== undefined ? [
-          ui.Text({
-            text: new ui.Binding(String(card.cost)),
-            style: {
-              position: 'absolute',
-              top: positions.cost.y,
-              left: positions.cost.x - 10,
-              width: 20,
-              fontSize: DIMENSIONS.fontSize.xxl,
-              color: COLORS.textPrimary,
-              textAlign: 'center',
-            },
-          })
-        ] : []),
-
-        // Attack and Health (for Bloom cards)
-        ...(card.type === 'Bloom' && ((card as any).currentAttack !== undefined || (card as any).baseAttack !== undefined) ? [
-          ui.Text({
-            text: String((card as any).currentAttack ?? (card as any).baseAttack ?? 0),
-            style: {
-              position: 'absolute',
-              top: positions.attack.y,
-              left: positions.attack.x - 10,
-              width: 20,
-              fontSize: DIMENSIONS.fontSize.xxl,
-              color: COLORS.textPrimary,
-              textAlign: 'center',
-            },
-          })
-        ] : []),
-
-        ...(card.type === 'Bloom' && ((card as any).currentHealth !== undefined || (card as any).baseHealth !== undefined) ? [
-          ui.Text({
-            text: String((card as any).currentHealth ?? (card as any).baseHealth ?? 0),
-            style: {
-              position: 'absolute',
-              top: positions.health.y,
-              left: positions.health.x - 10,
-              width: 20,
-              fontSize: DIMENSIONS.fontSize.xxl,
-              color: COLORS.textPrimary,
-              textAlign: 'center',
-            },
-          })
-        ] : []),
-
-        // Level (for all cards)
-        ...(card.level !== undefined ? [
-          ui.Text({
-            text: new ui.Binding(`Level ${card.level}`),
-            style: {
-              position: 'absolute',
-              top: positions.level.y,
-              left: 0,
-              width: cardWidth,
-              fontSize: DIMENSIONS.fontSize.xs,
-              color: COLORS.textPrimary,
-              textAlign: 'center',
-            },
-          })
-        ] : []),
-
-        // Ability/Effect text (for all cards)
-        ...(abilityText ? [
-          ui.Text({
-            text: new ui.Binding(abilityText),
-            numberOfLines: 3,
-            style: {
-              position: 'absolute',
-              top: positions.ability.y,
-              left: positions.ability.x,
-              width: 168,
-              fontSize: DIMENSIONS.fontSize.xs,
-              color: COLORS.textPrimary,
-              textAlign: 'left',
-            },
-          })
-        ] : []),
-
-        // Deck indicator border if in deck and showDeckIndicator is true
-        ...(isInDeck && showDeckIndicator ? [
-          ui.View({
-            style: {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: cardWidth,
-              height: cardHeight,
-              borderWidth: 4,
-              borderColor: COLORS.success,
-              borderRadius: 8,
-            },
-          })
-        ] : []),
-      ];
-
-    // Filter out any undefined values to prevent rendering errors
-    const filteredChildren = children.filter(child => child !== undefined && child !== null);
-
-    // Only wrap in Pressable if onClick is provided
-    // Otherwise use View to avoid blocking parent click handlers
-    if (onClick) {
-      return ui.Pressable({
-        onClick: () => onClick(card.id),
-        style: {
-          width: cardWidth,
-          height: cardHeight,
-          position: 'relative',
-        },
-        children: filteredChildren,
-      });
-    } else {
-      return ui.View({
-        style: {
-          width: cardWidth,
-          height: cardHeight,
-          position: 'relative',
-        },
-        children: filteredChildren,
-      });
-    }
-  }
-
-  /**
-   * Props for reactive card component that uses bindings
-   * Supports two modes:
-   * 1. Slot-based: Use slotIndex + cardsPerPage + scrollOffsetBinding (for grids)
-   * 2. ID-based: Use cardIdBinding (for popups/single cards)
-   */
-  export interface ReactiveCardRendererProps {
-    // Source playerData binding
-    playerDataBinding: any;
-
-    // Slot-based selection (for grids)
-    scrollOffsetBinding?: any; // Binding<number>
-    slotIndex?: number;
-    cardsPerPage?: number;
-
-    // ID-based selection (for popups)
-    cardIdBinding?: any; // Binding<string | null>
-
-    onClick?: (cardId: string) => void;
-    showDeckIndicator?: boolean;
-  }
-
-  /**
-   * Create a reactive card UI component using bindings
-   * Supports two modes:
-   * - Slot-based (grids): Derives card from slotIndex + scrollOffset
-   * - ID-based (popups): Derives card from cardIdBinding
-   */
-  export function createReactiveCardComponent(ui: UIMethodMappings, props: ReactiveCardRendererProps): UINodeType {
-    const {
-      playerDataBinding,
-      scrollOffsetBinding,
-      slotIndex,
-      cardsPerPage,
-      cardIdBinding,
-      onClick,
-      showDeckIndicator = true
-    } = props;
-
-    // Determine which mode we're in
-    const isIdMode = cardIdBinding !== undefined;
-    const isSlotMode = slotIndex !== undefined && cardsPerPage !== undefined && scrollOffsetBinding !== undefined;
-
-    // Standard card dimensions
-    const cardWidth = 210;
-    const cardHeight = 280;
-    const beastImageWidth = 185;
-    const beastImageHeight = 185;
-
-    // Standard card positions
-    const positions = {
-      beastImage: { x: 12, y: 13 },
-      cost: { x: 20, y: 10 },
-      affinity: { x: 175, y: 7 },
-      level: { x: 105, y: 182 },
-      experienceBar: { x: 44, y: 182 },
-      name: { x: 105, y: 13 },
-      ability: { x: 21, y: 212 },
-      attack: { x: 20, y: 176 },
-      health: { x: 188, y: 176 },
-    };
-
-    // Helper function to extract base ID
-    const extractBaseId = (id: string | undefined, name: string): string => {
-      if (!id) {
-        return name.toLowerCase().replace(/\s+/g, '-');
-      }
-      return id.replace(/-\d+-\d+$/, '');
-    };
-
-    // Create dependencies array based on mode
-    // Use playerDataBinding directly in dependencies to avoid nesting
-    // ALWAYS include assetsLoadedBinding as first dependency to prevent premature asset lookups
-    let dependencies: any[];
-    if (isIdMode && cardIdBinding) {
-      dependencies = [ui.assetsLoadedBinding, playerDataBinding, cardIdBinding];
-    } else if (isSlotMode && scrollOffsetBinding) {
-      dependencies = [ui.assetsLoadedBinding, playerDataBinding, scrollOffsetBinding];
-    } else {
-      dependencies = [ui.assetsLoadedBinding, playerDataBinding];
-    }
-
-    // Helper to get card based on mode
-    // Now computes display data on-demand from CardInstance
-    // args[0] = assetsLoadedBinding, args[1] = playerDataBinding, args[2] = cardIdBinding or scrollOffsetBinding
-    const getCard = (args: any[]): CardDisplayData | null => {
-      // Extract card instances from PlayerData (now at args[1])
-      const cardInstances: CardInstance[] = args[1]?.cards?.collected || [];
-
-      let instance: CardInstance | null = null;
-
-      if (isIdMode && cardIdBinding) {
-        // ID-based mode: find card by ID (now at args[2])
-        const cardId: string | null = args[2];
-        if (!cardId) return null;
-        instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;
-      } else if (isSlotMode && slotIndex !== undefined && cardsPerPage !== undefined && scrollOffsetBinding) {
-        // Slot-based mode: find card by slot index (offset now at args[2])
-        const offset: number = args[2];
-        const pageStart = offset * cardsPerPage;
-        const cardIndex = pageStart + slotIndex;
-        instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
-      }
-
-      // Compute display data from instance
-      return instance ? computeCardDisplay(instance) : null;
-    };
-
-    // Helper to get current card ID from bindings (for onClick handler)
-    const getCurrentCardId = (): string | null => {
-      if (isIdMode && cardIdBinding) {
-        // For ID mode, directly get the ID from the binding
-        return cardIdBinding.get ? cardIdBinding.get() : null;
-      } else if (isSlotMode && scrollOffsetBinding) {
-        // For slot mode, calculate from current player data and scroll offset
-        const playerData = playerDataBinding.get ? playerDataBinding.get() : null;
-        const cardInstances: CardInstance[] = playerData?.cards?.collected || [];
-        const offset = scrollOffsetBinding.get ? scrollOffsetBinding.get() : 0;
-        const pageStart = offset * cardsPerPage!;
-        const cardIndex = pageStart + slotIndex!;
-        const instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
-        return instance?.id || null;
-      }
-      return null;
-    };
-
-    // Helper to check if card is in deck
-    const isCardInDeck = (args: any[], cardId: string | undefined): boolean => {
-      if (!showDeckIndicator || !cardId) return false;
-
-      // PlayerData is now at args[1] (args[0] is assetsLoadedBinding)
-      const deckCardIds: string[] = args[1]?.cards?.deck || [];
-      return deckCardIds.includes(cardId);
-    };
-
-    // Create reactive text bindings directly from source bindings
-    // This avoids nesting by deriving each property separately from the same sources
-    const cardNameBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const card = getCard(args);
-      return card?.name || '';
-    });
-
-    const cardCostBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const card = getCard(args);
-      return card && card.cost !== undefined ? String(card.cost) : '';
-    });
-
-    const cardAttackBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const card = getCard(args);
-      if (!card || card.type !== 'Bloom') return '';
-      const bloomCard = card as any;
-      return String(bloomCard.currentAttack ?? bloomCard.baseAttack ?? 0);
-    });
-
-    const cardHealthBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const card = getCard(args);
-      if (!card || card.type !== 'Bloom') return '';
-      const bloomCard = card as any;
-      return String(bloomCard.currentHealth ?? bloomCard.baseHealth ?? 0);
-    });
-
-    const cardLevelBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const card = getCard(args);
-      return card && card.level !== undefined ? `Level ${card.level}` : '';
-    });
-
-    const abilityTextBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const card = getCard(args);
-      return card ? getCardDescription(card) : '';
-    });
-
-    // Create image source bindings
-    const baseCardImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding now
-      if (!assetsLoaded) return null;
-      const card = getCard(args);
-      if (!card) return null;
-      const baseId = extractBaseId(card.id, card.name);
-      if (!baseId) return null; // Don't try to load empty asset IDs
-      return ui.assetIdToImageSource?.(baseId) ?? null;
-    });
-
-    const templateImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding now
-      if (!assetsLoaded) return null;
-      const card = getCard(args);
-      if (!card) return null;
-
-      let templateAssetId = '';
-      if (card.type === 'Habitat' && card.affinity) {
-        templateAssetId = `${card.affinity.toLowerCase()}-habitat`;
-      } else if (card.type !== 'Bloom') {
-        templateAssetId = `${card.type.toLowerCase()}-card`;
-      }
-
-      return templateAssetId ? (ui.assetIdToImageSource?.(templateAssetId) ?? null) : null;
-    });
-
-    const affinityIconBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
-      if (!assetsLoaded) return null;
-      const card = getCard(args);
-      if (!card || card.type !== 'Bloom' || !card.affinity) return null;
-      const affinityAssetId = `${card.affinity.toLowerCase()}-icon`;
-      if (!affinityAssetId) return null; // Don't try to load empty asset IDs
-      return ui.assetIdToImageSource?.(affinityAssetId) ?? null;
-    });
-
-
-    // Render all layers without conditional wrapping
-    // Null/empty values will naturally hide elements
-    const children = [
-      // Layer 1: Card/Beast artwork image
-      ui.Image({
-        source: baseCardImageBinding,
-        style: {
-          width: beastImageWidth,
-          height: beastImageHeight,
-          position: 'absolute',
-          top: positions.beastImage.y,
-          left: positions.beastImage.x,
-        },
-      }),
-
-      // Layer 2: Base card frame
-      ui.Image({
-        source: ui.Binding.derive(dependencies, (...args: any[]) => {
-          const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
-          if (!assetsLoaded) return null;
-          const card = getCard(args);
-          return card ? ui.assetIdToImageSource?.('base-card') : null;
-        }),
-        style: {
-          width: cardWidth,
-          height: cardHeight,
-          position: 'absolute',
-          top: 0,
-          left: 0,
-        },
-      }),
-
-      // Layer 3: Template overlay
-      ui.Image({
-        source: templateImageBinding,
-        style: {
-          width: cardWidth,
-          height: cardHeight,
-          position: 'absolute',
-          top: 0,
-          left: 0,
-        },
-      }),
-
-      // Layer 4: Affinity icon
-      ui.Image({
-        source: affinityIconBinding,
-        style: {
-          width: 30,
-          height: 30,
-          position: 'absolute',
-          top: positions.affinity.y,
-          left: positions.affinity.x,
-        },
-      }),
-
-      // Layer 5: Experience bar
-      ui.Image({
-        source: ui.Binding.derive(dependencies, (...args: any[]) => {
-          const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
-          if (!assetsLoaded) return null;
-          const card = getCard(args);
-          if (!card || card.type !== 'Bloom' || card.level === undefined) return null;
-          return ui.assetIdToImageSource?.('experience-bar');
-        }),
-        style: {
-          width: 120,
-          height: 20,
-          position: 'absolute',
-          top: positions.experienceBar.y,
-          left: positions.experienceBar.x,
-        },
-      }),
-
-      // Layer 6: Text overlays
-      // Card name
-      ui.Text({
-        text: cardNameBinding,
-        style: {
-          position: 'absolute',
-          top: positions.name.y,
-          left: 0,
-          width: cardWidth,
-          fontSize: DIMENSIONS.fontSize.md,
-          color: COLORS.textPrimary,
-          textAlign: 'center',
-        },
-      }),
-
-      // Cost
-      ui.Text({
-        text: cardCostBinding,
-        style: {
-          position: 'absolute',
-          top: positions.cost.y,
-          left: positions.cost.x - 10,
-          width: 20,
-          fontSize: DIMENSIONS.fontSize.xxl,
-          color: COLORS.textPrimary,
-          textAlign: 'center',
-        },
-      }),
-
-      // Attack
-      ui.Text({
-        text: cardAttackBinding,
-        style: {
-          position: 'absolute',
-          top: positions.attack.y,
-          left: positions.attack.x - 10,
-          width: 20,
-          fontSize: DIMENSIONS.fontSize.xxl,
-          color: COLORS.textPrimary,
-          textAlign: 'center',
-        },
-      }),
-
-      // Health
-      ui.Text({
-        text: cardHealthBinding,
-        style: {
-          position: 'absolute',
-          top: positions.health.y,
-          left: positions.health.x - 10,
-          width: 20,
-          fontSize: DIMENSIONS.fontSize.xxl,
-          color: COLORS.textPrimary,
-          textAlign: 'center',
-        },
-      }),
-
-      // Level
-      ui.Text({
-        text: cardLevelBinding,
-        style: {
-          position: 'absolute',
-          top: positions.level.y,
-          left: 0,
-          width: cardWidth,
-          fontSize: DIMENSIONS.fontSize.xs,
-          color: COLORS.textPrimary,
-          textAlign: 'center',
-        },
-      }),
-
-      // Ability text
-      ui.Text({
-        text: abilityTextBinding,
-        numberOfLines: 3,
-        style: {
-          position: 'absolute',
-          top: positions.ability.y,
-          left: positions.ability.x,
-          width: 168,
-          fontSize: DIMENSIONS.fontSize.xs,
-          color: COLORS.textPrimary,
-          textAlign: 'left',
-        },
-      }),
-
-      // Layer 7: Deck indicator border (only if showDeckIndicator is true)
-      ...(showDeckIndicator ? [ui.View({
-        style: ui.Binding.derive(dependencies, (...args: any[]) => {
-          const card = getCard(args);
-          const isInDeck = isCardInDeck(args, card?.id);
-
-          return {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: cardWidth,
-            height: cardHeight,
-            borderWidth: isInDeck ? 4 : 0,
-            borderColor: COLORS.success,
-            borderRadius: 8,
-          };
-        }),
-      })] : []),
-    ];
-
-    const filteredChildren = children.filter(child => child !== undefined && child !== null);
-
-    // Wrap in Pressable if onClick is provided, otherwise use View
-    if (onClick) {
-      return ui.Pressable({
-        onClick: () => {
-          const cardId = getCurrentCardId();
-          console.log('[CardRenderer] Pressable clicked, cardId:', cardId);
-          if (cardId) {
-            console.log('[CardRenderer] Calling onClick with cardId:', cardId);
-            onClick(cardId);
-          } else {
-            console.log('[CardRenderer] cardId is null, not calling onClick');
-          }
-        },
-        style: {
-          width: cardWidth,
-          height: cardHeight,
-          position: 'relative',
-        },
-        children: filteredChildren,
-      });
-    } else {
-      return ui.View({
-        style: {
-          width: cardWidth,
-          height: cardHeight,
-          position: 'relative',
-        },
-        children: filteredChildren,
-      });
-    }
-  }
-
-  /**
-   * Standard card dimensions for external use
-   */
-  export const CARD_DIMENSIONS = {
-    width: 210,
-    height: 280,
-    imageWidth: 185,
-    imageHeight: 185,
-  };
-
-  // ==================== bloombeasts\ui\screens\common\CardDetailPopup.ts ====================
-
-  /**
-   * Card Detail Popup Component
-   * Shows card details in a popup overlay with action buttons
-   */
-
-
-  export interface CardDetailPopupProps {
-    cardDetail: CardDetailDisplay;
-    onButtonClick: (buttonId: string) => void;
-  }
-
-  export interface ReactiveCardDetailPopupProps {
-    cardIdBinding: any; // Binding<string | null>
-    playerDataBinding: any; // PlayerData binding
-    onClose: () => void;
-    sideContent?: (ui: UIMethodMappings, deps: {
-      cardIdBinding: any;
-      playerDataBinding: any;
-    }) => UINodeType[];
-  }
-
-  /**
-   * Create a reactive card detail popup overlay
-   * Uses createReactiveCardComponent in ID mode to display the card
-   */
-  export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: ReactiveCardDetailPopupProps): UINodeType {
-    const { cardIdBinding, playerDataBinding, onClose, sideContent } = props;
-
-    const cardWidth = 210;
-    const cardHeight = 280;
-    const screenWidth = 1280;
-    const screenHeight = 720;
-    const totalWidth = cardWidth + DIMENSIONS.spacing.xl + sideMenuButtonDimensions.width;
-    const contentX = (screenWidth - totalWidth) / 2;
-    const contentY = (screenHeight - cardHeight) / 2;
-
-    return ui.View({
-      style: {
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
-        top: 0,
-        left: 0,
-      },
-      children: [
-        // Black backdrop
-        ui.Pressable({
-          onClick: () => onClose(),
-          style: {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          },
-        }),
-
-        // Content container
-        ui.View({
-          style: {
-            position: 'absolute',
-            left: contentX,
-            top: contentY,
-            flexDirection: 'row',
-            alignItems: 'flex-start',
-          },
-          children: [
-            // Card display using reactive card component in ID mode
-            createReactiveCardComponent(ui, {
-              playerDataBinding: playerDataBinding,
-              cardIdBinding: cardIdBinding,
-              onClick: undefined, // No click handler in popup
-              showDeckIndicator: true, // Show deck indicator
-            }),
-
-            // Side content (buttons, etc.)
-            ui.View({
-              style: {
-                marginLeft: DIMENSIONS.spacing.xl,
-                flexDirection: 'column',
-              },
-              children: sideContent ? sideContent(ui, { cardIdBinding, playerDataBinding }) : [],
-            }),
-          ],
-        }),
-      ],
-    });
-  }
-
-  /**
-   * Create a card detail popup overlay
-   */
-  export function createCardDetailPopup(ui: UIMethodMappings, props: CardDetailPopupProps): UINodeType {
-    const { cardDetail, onButtonClick } = props;
-
-    const cardWidth = 210; // Standard card width
-    const cardHeight = 280; // Standard card height
-    const buttonWidth = sideMenuButtonDimensions.width;
-    const buttonHeight = sideMenuButtonDimensions.height;
-    const buttonSpacing = GAPS.buttons;
-
-    // Calculate center position (screen is 1280x720)
-    const screenWidth = 1280;
-    const screenHeight = 720;
-    const totalWidth = cardWidth + DIMENSIONS.spacing.xl + buttonWidth;
-    const contentX = (screenWidth - totalWidth) / 2;
-    const contentY = (screenHeight - cardHeight) / 2;
-
-    return ui.View({
-      style: {
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
-        top: 0,
-        left: 0,
-      },
-      children: [
-        // Black backdrop - clicking closes the popup
-        ui.Pressable({
-          onClick: () => onButtonClick('btn-card-close'),
-          style: {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          },
-        }),
-
-        // Content container (centered)
-        ui.View({
-          style: {
-            position: 'absolute',
-            left: contentX,
-            top: contentY,
-            flexDirection: 'row',
-            alignItems: 'flex-start',
-          },
-          children: [
-            // Card display
-            createCardComponent(ui, {
-              card: cardDetail.card,
-              isInDeck: cardDetail.isInDeck,
-              showDeckIndicator: false, // Don't show deck indicator in detail view
-            }),
-
-            // Buttons to the right
-            ui.View({
-              style: {
-                marginLeft: DIMENSIONS.spacing.xl,
-                flexDirection: 'column',
-              },
-              children: (cardDetail.buttons || []).filter(b => b).map((buttonText, index) =>
-                ui.Pressable({
-                  onClick: () => {
-                    // Prevent backdrop click
-                    const buttonId = `btn-card-${buttonText.toLowerCase().replace(/ /g, '-')}`;
-                    onButtonClick(buttonId);
-                  },
-                  style: {
-                    width: buttonWidth,
-                    height: buttonHeight,
-                    position: 'relative',
-                    marginBottom: index < cardDetail.buttons.length - 1 ? buttonSpacing : 0,
-                  },
-                  children: [
-                    // Button background image
-                    ui.Image({
-                      source: ui.Binding.derive(
-                        [ui.assetsLoadedBinding],
-                        (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(
-                          buttonText === 'Add' ? 'green-button' :
-                          buttonText === 'Remove' ? 'red-button' :
-                          'standard-button'
-                        ) : null
-                      ),
-                      style: {
-                        position: 'absolute',
-                        width: buttonWidth,
-                        height: buttonHeight,
-                        top: 0,
-                        left: 0,
-                      },
-                    }),
-                    // Button text
-                    ui.View({
-                      style: {
-                        position: 'absolute',
-                        width: buttonWidth,
-                        height: buttonHeight,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      },
-                      children: ui.Text({
-                        text: new ui.Binding(buttonText),
-                        style: {
-                          fontSize: DIMENSIONS.fontSize.md,
-                          color: COLORS.textPrimary,
-                          fontWeight: 'bold',
-                        },
-                      }),
-                    }),
-                  ],
-                })
-              ),
-            }),
-          ],
-        }),
-      ],
-    });
-  }
-
-  // ==================== bloombeasts\ui\screens\CardsScreen.ts ====================
-
-  /**
-   * Unified Cards Screen Component
-   * Works on both Horizon and Web platforms
-   * Matches the styling from cardsScreen.new.ts
-   */
-
-
-  export interface CardsScreenProps {
-    ui: UIMethodMappings;
-    playerDataBinding: any; // PlayerData binding - screens derive what they need
-    onCardSelect?: (cardId: string) => void;
-    onNavigate?: (screen: string) => void;
-    onRenderNeeded?: () => void;
-  }
-
-  /**
-   * Unified Cards Screen
-   */
-  export class CardsScreen {
-    // UI methods (injected)
-    private ui: UIMethodMappings;
-
-    private playerDataBinding: any;
-    private scrollOffset: any;
-    private selectedCardId: any; // Binding<string | null>
-
-    // Track scroll offset for button handlers (can't use .get() in Horizon)
-    private scrollOffsetValue: number = 0;
-
-    private cardsPerRow = 4;
-    private rowsPerPage = 2;
-    private onCardSelect?: (cardId: string) => void;
-    private onNavigate?: (screen: string) => void;
-    private onRenderNeeded?: () => void;
-
-    constructor(props: CardsScreenProps) {
-      this.ui = props.ui;
-      this.selectedCardId = new this.ui.Binding<string | null>(null);
-      this.playerDataBinding = props.playerDataBinding;
-      this.onCardSelect = props.onCardSelect;
-      this.onNavigate = props.onNavigate;
-      this.onRenderNeeded = props.onRenderNeeded;
-      this.scrollOffset = new this.ui.Binding(0);
-    }
-
-    /**
-     * Create a single card slot using reactive card component
-     * Passes playerDataBinding to avoid binding nesting
-     */
-    private createCardSlot(
-      slotIndex: number,
-      cardsPerPage: number,
-      hasMarginRight: boolean
-    ): UINodeType {
-      return this.ui.View({
-        style: {
-          marginRight: hasMarginRight ? GAPS.cards : 0,
-        },
-        children: createReactiveCardComponent(this.ui, {
-          playerDataBinding: this.playerDataBinding,
-          scrollOffsetBinding: this.scrollOffset,
-          slotIndex,
-          cardsPerPage,
-          onClick: (cardId: string) => this.handleCardClick(cardId),
-          showDeckIndicator: true,
-        }),
-      });
-    }
-
-    /**
-     * Create card grid with reactive bindings
-     * Card slots derive directly from playerDataBinding to avoid nesting
-     */
-    private createCardGrid(): UINodeType {
-      const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          left: 70,
-          top: 70,
-          width: 920,
-          height: 580,
-        },
-        children: [
-          // Empty state - derive directly from playerDataBinding
-          ...(this.ui.UINode ? [this.ui.UINode.if(
-            this.playerDataBinding.derive((pd: any) => {
-              const cards = pd?.cards?.collected || [];
-              console.log('[CardsScreen] Empty state check - cards.length:', cards.length);
-              return cards.length === 0 ? true : false;
-            }),
-            this.ui.View({
-              style: {
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-              },
-              children: this.ui.Text({
-                text: new this.ui.Binding('No cards in your collection yet.'),
-                style: {
-                  fontSize: DIMENSIONS.fontSize.xl,
-                  color: COLORS.textPrimary,
-                },
-              }),
-            })
-          )] : []),
-
-          // Card grid - pre-create 8 slots using reactive card components
-          this.ui.View({
-            style: {
-              flexDirection: 'column',
-            },
-            children: Array.from({ length: this.rowsPerPage }, (_, rowIndex) =>
-              this.ui.View({
-                style: {
-                  flexDirection: 'row',
-                  marginBottom: rowIndex < this.rowsPerPage - 1 ? GAPS.cards : 0,
-                },
-                children: Array.from({ length: this.cardsPerRow }, (_, colIndex) => {
-                  const slotIndex = rowIndex * this.cardsPerRow + colIndex;
-
-                  // Create card slot - passes playerDataBinding
-                  return this.createCardSlot(slotIndex, cardsPerPage, colIndex < this.cardsPerRow - 1);
-                }),
-              })
-            ),
-          }),
-        ],
-      });
-    }
-
-    createUI(): UINodeType {
-
-      // Create scroll buttons for the side menu
-      // Note: Derive directly from playerDataBinding to avoid nesting (cards is already a derived binding)
-      const scrollButtons = [
-        {
-          label: '↑',
-          onClick: () => {
-            // Reactive disabled state prevents invalid scrolling, so just decrement
-            this.scrollOffsetValue--;
-            this.scrollOffset.set(this.scrollOffsetValue);
-          },
-          disabled: this.ui.Binding.derive(
-            [this.playerDataBinding, this.scrollOffset],
-            (pd: any, offset: number) => offset <= 0 ? true : false
-          ) as any,
-          yOffset: 0,
-        },
-        {
-          label: '↓',
-          onClick: () => {
-            // Reactive disabled state prevents invalid scrolling, so just increment
-            this.scrollOffsetValue++;
-            this.scrollOffset.set(this.scrollOffsetValue);
-          },
-          disabled: this.ui.Binding.derive(
-            [this.playerDataBinding, this.scrollOffset],
-            (pd: any, offset: number) => {
-              const cards = pd?.cards?.collected || [];
-              const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-              const totalPages = Math.ceil(cards.length / cardsPerPage);
-              return offset >= totalPages - 1 ? true : false;
-            }
-          ) as any,
-          yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
-        },
-      ];
-
-      // Deck info text - derive directly from playerDataBinding to avoid nesting
-      const deckInfoText = this.playerDataBinding.derive((pd: any) => `${deckEmoji} ${pd?.cards?.deck?.length || 0}/30`);
-
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [
-          // Background
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
-            ),
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              top: 0,
-              left: 0,
-            },
-          }),
-          // Cards Container image as background
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('cards-container') : null
-            ),
-            style: {
-              position: 'absolute',
-              left: 40,
-              top: 40,
-              width: 980,
-              height: 640,
-            },
-          }),
-          // Main content - card grid
-          // Card grid view with Horizon-compatible pattern (derives bindings internally)
-          this.createCardGrid(),
-          // Sidebar with common side menu
-          createSideMenu(this.ui, {
-            title: 'Cards',
-            customTextContent: [
-              createTextRow(this.ui, deckInfoText, 0),
-            ],
-            buttons: scrollButtons,
-            bottomButton: {
-              label: 'Back',
-              onClick: () => {
-                if (this.onNavigate) this.onNavigate('menu');
-              },
-              disabled: false,
-            },
-            playerDataBinding: this.playerDataBinding,
-          }),
-
-          // Card detail popup overlay container (conditionally rendered)
-          // Uses UINode.if() for proper conditional rendering per Horizon docs
-          ...(this.ui.UINode ? [this.ui.UINode.if(
-            this.ui.Binding.derive(
-              [this.selectedCardId],
-              (cardId: string | null) => cardId !== null ? true : false
-            ),
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                top: 0,
-                left: 0,
-              },
-              children: createReactiveCardDetailPopup(this.ui, {
-                cardIdBinding: this.selectedCardId,
-                playerDataBinding: this.playerDataBinding,
-                onClose: () => this.closePopup(),
-                sideContent: (ui, deps) => this.createPopupButtons(deps),
-              }),
-            })
-          )] : []),
-        ],
-      });
-    }
-
-    /**
-     * Handle card click - show popup with Add/Remove options
-     */
-    private handleCardClick(cardId: string): void {
-      console.log('[CardsScreen] handleCardClick called with cardId:', cardId);
-      this.selectedCardId.set(cardId);
-    }
-
-    /**
-     * Close the popup
-     */
-    private closePopup(): void {
-      this.selectedCardId.set(null);
-    }
-
-    /**
-     * Create reactive popup buttons
-     * Returns Add/Remove and Close buttons with reactive state
-     */
-    private createPopupButtons(deps: {
-      cardIdBinding: any;
-      playerDataBinding: any;
-    }): UINodeType[] {
-      const { cardIdBinding, playerDataBinding } = deps;
-      const buttonWidth = sideMenuButtonDimensions.width;
-      const buttonHeight = sideMenuButtonDimensions.height;
-      const buttonSpacing = GAPS.buttons;
-
-      // Track cardId for onClick handler
-      let currentCardId: string | null = null;
-      const cardIdTracker = this.ui.Binding.derive(
-        [cardIdBinding],
-        (cardId: string | null) => {
-          currentCardId = cardId;
-          return cardId;
-        }
-      );
-
-      // Hover state bindings for buttons
-      const actionButtonHover = new this.ui.Binding(false);
-      const closeButtonHover = new this.ui.Binding(false);
-
-      return [
-        // Add/Remove button
-        this.ui.Pressable({
-          onClick: () => {
-            if (currentCardId && this.onCardSelect) {
-              this.onCardSelect(currentCardId);
-            }
-          },
-          onHoverIn: () => actionButtonHover.set(true),
-          onHoverOut: () => actionButtonHover.set(false),
-          style: {
-            width: buttonWidth,
-            height: buttonHeight,
-            position: 'relative',
-            marginBottom: buttonSpacing,
-          },
-          children: [
-            // Button background
-            this.ui.Image({
-              source: this.ui.Binding.derive(
-                [this.ui.assetsLoadedBinding, playerDataBinding, cardIdBinding],
-                (...args: any[]) => {
-                  const assetsLoaded: boolean = args[0];
-                  const pd: any = args[1];
-                  const cardId: string | null = args[2];
-                  if (!assetsLoaded || !cardId) return null;
-                  const deckCardIds: string[] = pd?.cards?.deck || [];
-                  const isInDeck = deckCardIds.includes(cardId);
-                  return this.ui.assetIdToImageSource?.(isInDeck ? 'red-button' : 'green-button');
+                {
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.Self,
+                  stat: StatType.Health,
+                  value: 10,
+                  duration: EffectDuration.WhileOnField
                 }
-              ),
-              style: {
-                position: 'absolute',
-                width: buttonWidth,
-                height: buttonHeight,
-                top: 0,
-                left: 0,
-                opacity: this.ui.Binding.derive([actionButtonHover], (hover) => hover ? 0.8 : 1.0),
-              },
-            }),
-            // Button text
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                width: buttonWidth,
-                height: buttonHeight,
-                justifyContent: 'center',
-                alignItems: 'center',
-              },
-              children: this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [playerDataBinding, cardIdBinding],
-                  (...args: any[]) => {
-                    const pd: any = args[0];
-                    const cardId: string | null = args[1];
-                    if (!cardId) return '';
-                    const deckCardIds: string[] = pd?.cards?.deck || [];
-                    const isInDeck = deckCardIds.includes(cardId);
-                    return isInDeck ? 'Remove' : 'Add';
-                  }
-                ),
-                style: {
-                  fontSize: DIMENSIONS.fontSize.md,
-                  color: COLORS.textPrimary,
-                  fontWeight: 'bold',
-                },
-              }),
-            }),
-          ],
-        }),
-
-        // Close button
-        this.ui.Pressable({
-          onClick: () => this.closePopup(),
-          onHoverIn: () => closeButtonHover.set(true),
-          onHoverOut: () => closeButtonHover.set(false),
-          style: {
-            width: buttonWidth,
-            height: buttonHeight,
-            position: 'relative',
-          },
-          children: [
-            // Button background
-            this.ui.Image({
-              source: this.ui.Binding.derive(
-                [this.ui.assetsLoadedBinding],
-                (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('standard-button') : null
-              ),
-              style: {
-                position: 'absolute',
-                width: buttonWidth,
-                height: buttonHeight,
-                top: 0,
-                left: 0,
-                opacity: this.ui.Binding.derive([closeButtonHover], (hover) => hover ? 0.8 : 1.0),
-              },
-            }),
-            // Button text
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                width: buttonWidth,
-                height: buttonHeight,
-                justifyContent: 'center',
-                alignItems: 'center',
-              },
-              children: this.ui.Text({
-                text: new this.ui.Binding('Close'),
-                style: {
-                  fontSize: DIMENSIONS.fontSize.md,
-                  color: COLORS.textPrimary,
-                  fontWeight: 'bold',
-                },
-              }),
-            }),
-          ],
-        }),
-      ];
-    }
-
-    dispose(): void {
-      // Nothing to clean up
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\common\MissionRenderer.ts ====================
-
-  /**
-   * Mission Renderer Component
-   * Creates reactive mission cards for the mission selection screen
-   */
-
-
-  /**
-   * Mission card dimensions
-   */
-  export const MISSION_DIMENSIONS = {
-    width: 290,
-    height: 185,
-  };
-
-  /**
-   * Props for reactive mission component
-   */
-  export interface ReactiveMissionRendererProps {
-    // Source bindings (not derived)
-    missionsBinding: any; // Binding<MissionDisplay[]>
-    scrollOffsetBinding: any; // Binding<number>
-    slotIndex: number;
-    missionsPerPage: number;
-    onClick?: (missionId: string) => void;
-  }
-
-  /**
-   * Create a reactive mission component that updates based on bindings
-   * Uses Horizon-compatible pattern without UINode.if() to avoid type checking errors
-   */
-  export function createReactiveMissionComponent(ui: UIMethodMappings, props: ReactiveMissionRendererProps): UINodeType {
-    const {
-      missionsBinding,
-      scrollOffsetBinding,
-      slotIndex,
-      missionsPerPage,
-      onClick,
-    } = props;
-
-    // Track mission data for click handler
-    let trackedMission: MissionDisplay | null = null;
-
-    // Create dependencies array
-    // ALWAYS include assetsLoadedBinding as first dependency to prevent premature asset lookups
-    const dependencies = [ui.assetsLoadedBinding, missionsBinding, scrollOffsetBinding];
-
-    // Mission card positions
-    const positions = {
-      name: { x: 97, y: 10 },
-      image: { x: 16, y: 16 },
-      level: { x: 97, y: 43 },
-      difficulty: { x: 97, y: 66 },
-      description: { x: 13, y: 98 },
-    };
-
-    const cardWidth = MISSION_DIMENSIONS.width;
-    const cardHeight = MISSION_DIMENSIONS.height;
-    const beastSize = 70;
-
-    // Helper to get difficulty color
-    const getDifficultyColor = (difficulty: string): string => {
-      switch (difficulty) {
-        case 'tutorial': return '#90EE90';
-        case 'easy': return '#87CEEB';
-        case 'normal': return '#FFD700';
-        case 'hard': return '#FF6347';
-        case 'expert': return '#8B008B';
-        case 'legendary': return '#FF1493';
-        default: return COLORS.textSecondary;
-      }
-    };
-
-    // Create reactive bindings for all mission properties
-    // args[0] = assetsLoadedBinding, args[1] = missionsBinding, args[2] = scrollOffsetBinding
-    const missionNameBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[1];
-      const offset: number = args[2];
-      const pageStart = offset * missionsPerPage;
-      const missionIndex = pageStart + slotIndex;
-      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-
-      // Track the mission for click handler
-      trackedMission = mission;
-
-      return mission?.name || '';
-    });
-
-    const levelTextBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[1];
-      const offset: number = args[2];
-      const pageStart = offset * missionsPerPage;
-      const missionIndex = pageStart + slotIndex;
-      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-      return mission ? `Level ${mission.level}` : '';
-    });
-
-    const difficultyTextBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[1];
-      const offset: number = args[2];
-      const pageStart = offset * missionsPerPage;
-      const missionIndex = pageStart + slotIndex;
-      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-      if (!mission) return '';
-
-      // Format difficulty nicely (capitalize first letter)
-      const formattedDifficulty = mission.difficulty.charAt(0).toUpperCase() + mission.difficulty.slice(1);
-      return formattedDifficulty;
-    });
-
-    const difficultyColorBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[1];
-      const offset: number = args[2];
-      const pageStart = offset * missionsPerPage;
-      const missionIndex = pageStart + slotIndex;
-      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-      return mission ? getDifficultyColor(mission.difficulty) : COLORS.textSecondary;
-    });
-
-    const descriptionBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[1];
-      const offset: number = args[2];
-      const pageStart = offset * missionsPerPage;
-      const missionIndex = pageStart + slotIndex;
-      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-      return mission?.description || '';
-    });
-
-    const missionImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
-      if (!assetsLoaded) return null;
-      const missions: MissionDisplay[] = args[1];
-      const offset: number = args[2];
-      const pageStart = offset * missionsPerPage;
-      const missionIndex = pageStart + slotIndex;
-      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-
-      if (!mission) return null;
-
-      // Determine mission background image based on affinity
-      let missionImageName = 'forest-mission';
-      if (mission.affinity === 'Water') missionImageName = 'water-mission';
-      else if (mission.affinity === 'Fire') missionImageName = 'fire-mission';
-      else if (mission.affinity === 'Sky') missionImageName = 'sky-mission';
-      else if (mission.affinity === 'Boss') missionImageName = 'boss-mission';
-
-      return ui.assetIdToImageSource?.(missionImageName) ?? null;
-    });
-
-    const beastImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
-      if (!assetsLoaded) return null;
-      const missions: MissionDisplay[] = args[1];
-      const offset: number = args[2];
-      const pageStart = offset * missionsPerPage;
-      const missionIndex = pageStart + slotIndex;
-      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-
-      if (!mission || !mission.beastId) return null;
-
-      const beastAssetId = mission.beastId.toLowerCase().replace(/\s+/g, '-');
-      if (!beastAssetId) return null; // Don't try to load empty asset IDs
-      return ui.assetIdToImageSource?.(beastAssetId) ?? null;
-    });
-
-    const opacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[1];
-      const offset: number = args[2];
-      const pageStart = offset * missionsPerPage;
-      const missionIndex = pageStart + slotIndex;
-      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-      return mission?.isAvailable ? 1 : 0.4;
-    });
-
-    const lockOverlayOpacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[1];
-      const offset: number = args[2];
-      const pageStart = offset * missionsPerPage;
-      const missionIndex = pageStart + slotIndex;
-      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-      const lockOpacity = (mission && !mission.isAvailable) ? 1 : 0;
-
-      // Debug log for first 3 slots
-      if (slotIndex < 3 && mission) {
-        console.log(`[MissionRenderer] Slot ${slotIndex} (${mission.id}): isAvailable=${mission.isAvailable}, lockOpacity=${lockOpacity}`);
-      }
-
-      return lockOpacity;
-    });
-
-    const checkmarkOpacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-      const missions: MissionDisplay[] = args[1];
-      const offset: number = args[2];
-      const pageStart = offset * missionsPerPage;
-      const missionIndex = pageStart + slotIndex;
-      const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-      return (mission && mission.isCompleted) ? 1 : 0;
-    });
-
-    // Render all layers - use opacity to hide/show
-    const children = [
-      // Mission background image
-      ui.Image({
-        source: missionImageBinding,
-        style: {
-          position: 'absolute',
-          width: cardWidth,
-          height: cardHeight,
-          top: 0,
-          left: 0,
-        },
-      }),
-
-      // Beast image
-      ui.Image({
-        source: beastImageBinding,
-        style: {
-          position: 'absolute',
-          width: beastSize,
-          height: beastSize,
-          left: positions.image.x,
-          top: positions.image.y,
-          opacity: opacityBinding,
-        },
-      }),
-
-      // Mission name
-      ui.Text({
-        text: missionNameBinding,
-        numberOfLines: 1,
-        style: {
-          position: 'absolute',
-          left: positions.name.x,
-          top: positions.name.y,
-          fontSize: DIMENSIONS.fontSize.xl,
-          color: COLORS.textPrimary,
-          fontWeight: 'bold',
-        },
-      }),
-
-      // Level
-      ui.Text({
-        text: levelTextBinding,
-        style: {
-          position: 'absolute',
-          left: positions.level.x,
-          top: positions.level.y,
-          fontSize: DIMENSIONS.fontSize.xs,
-          color: COLORS.textSecondary,
-        },
-      }),
-
-      // Difficulty (below level, aligned left with name and level)
-      ui.Text({
-        text: difficultyTextBinding,
-        style: {
-            position: 'absolute',
-            left: positions.difficulty.x,
-            top: positions.difficulty.y,
-            fontSize: DIMENSIONS.fontSize.xs,
-            color: difficultyColorBinding,
-            fontWeight: 'bold',
-          },
-      }),
-
-      // Description
-      ui.Text({
-        text: descriptionBinding,
-        numberOfLines: 3,
-        style: {
-          position: 'absolute',
-          left: positions.description.x,
-          top: positions.description.y,
-          width: cardWidth - 26,
-          fontSize: DIMENSIONS.fontSize.sm,
-          color: COLORS.textPrimary,
-        },
-      }),
-
-      // Lock overlay (for unavailable missions)
-      ui.View({
-        style: {
-          position: 'absolute',
-          width: cardWidth,
-          height: cardHeight,
-          top: 0,
-          left: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.6)',
-          opacity: lockOverlayOpacityBinding,
-        },
-        children: ui.Text({
-          text: new ui.Binding('🔒'),
-          style: {
-            position: 'absolute',
-            left: cardWidth / 2 - 15,
-            top: cardHeight / 2 - 15,
-            fontSize: 30,
-            color: COLORS.textPrimary,
-          },
-        }),
-      }),
-
-      // Completed checkmark
-      ui.Text({
-        text: new ui.Binding('✅'),
-        style: {
-          position: 'absolute',
-          right: 10,
-          top: 10,
-          fontSize: 20,
-          opacity: checkmarkOpacityBinding,
-        },
-      }),
-    ];
-
-    // Wrap in pressable container
-    return ui.Pressable({
-      onClick: () => {
-        if (trackedMission && trackedMission.isAvailable && onClick) {
-          onClick(trackedMission.id);
-        }
-      },
-      style: {
-        width: cardWidth,
-        height: cardHeight,
-        position: 'relative',
-        opacity: opacityBinding,
-      },
-      children: children.filter(child => child !== undefined && child !== null),
-    });
-  }
-
-  // ==================== bloombeasts\ui\screens\MissionScreen.ts ====================
-
-  /**
-   * Mission Screen - Refactored with UI Component System
-   */
-
-
-  // MissionScreen-specific constants
-  const cardsUIContainerDimensions = {
-    width: 950,
-    height: 640,
-  };
-
-  const cardsUIContainerPosition: SimplePosition = {
-    x: 103,
-    y: 41,
-  };
-
-  export interface MissionScreenProps {
-    ui: UIMethodMappings;
-    missions: any; // Missions binding - still separate
-    playerDataBinding: any; // PlayerData binding
-    onMissionSelect?: (missionId: string) => void;
-    onNavigate?: (screen: string) => void;
-    onRenderNeeded?: () => void;
-  }
-
-  /**
-   * Unified Mission Screen that works on both platforms
-   */
-  export class MissionScreen {
-    // UI methods (injected)
-    private ui: UIMethodMappings;
-
-    // State bindings
-    private missions: any;
-    private playerDataBinding: any;
-    private scrollOffset: any;
-
-    // Track scroll offset value for button handlers (can't use .get() in Horizon)
-    private scrollOffsetValue: number = 0;
-
-    // Configuration
-    private missionsPerRow: number = 3;
-    private rowsPerPage: number = 3;
-
-    // Callbacks
-    private onMissionSelect?: (missionId: string) => void;
-    private onNavigate?: (screen: string) => void;
-    private onRenderNeeded?: () => void;
-
-    constructor(props: MissionScreenProps) {
-      this.ui = props.ui;
-      this.scrollOffset = new this.ui.Binding(0);
-      this.missions = props.missions;
-      this.playerDataBinding = props.playerDataBinding;
-      this.onMissionSelect = props.onMissionSelect;
-      this.onNavigate = props.onNavigate;
-      this.onRenderNeeded = props.onRenderNeeded;
-    }
-
-    /**
-     * Create the missions UI
-     */
-    createUI(): UINodeType {
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [
-          // Background image (full screen)
-          this.createBackground(),
-
-          // Main content area with mission grid
-          this.createMainContent(),
-
-          // Side menu with controls (absolutely positioned)
-          this.createSideMenu(),
-        ],
-      });
-    }
-
-    /**
-     * Create full-screen background image
-     */
-    private createBackground(): UINodeType {
-      return this.ui.Image({
-        source: this.ui.Binding.derive(
-          [this.ui.assetsLoadedBinding],
-          (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
-        ),
-        style: {
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          top: 0,
-          left: 0,
-        },
-      });
-    }
-
-    /**
-     * Create main content area with mission grid
-     */
-    private createMainContent(): UINodeType {
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          left: cardsUIContainerPosition.x,
-          top: cardsUIContainerPosition.y,
-          width: cardsUIContainerDimensions.width,
-          height: cardsUIContainerDimensions.height,
-        },
-        children: [
-          // Cards container background image
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('cards-container') : null
-            ),
-            style: {
-              position: 'absolute',
-              width: cardsUIContainerDimensions.width,
-              height: cardsUIContainerDimensions.height,
-              top: 0,
-              left: 0,
-            },
-          }),
-          // Content on top of container image
-          // Mission grid container with reactive missions
-          this.createMissionGrid(),
-        ],
-      });
-    }
-
-    /**
-     * Create a single mission slot using reactive mission component
-     */
-    private createMissionSlot(slotIndex: number, missionsPerPage: number, row: number, col: number): UINodeType {
-      const cardWidth = MISSION_DIMENSIONS.width;
-      const cardHeight = MISSION_DIMENSIONS.height;
-      const gapX = 12;
-      const gapY = 12;
-      const startX = 24;
-      const startY = 24;
-      const spacingX = cardWidth + gapX;
-      const spacingY = cardHeight + gapY;
-      const x = startX + col * spacingX;
-      const y = startY + row * spacingY;
-
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          left: x,
-          top: y,
-        },
-        children: createReactiveMissionComponent(this.ui, {
-          missionsBinding: this.missions,
-          scrollOffsetBinding: this.scrollOffset,
-          slotIndex,
-          missionsPerPage,
-          onClick: (missionId: string) => {
-            if (this.onMissionSelect) {
-              this.onMissionSelect(missionId);
+              ]
             }
-          },
-        }),
-      });
-    }
-
-    /**
-     * Create the mission grid with reactive components
-     */
-    private createMissionGrid(): UINodeType {
-      const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-
-      return this.ui.View({
-        style: {
-          position: 'relative',
-          paddingLeft: 4,
-          paddingTop: 4,
-          width: cardsUIContainerDimensions.width,
-          height: cardsUIContainerDimensions.height,
-        },
-        children: [
-          // Mission grid - pre-create all slots
-          this.ui.View({
-            style: {
-              position: 'relative',
-              width: '100%',
-              height: '100%',
+          ],
+          levelingConfig: {
+            statGains: {
+              "1": { hp: 0, atk: 0 },
+              "2": { hp: 0, atk: 0 },
+              "3": { hp: 0, atk: 0 },
+              "4": { hp: 0, atk: 0 },
+              "5": { hp: 0, atk: 0 },
+              "6": { hp: 0, atk: 0 },
+              "7": { hp: 0, atk: 0 },
+              "8": { hp: 0, atk: 0 },
+              "9": { hp: 0, atk: 0 }
             },
-            children: Array.from({ length: this.rowsPerPage }, (_, rowIndex) =>
-              Array.from({ length: this.missionsPerRow }, (_, colIndex) => {
-                const slotIndex = rowIndex * this.missionsPerRow + colIndex;
-                return this.createMissionSlot(slotIndex, missionsPerPage, rowIndex, colIndex);
-              })
-            ).flat(),
-          }),
-
-          // Empty state message (only show when no missions, render on top)
-          ...(this.ui.UINode ? [this.ui.UINode.if(
-            this.ui.Binding.derive([this.missions], (missions: MissionDisplay[]) => {
-              return missions.length === 0 ? true : false;
-            }),
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                justifyContent: 'center',
-                alignItems: 'center',
-                top: 0,
-                left: 0,
-              },
-              children: this.ui.Text({
-                text: new this.ui.Binding('No missions available yet.'),
-                style: {
-                  fontSize: DIMENSIONS.fontSize.xl,
-                  color: COLORS.textSecondary,
-                },
-              }),
-            })
-          )] : []),
-        ],
-      });
-    }
-
-
-    /**
-     * Create side menu with controls
-     */
-    private createSideMenu(): UINodeType {
-      const completionText = this.ui.Binding.derive(
-        [this.missions],
-        (missions: MissionDisplay[]) => {
-          const completedCount = missions.filter((m: MissionDisplay) => m.isCompleted).length;
-          return `${missionEmoji} ${completedCount}/${missions.length}`;
-        }
-      );
-
-      return createSideMenu(this.ui, {
-        title: 'Missions',
-        customTextContent: [
-          createTextRow(this.ui, completionText as any, 0),
-        ],
-        buttons: [
+            abilityUpgrades: {}
+          }
+        },
+        assets: [
           {
-            label: 'Up',
-            onClick: () => {
-              // Reactive disabled state prevents invalid scrolling, so just decrement
-              this.scrollOffsetValue--;
-              this.scrollOffset.set(this.scrollOffsetValue);
-            },
-            disabled: this.ui.Binding.derive(
-              [this.missions, this.scrollOffset],
-              (missions, offset) => offset <= 0 ? true : false
-            ) as any,
-            yOffset: 0,
-          },
-          {
-            label: 'Down',
-            onClick: () => {
-              // Reactive disabled state prevents invalid scrolling, so just increment
-              this.scrollOffsetValue++;
-              this.scrollOffset.set(this.scrollOffsetValue);
-            },
-            disabled: this.ui.Binding.derive(
-              [this.missions, this.scrollOffset],
-              (missions: MissionDisplay[], offset: number) => {
-                const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-                const totalPages = Math.ceil(missions.length / missionsPerPage);
-                return offset >= totalPages - 1 ? true : false;
-              }
-            ) as any,
-            yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
-          },
-        ],
-        bottomButton: {
-          label: 'Back',
-          onClick: () => {
-            if (this.onNavigate) {
-              this.onNavigate('menu');
-            }
-          },
-          disabled: false,
-        },
-        playerDataBinding: this.playerDataBinding,
-      });
-    }
-
-    /**
-     * Cleanup
-     */
-    dispose(): void {
-      // Nothing to clean up
-    }
-  }
-
-  // ==================== bloombeasts\engine\utils\combatHelpers.ts ====================
-
-  /**
-   * Combat Helper Utilities
-   */
-
-
-  /**
-   * Calculate damage after applying modifiers
-   */
-  export function calculateDamage(
-    baseDamage: number,
-    attacker: BloomBeastInstance,
-    defender: BloomBeastInstance
-  ): number {
-    let damage = baseDamage;
-
-    // Check for damage amplification on attacker
-    const ampEffect = attacker.statusEffects?.find(e => e.type === 'damage-amp');
-    if (ampEffect) {
-      damage = Math.floor(damage * (ampEffect.value || 1));
-    }
-
-    // Check for damage reduction on defender
-    const reduction = defender.statusEffects?.find(e => e.type === 'damage-reduction');
-    if (reduction) {
-      damage = Math.max(0, damage - (reduction.value || 0));
-    }
-
-    return damage;
-  }
-
-  /**
-   * Check if a beast can attack
-   */
-  export function canAttack(beast: BloomBeastInstance): boolean {
-    // Check summoning sickness
-    if (beast.summoningSickness) {
-      return false;
-    }
-
-    // Check freeze status
-    const frozen = beast.counters.find(c => c.type === 'Freeze');
-    if (frozen && frozen.amount > 0) {
-      return false;
-    }
-
-    // Check entangle status
-    const entangled = beast.counters.find(c => c.type === 'Entangle');
-    if (entangled && entangled.amount > 0) {
-      return false;
-    }
-
-    // Check attack prevention effects
-    const preventAttack = beast.statusEffects?.find(e => e.type === 'prevent-attack');
-    if (preventAttack) {
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Get valid attack targets for a beast
-   */
-  export function getValidTargets(
-    attacker: BloomBeastInstance,
-    gameState: GameState,
-    attackerPlayer: number
-  ): BloomBeastInstance[] {
-    const opponentPlayer = attackerPlayer === 0 ? 1 : 0;
-    const opponent = gameState.players[opponentPlayer];
-
-    const targets: BloomBeastInstance[] = [];
-
-    // Check for taunt effects
-    const allOpponentBeasts = getAllBeasts(opponent.field);
-    const taunters = allOpponentBeasts.filter(b =>
-      b.statusEffects?.some(e => e.type === 'taunt')
-    );
-
-    if (taunters.length > 0) {
-      return taunters;
-    }
-
-    // Otherwise all alive opponent beasts are valid targets
-    return getAliveBeasts(opponent.field);
-  }
-
-  /**
-   * Check if a beast has a specific ability effect
-   */
-  export function hasAbilityEffect(
-    beast: BloomBeastInstance,
-    effectType: string
-  ): boolean {
-    return beast.statusEffects?.some(e => e.type === effectType) || false;
-  }
-
-  /**
-   * Apply a status effect to a beast
-   */
-  export function applyStatusEffect(
-    beast: BloomBeastInstance,
-    effect: AbilityEffect
-  ): void {
-    if (!beast.statusEffects) {
-      beast.statusEffects = [];
-    }
-
-    // Check for immunity
-    if (hasAbilityEffect(beast, 'immunity')) {
-      Logger.debug(`${beast.cardId} is immune to status effects`);
-      return;
-    }
-
-    beast.statusEffects.push({
-      type: effect.type,
-      value: (effect as any).value,
-      duration: (effect as any).duration,
-      turnsRemaining: getEffectDuration((effect as any).duration),
-    });
-  }
-
-  /**
-   * Get effect duration in turns
-   */
-  function getEffectDuration(duration: string): number {
-    switch (duration) {
-      case 'end-of-turn':
-        return 1;
-      case 'start-of-next-turn':
-        return 1;
-      case 'next-attack':
-        return -1; // Special handling needed
-      case 'permanent':
-        return 999;
-      case 'while-on-field':
-        return 999;
-      default:
-        return 1;
-    }
-  }
-
-  /**
-   * Remove expired status effects
-   */
-  export function cleanupStatusEffects(beast: BloomBeastInstance): void {
-    if (!beast.statusEffects) return;
-
-    beast.statusEffects = beast.statusEffects.filter(effect => {
-      if (effect.turnsRemaining === undefined) return true;
-      return effect.turnsRemaining > 0;
-    });
-  }
-
-  /**
-   * Decrease status effect durations
-   */
-  export function tickStatusEffects(beast: BloomBeastInstance): void {
-    if (!beast.statusEffects) return;
-
-    beast.statusEffects.forEach(effect => {
-      if (effect.turnsRemaining !== undefined && effect.turnsRemaining > 0) {
-        effect.turnsRemaining--;
-      }
-    });
-  }
-
-  /**
-   * Check if a position is adjacent
-   */
-  export function isAdjacent(pos1: number, pos2: number): boolean {
-    return Math.abs(pos1 - pos2) === 1;
-  }
-
-  /**
-   * Get adjacent positions
-   */
-  export function getAdjacentPositions(position: number): number[] {
-    const adjacent: number[] = [];
-    if (position > 0) adjacent.push(position - 1);
-    if (position < FIELD_SIZE - 1) adjacent.push(position + 1);
-    return adjacent;
-  }
-
-  /**
-   * Check if player has lost (no beasts on field and no cards in hand)
-   */
-  export function hasPlayerLost(player: Player): boolean {
-    const hasFieldBeasts = getAliveBeasts(player.field).length > 0;
-    const hasPlayableCards = player.hand.length > 0 || player.deck.length > 0;
-
-    return !hasFieldBeasts && !hasPlayableCards;
-  }
-
-  // ==================== bloombeasts\ui\screens\battle\types.ts ====================
-
-  /**
-   * Shared types and constants for Battle Screen components
-   */
-
-
-  // Re-export standardCardDimensions from dimensions.ts to avoid duplication
-
-  /**
-   * Card dimensions (battle-specific)
-   */
-
-  export const trapCardDimensions = {
-    width: 100,
-    height: 133,
-  };
-
-  export const buffCardDimensions = {
-    width: 100,
-    height: 133,
-  };
-
-  export const habitatShiftCardDimensions = {
-    width: 100,
-    height: 133,
-  };
-
-  /**
-   * Game dimensions
-   */
-  export const gameDimensions = {
-    panelWidth: 1280,
-    panelHeight: 720,
-  };
-
-  /**
-   * Battle board asset positions (from canvas version)
-   */
-  export const battleBoardAssetPositions = {
-    playerOne: {
-      beastOne: { x: 170, y: 50 },
-      beastTwo: { x: 535, y: 50 },
-      beastThree: { x: 900, y: 50 },
-      trapOne: { x: 120, y: 240 },
-      trapTwo: { x: 590, y: 240 },
-      trapThree: { x: 1060, y: 240 },
-      buffOne: { x: 20, y: 50 },
-      buffTwo: { x: 20, y: 193 },
-      health: { x: 30, y: 10 },
-      nectar: { x: 930, y: 10 },
-      deckCount: { x: 1150, y: 10 },
-    },
-    playerTwo: {
-      beastOne: { x: 170, y: 390 },
-      beastTwo: { x: 535, y: 390 },
-      beastThree: { x: 900, y: 390 },
-      trapOne: { x: 120, y: 347 },
-      trapTwo: { x: 590, y: 347 },
-      trapThree: { x: 1060, y: 347 },
-      buffOne: { x: 1160, y: 477 },
-      buffTwo: { x: 1160, y: 587 },
-      health: { x: 30, y: 680 },
-      nectar: { x: 930, y: 680 },
-      deckCount: { x: 1150, y: 680 },
-    },
-    habitatZone: { x: 330, y: 293 },
-    playOneInfoPosition: { x: 640, y: 20 },
-    playTwoInfoPosition: { x: 640, y: 680 },
-  };
-
-  /**
-   * Component props interface for battle components
-   */
-  export interface BattleComponentProps {
-    ui: UIMethodMappings;
-    battleDisplay: any; // BattleDisplay binding
-  }
-
-  /**
-   * Extended props for components that need callbacks
-   */
-  export interface BattleComponentWithCallbacks extends BattleComponentProps {
-    onAction?: (action: string) => void;
-    showPlayedCard?: (card: any, callback?: () => void) => void;
-    onCardDetailSelected?: (card: any) => void;
-  }
-
-  /**
-   * Props for PlayerHand component
-   */
-  export interface PlayerHandProps extends BattleComponentProps {
-    showHand: any; // Binding for show/hide state
-    handScrollOffset: any; // Binding for scroll offset
-    showHandValue: boolean; // Current show/hide value
-    handScrollOffsetValue: number; // Current scroll value
-    getBattleDisplayValue: () => any | null; // Function to get current battle display value for onClick handlers
-    onAction?: (action: string) => void;
-    onShowHandChange?: (newValue: boolean) => void;
-    onScrollOffsetChange?: (newValue: number) => void;
-    onRenderNeeded?: () => void;
-    showPlayedCard?: (card: any, callback?: () => void) => void;
-  }
-
-  /**
-   * Props for BattleSideMenu component
-   */
-  export interface BattleSideMenuProps extends BattleComponentProps {
-    endTurnButtonText: any; // Binding for button text
-    getIsPlayerTurn: () => boolean; // Function to get current turn state
-    getHasAttackableBeasts: () => boolean; // Function to check if player has beasts that can attack
-    onAction?: (action: string) => void;
-    onStopTurnTimer?: () => void;
-  }
-
-  // ==================== bloombeasts\ui\screens\battle\BattleBackground.ts ====================
-
-  /**
-   * Battle background and playboard rendering
-   */
-
-
-  export class BattleBackground {
-    private ui: BattleComponentProps['ui'];
-
-    constructor(props: BattleComponentProps) {
-      this.ui = props.ui;
-    }
-
-    /**
-     * Create full-screen background
-     */
-    createBackground(): UINodeType {
-      return this.ui.Image({
-        source: this.ui.Binding.derive(
-          [this.ui.assetsLoadedBinding],
-          (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
-        ),
-        style: {
-          position: 'absolute',
-          width: gameDimensions.panelWidth,
-          height: gameDimensions.panelHeight,
-          top: 0,
-          left: 0,
-        },
-      });
-    }
-
-    /**
-     * Create playboard overlay image
-     */
-    createPlayboard(): UINodeType {
-      return this.ui.Image({
-        source: this.ui.Binding.derive(
-          [this.ui.assetsLoadedBinding],
-          (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('playboard') : null
-        ),
-        style: {
-          position: 'absolute',
-          width: gameDimensions.panelWidth,
-          height: gameDimensions.panelHeight,
-          top: 0,
-          left: 0,
-        },
-      });
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\battle\BeastField.ts ====================
-
-  /**
-   * Beast field rendering - 3 slots per player
-   */
-
-
-  export class BeastField {
-    private ui: BattleComponentWithCallbacks['ui'];
-    private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
-    private onAction?: (action: string) => void;
-    private showPlayedCard?: (card: any, callback?: () => void) => void;
-
-    constructor(props: BattleComponentWithCallbacks) {
-      this.ui = props.ui;
-      this.battleDisplay = props.battleDisplay;
-      this.onAction = props.onAction;
-      this.showPlayedCard = props.showPlayedCard;
-    }
-
-    /**
-     * Create static beast card structure with reactive properties
-     * All images, text, etc. use bindings instead of being dynamically created
-     */
-    private createBeastCardStructure(player: 'player' | 'opponent', slotIndex: number): UINodeType[] {
-      const cardWidth = standardCardDimensions.width;
-      const cardHeight = standardCardDimensions.height;
-      const beastImageWidth = 185;
-      const beastImageHeight = 185;
-
-      const positions = {
-        beastImage: { x: 12, y: 13 },
-        cost: { x: 20, y: 10 },
-        affinity: { x: 175, y: 7 },
-        name: { x: 105, y: 13 },
-        attack: { x: 20, y: 176 },
-        health: { x: 188, y: 176 },
-      };
-
-      return [
-        // Layer 1: Beast artwork image - reactive source
-        this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.battleDisplay],
-            (state: BattleDisplay | null) => {
-              if (!state) return null;
-              const field = player === 'player' ? state.playerField : state.opponentField;
-              const beast = field?.[slotIndex];
-              if (!beast) return null;
-              const baseId = beast.id?.replace(/-\d+-\d+$/, '') || beast.name.toLowerCase().replace(/\s+/g, '-');
-              return this.ui.assetIdToImageSource?.(baseId) || null;
-            }
-          ),
-          style: {
-            width: beastImageWidth,
-            height: beastImageHeight,
-            position: 'absolute',
-            top: positions.beastImage.y,
-            left: positions.beastImage.x,
-          },
-        }),
-
-        // Layer 2: Base card frame
-        this.ui.Image({
-          source: this.ui.assetIdToImageSource?.('base-card') || null,
-          style: {
-            width: cardWidth,
-            height: cardHeight,
-            position: 'absolute',
-            top: 0,
-            left: 0,
-          },
-        }),
-
-        // Layer 3: Affinity icon - reactive source
-        this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.battleDisplay],
-            (state: BattleDisplay | null) => {
-              if (!state) return null;
-              const field = player === 'player' ? state.playerField : state.opponentField;
-              const beast = field?.[slotIndex];
-              if (!beast || !beast.affinity) return null;
-              return this.ui.assetIdToImageSource?.(`${beast.affinity.toLowerCase()}-icon`) || null;
-            }
-          ),
-          style: {
-            width: 30,
-            height: 30,
-            position: 'absolute',
-            top: positions.affinity.y,
-            left: positions.affinity.x,
-          },
-        }),
-
-        // Layer 4: Card name - reactive text
-        this.ui.Text({
-          text: this.ui.Binding.derive(
-            [this.battleDisplay],
-            (state: BattleDisplay | null) => {
-              if (!state) return '';
-              const field = player === 'player' ? state.playerField : state.opponentField;
-              const beast = field?.[slotIndex];
-              return beast?.name || '';
-            }
-          ),
-          style: {
-            position: 'absolute',
-            top: positions.name.y,
-            left: 0,
-            width: cardWidth,
-            fontSize: 14,
-            color: '#fff',
-            textAlign: 'center',
-          },
-        }),
-
-        // Layer 5: Cost - reactive text
-        this.ui.Text({
-          text: this.ui.Binding.derive(
-            [this.battleDisplay],
-            (state: BattleDisplay | null) => {
-              if (!state) return '';
-              const field = player === 'player' ? state.playerField : state.opponentField;
-              const beast = field?.[slotIndex];
-              return beast && beast.cost !== undefined ? String(beast.cost) : '';
-            }
-          ),
-          style: {
-            position: 'absolute',
-            top: positions.cost.y,
-            left: positions.cost.x - 10,
-            width: 20,
-            fontSize: 24,
-            color: '#fff',
-            textAlign: 'center',
-          },
-        }),
-
-        // Layer 6: Attack - reactive text
-        this.ui.Text({
-          text: this.ui.Binding.derive(
-            [this.battleDisplay],
-            (state: BattleDisplay | null) => {
-              if (!state) return '';
-              const field = player === 'player' ? state.playerField : state.opponentField;
-              const beast = field?.[slotIndex];
-              return beast ? String(beast.currentAttack ?? beast.baseAttack ?? 0) : '';
-            }
-          ),
-          style: {
-            position: 'absolute',
-            top: positions.attack.y,
-            left: positions.attack.x - 10,
-            width: 20,
-            fontSize: 24,
-            color: '#fff',
-            textAlign: 'center',
-          },
-        }),
-
-        // Layer 7: Health - reactive text
-        this.ui.Text({
-          text: this.ui.Binding.derive(
-            [this.battleDisplay],
-            (state: BattleDisplay | null) => {
-              if (!state) return '';
-              const field = player === 'player' ? state.playerField : state.opponentField;
-              const beast = field?.[slotIndex];
-              return beast ? String(beast.currentHealth ?? beast.baseHealth ?? 0) : '';
-            }
-          ),
-          style: {
-            position: 'absolute',
-            top: positions.health.y,
-            left: positions.health.x - 10,
-            width: 20,
-            fontSize: 24,
-            color: '#fff',
-            textAlign: 'center',
-          },
-        }),
-      ];
-    }
-
-    /**
-     * Create beast field for a player - REACTIVE
-     * Creates 3 slots, bindings determine what's shown
-     */
-    createBeastField(player: 'player' | 'opponent'): UINodeType[] {
-      const positions = player === 'player'
-        ? battleBoardAssetPositions.playerTwo
-        : battleBoardAssetPositions.playerOne;
-      const slots = [positions.beastOne, positions.beastTwo, positions.beastThree];
-
-      // Create 3 beast slots
-      return slots.map((pos, index) => {
-        // All bindings must derive from this.battleDisplay, not from other derived bindings
-        return this.ui.View({
-          style: {
-            position: 'absolute',
-            left: pos.x,
-            top: pos.y,
-            width: standardCardDimensions.width,
-            height: standardCardDimensions.height,
-            // Hide slot if no beast - derive directly from battleDisplay
-            display: this.ui.Binding.derive(
-              [this.battleDisplay],
-              (state: BattleDisplay | null) => {
-                if (!state) return 'none';
-                const field = player === 'player' ? state.playerField : state.opponentField;
-                const beast = field?.[index];
-                return beast ? 'flex' : 'none';
-              }
-            ),
-          },
-          children: [
-            // Beast card - static structure with reactive properties
-            this.ui.Pressable({
-              onClick: () => {
-                // View card details only (selection removed)
-                this.onAction?.(`view-field-card-${player}-${index}`);
-              },
-              style: {
-                width: standardCardDimensions.width,
-                height: standardCardDimensions.height,
-                position: 'relative',
-              },
-              children: this.createBeastCardStructure(player, index),
-            }),
-
-            // Attack animation overlay - derive directly from battleDisplay
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay | null) => {
-                    const isAttacking = state?.attackAnimation?.attackerPlayer === player &&
-                                       state?.attackAnimation?.attackerIndex === index;
-                    const isTarget = state?.attackAnimation?.targetPlayer === player &&
-                                    state?.attackAnimation?.targetIndex === index;
-                    if (isAttacking) return 'rgba(0, 255, 0, 0.4)';
-                    if (isTarget) return 'rgba(255, 0, 0, 0.4)';
-                    return 'transparent';
-                  }
-                ),
-                borderRadius: 12,
-                display: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay | null) => {
-                    const isAttacking = state?.attackAnimation?.attackerPlayer === player &&
-                                       state?.attackAnimation?.attackerIndex === index;
-                    const isTarget = state?.attackAnimation?.targetPlayer === player &&
-                                    state?.attackAnimation?.targetIndex === index;
-                    return (isAttacking || isTarget) ? 'flex' : 'none';
-                  }
-                ),
-              },
-            }),
-
-            // Action icons overlay wrapper - always exists, visibility controlled by display
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                left: 17,
-                top: 44,
-                width: 26,
-                height: 26,
-                // Hide when no beast or beast has summoning sickness
-                display: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay | null) => {
-                    if (!state) return 'none';
-                    const field = player === 'player' ? state.playerField : state.opponentField;
-                    const beast = field?.[index];
-                    if (!beast || beast.summoningSickness) return 'none';
-                    return 'flex';
-                  }
-                ),
-              },
-              children: this.ui.Image({
-                source: this.ui.assetIdToImageSource?.('icon-attack') || null,
-                style: { width: 26, height: 26 },
-              }),
-            }),
-          ],
-        });
-      });
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\battle\TrapZone.ts ====================
-
-  /**
-   * Trap zone rendering - 3 slots per player
-   */
-
-
-  export class TrapZone {
-    private ui: BattleComponentWithCallbacks['ui'];
-    private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
-    private onCardDetailSelected?: (card: any) => void;
-
-    constructor(props: BattleComponentWithCallbacks) {
-      this.ui = props.ui;
-      this.battleDisplay = props.battleDisplay;
-      this.onCardDetailSelected = props.onCardDetailSelected;
-    }
-
-    /**
-     * Create trap zone for a player - REACTIVE
-     * Creates 3 slots, bindings determine what's shown
-     */
-    createTrapZone(player: 'player' | 'opponent'): UINodeType[] {
-      const positions = player === 'player'
-        ? battleBoardAssetPositions.playerTwo
-        : battleBoardAssetPositions.playerOne;
-      const trapSlots = [positions.trapOne, positions.trapTwo, positions.trapThree];
-
-      // Create 3 trap slots
-      return trapSlots.map((pos, index) => {
-        // Get trap card image source directly
-        const trapCardSource = this.ui.assetIdToImageSource?.('trap-card-playboard') || null;
-
-        return this.ui.View({
-          style: {
-            position: 'absolute',
-            left: pos.x,
-            top: pos.y,
-            width: trapCardDimensions.width,
-            height: trapCardDimensions.height,
-            // Hide slot if no trap - derive directly from battleDisplay
-            display: this.ui.Binding.derive(
-              [this.battleDisplay],
-              (state: BattleDisplay | null) => {
-                if (!state) return 'none';
-                const trapZone = player === 'player' ? state.playerTrapZone : state.opponentTrapZone;
-                const trap = trapZone?.[index];
-                return trap ? 'flex' : 'none';
-              }
-            ),
-          },
-          children: [
-            // Clickable wrapper for trap card
-            this.ui.Pressable({
-              onClick: () => {
-                // Only allow player to view their own trap cards
-                if (player === 'player') {
-                  console.log('[TrapZone] Player trap clicked, showing detail');
-                  // Get current trap at click time
-                  const state = this.battleDisplay;
-                  if (state && typeof state === 'object' && 'playerTrapZone' in state) {
-                    const trapZone = (state as any).playerTrapZone;
-                    const trap = trapZone?.[index];
-                    if (trap) {
-                      this.onCardDetailSelected?.(trap);
-                    }
-                  }
-                }
-              },
-              style: {
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-              },
-              children: [
-                // Trap card playboard image (face-down)
-                this.ui.Image({
-                  source: trapCardSource,
-                  style: {
-                    width: trapCardDimensions.width,
-                    height: trapCardDimensions.height,
-                  },
-                }),
-              ],
-            }),
-          ],
-        });
-      });
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\battle\BuffZone.ts ====================
-
-  /**
-   * Buff zone rendering - 2 slots per player
-   */
-
-
-  export class BuffZone {
-    private ui: BattleComponentWithCallbacks['ui'];
-    private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
-    private onCardDetailSelected?: (card: any) => void;
-
-    constructor(props: BattleComponentWithCallbacks) {
-      this.ui = props.ui;
-      this.battleDisplay = props.battleDisplay;
-      this.onCardDetailSelected = props.onCardDetailSelected;
-    }
-
-    /**
-     * Create buff zone for a player - REACTIVE
-     * Creates 2 slots, bindings determine what's shown
-     */
-    createBuffZone(player: 'player' | 'opponent'): UINodeType[] {
-      const positions = player === 'player'
-        ? battleBoardAssetPositions.playerTwo
-        : battleBoardAssetPositions.playerOne;
-      const buffSlots = [positions.buffOne, positions.buffTwo];
-
-      // Create 2 buff slots
-      return buffSlots.map((pos, index) => {
-        // Get buff card template source directly
-        const buffCardSource = this.ui.assetIdToImageSource?.('buff-card-playboard') || null;
-
-        return this.ui.View({
-          style: {
-            position: 'absolute',
-            left: pos.x,
-            top: pos.y,
-            width: buffCardDimensions.width,
-            height: buffCardDimensions.height,
-            // Hide slot if no buff - derive directly from battleDisplay
-            display: this.ui.Binding.derive(
-              [this.battleDisplay],
-              (state: BattleDisplay | null) => {
-                if (!state) return 'none';
-                const buffZone = player === 'player' ? state.playerBuffZone : state.opponentBuffZone;
-                const buff = buffZone?.[index];
-                return buff ? 'flex' : 'none';
-              }
-            ),
-          },
-          children: [
-            // Clickable wrapper for buff card
-            this.ui.Pressable({
-              onClick: () => {
-                console.log(`[BuffZone] Buff card clicked: ${player}-${index}, showing detail`);
-                // Get current buff at click time
-                const state = this.battleDisplay;
-                if (state && typeof state === 'object' && 'playerBuffZone' in state) {
-                  const buffZone = player === 'player' ? (state as any).playerBuffZone : (state as any).opponentBuffZone;
-                  const buff = buffZone?.[index];
-                  if (buff) {
-                    this.onCardDetailSelected?.(buff);
-                  }
-                }
-              },
-              style: {
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-              },
-              children: [
-                // Buff card playboard template (face-up)
-                this.ui.Image({
-                  source: buffCardSource,
-                  style: {
-                    width: buffCardDimensions.width,
-                    height: buffCardDimensions.height,
-                  },
-                }),
-
-                // Buff card artwork image wrapper - always exists, image source is reactive
-                this.ui.View({
-                  style: {
-                    position: 'absolute',
-                    top: (buffCardDimensions.height - 100) / 2,
-                    left: (buffCardDimensions.width - 100) / 2,
-                    width: 100,
-                    height: 100,
-                  },
-                  children: this.ui.Image({
-                    source: this.ui.Binding.derive(
-                      [this.battleDisplay],
-                      (state: BattleDisplay | null) => {
-                        if (!state) return null;
-                        const buffZone = player === 'player' ? state.playerBuffZone : state.opponentBuffZone;
-                        const buff = buffZone?.[index];
-                        if (!buff) return null;
-                        return this.ui.assetIdToImageSource?.(buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-'));
-                      }
-                    ),
-                    style: {
-                      width: 100,
-                      height: 100,
-                    },
-                  }),
-                }),
-
-                // Golden glow effect
-                this.ui.View({
-                  style: {
-                    position: 'absolute',
-                    top: -3,
-                    left: -3,
-                    right: -3,
-                    bottom: -3,
-                    borderWidth: 3,
-                    borderColor: '#FFD700',
-                    borderRadius: 8,
-                    shadowColor: '#FFD700',
-                    shadowRadius: 8,
-                  },
-                }),
-              ],
-            }),
-          ],
-        });
-      });
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\battle\HabitatZone.ts ====================
-
-  /**
-   * Habitat zone rendering (center of board)
-   */
-
-
-  export class HabitatZone {
-    private ui: BattleComponentWithCallbacks['ui'];
-    private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
-    private onCardDetailSelected?: (card: any) => void;
-
-    constructor(props: BattleComponentWithCallbacks) {
-      this.ui = props.ui;
-      this.battleDisplay = props.battleDisplay;
-      this.onCardDetailSelected = props.onCardDetailSelected;
-    }
-
-    /**
-     * Create habitat zone - REACTIVE
-     * Derives habitat from battleDisplay binding
-     */
-    createHabitatZone(): UINodeType {
-      const pos = battleBoardAssetPositions.habitatZone;
-
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          left: pos.x,
-          top: pos.y,
-          width: habitatShiftCardDimensions.width,
-          height: habitatShiftCardDimensions.height,
-          // Hide if no habitat
-          display: this.ui.Binding.derive(
-            [this.battleDisplay],
-            (state: BattleDisplay | null) => state?.habitatZone ? 'flex' : 'none'
-          ),
-        },
-        children: [
-          // Clickable wrapper for entire habitat card
-          this.ui.Pressable({
-            onClick: () => {
-              console.log('[HabitatZone] Habitat card clicked, showing detail');
-              // Get current habitat at click time
-              const state = this.battleDisplay;
-              if (state && typeof state === 'object' && 'habitatZone' in state) {
-                const habitat = (state as any).habitatZone;
-                if (habitat) {
-                  const habitatWithType = { ...habitat, type: 'Habitat' };
-                  this.onCardDetailSelected?.(habitatWithType);
-                }
-              }
-            },
-            style: {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-            },
-            children: [
-              // Habitat artwork image wrapper - always exists, image source is reactive
-              this.ui.View({
-                style: {
-                  position: 'absolute',
-                  top: (habitatShiftCardDimensions.height - 70) / 2,
-                  left: (habitatShiftCardDimensions.width - 70) / 2,
-                  width: 70,
-                  height: 70,
-                },
-                children: this.ui.Image({
-                  source: this.ui.Binding.derive(
-                    [this.battleDisplay],
-                    (state: BattleDisplay | null) => {
-                      if (!state?.habitatZone) return null;
-                      const habitat = state.habitatZone;
-                      return this.ui.assetIdToImageSource?.(habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-'));
-                    }
-                  ),
-                  style: {
-                    width: 70,
-                    height: 70,
-                  },
-                }),
-              }),
-
-              // Green glow effect
-              this.ui.View({
-                style: {
-                  position: 'absolute',
-                  top: -4,
-                  left: -4,
-                  right: -4,
-                  bottom: -4,
-                  borderWidth: 4,
-                  borderColor: '#4caf50',
-                  borderRadius: 8,
-                  shadowColor: '#4caf50',
-                  shadowRadius: 10,
-                },
-              }),
-
-              // TODO: Counter badges - need to implement without Binding.derive in children
-              // For now, counter badges are disabled until we implement proper reactive rendering
-            ],
-          }),
-        ],
-      });
-    }
-
-    /**
-     * Create counter badges for habitat
-     */
-    private createCounterBadges(counters: any[], basePos: { x: number; y: number }): UINodeType {
-      const counterMap = new Map<string, number>();
-      counters.forEach((counter: any) => {
-        const current = counterMap.get(counter.type) || 0;
-        counterMap.set(counter.type, current + counter.amount);
-      });
-
-      const counterConfigs: Record<string, { emoji: string; color: string }> = {
-        'Spore': { emoji: '🍄', color: '#51cf66' },
-      };
-
-      const badges = Array.from(counterMap.entries()).map(([type, amount], index) => {
-        if (amount <= 0) return null;
-
-        const config = counterConfigs[type] || { emoji: '●', color: '#868e96' };
-        const badgeSize = 28;
-        const badgeSpacing = 32;
-
-        return this.ui.View({
-          style: {
-            position: 'absolute',
-            right: 10 + (index * badgeSpacing),
-            top: 5,
-            width: badgeSize,
-            height: badgeSize,
-            backgroundColor: config.color,
-            borderRadius: badgeSize / 2,
-            borderWidth: 2,
-            borderColor: '#fff',
-            justifyContent: 'center',
-            alignItems: 'center',
-          },
-          children: this.ui.Text({
-            text: `${config.emoji} ${amount}`,
-            style: {
-              fontSize: 16,
-              fontWeight: 'bold',
-              color: '#fff',
-              textAlign: 'center',
-            },
-          }),
-        });
-      }).filter(Boolean);
-
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        },
-        children: badges,
-      });
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\battle\PlayerHand.ts ====================
-
-  /**
-   * Player hand overlay - 5 card slots with scroll and toggle
-   */
-
-
-  export class PlayerHand {
-    private ui: PlayerHandProps['ui'];
-    private battleDisplay: PlayerHandProps['battleDisplay'];
-    private getBattleDisplayValue: () => any | null;
-    private showHand: PlayerHandProps['showHand'];
-    private handScrollOffset: PlayerHandProps['handScrollOffset'];
-    private showHandValue: boolean;
-    private handScrollOffsetValue: number;
-    private onAction?: (action: string) => void;
-    private onShowHandChange?: (newValue: boolean) => void;
-    private onScrollOffsetChange?: (newValue: number) => void;
-    private onRenderNeeded?: () => void;
-    private showPlayedCard?: (card: any, callback?: () => void) => void;
-
-    constructor(props: PlayerHandProps) {
-      this.ui = props.ui;
-      this.battleDisplay = props.battleDisplay;
-      this.getBattleDisplayValue = props.getBattleDisplayValue;
-      this.showHand = props.showHand;
-      this.handScrollOffset = props.handScrollOffset;
-      this.showHandValue = props.showHandValue;
-      this.handScrollOffsetValue = props.handScrollOffsetValue;
-      this.onAction = props.onAction;
-      this.onShowHandChange = props.onShowHandChange;
-      this.onScrollOffsetChange = props.onScrollOffsetChange;
-      this.onRenderNeeded = props.onRenderNeeded;
-      this.showPlayedCard = props.showPlayedCard;
-
-      console.log('[PlayerHand] Constructor - onAction:', this.onAction ? 'DEFINED' : 'UNDEFINED');
-    }
-
-    /**
-     * Create static card structure with reactive properties for hand slot
-     * Handles all card types: Bloom, Magic, Trap, Buff, Habitat
-     */
-    private createHandCardStructure(slotIndex: number, cardsPerPage: number): UINodeType[] {
-      const cardWidth = standardCardDimensions.width;
-      const cardHeight = standardCardDimensions.height;
-      const beastImageWidth = 185;
-      const beastImageHeight = 185;
-
-      const positions = {
-        beastImage: { x: 12, y: 13 },
-        cost: { x: 20, y: 10 },
-        affinity: { x: 175, y: 7 },
-        name: { x: 105, y: 13 },
-        ability: { x: 21, y: 212 },
-        attack: { x: 20, y: 176 },
-        health: { x: 188, y: 176 },
-      };
-
-      return [
-        // Layer 1: Card/Beast artwork image - reactive source
-        this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.battleDisplay, this.handScrollOffset],
-            (display: BattleDisplay | null, scrollOffset: number) => {
-              if (!display || !display.playerHand) return null;
-              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-              const card = display.playerHand[actualIndex];
-              if (!card) return null;
-              const baseId = card.id?.replace(/-\d+-\d+$/, '') || card.name.toLowerCase().replace(/\s+/g, '-');
-              return this.ui.assetIdToImageSource?.(baseId) || null;
-            }
-          ),
-          style: {
-            width: beastImageWidth,
-            height: beastImageHeight,
-            position: 'absolute',
-            top: positions.beastImage.y,
-            left: positions.beastImage.x,
-          },
-        }),
-
-        // Layer 2: Base card frame
-        this.ui.Image({
-          source: this.ui.assetIdToImageSource?.('base-card') || null,
-          style: {
-            width: cardWidth,
-            height: cardHeight,
-            position: 'absolute',
-            top: 0,
-            left: 0,
-          },
-        }),
-
-        // Layer 3: Type-specific template overlay - reactive source
-        this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.battleDisplay, this.handScrollOffset],
-            (display: BattleDisplay | null, scrollOffset: number) => {
-              if (!display || !display.playerHand) return null;
-              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-              const card = display.playerHand[actualIndex];
-              if (!card || card.type === 'Bloom') return null;
-
-              let templateKey = '';
-              if (card.type === 'Habitat' && card.affinity) {
-                templateKey = `${card.affinity.toLowerCase()}-habitat`;
-              } else {
-                templateKey = `${card.type.toLowerCase()}-card`;
-              }
-              return this.ui.assetIdToImageSource?.(templateKey) || null;
-            }
-          ),
-          style: {
-            width: cardWidth,
-            height: cardHeight,
-            position: 'absolute',
-            top: 0,
-            left: 0,
-          },
-        }),
-
-        // Layer 4: Affinity icon (for Bloom cards) - reactive source
-        this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.battleDisplay, this.handScrollOffset],
-            (display: BattleDisplay | null, scrollOffset: number) => {
-              if (!display || !display.playerHand) return null;
-              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-              const card = display.playerHand[actualIndex];
-              if (!card || card.type !== 'Bloom' || !card.affinity) return null;
-              return this.ui.assetIdToImageSource?.(`${card.affinity.toLowerCase()}-icon`) || null;
-            }
-          ),
-          style: {
-            width: 30,
-            height: 30,
-            position: 'absolute',
-            top: positions.affinity.y,
-            left: positions.affinity.x,
-          },
-        }),
-
-        // Layer 5: Card name - reactive text
-        this.ui.Text({
-          text: this.ui.Binding.derive(
-            [this.battleDisplay, this.handScrollOffset],
-            (display: BattleDisplay | null, scrollOffset: number) => {
-              if (!display || !display.playerHand) return '';
-              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-              const card = display.playerHand[actualIndex];
-              return card?.name || '';
-            }
-          ),
-          style: {
-            position: 'absolute',
-            top: positions.name.y,
-            left: 0,
-            width: cardWidth,
-            fontSize: 14,
-            color: '#fff',
-            textAlign: 'center',
-          },
-        }),
-
-        // Layer 6: Cost - reactive text
-        this.ui.Text({
-          text: this.ui.Binding.derive(
-            [this.battleDisplay, this.handScrollOffset],
-            (display: BattleDisplay | null, scrollOffset: number) => {
-              if (!display || !display.playerHand) return '';
-              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-              const card = display.playerHand[actualIndex];
-              return card && card.cost !== undefined ? String(card.cost) : '';
-            }
-          ),
-          style: {
-            position: 'absolute',
-            top: positions.cost.y,
-            left: positions.cost.x - 10,
-            width: 20,
-            fontSize: 24,
-            color: '#fff',
-            textAlign: 'center',
-          },
-        }),
-
-        // Layer 7: Attack (for Bloom cards) - reactive text
-        this.ui.Text({
-          text: this.ui.Binding.derive(
-            [this.battleDisplay, this.handScrollOffset],
-            (display: BattleDisplay | null, scrollOffset: number) => {
-              if (!display || !display.playerHand) return '';
-              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-              const card = display.playerHand[actualIndex];
-              if (!card || card.type !== 'Bloom') return '';
-              return String((card as any).currentAttack ?? (card as any).baseAttack ?? 0);
-            }
-          ),
-          style: {
-            position: 'absolute',
-            top: positions.attack.y,
-            left: positions.attack.x - 10,
-            width: 20,
-            fontSize: 24,
-            color: '#fff',
-            textAlign: 'center',
-          },
-        }),
-
-        // Layer 8: Health (for Bloom cards) - reactive text
-        this.ui.Text({
-          text: this.ui.Binding.derive(
-            [this.battleDisplay, this.handScrollOffset],
-            (display: BattleDisplay | null, scrollOffset: number) => {
-              if (!display || !display.playerHand) return '';
-              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-              const card = display.playerHand[actualIndex];
-              if (!card || card.type !== 'Bloom') return '';
-              return String((card as any).currentHealth ?? (card as any).baseHealth ?? 0);
-            }
-          ),
-          style: {
-            position: 'absolute',
-            top: positions.health.y,
-            left: positions.health.x - 10,
-            width: 20,
-            fontSize: 24,
-            color: '#fff',
-            textAlign: 'center',
-          },
-        }),
-
-        // Layer 9: Ability text (for non-Bloom cards) - reactive text
-        this.ui.Text({
-          text: this.ui.Binding.derive(
-            [this.battleDisplay, this.handScrollOffset],
-            (display: BattleDisplay | null, scrollOffset: number) => {
-              if (!display || !display.playerHand) return '';
-              const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-              const card = display.playerHand[actualIndex];
-              if (!card || card.type === 'Bloom') return '';
-              // For now, show basic ability text - could enhance with description generator
-              return card.abilities?.[0]?.description || '';
-            }
-          ),
-          numberOfLines: 3,
-          style: {
-            position: 'absolute',
-            top: positions.ability.y,
-            left: positions.ability.x,
-            width: 168,
-            fontSize: 10,
-            color: '#fff',
-            textAlign: 'left',
-          },
-        }),
-      ];
-    }
-
-    /**
-     * Create player hand overlay - REACTIVE version using bindings
-     * Creates all slots upfront, uses bindings to show/hide cards
-     */
-    createPlayerHand(): UINodeType {
-      // Hand overlay dimensions
-      const cardWidth = standardCardDimensions.width;  // 210
-      const cardHeight = standardCardDimensions.height; // 280
-      const cardsPerRow = 5;
-      const rowsPerPage = 1;
-      const spacing = 10;
-      const startX = 50;
-      const overlayWidth = 1210;
-      const startY = 10;
-
-      const cardsPerPage = cardsPerRow * rowsPerPage;
-
-      // Create card slots (5 slots total for one row)
-      const cardSlots = Array.from({ length: cardsPerPage }, (_, slotIndex) => {
-        const col = slotIndex % cardsPerRow;
-        const row = Math.floor(slotIndex / cardsPerRow);
-        const x = startX + col * (cardWidth + spacing);
-        const y = startY + row * (cardHeight + spacing);
-
-        return this.ui.View({
-          style: {
-            position: 'absolute',
-            left: x,
-            top: y,
-            width: cardWidth,
-            height: cardHeight,
-            // Hide slot if no card - derive directly from battleDisplay and handScrollOffset
-            display: this.ui.Binding.derive(
-              [this.battleDisplay, this.handScrollOffset],
-              (display: BattleDisplay | null, scrollOffset: number) => {
-                if (!display || !display.playerHand) return 'none';
-                const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-                const card = display.playerHand[actualIndex];
-                return card ? 'flex' : 'none';
-              }
-            ),
-          },
-          children: [
-            // Card component wrapper - always exists, card content is reactive
-            this.ui.View({
-              style: {
-                width: cardWidth,
-                height: cardHeight,
-              },
-              children: this.ui.Pressable({
-                onClick: () => {
-                  console.log('[PlayerHand] onClick fired! slotIndex:', slotIndex);
-                  const actualIndex = this.handScrollOffsetValue * cardsPerPage + slotIndex;
-                  // Get current card state from cached value
-                  const display = this.getBattleDisplayValue();
-                  console.log('[PlayerHand] display:', display ? 'EXISTS' : 'NULL', 'actualIndex:', actualIndex);
-                  if (display && display.playerHand) {
-                    console.log('[PlayerHand] playerHand length:', display.playerHand.length);
-                    const card = display.playerHand[actualIndex];
-                    console.log('[PlayerHand] card at', actualIndex, ':', card);
-                    if (card) {
-                      console.log(`[PlayerHand] Card clicked: ${actualIndex}, card: ${card.name}, onAction:`, this.onAction ? 'DEFINED' : 'UNDEFINED');
-
-                      // Show card popup for magic/buff cards, then play
-                      if (card.type === 'Magic' || card.type === 'Buff') {
-                        console.log('[PlayerHand] Showing card popup for', card.type);
-                        this.showPlayedCard?.(card, () => {
-                          console.log('[PlayerHand] Popup closed, calling onAction');
-                          this.onAction?.(`play-card-${actualIndex}`);
-                        });
-                      } else {
-                        console.log('[PlayerHand] Calling onAction directly');
-                        this.onAction?.(`play-card-${actualIndex}`);
-                      }
-                    } else {
-                      console.log('[PlayerHand] No card at index', actualIndex);
-                    }
-                  } else {
-                    console.log('[PlayerHand] No display or playerHand');
-                  }
-                },
-                style: {
-                  width: cardWidth,
-                  height: cardHeight,
-                  position: 'relative',
-                },
-                children: this.createHandCardStructure(slotIndex, cardsPerPage),
-              }),
-            }),
-
-            // Dim overlay if not affordable - derive directly from battleDisplay and handScrollOffset
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: this.ui.Binding.derive(
-                  [this.battleDisplay, this.handScrollOffset],
-                  (display: BattleDisplay | null, scrollOffset: number) => {
-                    if (!display || !display.playerHand) return 'transparent';
-                    const actualIndex = scrollOffset * cardsPerPage + slotIndex;
-                    const card = display.playerHand[actualIndex];
-                    if (!card) return 'transparent';
-                    const canAfford = card.cost <= display.playerNectar;
-                    return canAfford ? 'transparent' : 'rgba(0, 0, 0, 0.5)';
-                  }
-                ),
-              },
-            }),
-          ].filter(Boolean),
-        });
-      });
-
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          left: 40,
-          top: this.ui.Binding.derive(
-            [this.showHand],
-            (showFull: boolean) => showFull ? (gameDimensions.panelHeight - 300) : 640
-          ),
-          width: overlayWidth,
-          height: this.ui.Binding.derive(
-            [this.showHand],
-            (showFull: boolean) => showFull ? 300 : 80
-          ),
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          borderWidth: 3,
-          borderColor: '#4a8ec2',
-        },
-        children: [
-          // Render all card slots (they show/hide based on bindings)
-          ...cardSlots,
-
-          // Toggle button
-          this.ui.Pressable({
-            onClick: () => {
-              console.log('[PlayerHand] Toggle button clicked, current showHandValue:', this.showHandValue);
-              const newShowHand = !this.showHandValue;
-              console.log('[PlayerHand] Setting showHandValue to:', newShowHand);
-              this.showHandValue = newShowHand;
-              this.onShowHandChange?.(newShowHand);
-              this.onAction?.('toggle-hand');
-            },
-            style: {
-              position: 'absolute',
-              left: overlayWidth - 50,
-              top: 10,
-              width: 60,
-              height: 50,
-              backgroundColor: '#4a8ec2',
-              borderRadius: 8,
-              justifyContent: 'center',
-              alignItems: 'center',
-            },
-            children: this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.showHand],
-                (showFull: boolean) => showFull ? 'X' : '↑'
-              ),
-              style: {
-                fontSize: 24,
-                fontWeight: 'bold',
-                color: '#fff',
-              },
-            }),
-          }),
-
-          // Scroll buttons (show/hide based on showHand binding)
-          // Up button (positioned below toggle button)
-          this.ui.Pressable({
-            onClick: () => {
-              const newOffset = Math.max(0, this.handScrollOffsetValue - 1);
-              this.onScrollOffsetChange?.(newOffset);
-            },
-            disabled: this.ui.Binding.derive(
-              [this.handScrollOffset],
-              (offset: number) => offset <= 0
-            ),
-            style: {
-              position: 'absolute',
-              left: overlayWidth - 50,
-              top: 10 + 50 + 10, // Below toggle button
-              width: 60,
-              height: 50,
-              backgroundColor: this.ui.Binding.derive(
-                [this.handScrollOffset],
-                (offset: number) => offset > 0 ? '#4a8ec2' : '#666'
-              ),
-              borderRadius: 8,
-              justifyContent: 'center',
-              alignItems: 'center',
-              opacity: this.ui.Binding.derive(
-                [this.handScrollOffset],
-                (offset: number) => offset > 0 ? 1 : 0.5
-              ),
-              display: this.ui.Binding.derive(
-                [this.showHand],
-                (showFull: boolean) => showFull ? 'flex' : 'none'
-              ),
-            },
-            children: this.ui.Text({
-              text: new this.ui.Binding('⬆'),
-              style: {
-                fontSize: 24,
-                fontWeight: 'bold',
-                color: '#fff',
-              },
-            }),
-          }),
-
-          // Down button (positioned below up button)
-          this.ui.Pressable({
-            onClick: () => {
-              this.onScrollOffsetChange?.(this.handScrollOffsetValue + 1);
-            },
-            disabled: this.ui.Binding.derive(
-              [this.handScrollOffset, this.battleDisplay],
-              (offset: number, state: BattleDisplay | null) => {
-                if (!state || !state.playerHand) return true;
-                const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
-                return offset >= totalPages - 1 || state.playerHand.length <= cardsPerPage;
-              }
-            ),
-            style: {
-              position: 'absolute',
-              left: overlayWidth - 50,
-              top: 10 + 50 + 10 + 50 + 10, // Below up button
-              width: 60,
-              height: 50,
-              backgroundColor: this.ui.Binding.derive(
-                [this.handScrollOffset, this.battleDisplay],
-                (offset: number, state: BattleDisplay | null) => {
-                  if (!state || !state.playerHand) return '#666';
-                  const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
-                  return (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? '#4a8ec2' : '#666';
-                }
-              ),
-              borderRadius: 8,
-              justifyContent: 'center',
-              alignItems: 'center',
-              opacity: this.ui.Binding.derive(
-                [this.handScrollOffset, this.battleDisplay],
-                (offset: number, state: BattleDisplay | null) => {
-                  if (!state || !state.playerHand) return 0.5;
-                  const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
-                  return (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? 1 : 0.5;
-                }
-              ),
-              display: this.ui.Binding.derive(
-                [this.showHand],
-                (showFull: boolean) => showFull ? 'flex' : 'none'
-              ),
-            },
-            children: this.ui.Text({
-              text: new this.ui.Binding('↓'),
-              style: {
-                fontSize: 24,
-                fontWeight: 'bold',
-                color: '#fff',
-              },
-            }),
-          }),
-        ].filter(Boolean),
-      });
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\battle\InfoDisplays.ts ====================
-
-  /**
-   * Player and opponent info displays (health, nectar, deck count)
-   */
-
-
-  export class InfoDisplays {
-    private ui: BattleComponentProps['ui'];
-    private battleDisplay: BattleComponentProps['battleDisplay'];
-
-    constructor(props: BattleComponentProps) {
-      this.ui = props.ui;
-      this.battleDisplay = props.battleDisplay;
-    }
-
-    /**
-     * Create player and opponent info displays - Centered at top with two columns
-     */
-    createInfoDisplays(): UINodeType {
-      const boxWidth = 400;
-      const boxHeight = 100;
-      const centerX = 640; // Center of 1280px wide screen
-      const topY = 10;
-
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          left: centerX - boxWidth / 2,
-          top: topY,
-          width: boxWidth,
-          height: boxHeight,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)',
-          borderRadius: 10,
-          borderWidth: 2,
-          borderColor: 'rgba(74, 142, 194, 0.8)',
-          flexDirection: 'row',
-          padding: 10,
-        },
-        children: [
-          // Opponent column (left)
-          this.ui.View({
-            style: {
-              flex: 1,
-              paddingRight: 5,
-              borderRightWidth: 1,
-              borderRightColor: 'rgba(255, 255, 255, 0.3)',
-            },
-            children: [
-              this.ui.Text({
-                text: new this.ui.Binding('Opponent'),
-                style: {
-                  fontSize: 18,
-                  fontWeight: 'bold',
-                  color: '#ff6b6b',
-                  marginBottom: 5,
-                  textAlign: 'center',
-                },
-              }),
-              this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay) => state ? `❤️ ${state.opponentHealth}/${state.opponentMaxHealth}` : '❤️ 20/20'
-                ),
-                style: {
-                  fontSize: 16,
-                  color: '#fff',
-                  marginBottom: 3,
-                },
-              }),
-              this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay) => state ? `${nectarEmoji} ${state.opponentNectar}/10` : `${nectarEmoji} 0/10`
-                ),
-                style: {
-                  fontSize: 16,
-                  color: '#fff',
-                  marginBottom: 3,
-                },
-              }),
-              this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay) => state ? `${deckEmoji} ${state.opponentDeckCount}/30` : `${deckEmoji} 30/30`
-                ),
-                style: {
-                  fontSize: 16,
-                  color: '#fff',
-                },
-              }),
-            ],
-          }),
-
-          // Player column (right)
-          this.ui.View({
-            style: {
-              flex: 1,
-              paddingLeft: 5,
-            },
-            children: [
-              this.ui.Text({
-                text: new this.ui.Binding('Player'),
-                style: {
-                  fontSize: 18,
-                  fontWeight: 'bold',
-                  color: '#4a8ec2',
-                  marginBottom: 5,
-                  textAlign: 'center',
-                },
-              }),
-              this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay) => state ? `❤️ ${state.playerHealth}/${state.playerMaxHealth}` : '❤️ 20/20'
-                ),
-                style: {
-                  fontSize: 16,
-                  color: '#fff',
-                  marginBottom: 3,
-                },
-              }),
-              this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay) => state ? `${nectarEmoji} ${state.playerNectar}/10` : `${nectarEmoji} 0/10`
-                ),
-                style: {
-                  fontSize: 16,
-                  color: '#fff',
-                  marginBottom: 3,
-                },
-              }),
-              this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay) => state ? `${deckEmoji} ${state.playerDeckCount}/30` : `${deckEmoji} 30/30`
-                ),
-                style: {
-                  fontSize: 16,
-                  color: '#fff',
-                },
-              }),
-            ],
-          }),
-        ],
-      });
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\battle\BattleSideMenu.ts ====================
-
-  /**
-   * Battle side menu - Turn counter, end turn button, forfeit
-   */
-
-
-  export class BattleSideMenu {
-    private ui: BattleSideMenuProps['ui'];
-    private battleDisplay: BattleSideMenuProps['battleDisplay'];
-    private endTurnButtonText: BattleSideMenuProps['endTurnButtonText'];
-    private getIsPlayerTurn: () => boolean;
-    private getHasAttackableBeasts: () => boolean;
-    private onAction?: (action: string) => void;
-    private onStopTurnTimer?: () => void;
-
-    constructor(props: BattleSideMenuProps) {
-      this.ui = props.ui;
-      this.battleDisplay = props.battleDisplay;
-      this.endTurnButtonText = props.endTurnButtonText;
-      this.getIsPlayerTurn = props.getIsPlayerTurn;
-      this.getHasAttackableBeasts = props.getHasAttackableBeasts;
-      this.onAction = props.onAction;
-      this.onStopTurnTimer = props.onStopTurnTimer;
-
-      console.log('[BattleSideMenu] Constructor - onAction:', this.onAction ? 'DEFINED' : 'UNDEFINED');
-    }
-
-    /**
-     * Create battle-specific side menu - Fully reactive
-     */
-    createBattleSideMenu(): UINodeType {
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          left: sideMenuPositions.x,
-          top: sideMenuPositions.y,
-          width: 127,
-          height: 465,
-        },
-        children: [
-          // Side menu background
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('side-menu') : null
-            ),
-            style: {
-              position: 'absolute',
-              width: 127,
-              height: 465,
-            },
-          }),
-
-          // Forfeit button (at header position)
-          this.ui.Pressable({
-            onClick: () => {
-              console.log('[BattleSideMenu] Forfeit button clicked');
-              this.onAction?.('btn-forfeit');
-            },
-            style: {
-              position: 'absolute',
-              left: sideMenuPositions.headerStartPosition.x - sideMenuPositions.x,
-              top: sideMenuPositions.headerStartPosition.y - sideMenuPositions.y,
-              width: sideMenuButtonDimensions.width,
-              height: sideMenuButtonDimensions.height,
-            },
-            children: [
-              // Button background image
-              this.ui.Image({
-                source: this.ui.Binding.derive(
-                  [this.ui.assetsLoadedBinding],
-                  (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('standard-button') : null
-                ),
-                style: {
-                  position: 'absolute',
-                  width: sideMenuButtonDimensions.width,
-                  height: sideMenuButtonDimensions.height,
-                },
-              }),
-              // Button text centered over image
-              this.ui.View({
-                style: {
-                  position: 'absolute',
-                  width: sideMenuButtonDimensions.width,
-                  height: sideMenuButtonDimensions.height,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                },
-                children: this.ui.Text({
-                  text: 'Forfeit',
-                  style: {
-                    fontSize: DIMENSIONS.fontSize.md,
-                    fontWeight: 'bold',
-                    color: '#fff',
-                    textAlign: 'center',
-                  },
-                }),
-              }),
-            ],
-          }),
-
-          // Battle info text
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              left: sideMenuPositions.textStartPosition.x - sideMenuPositions.x,
-              top: sideMenuPositions.textStartPosition.y - sideMenuPositions.y,
-            },
-            children: [
-              this.ui.Text({
-                text: new this.ui.Binding('Battle'),
-                style: {
-                  fontSize: 20,
-                  fontWeight: 'bold',
-                  color: '#fff',
-                  marginBottom: 5,
-                },
-              }),
-              this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay) => state ? `Turn ${state.currentTurn}` : 'Turn 1'
-                ),
-                style: {
-                  fontSize: 18,
-                  color: '#fff',
-                  marginBottom: 5,
-                },
-              }),
-              // Deathmatch warning (reactive) - always rendered, conditionally visible
-              this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay | null) => {
-                    if (!state || state.currentTurn < 30) return '';
-                    const deathmatchDamage = Math.floor((state.currentTurn - 30) / 5) + 1;
-                    return `Deathmatch! -${deathmatchDamage} HP`;
-                  }
-                ),
-                style: {
-                  fontSize: 16,
-                  color: '#ff6b6b',
-                  fontWeight: 'bold',
-                  display: this.ui.Binding.derive(
-                    [this.battleDisplay],
-                    (state: BattleDisplay | null) => {
-                      return (state && state.currentTurn >= 30) ? 'flex' : 'none';
-                    }
-                  ),
-                },
-              }),
-            ],
-          }),
-
-          // Attack button (red) - positioned above End Turn button
-          this.ui.Pressable({
-            onClick: () => {
-              console.log('[BattleSideMenu] Attack button onClick fired!');
-              const currentIsPlayerTurn = this.getIsPlayerTurn();
-              const hasAttackable = this.getHasAttackableBeasts();
-              console.log('[BattleSideMenu] Attack button clicked, isPlayerTurn:', currentIsPlayerTurn, 'hasAttackable:', hasAttackable);
-
-              if (currentIsPlayerTurn && hasAttackable) {
-                console.log('[BattleSideMenu] Calling onAction with auto-attack-all');
-                this.onAction?.('auto-attack-all');
-                // Auto end turn after attacking
-                console.log('[BattleSideMenu] Auto ending turn after attack');
-                this.onStopTurnTimer?.();
-                this.onAction?.('end-turn');
-              } else {
-                console.log('[BattleSideMenu] Attack button cannot be used - turn:', currentIsPlayerTurn, 'attackable:', hasAttackable);
-              }
-            },
-            disabled: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => {
-              // Disabled if state not ready
-              if (!state) return true;
-
-              // Disabled if not player turn
-              const notPlayerTurn = state.turnPlayer !== 'player';
-              if (notPlayerTurn) return true;
-
-              // Check if player has any attackable beasts (using proper canAttack check)
-              let hasAttackable = false;
-              if (state.playerField && Array.isArray(state.playerField)) {
-                for (const beast of state.playerField) {
-                  if (beast && canAttack(beast)) {
-                    hasAttackable = true;
-                    break;
-                  }
-                }
-              }
-
-              // Disabled if no attackable beasts
-              return !hasAttackable;
-            }),
-            style: {
-              position: 'absolute',
-              left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
-              top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y - sideMenuButtonDimensions.height - 10,
-              width: sideMenuButtonDimensions.width,
-              height: sideMenuButtonDimensions.height,
-              opacity: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => {
-                if (!state || state.turnPlayer !== 'player') return 0.3;
-
-                // Check if has attackable beasts
-                let hasAttackable = false;
-                if (state.playerField && Array.isArray(state.playerField)) {
-                  for (const beast of state.playerField) {
-                    if (beast && canAttack(beast)) {
-                      hasAttackable = true;
-                      break;
-                    }
-                  }
-                }
-
-                return hasAttackable ? 1 : 0.3;
-              }),
-            },
-            children: [
-              // Red button background
-              this.ui.Image({
-                source: this.ui.Binding.derive(
-                  [this.ui.assetsLoadedBinding],
-                  (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('red-button') : null
-                ),
-                style: {
-                  position: 'absolute',
-                  width: sideMenuButtonDimensions.width,
-                  height: sideMenuButtonDimensions.height,
-                },
-              }),
-              // Button text centered over image
-              this.ui.View({
-                style: {
-                  position: 'absolute',
-                  width: sideMenuButtonDimensions.width,
-                  height: sideMenuButtonDimensions.height,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                },
-                children: this.ui.Text({
-                  text: 'Attack',
-                  style: {
-                    fontSize: DIMENSIONS.fontSize.md,
-                    fontWeight: 'bold',
-                    color: '#fff',
-                    textAlign: 'center',
-                  },
-                }),
-              }),
-            ],
-          }),
-
-          // End Turn button with timer - uses derived bindings for reactive updates
-          this.ui.Pressable({
-            onClick: () => {
-              console.log('[BattleSideMenu] End Turn button onClick fired!');
-              const currentIsPlayerTurn = this.getIsPlayerTurn();
-              console.log('[BattleSideMenu] End Turn button clicked, isPlayerTurn:', currentIsPlayerTurn);
-              console.log('[BattleSideMenu] onAction defined?', this.onAction ? 'YES' : 'NO');
-              if (currentIsPlayerTurn) {
-                this.onStopTurnTimer?.();
-                console.log('[BattleSideMenu] Calling onAction with end-turn');
-                this.onAction?.('end-turn');
-              } else {
-                console.log('[BattleSideMenu] End Turn clicked but not player turn');
-              }
-            },
-            disabled: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => {
-              return state?.turnPlayer !== 'player';
-            }),
-            style: {
-              position: 'absolute',
-              left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
-              top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y,
-              width: sideMenuButtonDimensions.width,
-              height: sideMenuButtonDimensions.height,
-              opacity: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => state?.turnPlayer === 'player' ? 1 : 0.5),
-            },
-            children: [
-              // Button background image - green when player turn, standard when opponent turn
-              this.ui.Image({
-                source: this.ui.Binding.derive(
-                  [this.ui.assetsLoadedBinding, this.battleDisplay],
-                  (assetsLoaded: boolean, state: BattleDisplay) => {
-                    if (!assetsLoaded) return null;
-                    return this.ui.assetIdToImageSource?.(state?.turnPlayer === 'player' ? 'green-button' : 'standard-button') ?? null;
-                  }
-                ),
-                style: {
-                  position: 'absolute',
-                  width: sideMenuButtonDimensions.width,
-                  height: sideMenuButtonDimensions.height,
-                },
-              }),
-              // Button text centered over image
-              this.ui.View({
-                style: {
-                  position: 'absolute',
-                  width: sideMenuButtonDimensions.width,
-                  height: sideMenuButtonDimensions.height,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                },
-                children: this.ui.Text({
-                  text: this.endTurnButtonText,
-                  style: {
-                    fontSize: DIMENSIONS.fontSize.md,
-                    fontWeight: 'bold',
-                    color: '#fff',
-                    textAlign: 'center',
-                  },
-                }),
-              }),
-            ],
-          }),
-        ],
-      });
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\battle\index.ts ====================
-
-  /**
-   * Battle screen components - Modular, reactive battle UI
-   */
-
-  // Export components
-
-  // Export constants from types
-
-  // Note: Prop interfaces (BattleComponentProps, etc.) are exported from types.ts
-  // but not re-exported here to avoid namespace bundling issues.
-  // Import them directly from './types' if needed externally.
-
-  // ==================== bloombeasts\ui\screens\BattleScreen.ts ====================
-
-  /**
-   * Unified Battle Screen Component
-   * Works on both Horizon and Web platforms
-   * Exactly mimics the UI from deployments/web/src/screens/battleScreen.ts
-   */
-
-
-  // Import modular battle components
-
-  export interface BattleScreenProps {
-    ui: UIMethodMappings;
-    async: AsyncMethods;
-    battleDisplay: any; // BattleDisplay binding - REQUIRED
-    onAction?: (action: string) => void;
-    onNavigate?: (screen: string) => void;
-    onRenderNeeded?: () => void;
-    onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
-  }
-
-  /**
-   * Unified Battle Screen that exactly replicates web deployment's battle UI
-   */
-  export class BattleScreen {
-    // UI methods (injected)
-    private ui: UIMethodMappings;
-    private async: AsyncMethods;
-
-    // State bindings
-    private battleDisplay: any; // BattleDisplay binding - REQUIRED
-    private showHand: any;
-    private handScrollOffset: any;
-    private turnTimer: any;
-    private selectedCardDetail: any;
-    private isPlayerTurn: any;
-    private endTurnButtonText: any; // Binding for button text that updates reactively
-
-    // Temporary card display (for showing played cards)
-    private playedCardDisplay: any | null = null;
-    private playedCardTimeout: number | null = null;
-
-    // Timer management
-    private timerInterval: number | null = null;
-
-    // Track binding values separately (as per Horizon docs - no .get() method)
-    private timerValue = 60;
-    private isPlayerTurnValue = false;
-    private battleDisplayValue: any | null = null;
-    private hasAttackableBeasts = false;
-    private showHandValue = true;
-    private handScrollOffsetValue = 0;
-    private selectedCardDetailValue: any = null;
-
-    // Configuration
-    private cardsPerRow = 5;
-    private rowsPerPage = 1;
-
-    // Render guard to prevent infinite loops
-    private isRendering = false;
-    private needsRerender = false;
-
-    // Callbacks
-    private onAction?: (action: string) => void;
-    private onNavigate?: (screen: string) => void;
-    private onRenderNeeded?: () => void;
-    private onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
-
-    // Battle components (modular)
-    private backgroundComponent!: BattleBackground;
-    private beastFieldComponent!: BeastField;
-    private trapZoneComponent!: TrapZone;
-    private buffZoneComponent!: BuffZone;
-    private habitatZoneComponent!: HabitatZone;
-    private playerHandComponent!: PlayerHand;
-    private infoDisplaysComponent!: InfoDisplays;
-    private sideMenuComponent!: BattleSideMenu;
-
-    constructor(props: BattleScreenProps) {
-      this.ui = props.ui;
-      this.async = props.async;
-
-      console.log('[BattleScreen] Constructor called, onAction:', props.onAction ? 'DEFINED' : 'UNDEFINED');
-
-      // Initialize bindings after ui is set
-      this.showHandValue = true;
-      this.showHand = new this.ui.Binding(this.showHandValue);
-
-      this.handScrollOffsetValue = 0;
-      this.handScrollOffset = new this.ui.Binding(this.handScrollOffsetValue);
-
-      this.timerValue = 60;
-      this.turnTimer = new this.ui.Binding(this.timerValue);
-
-      this.selectedCardDetailValue = null;
-      this.selectedCardDetail = new this.ui.Binding<any | null>(this.selectedCardDetailValue);
-
-      // Store required battleDisplay binding
-      this.battleDisplay = props.battleDisplay;
-
-      // Wrap onAction to add logging
-      this.onAction = props.onAction ? (action: string) => {
-        console.log('[BattleScreen] onAction called with:', action);
-        props.onAction!(action);
-      } : undefined;
-
-      this.onNavigate = props.onNavigate;
-      this.onRenderNeeded = props.onRenderNeeded;
-      this.onShowCardDetail = props.onShowCardDetail;
-
-      // Initialize player turn tracking with derived bindings
-      // Create derived binding for isPlayerTurn
-      this.isPlayerTurn = this.ui.Binding.derive(
-        [this.battleDisplay],
-        (state: BattleDisplay | null) => {
-          const newIsPlayerTurn = state?.turnPlayer === 'player';
-
-          // Cache battle display value for onClick handlers
-          this.battleDisplayValue = state;
-
-          // Check if player has any beasts that can attack (using proper canAttack check)
-          this.hasAttackableBeasts = false;
-          if (state && state.playerField) {
-            for (const beast of state.playerField) {
-              if (beast && canAttack(beast)) {
-                this.hasAttackableBeasts = true;
-                break;
-              }
-            }
+            type: "image",
+            horizonAssetId: "1358389912362012",
+            path: "assets/images/cards_boss_cluck-norris.png"
           }
-
-          // Start/stop timer based on turn changes
-          if (this.isPlayerTurnValue !== newIsPlayerTurn) {
-            this.isPlayerTurnValue = newIsPlayerTurn;
-            if (newIsPlayerTurn) {
-              this.startTurnTimer();
-            } else {
-              this.stopTurnTimer();
-            }
-          }
-
-          return newIsPlayerTurn;
-        }
-      );
-
-      // Create derived binding for endTurnButtonText
-      this.endTurnButtonText = this.ui.Binding.derive(
-        [this.battleDisplay, this.turnTimer],
-        (state: BattleDisplay | null, timer: number) => state?.turnPlayer === 'player' ? `(${timer})` : 'Enemy Turn'
-      );
-
-      // Initialize battle components
-      this.backgroundComponent = new BattleBackground({
-        ui: this.ui,
-        battleDisplay: this.battleDisplay,
-      });
-
-      this.beastFieldComponent = new BeastField({
-        ui: this.ui,
-        battleDisplay: this.battleDisplay,
-        onAction: this.onAction,
-        showPlayedCard: this.showPlayedCard.bind(this),
-      });
-
-      this.trapZoneComponent = new TrapZone({
-        ui: this.ui,
-        battleDisplay: this.battleDisplay,
-        onCardDetailSelected: (card) => {
-          this.selectedCardDetailValue = card;
-          this.selectedCardDetail.set(card);
-        },
-      });
-
-      this.buffZoneComponent = new BuffZone({
-        ui: this.ui,
-        battleDisplay: this.battleDisplay,
-        onCardDetailSelected: (card) => {
-          this.selectedCardDetailValue = card;
-          this.selectedCardDetail.set(card);
-        },
-      });
-
-      this.habitatZoneComponent = new HabitatZone({
-        ui: this.ui,
-        battleDisplay: this.battleDisplay,
-        onCardDetailSelected: (card) => {
-          const habitatWithType = { ...card, type: 'Habitat' };
-          this.selectedCardDetailValue = habitatWithType;
-          this.selectedCardDetail.set(habitatWithType);
-        },
-      });
-
-      this.playerHandComponent = new PlayerHand({
-        ui: this.ui,
-        battleDisplay: this.battleDisplay,
-        showHand: this.showHand,
-        handScrollOffset: this.handScrollOffset,
-        showHandValue: this.showHandValue,
-        handScrollOffsetValue: this.handScrollOffsetValue,
-        getBattleDisplayValue: () => this.battleDisplayValue,
-        onAction: this.onAction,
-        onShowHandChange: (newValue) => {
-          this.showHandValue = newValue;
-          this.showHand.set(newValue);
-        },
-        onScrollOffsetChange: (newValue) => {
-          this.handScrollOffsetValue = newValue;
-          this.handScrollOffset.set(newValue);
-        },
-        onRenderNeeded: this.onRenderNeeded,
-        showPlayedCard: this.showPlayedCard.bind(this),
-      });
-
-      this.infoDisplaysComponent = new InfoDisplays({
-        ui: this.ui,
-        battleDisplay: this.battleDisplay,
-      });
-
-      this.sideMenuComponent = new BattleSideMenu({
-        ui: this.ui,
-        battleDisplay: this.battleDisplay,
-        endTurnButtonText: this.endTurnButtonText,
-        getIsPlayerTurn: () => this.isPlayerTurnValue,
-        getHasAttackableBeasts: () => this.hasAttackableBeasts,
-        onAction: this.onAction,
-        onStopTurnTimer: () => this.stopTurnTimer(),
-      });
-    }
-
-    /**
-     * Safe render wrapper to prevent infinite loops
-     */
-    private safeRender(): void {
-      if (this.isRendering) {
-        // Already rendering, schedule for after current render completes
-        this.needsRerender = true;
-        return;
-      }
-      this.onRenderNeeded?.();
-    }
-
-    /**
-     * Create the complete battle UI
-     */
-    createUI(): UINodeType {
-      // console.log('[BattleScreen] createUI called');
-      this.isRendering = true;
-      this.needsRerender = false;
-
-      // Mark rendering as complete
-      this.finishRender();
-
-      // Full battle UI - all structure created once, bindings handle updates
-      return this.ui.View({
-        style: {
-          width: gameDimensions.panelWidth,
-          height: gameDimensions.panelHeight,
-          position: 'relative',
-          overflow: 'hidden',
-        },
-        children: [
-          // Layer 1: Background image (full screen)
-          this.backgroundComponent.createBackground(),
-
-          // Layer 2: Playboard overlay
-          this.backgroundComponent.createPlayboard(),
-
-          // Layer 3: Battle zones (beasts, traps, buffs, habitat)
-          ...this.beastFieldComponent.createBeastField('player'),
-          ...this.beastFieldComponent.createBeastField('opponent'),
-          ...this.trapZoneComponent.createTrapZone('player'),
-          ...this.trapZoneComponent.createTrapZone('opponent'),
-          ...this.buffZoneComponent.createBuffZone('player'),
-          ...this.buffZoneComponent.createBuffZone('opponent'),
-          this.habitatZoneComponent.createHabitatZone(),
-
-          // Layer 4: Player/Opponent info displays
-          this.infoDisplaysComponent.createInfoDisplays(),
-
-          // Layer 5: Side menu with controls
-          this.sideMenuComponent.createBattleSideMenu(),
-
-          // Layer 6: Player hand overlay (always rendered, bindings control visibility)
-          this.playerHandComponent.createPlayerHand(),
-
-          // Layer 7: Card detail popup (from battleDisplay) - conditionally visible
-          this.createCardPopupLayer(),
-
-          // Layer 7.25: Selected card detail popup (from clicking buff/trap cards) - conditionally visible
-          this.createSelectedCardDetailLayer(),
-
-          // Layer 7.5: Played card popup (temporary 2-second display) - conditionally visible
-          this.createPlayedCardPopupLayer(),
-
-          // Layer 8: Attack animation overlays
-          this.createAttackAnimations(),
-        ],
-      });
-    }
-
-
-    /**
-     * Create card popup layer with conditional visibility
-     */
-    private createCardPopupLayer(): UINodeType {
-      // Use UINode.if for conditional rendering if available
-      if (this.ui.UINode?.if) {
-        return this.ui.UINode.if(
-          this.battleDisplay.derive((state: BattleDisplay | null) => !!state?.cardPopup),
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 1000,
-            },
-            children: this.ui.Text({
-              text: 'Card Popup - TODO: Implement with reactive data',
-              style: { color: '#fff', fontSize: 20 }
-            }),
-          })
-        );
-      }
-
-      // Fallback: empty View (popup won't work)
-      return this.ui.View({ style: { display: 'none' } });
-    }
-
-    /**
-     * Create selected card detail popup layer with conditional visibility
-     */
-    private createSelectedCardDetailLayer(): UINodeType {
-      // Use UINode.if for conditional rendering if available
-      if (this.ui.UINode?.if) {
-        return this.ui.UINode.if(
-          this.selectedCardDetail.derive((card: any) => !!card),
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              top: 0,
-              left: 0,
-            },
-            children: [
-              // Black backdrop
-              this.ui.Pressable({
-                onClick: () => {
-                  this.selectedCardDetailValue = null;
-                  this.selectedCardDetail.set(null);
-                },
-                style: {
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                },
-              }),
-              // Card display
-              this.ui.Text({
-                text: 'Selected Card Detail - TODO: Implement with reactive card rendering',
-                style: {
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  color: '#fff',
-                  fontSize: 20,
-                }
-              }),
-            ],
-          })
-        );
-      }
-
-      // Fallback: empty View
-      return this.ui.View({ style: { display: 'none' } });
-    }
-
-    /**
-     * Create played card popup layer with conditional visibility
-     */
-    private createPlayedCardPopupLayer(): UINodeType {
-      // For now, return empty View since playedCardDisplay is not reactive yet
-      // TODO: Make playedCardDisplay reactive and implement properly
-      return this.ui.View({ style: { display: 'none' } });
-    }
-
-    /**
-     * Create card popup overlay
-     */
-    private createCardPopup(popup: any): UINodeType {
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-        },
-        children: [
-          // Card detail popup
-          createCardDetailPopup(this.ui, {
-            cardDetail: {
-              card: popup.card,
-              isInDeck: false,
-              buttons: popup.showCloseButton ? ['Close'] : []
-            },
-            onButtonClick: () => this.onAction?.('btn-card-close'),
-          }),
-        ],
-      });
-    }
-
-    /**
-     * Create attack animation overlays
-     */
-    private createAttackAnimations(): UINodeType | null {
-      // Attack animations are handled directly in the beast field rendering (reactive)
-      // This is a placeholder for any additional animation effects
-      return null;
-    }
-
-    /**
-     * Start the turn timer
-     */
-    private startTurnTimer(): void {
-      // Don't start if already running
-      if (this.timerInterval !== null) {
-        return;
-      }
-
-      this.timerValue = 60;
-      this.turnTimer.set(60);
-      this.updateEndTurnButtonText(); // Initialize button text
-      this.onRenderNeeded?.(); // Trigger re-render
-
-      this.timerInterval = this.async.setInterval(() => {
-        const current = this.timerValue;
-
-        if (current <= 0) {
-          console.log('[BattleScreen] Timer reached 0, auto-ending turn');
-          this.stopTurnTimer();
-          this.onAction?.('end-turn');
-        } else {
-          this.timerValue = current - 1;
-          this.turnTimer.set(this.timerValue);
-          // Update button text and trigger re-render
-          this.updateEndTurnButtonText();
-          this.onRenderNeeded?.();
-        }
-      }, 1000);
-    }
-
-    /**
-     * Stop the turn timer
-     */
-    private stopTurnTimer(): void {
-      if (this.timerInterval) {
-        this.async.clearInterval(this.timerInterval);
-        this.timerInterval = null;
-      }
-    }
-
-    /**
-     * Update the end turn button text based on turn and timer
-     */
-    private updateEndTurnButtonText(): void {
-      // endTurnButtonText is now a derived binding, so it updates automatically
-      // This method is kept for compatibility but doesn't need to do anything
-      console.log('[BattleScreen] updateEndTurnButtonText called (no-op, using derived binding)');
-    }
-
-    /**
-     * Finish render and trigger re-render if needed
-     */
-    private finishRender(): void {
-      this.isRendering = false;
-      if (this.needsRerender) {
-        console.log('[BattleScreen] Re-render needed after current render');
-        this.needsRerender = false;
-        // Use setTimeout to break out of the current call stack
-        this.async.setTimeout(() => this.onRenderNeeded?.(), 0);
-      }
-    }
-
-    /**
-     * Cleanup resources
-     */
-    /**
-     * Create played card popup (shows for 2 seconds when card is played)
-     */
-    private createPlayedCardPopup(card: any): UINodeType {
-      return createCardDetailPopup(this.ui, {
-        cardDetail: {
-          card: card,
-          isInDeck: false,
-          buttons: []
-        },
-        onButtonClick: (buttonId: string) => {
-          // User can close early by clicking
-          if (this.playedCardTimeout) {
-            this.async.clearTimeout(this.playedCardTimeout);
-            this.playedCardTimeout = null;
-          }
-          this.playedCardDisplay = null;
-          this.onRenderNeeded?.();
-        }
-      });
-    }
-
-    /**
-     * Show a played card popup for 2 seconds, then execute callback
-     */
-    private showPlayedCard(card: any, callback?: () => void): void {
-      console.log('[BattleScreen] Showing played card popup:', card.name);
-
-      // Use the onShowCardDetail callback if available
-      if (this.onShowCardDetail) {
-        this.onShowCardDetail(card, 2000, callback);
-      } else {
-        console.warn('[BattleScreen] onShowCardDetail not defined, executing callback immediately');
-        callback?.();
-      }
-    }
-
-    public cleanup(): void {
-      this.stopTurnTimer();
-      this.showHandValue = true;
-      this.showHand.set(true);
-      this.handScrollOffsetValue = 0;
-      this.handScrollOffset.set(0);
-      this.selectedCardDetailValue = null;
-      this.selectedCardDetail.set(null);
-      // Trigger final re-render
-      this.onRenderNeeded?.();
-
-      // Clear played card timeout
-      if (this.playedCardTimeout) {
-        this.async.clearTimeout(this.playedCardTimeout);
-        this.playedCardTimeout = null;
-      }
-      this.playedCardDisplay = null;
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\SettingsScreen.ts ====================
-
-  /**
-   * Unified Settings Screen Component
-   * Works on both Horizon and Web platforms
-   * Matches the styling from settingsScreen.new.ts
-   */
-
-
-  export interface SettingsScreenProps {
-    ui: UIMethodMappings;
-    playerDataBinding: any; // PlayerData binding - screen derives settings
-    onSettingChange?: (settingId: string, value: any) => void;
-    onNavigate?: (screen: string) => void;
-    onRenderNeeded?: () => void;
-  }
-
-  /**
-   * Unified Settings Screen
-   */
-  export class SettingsScreen {
-    // UI methods (injected)
-    private ui: UIMethodMappings;
-
-    private playerDataBinding: any;
-
-    // Track binding values separately (as per Horizon docs - no .get() method)
-    private settingsValue: any = {};
-
-    private onSettingChange?: (settingId: string, value: any) => void;
-    private onNavigate?: (screen: string) => void;
-    private onRenderNeeded?: () => void;
-
-    constructor(props: SettingsScreenProps) {
-      this.ui = props.ui;
-      this.playerDataBinding = props.playerDataBinding;
-      this.onSettingChange = props.onSettingChange;
-      this.onNavigate = props.onNavigate;
-      this.onRenderNeeded = props.onRenderNeeded;
-      console.log('[SettingsScreen] constructor, onRenderNeeded:', this.onRenderNeeded ? 'defined' : 'undefined');
-    }
-
-    createUI(): UINodeType {
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [
-          // Background
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
-            ),
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              top: 0,
-              left: 0,
-            },
-          }),
-          // Cards Container image as background
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('cards-container') : null
-            ),
-            style: {
-              position: 'absolute',
-              left: 40,
-              top: 40,
-              width: 980,
-              height: 640,
-            },
-          }),
-          // Main content - settings panel
-          // Pass playerDataBinding directly to controls to avoid nesting
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              left: 70,
-              top: 70,
-              width: 920,
-              height: 580,
-              padding: 40,
-            },
-            children: [
-              // Music settings (pass playerDataBinding directly)
-              this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume'),
-              this.createToggleControl('Music', 'musicEnabled', 'musicEnabled'),
-
-              // SFX settings (pass playerDataBinding directly)
-              this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume'),
-              this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled'),
-            ],
-          }),
-          // Sidebar with common side menu
-          createSideMenu(this.ui, {
-            title: 'Settings',
-            bottomButton: {
-              label: 'Back',
-              onClick: () => {
-                if (this.onNavigate) this.onNavigate('menu');
-              },
-              disabled: false,
-            },
-            playerDataBinding: this.playerDataBinding,
-          }),
-        ],
-      });
-    }
-
-    /**
-     * Create volume control with +/- buttons
-     */
-    private createVolumeControl(
-      label: string,
-      settingKey: 'musicVolume' | 'sfxVolume',
-      settingId: string
-    ): UINodeType {
-      return this.ui.View({
-        style: {
-          marginBottom: 30,
-        },
-        children: [
-          // Label and value
-          this.ui.View({
-            style: {
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginBottom: 10,
-              alignItems: 'center',
-            },
-            children: [
-              this.ui.Text({
-                text: new this.ui.Binding(label),
-                style: {
-                  fontSize: DIMENSIONS.fontSize.xl,
-                  color: COLORS.textPrimary,
-                },
-              }),
-              // Volume control: - button, value, + button
-              this.ui.View({
-                style: {
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                },
-                children: [
-                  // Decrease button
-                  this.ui.Pressable({
-                    onClick: () => {
-                      if (this.onSettingChange) {
-                        const currentSettings = this.settingsValue;
-                        const currentValue = currentSettings[settingKey] || 0;
-                        const newValue = Math.max(0, currentValue - 10);
-                        this.onSettingChange(settingId, newValue);
-                      }
-                    },
-                    style: {
-                      width: 40,
-                      height: 40,
-                      backgroundColor: COLORS.surface,
-                      borderRadius: 5,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginRight: 15,
-                    },
-                    children: this.ui.Text({
-                      text: new this.ui.Binding('-'),
-                      style: {
-                        fontSize: DIMENSIONS.fontSize.xl,
-                        color: COLORS.textPrimary,
-                        textAlign: 'center',
-                        fontWeight: 'bold',
-                      },
-                    }),
-                  }),
-                  // Volume display
-                  this.ui.Text({
-                    text: this.ui.Binding.derive(
-                      [this.playerDataBinding],
-                      (pd: any) => {
-                        const settings = pd?.settings;
-                        this.settingsValue = settings;
-                        const volume = settings?.[settingKey];
-                        return `${volume !== undefined && volume !== null && typeof volume === 'number' ? Math.round(volume) : 0}%`;
-                      }
-                    ),
-                    style: {
-                      fontSize: DIMENSIONS.fontSize.xl,
-                      color: COLORS.success,
-                      width: 70,
-                      textAlign: 'center',
-                    },
-                  }),
-                  // Increase button
-                  this.ui.Pressable({
-                    onClick: () => {
-                      if (this.onSettingChange) {
-                        const currentSettings = this.settingsValue;
-                        const currentValue = currentSettings[settingKey] || 0;
-                        const newValue = Math.min(100, currentValue + 10);
-                        this.onSettingChange(settingId, newValue);
-                      }
-                    },
-                    style: {
-                      width: 40,
-                      height: 40,
-                      backgroundColor: COLORS.surface,
-                      borderRadius: 5,
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      marginLeft: 15,
-                    },
-                    children: this.ui.Text({
-                      text: new this.ui.Binding('+'),
-                      style: {
-                        fontSize: DIMENSIONS.fontSize.xl,
-                        color: COLORS.textPrimary,
-                        textAlign: 'center',
-                        fontWeight: 'bold',
-                      },
-                    }),
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      });
-    }
-
-    /**
-     * Create toggle button control
-     */
-    private createToggleControl(
-      label: string,
-      settingKey: 'musicEnabled' | 'sfxEnabled',
-      settingId: string
-    ): UINodeType {
-      return this.ui.View({
-        style: {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 30,
-        },
-        children: [
-          this.ui.Text({
-            text: new this.ui.Binding(label),
-            style: {
-              fontSize: DIMENSIONS.fontSize.xl,
-              color: COLORS.textPrimary,
-            },
-          }),
-
-          // Toggle button
-          this.ui.Pressable({
-            onClick: () => {
-              console.log(`[SettingsScreen] Toggle clicked - settingKey: ${settingKey}, settingId: ${settingId}`);
-              if (this.onSettingChange) {
-                const currentSettings = this.settingsValue;
-                console.log(`[SettingsScreen] Current settings:`, currentSettings);
-                const currentValue = currentSettings[settingKey];
-                const newValue = !currentValue;
-                console.log(`[SettingsScreen] Toggle value: ${currentValue} -> ${newValue}`);
-
-                // Just call the callback - let the parent handle updating the binding
-                // The binding update will trigger a re-render automatically
-                this.onSettingChange(settingId, newValue);
-              }
-            },
-            style: {
-              position: 'relative',
-              width: 120,
-              height: 40,
-            },
-            children: [
-              // Button background image (standard or green based on state)
-              this.ui.Image({
-                source: this.ui.Binding.derive(
-                  [this.ui.assetsLoadedBinding, this.playerDataBinding],
-                  (assetsLoaded: boolean, pd: any) => {
-                    if (!assetsLoaded) return null;
-                    const settings = pd?.settings;
-                    return this.ui.assetIdToImageSource?.(settings?.[settingKey] ? 'green-button' : 'standard-button') ?? null;
-                  }
-                ),
-                style: {
-                  position: 'absolute',
-                  width: 120,
-                  height: 40,
-                },
-              }),
-              // Button text centered
-              this.ui.View({
-                style: {
-                  position: 'absolute',
-                  width: 120,
-                  height: 40,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                },
-                children: this.ui.Text({
-                  text: this.ui.Binding.derive(
-                    [this.playerDataBinding],
-                    (pd: any) => {
-                      const settings = pd?.settings;
-                      return settings?.[settingKey] ? 'ON' : 'OFF';
-                    }
-                  ),
-                  style: {
-                    fontSize: DIMENSIONS.fontSize.md,
-                    color: COLORS.textPrimary,
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    textAlignVertical: 'center',
-                  },
-                }),
-              }),
-            ],
-          }),
-        ],
-      });
-    }
-
-    dispose(): void {
-      // Cleanup
-    }
-  }
-
-  // ==================== bloombeasts\ui\screens\common\MissionCompletePopup.ts ====================
-
-  /**
-   * Unified Mission Complete Popup Component
-   * Works on both Horizon and Web platforms
-   * Exactly mimics the UI from bloombeasts/screens/missions/MissionCompletePopup.ts
-   */
-
-
-  export interface MissionCompletePopupProps {
-    mission: {
-      id: string;
-      name: string;
-      affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky';
-    };
-    rewards: {
-      xpGained: number;
-      beastXP: number;
-      completionTimeSeconds: number;
-      cardsReceived: any[];
-      itemsReceived: Array<{
-        itemId: string;
-        quantity: number;
-        emoji?: string;
-        name?: string;
-      }>;
-    } | null; // null for mission failed
-    chestOpened: boolean;
-    onClaimRewards?: () => void;
-    onContinue?: () => void;
-  }
-
-  /**
-   * Unified Mission Complete Popup that exactly replicates canvas version
-   */
-  export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionCompletePopupProps): UINodeType {
-    const { mission, rewards, chestOpened, onClaimRewards, onContinue } = props;
-    const isFailed = !rewards;
-
-    const containerWidth = missionCompleteCardDimensions.width;
-    const containerHeight = missionCompleteCardDimensions.height;
-    const centerX = (1280 - containerWidth) / 2;
-    const centerY = (720 - containerHeight) / 2;
-
-    return ui.View({
-      style: {
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
-        top: 0,
-        left: 0,
-        zIndex: 2000, // Ensure popup is on top of everything
-      },
-      children: [
-        // Semi-transparent backdrop
-        ui.View({
-          style: {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-          },
-        }),
-
-        // Content container (centered)
-        ui.View({
-          style: {
-            position: 'absolute',
-            left: centerX,
-            top: centerY,
-            width: containerWidth,
-            height: containerHeight,
-          },
-          children: [
-            // Container background image
-            ui.Image({
-              source: ui.Binding.derive(
-                [ui.assetsLoadedBinding],
-                (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('mission-container') : null
-              ),
-              style: {
-                position: 'absolute',
-                width: containerWidth,
-                height: containerHeight,
-              },
-            }),
-
-            // Content overlay
-            ui.View({
-              style: {
-                position: 'absolute',
-                width: containerWidth,
-                height: containerHeight,
-              },
-              children: [
-            // Title
-            ui.View({
-              style: {
-                position: 'absolute',
-                left: missionCompleteCardPositions.title.x,
-                top: missionCompleteCardPositions.title.y,
-                width: containerWidth - missionCompleteCardPositions.title.x * 2,
-              },
-              children: ui.Text({
-                text: isFailed ? 'MISSION FAILED' : 'MISSION COMPLETE!',
-                style: {
-                  fontSize: missionCompleteCardPositions.title.size,
-                  fontWeight: 'bold',
-                  color: isFailed ? '#FF4444' : '#FFD700',
-                  textAlign: missionCompleteCardPositions.title.textAlign as any,
-                },
-              }),
-            }),
-
-            // Chest or lose image
-            isFailed
-              ? ui.Image({
-                  source: ui.Binding.derive(
-                    [ui.assetsLoadedBinding],
-                    (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('lose-image') : null
-                  ),
-                  style: {
-                    position: 'absolute',
-                    left: missionCompleteCardPositions.chestImage.x,
-                    top: missionCompleteCardPositions.chestImage.y,
-                    width: chestImageMissionCompleteDimensions.width,
-                    height: chestImageMissionCompleteDimensions.height,
-                  },
-                })
-              : ui.Image({
-                  source: ui.Binding.derive(
-                    [ui.assetsLoadedBinding],
-                    (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(
-                      chestOpened
-                        ? `${mission.affinity || 'Forest'}-chest-opened`.toLowerCase()
-                        : `${mission.affinity || 'Forest'}-chest-closed`.toLowerCase()
-                    ) : null
-                  ),
-                  style: {
-                    position: 'absolute',
-                    left: missionCompleteCardPositions.chestImage.x,
-                    top: missionCompleteCardPositions.chestImage.y,
-                    width: chestImageMissionCompleteDimensions.width,
-                    height: chestImageMissionCompleteDimensions.height,
-                  },
-                }),
-
-            // Info text
-            ui.View({
-              style: {
-                position: 'absolute',
-                left: missionCompleteCardPositions.infoText.x,
-                top: missionCompleteCardPositions.infoText.y,
-                width: containerWidth - missionCompleteCardPositions.infoText.x - 30, // 30px right margin
-              },
-              children: isFailed
-                ? createFailedInfo(ui)
-                : chestOpened
-                ? createDetailedRewards(ui, rewards)
-                : createBasicInfo(ui, rewards),
-            }),
-
-            // Claim/Continue button
-            ui.Pressable({
-              onClick: () => {
-                console.log('[MissionCompletePopup] Button clicked, isFailed:', isFailed, 'chestOpened:', chestOpened);
-                if (isFailed || chestOpened) {
-                  console.log('[MissionCompletePopup] Calling onContinue');
-                  onContinue?.();
-                } else {
-                  console.log('[MissionCompletePopup] Calling onClaimRewards');
-                  onClaimRewards?.();
-                }
-              },
-              style: {
-                position: 'absolute',
-                left: missionCompleteCardPositions.claimRewardButton.x,
-                top: missionCompleteCardPositions.claimRewardButton.y,
-                width: longButtonDimensions.width,
-                height: longButtonDimensions.height,
-                zIndex: 10, // Ensure button is on top
-              },
-              children: [
-                // Button background image
-                ui.Image({
-                  source: ui.Binding.derive(
-                    [ui.assetsLoadedBinding],
-                    (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('long-green-button') : null
-                  ),
-                  style: {
-                    position: 'absolute',
-                    width: longButtonDimensions.width,
-                    height: longButtonDimensions.height,
-                  },
-                }),
-                // Button text
-                ui.View({
-                  style: {
-                    position: 'absolute',
-                    width: longButtonDimensions.width,
-                    height: longButtonDimensions.height,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  },
-                  children: ui.Text({
-                    text: isFailed ? 'CONTINUE' : chestOpened ? 'CONTINUE' : 'CLAIM REWARDS',
-                    style: {
-                      fontSize: 18,
-                      fontWeight: 'bold',
-                      color: '#FFFFFF',
-                      textAlign: 'center',
-                    },
-                  }),
-                }),
-              ],
-            }),
-            ],
-          }),
-        ],
-      }),
-      ],
-    });
-  }
-
-  /**
-   * Create failed mission info text
-   */
-  function createFailedInfo(ui: UIMethodMappings): UINodeType {
-    return ui.View({
-      style: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-      },
-      children: [
-        ui.Text({
-          text: 'Better luck next time!\n\nKeep training your beasts\nand try again.',
-          style: {
-            fontSize: 14,
-            lineHeight: 18,
-            color: '#FFFFFF',
-            textAlign: 'center',
-          },
-        }),
-      ],
-    });
-  }
-
-  /**
-   * Create basic info (before chest opened)
-   */
-  function createBasicInfo(ui: UIMethodMappings, rewards: any): UINodeType {
-    const minutes = Math.floor(rewards.completionTimeSeconds / 60);
-    const seconds = rewards.completionTimeSeconds % 60;
-    const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-
-    const lines = [`Time: ${timeString}`, '', `Player XP: +${rewards.xpGained}`, `Beast XP: +${rewards.beastXP}`];
-
-    return ui.View({
-      style: {
-        flexDirection: 'column',
-      },
-      children: lines.map((line, index) =>
-        ui.Text({
-          text: line,
-          style: {
-            fontSize: missionCompleteCardPositions.infoText.size,
-            color: '#FFFFFF',
-            textAlign: missionCompleteCardPositions.infoText.textAlign as any,
-            marginBottom: 5,
-          },
-        })
-      ),
-    });
-  }
-
-  /**
-   * Create detailed rewards (after chest opened)
-   */
-  function createDetailedRewards(ui: UIMethodMappings, rewards: any): UINodeType {
-    const elements: UINodeType[] = [];
-
-    // Cards received
-    if (rewards.cardsReceived && rewards.cardsReceived.length > 0) {
-      elements.push(
-        ui.Text({
-          text: 'Cards Received:',
-          style: {
-            fontSize: missionCompleteCardPositions.infoText.size,
-            color: '#FFD700',
-            textAlign: missionCompleteCardPositions.infoText.textAlign as any,
-            marginBottom: 5,
-          },
-        })
-      );
-
-      rewards.cardsReceived.forEach((card: any, index: number) => {
-        elements.push(
-          ui.Text({
-            text: `  • ${card.name}`,
-            style: {
-              fontSize: missionCompleteCardPositions.infoText.size,
-              color: '#FFFFFF',
-              textAlign: missionCompleteCardPositions.infoText.textAlign as any,
-              marginBottom: 5,
-            },
-          })
-        );
-      });
-
-      // Extra spacing
-      elements.push(
-        ui.View({
-          style: { height: 10 },
-        })
-      );
-    }
-
-    // Items received
-    if (rewards.itemsReceived && rewards.itemsReceived.length > 0) {
-      elements.push(
-        ui.Text({
-          text: 'Items Received:',
-          style: {
-            fontSize: missionCompleteCardPositions.infoText.size,
-            color: '#FFD700',
-            textAlign: missionCompleteCardPositions.infoText.textAlign as any,
-            marginBottom: 5,
-          },
-        })
-      );
-
-      rewards.itemsReceived.forEach((itemReward: any, index: number) => {
-        const emoji = itemReward.emoji || '';
-        const itemName = itemReward.name || itemReward.itemId;
-        elements.push(
-          ui.Text({
-            text: `  ${emoji} ${itemName} x${itemReward.quantity}`,
-            style: {
-              fontSize: missionCompleteCardPositions.infoText.size,
-              color: '#FFFFFF',
-              textAlign: missionCompleteCardPositions.infoText.textAlign as any,
-              marginBottom: 5,
-            },
-          })
-        );
-      });
-
-      // Extra spacing
-      elements.push(
-        ui.View({
-          style: { height: 10 },
-        })
-      );
-    }
-
-    return ui.View({
-      style: {
-        flexDirection: 'column',
-      },
-      children: elements,
-    });
-  }
-
-  // ==================== bloombeasts\ui\screens\common\ButtonPopup.ts ====================
-
-  /**
-   * Button Popup Component
-   * Simple popup that shows buttons for user choices
-   */
-
-
-  export interface ButtonPopupProps {
-    title: string;
-    message?: string;
-    buttons: {
-      text: string;
-      onClick: () => void;
-      color?: string;
-    }[];
-  }
-
-  /**
-   * Create a button popup
-   */
-  export function createButtonPopup(ui: UIMethodMappings, props: ButtonPopupProps): any {
-    const { View: V, Text: T, Pressable: P } = ui;
-
-    return V({
-      style: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1000,
-      },
-      children: [
-        // Popup container
-        V({
-          style: {
-            width: 400,
-            backgroundColor: COLORS.surface,
-            borderRadius: 12,
-            padding: 24,
-            borderWidth: 2,
-            borderColor: COLORS.primary,
-          },
-          children: [
-            // Title
-            T({
-              text: props.title,
-              style: {
-                fontSize: 24,
-                fontWeight: 'bold',
-                color: COLORS.textPrimary,
-                textAlign: 'center',
-                marginBottom: props.message ? 12 : 24,
-              },
-            }),
-
-            // Message (optional)
-            props.message ? T({
-              text: props.message,
-              style: {
-                fontSize: 16,
-                color: COLORS.textSecondary,
-                textAlign: 'center',
-                marginBottom: 24,
-              },
-            }) : null,
-
-            // Buttons
-            V({
-              style: {
-                flexDirection: 'row',
-                justifyContent: 'center',
-              },
-              children: props.buttons.map((button, index) =>
-                P({
-                  onClick: button.onClick,
-                  style: {
-                    backgroundColor: button.color || COLORS.primary,
-                    padding: 12,
-                    paddingLeft: 24,
-                    paddingRight: 24,
-                    borderRadius: 8,
-                    minWidth: 100,
-                    marginRight: index < props.buttons.length - 1 ? 12 : 0,
-                  },
-                  children: T({
-                    text: button.text,
-                    style: {
-                      color: '#FFFFFF',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                      textAlign: 'center',
-                    },
-                  }),
-                })
-              ),
-            }),
-          ].filter(Boolean),
-        }),
-      ],
-    });
-  }
-
-  // ==================== bloombeasts\BloomBeastsGame.ts ====================
-
-  /**
-   * BloomBeastsGame - Unified Game Controller
-   *
-   * This is the main entry point for the game that works across all platforms (web, horizon).
-   * Platform-specific code should be minimal - just implement the PlatformConfig callbacks.
-   *
-   * The game is fully platform-agnostic - it doesn't even import UI methods directly,
-   * but receives them from the platform configuration.
-   */
-
-
-  /**
-   * XP thresholds for player leveling (cumulative)
-   * Formula: XP = 100 * (2.0 ^ (level - 1))
-   */
-  const XP_THRESHOLDS = [
-    0,      // Level 1
-    100,    // Level 2: 100 XP
-    300,    // Level 3: 300 XP total
-    700,    // Level 4: 700 XP total
-    1500,   // Level 5: 1500 XP total
-    3100,   // Level 6: 3100 XP total
-    6300,   // Level 7: 6300 XP total
-    12700,  // Level 8: 12700 XP total
-    25500,  // Level 9: 25500 XP total
-  ];
-
-  /**
-   * Calculate player level from total XP (derived data)
-   */
-  function getPlayerLevel(totalXP: number): number {
-    for (let level = 9; level >= 1; level--) {
-      if (totalXP >= XP_THRESHOLDS[level - 1]) {
-        return level;
-      }
-    }
-    return 1;
-  }
-
-  // UINode type - represents a UI node returned by UI components
-  export type UINode = any;
-
-  /**
-   * Read-only binding interface (for derived bindings)
-   */
-  export interface ReadonlyBindingInterface<T> {
-    get(): T;
-    subscribe(callback: () => void): void;
-  }
-
-  /**
-   * Binding interface - platform-agnostic reactive data binding
-   * Each platform provides its own implementation
-   */
-  export interface BindingInterface<T> {
-    get(): T;
-    set(value: T): void;
-    subscribe(callback: () => void): void;
-    derive<U>(fn: (value: T) => U): ReadonlyBindingInterface<U>;
-  }
-
-  /**
-   * Binding constructor type
-   */
-  export type BindingConstructor = {
-    new <T>(value: T): BindingInterface<T>;
-    derive<T extends any[], R>(
-      bindings: any[],
-      deriveFn: (...values: T) => R
-    ): ReadonlyBindingInterface<R>;
-  };
-
-  /**
-   * Style properties - platform-agnostic style definitions
-   * These match Horizon's styling but work on web too
-   */
-  export interface StyleProps {
-    width?: number;
-    height?: number;
-    backgroundColor?: string;
-    borderRadius?: number;
-    padding?: number;
-    margin?: number;
-    flexDirection?: 'row' | 'column';
-    justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
-    alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
-    position?: 'relative' | 'absolute';
-    top?: number;
-    left?: number;
-    right?: number;
-    bottom?: number;
-    opacity?: number;
-    // Add more as needed
-  }
-
-  /**
-   * Common props for all UI components
-   */
-  export interface BaseUIProps {
-    style?: StyleProps;
-    children?: UINode | UINode[];
-  }
-
-  /**
-   * View component props
-   */
-  export interface ViewProps extends BaseUIProps {}
-
-  /**
-   * Text component props
-   */
-  export interface TextProps extends BaseUIProps {
-    text?: string;
-    fontSize?: number;
-    fontWeight?: 'normal' | 'bold';
-    color?: string;
-    textAlign?: 'left' | 'center' | 'right';
-  }
-
-  /**
-   * Image component props
-   */
-  export interface ImageProps extends BaseUIProps {
-    imageId?: string | any; // Single image asset ID (or binding)
-    binding?: any; // BaseBinding<string> for animations, derived values, etc.
-    width?: number;
-    height?: number;
-  }
-
-  /**
-   * Pressable (button) component props
-   */
-  export interface PressableProps extends BaseUIProps {
-    onPress?: () => void;
-    id?: string;
-  }
-
-  /**
-   * Platform-specific UI method mappings
-   * Each platform provides its own implementation of these methods
-   * Screens receive this object and use it to create UI elements
-   */
-  export interface UIMethodMappings {
-    // Core UI components
-    View: (props: any) => any;
-    Text: (props: any) => any;
-    Image: (props: any) => any;
-    Pressable: (props: any) => any;
-    ScrollView?: (props: any) => any;
-
-    // UINode utilities for conditional rendering
-    // Matches Horizon's actual signature
-    UINode?: any;
-
-    // Data binding
-    Binding: BindingConstructor;
-    AnimatedBinding?: any;
-
-    // Animation
-    Animation?: any;
-    Easing?: any;
-
-    // Platform-specific helpers
-    assetIdToImageSource?: (assetId: string) => any; // Convert asset ID to ImageSource (Horizon) or string (Web)
-    assetsLoadedBinding?: any; // Binding<boolean> - true when assets are loaded (prevents race conditions)
-  }
-
-  /**
-   * Player item in inventory
-   */
-  export interface PlayerItem {
-    itemId: string;
-    quantity: number;
-  }
-
-  /**
-   * Player data structure - persisted to platform storage
-   * This is the canonical save data format
-   *
-   * Note: Player level is derived from totalXP and not stored directly
-   */
-  export interface PlayerData {
-    // Identity and progression
-    name: string;
-    totalXP: number; // Level is derived from this via getPlayerLevel()
-
-    // Card collection and deck (SINGLE SOURCE OF TRUTH)
-    cards: {
-      collected: CardInstance[]; // All owned card instances
-      deck: string[]; // Card instance IDs in player's deck
-    };
-
-    // Mission tracking
-    missions: {
-      completedMissions: { [missionId: string]: number }; // Mission ID -> completion count
-    };
-
-    // Item inventory
-    items: PlayerItem[];
-
-    // UI preferences (not persisted on all platforms)
-    settings?: SoundSettings;
-  }
-
-  /**
-   * Platform configuration - implement these callbacks for your platform
-   *
-   * TypeScript ensures ALL assets from the catalog are provided!
-   *
-   * Example for Web:
-   * {
-   *   setPlayerData: (data) => localStorage.setItem('playerData', JSON.stringify(data)),
-   *   getPlayerData: () => JSON.parse(localStorage.getItem('playerData') || 'null'),
-   *   imageAssets: {
-   *     [ImageAssetIds.CARD_ROOTLING]: '/shared/images/cards/Forest/Rootling.png',
-   *     [ImageAssetIds.CARD_EMBERLING]: '/shared/images/cards/Fire/Emberling.png',
-   *     // ... TypeScript enforces all assets are provided!
-   *   },
-   *   soundAssets: {
-   *     [SoundAssetIds.MUSIC_BACKGROUND]: '/shared/sounds/BackgroundMusic.mp3',
-   *     // ... TypeScript enforces all assets are provided!
-   *   },
-   *   getUIMethodMappings: () => ({ View, Text, Image, Pressable, Binding }),
-   *   render: (uiNode) => renderer.render(uiNode)
-   * }
-   *
-   * Example for Horizon:
-   * {
-   *   setPlayerData: (data) => persistentVar.set(data),
-   *   getPlayerData: () => persistentVar.get(),
-   *   imageAssets: {
-   *     [ImageAssetIds.CARD_ROOTLING]: ImageSource.fromTextureAsset(new hz.Asset(BigInt('123'))),
-   *     [ImageAssetIds.CARD_EMBERLING]: ImageSource.fromTextureAsset(new hz.Asset(BigInt('456'))),
-   *     // ... TypeScript enforces all assets are provided!
-   *   },
-   *   soundAssets: {
-   *     [SoundAssetIds.MUSIC_BACKGROUND]: new hz.Asset(BigInt('789')),
-   *     // ... TypeScript enforces all assets are provided!
-   *   },
-   *   getUIMethodMappings: () => ({ View: hz.View, Text: hz.Text, ... }),
-   *   render: (uiNode) => horizonComponent.update(uiNode)
-   * }
-   */
-  export interface PlatformConfig {
-    /**
-     * Save player data to persistent storage
-     * For web: localStorage
-     * For horizon: Persistent Variables API
-     */
-    setPlayerData: (data: PlayerData) => void;
-
-    /**
-     * Load player data from persistent storage
-     * Return null if no data exists
-     */
-    getPlayerData: () => PlayerData | null;
-
-    /**
-     * Get an image asset by ID
-     * Platform queries AssetCatalogManager and returns the asset in platform format
-     *
-     * For web: Returns string path from catalog (e.g., '/assets/cards/fire/beast.png')
-     * For horizon: Converts catalog horizonAssetId to ImageSource object
-     */
-    getImageAsset: (assetId: string) => any;
-
-    /**
-     * Asset catalog manager instance
-     * Provides access to all game asset metadata and card definitions
-     */
-    catalogManager: any; // AssetCatalogManager instance
-
-    /**
-     * Get platform-specific UI method implementations
-     *
-     * For web: Returns web-specific View, Text, Image, Pressable, Binding
-     * For horizon: Returns hz.View, hz.Text, hz.Image, hz.Pressable, hz.Binding
-     */
-    getUIMethodMappings: () => UIMethodMappings;
-
-    /**
-     * Platform-specific async methods (setTimeout, setInterval, etc.)
-     *
-     * For web: Standard window.setTimeout, window.setInterval, etc.
-     * For horizon: component.async.setTimeout, component.async.setInterval, etc.
-     */
-    async: AsyncMethods;
-
-    /**
-     * Render the UI tree
-     * Called whenever the UI needs to be updated
-     *
-     * For web: renderer.render(uiNode)
-     * For horizon: component.update(uiNode) or similar
-     */
-    render: (uiNode: UINode) => void;
-
-    /**
-     * Audio callbacks (optional)
-     * Implement if your platform supports audio
-     */
-    playSound?: (assetId: string, loop: boolean, volume: number) => void;
-    stopSound?: (assetId?: string) => void;
-    setMusicVolume?: (volume: number) => void;
-    setSfxVolume?: (volume: number) => void;
-    setMusicEnabled?: (enabled: boolean) => void;
-    setSfxEnabled?: (enabled: boolean) => void;
-  }
-
-  /**
-   * Main game class - handles all game logic and UI orchestration
-   */
-  export class BloomBeastsGame {
-    // Platform configuration
-    private platform: PlatformConfig;
-
-    // Platform-specific UI methods
-    private UI: UIMethodMappings;
-
-    // Platform-specific async methods
-    private asyncMethods: AsyncMethods;
-
-    // Platform-provided asset getters
-    private platformGetImageAsset: (assetId: string) => any;
-
-    // Core game systems
-    private gameEngine: GameEngine;
-    private missionManager: MissionManager;
-    private missionUI: MissionSelectionUI;
-    private battleUI: MissionBattleUI;
-    private cardCollectionManager: CardCollectionManager;
-
-    // Sound and display state
-    private currentMusic: string | null = null;
-    private battleDisplayManager: BattleDisplayManager;
-
-    // Player data state - SINGLE SOURCE OF TRUTH (no duplicates!)
-    // Starts as null to indicate data hasn't loaded yet (prevents race conditions)
-    private playerData: PlayerData | null = null;
-
-    // Game state
-    private isInitializing: boolean = true;  // Prevent renders during initialization
-    private currentScreen: string = 'loading';  // Current active screen
-    private currentBattleId: string | null = null;
-
-    // UI State bindings
-    private playerDataBinding: BindingInterface<PlayerData | null>;
-    private currentScreenBinding: BindingInterface<string>;
-    private missionsBinding: BindingInterface<MissionDisplay[]>;
-
-    // Battle-specific UI bindings (UI-only state)
-    private battleStateBinding: BindingInterface<string>;
-    private battleMessageBinding: BindingInterface<string>;
-    private battleDisplayBinding: BindingInterface<BattleDisplay | null>;
-
-    // Popup bindings (UI-only state)
-    private missionCompletePopupBinding: BindingInterface<any>;
-    private forfeitPopupBinding: BindingInterface<any>;
-    private cardDetailPopupBinding: BindingInterface<any>;
-
-    // Track binding values separately (as per Horizon docs - no .get() method)
-    private missionCompletePopupValue: any = null;
-    private forfeitPopupValue: any = null;
-    private cardDetailPopupValue: any = null;
-
-    // Screen instances
-    private menuScreen: MenuScreen;
-    private cardsScreen: CardsScreen;
-    private missionScreen: MissionScreen;
-    private battleScreen: BattleScreen;
-    private settingsScreen: SettingsScreen;
-
-    // UI tree (created once, updated reactively)
-    // Public so platform wrappers can access it (needed for Horizon's initializeUI)
-    public uiTree: UINode | null = null;
-
-    constructor(config: PlatformConfig) {
-      this.platform = config;
-
-      // Get platform-specific UI methods
-      this.UI = config.getUIMethodMappings();
-
-      // Get platform-specific async methods
-      this.asyncMethods = config.async;
-
-      // Store platform-provided asset getters
-      this.platformGetImageAsset = config.getImageAsset;
-
-      // Initialize card utils and deck builder with catalog manager
-      setCatalogManagerForUtils(config.catalogManager);
-      setCatalogManagerForDeckBuilder(config.catalogManager);
-
-      // Initialize core systems
-      this.gameEngine = new GameEngine(config.catalogManager);
-      this.missionManager = new MissionManager(config.catalogManager);
-      this.missionUI = new MissionSelectionUI(this.missionManager);
-      this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine, this.asyncMethods);
-
-      // Set up render callback for battle UI to update display during opponent turns
-      (this.battleUI as any).renderCallback = () => {
-        const currentState = this.battleUI.getCurrentBattle();
-        if (currentState && !currentState.isComplete) {
-          const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
-            currentState,
-            null
-          );
-          if (updatedDisplay) {
-            // console.log('[BloomBeastsGame] renderCallback: Updating battleDisplayBinding with turnPlayer:', updatedDisplay.turnPlayer);
-            this.battleDisplayBinding.set(updatedDisplay);
-            this.triggerRender();
-          }
-        }
-      };
-
-      this.cardCollectionManager = new CardCollectionManager(config.catalogManager);
-      this.battleDisplayManager = new BattleDisplayManager(config.catalogManager);
-
-      // Initialize bindings using platform's Binding class
-      const BindingClass = this.UI.Binding as any;
-      this.playerDataBinding = new BindingClass(null);  // Start null - data loads in initialize()
-      this.currentScreenBinding = new BindingClass('loading');  // Start with loading
-      this.missionsBinding = new BindingClass([]);
-
-      // Battle UI bindings
-      this.battleStateBinding = new BindingClass('initializing');
-      this.battleMessageBinding = new BindingClass('Preparing for battle...');
-      this.battleDisplayBinding = new BindingClass(null);
-
-      // Popup bindings
-      this.missionCompletePopupBinding = new BindingClass(null);
-      this.forfeitPopupBinding = new BindingClass(null);
-      this.cardDetailPopupBinding = new BindingClass(null);
-
-      // Create screen instances (pass UI methods and playerData binding)
-      this.menuScreen = new MenuScreen({
-        ui: this.UI,
-        async: this.asyncMethods,
-        playerDataBinding: this.playerDataBinding,
-        onButtonClick: this.handleButtonClick.bind(this),
-        onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this)
-      });
-
-      this.cardsScreen = new CardsScreen({
-        ui: this.UI,
-        playerDataBinding: this.playerDataBinding,
-        onCardSelect: this.handleCardSelect.bind(this),
-        onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this)
-      });
-
-      this.missionScreen = new MissionScreen({
-        ui: this.UI,
-        missions: this.missionsBinding,
-        playerDataBinding: this.playerDataBinding,
-        onMissionSelect: this.handleMissionSelect.bind(this),
-        onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this)
-      });
-
-      this.battleScreen = new BattleScreen({
-        ui: this.UI,
-        async: this.asyncMethods,
-        battleDisplay: this.battleDisplayBinding,
-        onAction: this.handleBattleAction.bind(this),
-        onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this),
-        onShowCardDetail: this.showCardDetailPopup.bind(this)
-      });
-
-      this.settingsScreen = new SettingsScreen({
-        ui: this.UI,
-        playerDataBinding: this.playerDataBinding,
-        onSettingChange: this.handleSettingsChange.bind(this),
-        onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this)
-      });
-
-      // All screens are now created, enable rendering
-      this.isInitializing = false;
-
-      // Create UI tree once (it's reactive via bindings)
-      this.uiTree = this.createUI();
-    }
-
-    /**
-     * Get an image asset by ID
-     * Delegates to platform-specific implementation
-     */
-    getImageAsset(assetId: string): any {
-      return this.platformGetImageAsset(assetId);
-    }
-
-    /**
-     * Get platform async methods (setTimeout, setInterval, etc.)
-     * Screens can use this to access platform-specific async operations
-     */
-    get async(): AsyncMethods {
-      return this.asyncMethods;
-    }
-
-    /**
-     * Initialize the game
-     * Call this after construction to load data and show initial screen
-     */
-    async initialize(): Promise<void> {
-      console.log('[BloomBeastsGame] Initializing...');
-
-      // Load saved game data (initializes starting cards if needed)
-      await this.loadGameData();
-
-      // Update bindings from loaded data
-      console.log('[BloomBeastsGame] About to call updateBindingsFromGameState...');
-      await this.updateBindingsFromGameState();
-      console.log('[BloomBeastsGame] updateBindingsFromGameState completed');
-
-      // Trigger initial render
-      console.log('[BloomBeastsGame] About to trigger render...');
-      this.triggerRender();
-
-      // Start menu music
-      console.log('[BloomBeastsGame] Starting menu music...');
-      this.playMusic('music-background', true);
-      console.log('[BloomBeastsGame] Navigating to menu...');
-      this.navigate('menu');
-      console.log('[BloomBeastsGame] Initialize complete!');
-    }
-
-    /**
-     * Get current player level (derived from totalXP)
-     */
-    private get playerLevel(): number {
-      return getPlayerLevel(this.playerData?.totalXP ?? 0);
-    }
-
-    /**
-     * Create default player data structure
-     */
-    private createDefaultPlayerData(): PlayerData {
-      return {
-        name: 'Player',
-        totalXP: 0,
-        items: [],
-        cards: {
-          collected: [],
-          deck: []
-        },
-        missions: {
-          completedMissions: {}
-        },
-        settings: {
-          musicVolume: 10,
-          sfxVolume: 50,
-          musicEnabled: true,
-          sfxEnabled: true
-        }
-      };
-    }
-
-    /**
-     * Load game data from platform storage
-     * Creates default data if none exists
-     */
-    private async loadGameData(): Promise<void> {
-      try {
-        const savedData = this.platform.getPlayerData?.();
-
-        if (savedData && Object.keys(savedData).length > 0) {
-          // Use saved data directly
-          this.playerData = savedData;
-          Logger.info(`[BloomBeastsGame] Loaded player data with ${savedData.cards.collected.length} cards`);
-        } else {
-          // Create default player data
-          this.playerData = this.createDefaultPlayerData();
-          Logger.info('[BloomBeastsGame] Created default player data');
-        }
-      } catch (error) {
-        Logger.error('[BloomBeastsGame] Error loading player data:', error);
-        // Create default player data on error
-        this.playerData = this.createDefaultPlayerData();
-        Logger.info('[BloomBeastsGame] Using default player data');
-      }
-
-      Logger.info(`[BloomBeastsGame] Restored deck with ${this.playerData.cards.deck.length} cards`);
-
-      // Apply sound settings to platform
-      if (this.playerData.settings) {
-        this.platform.setMusicVolume?.(this.playerData.settings!.musicVolume / 100);
-        this.platform.setSfxVolume?.(this.playerData.settings!.sfxVolume / 100);
-        this.platform.setMusicEnabled?.(this.playerData.settings!.musicEnabled);
-        this.platform.setSfxEnabled?.(this.playerData.settings!.sfxEnabled);
-      }
-
-      // Load completed missions into MissionManager
-      this.missionManager.loadCompletedMissions(this.playerData.missions.completedMissions);
-
-      // Initialize starting cards if collection is empty
-      if (this.playerData.cards.collected.length === 0) {
-        Logger.info('[BloomBeastsGame] Initializing starting card collection');
-        await this.initializeStartingCollection();
-      }
-
-      // Save to ensure data persists
-      await this.saveGameData();
-    }
-
-    /**
-     * Save game data to platform storage
-     */
-    private async saveGameData(): Promise<void> {
-      if (!this.playerData) {
-        Logger.warn('[BloomBeastsGame] Cannot save null player data');
-        return;
-      }
-      this.platform.setPlayerData?.(this.playerData);
-      Logger.debug('[BloomBeastsGame] Player data saved');
-    }
-
-    /**
-     * Update player data (single update method)
-     * This is the ONLY way to update playerData - ensures binding stays in sync
-     */
-    private async updatePlayerData(updates: Partial<PlayerData> | ((current: PlayerData) => PlayerData)): Promise<void> {
-      // Data must be loaded before updates
-      if (!this.playerData) {
-        Logger.error('[BloomBeastsGame] Cannot update player data before it is loaded');
-        return;
-      }
-
-      // Support both object updates and function updates
-      if (typeof updates === 'function') {
-        this.playerData = updates(this.playerData);
-      } else {
-        this.playerData = { ...this.playerData, ...updates };
-      }
-
-      // Update binding
-      this.playerDataBinding.set(this.playerData);
-
-      // Auto-save
-      await this.saveGameData();
-    }
-
-    /**
-     * Play background music
-     */
-    private playMusic(musicId: string, loop: boolean = true): void {
-      // Don't restart music if it's already playing
-      if (this.currentMusic === musicId) {
-        return;
-      }
-
-      this.currentMusic = musicId;
-
-      if (this.playerData?.settings?.musicEnabled) {
-        const volume = this.playerData.settings.musicVolume / 100;
-        this.platform.playSound?.(musicId, loop, volume);
-      }
-    }
-
-    /**
-     * Stop background music
-     */
-    private stopMusic(): void {
-      this.currentMusic = null;
-      this.platform.stopSound?.();
-    }
-
-    /**
-     * Play sound effect
-     */
-    private playSfx(sfxId: string): void {
-      if (this.playerData?.settings?.sfxEnabled) {
-        const volume = this.playerData.settings.sfxVolume / 100;
-        this.platform.playSound?.(sfxId, false, volume);
-      }
-    }
-
-    /**
-     * Set music volume (0-100)
-     */
-    private setMusicVolume(volume: number): void {
-      if (!this.playerData?.settings) return;
-      this.playerData.settings.musicVolume = Math.max(0, Math.min(100, volume));
-      if (this.playerData.settings.musicEnabled) {
-        this.platform.setMusicVolume?.(this.playerData.settings.musicVolume / 100);
-      }
-    }
-
-    /**
-     * Set SFX volume (0-100)
-     */
-    private setSfxVolume(volume: number): void {
-      if (!this.playerData?.settings) return;
-      this.playerData.settings.sfxVolume = Math.max(0, Math.min(100, volume));
-      if (this.playerData.settings.sfxEnabled) {
-        this.platform.setSfxVolume?.(this.playerData.settings.sfxVolume / 100);
-      }
-    }
-
-    /**
-     * Toggle music on/off
-     */
-    private toggleMusic(enabled: boolean): void {
-      console.log('[BloomBeastsGame] toggleMusic called:', { enabled, currentMusic: this.currentMusic });
-      if (!this.playerData?.settings) return;
-      this.playerData.settings.musicEnabled = enabled;
-
-      // Notify platform
-      this.platform.setMusicEnabled?.(enabled);
-
-      if (enabled && this.currentMusic) {
-        // Resume music - force replay even if it's the same track
-        const musicToResume = this.currentMusic;
-        const volume = this.playerData.settings.musicVolume / 100;
-        console.log('[BloomBeastsGame] Resuming music:', { musicToResume, volume, platformHasPlaySound: !!this.platform.playSound });
-        this.platform.playSound?.(musicToResume, true, volume);
-      } else if (!enabled) {
-        // Stop music playback but keep track of current music for resume
-        // Don't call stopMusic() as it clears this.currentMusic
-        console.log('[BloomBeastsGame] Stopping music, keeping currentMusic:', this.currentMusic);
-        this.platform.stopSound?.();
-      } else {
-        console.log('[BloomBeastsGame] Music enabled but no currentMusic set');
-      }
-    }
-
-    /**
-     * Toggle SFX on/off
-     */
-    private toggleSfx(enabled: boolean): void {
-      if (!this.playerData?.settings) return;
-      this.playerData.settings.sfxEnabled = enabled;
-
-      // Notify platform
-      this.platform.setSfxEnabled?.(enabled);
-    }
-
-    /**
-     * Add XP to player (level is automatically derived)
-     */
-    private addXP(amount: number): void {
-      if (!this.playerData) return;
-      this.playerData.totalXP += amount;
-      Logger.debug(`[BloomBeastsGame] Added ${amount} XP (total: ${this.playerData.totalXP}, level: ${this.playerLevel})`);
-    }
-
-    /**
-     * Get the quantity of a specific item from player's items array
-     */
-    private getItemQuantity(itemId: string): number {
-      if (!this.playerData) return 0;
-      const item = this.playerData.items.find(i => i.itemId === itemId);
-      return item ? item.quantity : 0;
-    }
-
-    /**
-     * Track mission completion
-     */
-    private trackMissionCompletion(missionId: string): void {
-      if (!this.playerData) return;
-      const currentCount = this.playerData.missions.completedMissions[missionId] || 0;
-      this.playerData.missions.completedMissions[missionId] = currentCount + 1;
-      Logger.debug(`[BloomBeastsGame] Mission ${missionId} completed ${currentCount + 1} times`);
-    }
-
-    /**
-     * Add items to player's inventory
-     */
-    private addItems(itemId: string, quantity: number): void {
-      if (!this.playerData) return;
-      const existingItem = this.playerData.items.find(i => i.itemId === itemId);
-
-      if (existingItem) {
-        existingItem.quantity += quantity;
-      } else {
-        this.playerData.items.push({
-          itemId,
-          quantity,
-        });
-      }
-      Logger.debug(`[BloomBeastsGame] Added ${quantity}x ${itemId} to inventory`);
-    }
-
-    /**
-     * Initialize a new game with starter cards
-     */
-    private async initializeStartingCollection(): Promise<void> {
-      if (!this.playerData) return;
-      this.playerData.cards.deck = await this.cardCollectionManager.initializeStartingCollection(
-        this.playerData.cards.collected,
-        this.playerData.cards.deck
-      );
-      await this.saveGameData();
-    }
-
-    /**
-     * Update bindings from current game state
-     * This syncs the UI bindings with the actual game state
-     */
-    private async updateBindingsFromGameState(): Promise<void> {
-      // Update player data binding (screens derive what they need from this)
-      this.playerDataBinding.set(this.playerData);
-
-      // Update missions binding (still separate as it includes availability logic)
-      this.missionUI.setPlayerLevel(this.playerLevel);
-      const missionList = this.missionUI.getMissionList();
-      const displayMissions: MissionDisplay[] = missionList.map(m => ({
-        id: m.mission.id,
-        name: m.mission.name,
-        level: m.mission.level,
-        difficulty: m.mission.difficulty,
-        isAvailable: m.isAvailable,
-        isCompleted: m.completionCount > 0,
-        description: m.mission.description,
-        affinity: m.mission.affinity,
-        beastId: m.mission.beastId,
-      }));
-
-      // Debug: Log first 3 missions
-      console.log('[BloomBeastsGame] First 3 display missions:', displayMissions.slice(0, 3).map(m => ({id: m.id, isAvailable: m.isAvailable})));
-
-      this.missionsBinding.set(displayMissions);
-    }
-
-    /**
-     * Navigate to a different screen
-     */
-    private navigate(screen: string): void {
-      this.currentScreen = screen;
-      this.currentScreenBinding.set(screen);
-      this.triggerRender();
-    }
-
-    /**
-     * Trigger a render
-     * Notifies the platform to render (bindings update automatically)
-     */
-    private triggerRender(): void {
-      // Skip rendering during initialization to prevent errors
-      if (this.isInitializing) {
-        return;
-      }
-
-      // Just notify platform - UI tree is reactive via bindings
-      // No need to recreate the entire tree!
-      this.platform.render(this.uiTree);
-    }
-
-    /**
-     * Handle button clicks
-     */
-    private async handleButtonClick(buttonId: string): Promise<void> {
-      // console.log('[BloomBeastsGame] Button clicked:', buttonId);
-
-      // Play button sound
-      this.playSfx('sfx-menu-button-select');
-
-      // Handle navigation buttons
-      switch (buttonId) {
-        case 'play':
-        case 'btn-missions':
-          this.navigate('missions');
-          break;
-        case 'cards':
-        case 'btn-cards':
-          this.navigate('cards');
-          break;
-        case 'missions':
-          this.navigate('missions');
-          break;
-        case 'settings':
-        case 'btn-settings':
-          this.navigate('settings');
-          break;
-        case 'shop':
-          // console.log('Shop coming soon!');
-          break;
-        case 'btn-back':
-          this.navigate('menu');
-          break;
-        case 'forfeit':
-          // Show forfeit confirmation popup
-          this.showForfeitConfirmation();
-          break;
-        default:
-          // console.log('Unhandled button:', buttonId);
-      }
-    }
-
-    /**
-     * Show forfeit confirmation popup
-     */
-    private showForfeitConfirmation(): void {
-      this.forfeitPopupBinding.set({
-        title: 'Forfeit Battle?',
-        message: 'Are you sure you want to give up? You will lose this battle.',
-        buttons: [
-          {
-            text: 'Forfeit',
-            onClick: () => {
-              this.handleForfeit();
-            },
-            color: '#DC2626', // Red color
-          },
-          {
-            text: 'Cancel',
-            onClick: () => {
-              this.forfeitPopupBinding.set(null);
-            },
-            color: '#6B7280', // Gray color
-          },
-        ],
-      });
-    }
-
-    /**
-     * Show card detail popup for a duration, then close and execute callback
-     */
-    private showCardDetailPopup(card: any, durationMs: number, callback?: () => void): void {
-      console.log('[BloomBeastsGame] Showing card detail popup:', card.name, 'for', durationMs, 'ms');
-
-      // Set the card detail popup
-      this.cardDetailPopupValue = {
-        cardDetail: {
-          card: card,
-          stats: null,
-        },
-        onButtonClick: () => {
-          // Close button clicked
-          this.cardDetailPopupValue = null;
-          this.cardDetailPopupBinding.set(null);
-        }
-      };
-      this.cardDetailPopupBinding.set(this.cardDetailPopupValue);
-      this.triggerRender();
-
-      // After duration, close the popup and execute callback
-      this.asyncMethods.setTimeout(() => {
-        this.cardDetailPopupValue = null;
-        this.cardDetailPopupBinding.set(null);
-        this.triggerRender();
-        callback?.();
-      }, durationMs);
-    }
-
-    /**
-     * Handle forfeit - player gives up
-     */
-    private handleForfeit(): void {
-      // Close popup
-      this.forfeitPopupBinding.set(null);
-
-      // Play lose sound
-      this.playSfx('sfx-lose');
-
-      // End battle as a loss
-      const currentBattle = this.battleUI.getCurrentBattle();
-      if (currentBattle) {
-        const defeatState = {
-          ...currentBattle,
-          isComplete: true,
-          rewards: null, // No rewards for forfeit
-          mission: currentBattle.mission,
-        };
-        this.handleBattleComplete(defeatState);
-      }
-    }
-
-    /**
-     * Handle card selection
-     */
-    private async handleCardSelect(cardId: string): Promise<void> {
-      // console.log('[BloomBeastsGame] Card selected:', cardId);
-      if (!this.playerData) return;
-
-      // Play menu button sound
-      this.playSfx('sfx-menu-button-select');
-
-      const cardEntry = this.playerData.cards.collected.find(c => c.id === cardId);
-
-      if (!cardEntry) {
-        return;
-      }
-
-      // Check if card is in deck
-      const isInDeck = this.playerData.cards.deck.includes(cardId);
-
-      // Toggle card in/out of deck
-      if (isInDeck) {
-        await this.removeCardFromDeck(cardId);
-      } else {
-        await this.addCardToDeck(cardId);
-      }
-    }
-
-    /**
-     * Add card to player's deck
-     */
-    private async addCardToDeck(cardId: string): Promise<void> {
-      if (!this.playerData) return;
-      if (this.playerData.cards.deck.length >= DECK_SIZE) {
-        Logger.warn(`Deck is full (${DECK_SIZE} cards)`);
-        return;
-      }
-
-      if (!this.playerData.cards.deck.includes(cardId)) {
-        this.playerData.cards.deck.push(cardId);
-        await this.saveGameData();
-        await this.updateBindingsFromGameState();
-      }
-    }
-
-    /**
-     * Remove card from player's deck
-     */
-    private async removeCardFromDeck(cardId: string): Promise<void> {
-      if (!this.playerData) return;
-      const index = this.playerData.cards.deck.indexOf(cardId);
-      if (index > -1) {
-        this.playerData.cards.deck.splice(index, 1);
-        await this.saveGameData();
-        await this.updateBindingsFromGameState();
-      }
-    }
-
-    /**
-     * Handle mission selection
-     */
-    private async handleMissionSelect(missionId: string): Promise<void> {
-      Logger.info(`Mission selected: ${missionId}`);
-      if (!this.playerData) return;
-
-      // Play menu button sound
-      this.playSfx('sfx-menu-button-select');
-
-      // Check if player has cards in deck
-      if (this.playerData.cards.deck.length === 0) {
-        Logger.warn('No cards in deck');
-        // TODO: Show dialog or message to user
-        return;
-      }
-
-      // Get player's deck cards
-      const playerDeckCards = this.cardCollectionManager.getPlayerDeckCards(
-        this.playerData.cards.deck,
-        this.playerData.cards.collected
-      );
-
-      if (playerDeckCards.length === 0) {
-        Logger.error('Failed to load deck cards');
-        return;
-      }
-
-      // Start the mission
-      const success = this.missionUI.startMission(missionId);
-
-      if (success) {
-        // console.log('[BloomBeastsGame] Mission started successfully');
-        // Initialize battle with player's deck cards
-        const battleState = this.battleUI.initializeBattle(playerDeckCards);
-        // console.log('[BloomBeastsGame] battleState:', battleState);
-
-        if (battleState) {
-          // console.log('[BloomBeastsGame] Battle state is valid, initializing...');
-          this.currentScreen = 'battle';
-          this.currentBattleId = missionId;
-
-          // Create battle display from battle state
-          const battleDisplay = this.battleDisplayManager.createBattleDisplay(
-            battleState,
-            null  // No attack animation
-          );
-          // console.log('[BloomBeastsGame] battleDisplay:', battleDisplay);
-
-          // Update battle display binding
-          if (battleDisplay) {
-            // console.log('[BloomBeastsGame] Setting battle display binding...');
-            this.battleDisplayBinding.set(battleDisplay);
-          } else {
-            console.error('[BloomBeastsGame] battleDisplay is null!');
-          }
-
-          // Navigate to battle screen
-          // console.log('[BloomBeastsGame] Navigating to battle screen');
-          this.currentScreenBinding.set('battle');
-
-          // Trigger re-render to show battle screen
-          // console.log('[BloomBeastsGame] Triggering re-render');
-          this.triggerRender();
-
-          // Play battle music
-          this.playMusic('music-battle', true);
-
-          Logger.info('Battle initialized successfully');
-        } else {
-          console.error('[BloomBeastsGame] battleState is null or undefined!');
-        }
-      } else {
-        Logger.warn('Mission is not available');
-      }
-    }
-
-    /**
-     * Handle settings changes
-     */
-    private handleSettingsChange(settingId: string, value: any): void {
-      console.log('[BloomBeastsGame] Settings changed:', settingId, value);
-      if (!this.playerData) return;
-      console.log('[BloomBeastsGame] Current soundSettings before change:', this.playerData.settings);
-
-      // Play button sound for toggles (not sliders)
-      if (settingId === 'musicEnabled' || settingId === 'sfxEnabled') {
-        this.playSfx('sfx-menu-button-select');
-      }
-
-      // Apply settings via sound manager
-      switch (settingId) {
-        case 'musicVolume':
-          console.log('[BloomBeastsGame] Matched case: musicVolume');
-          this.setMusicVolume(value);
-          break;
-        case 'sfxVolume':
-          console.log('[BloomBeastsGame] Matched case: sfxVolume');
-          this.setSfxVolume(value);
-          break;
-        case 'musicEnabled':
-          console.log('[BloomBeastsGame] Matched case: musicEnabled');
-          this.toggleMusic(value);
-          break;
-        case 'sfxEnabled':
-          console.log('[BloomBeastsGame] Matched case: sfxEnabled');
-          this.toggleSfx(value);
-          break;
-      }
-
-      console.log('[BloomBeastsGame] Current soundSettings after change:', this.playerData.settings);
-
-      // Save settings and update binding
-      this.playerDataBinding.set(this.playerData);
-      this.saveGameData();
-
-      // Trigger re-render to update UI
-      this.triggerRender();
-    }
-
-    /**
-     * Handle battle actions
-     */
-    private async handleBattleAction(action: string): Promise<void> {
-      // Handle forfeit button - show confirmation popup
-      if (action === 'btn-forfeit' || action === 'forfeit') {
-        this.showForfeitConfirmation();
-        return;
-      }
-
-      // Handle back button - navigate to menu
-      if (action === 'btn-back') {
-        this.navigate('menu');
-        return;
-      }
-
-      // Process the action through the battle UI
-      if (!this.battleUI) {
-        Logger.warn('Battle UI not initialized');
-        return;
-      }
-
-      // Beast and opponent clicks are now just for viewing details (no selection)
-      if (action.startsWith('view-field-card-player-') || action.startsWith('view-field-card-opponent-')) {
-        // Just return - card details will be shown by the UI layer if needed
-        return;
-      }
-
-      // Play sound effects and show animations based on action type
-      if (action === 'auto-attack-all') {
-        // Handle auto-attack with animations
-        this.playSfx('sfx-attack');
-
-        // Process action with animation callback
-        await this.battleUI.processPlayerAction(action, {
-          onAttackAnimation: async (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => {
-            if (targetType === 'beast' && targetIndex !== undefined) {
-              await this.showAttackAnimation('player', attackerIndex, 'opponent', targetIndex);
-            } else {
-              await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
-            }
-          }
-        });
-
-        // Get updated state and render
-        const updatedState = this.battleUI.getCurrentBattle();
-        if (updatedState) {
-          if (updatedState.isComplete) {
-            await this.handleBattleComplete(updatedState);
-            return;
-          }
-
-          const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
-            updatedState,
-            null
-          );
-          if (updatedDisplay) {
-            this.battleDisplayBinding.set(updatedDisplay);
-            this.triggerRender();
-          }
-        }
-        return;
-      } else if (action.startsWith('attack-beast-')) {
-        this.playSfx('sfx-attack');
-        // Animation already shown above
-      } else if (action.startsWith('attack-player-')) {
-        this.playSfx('sfx-attack');
-        // Extract attacker index and show animation for direct health attack
-        const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
-        await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
-      } else if (action.startsWith('play-card-')) {
-        this.playSfx('sfx-play-card');
-      } else if (action.startsWith('activate-trap-')) {
-        this.playSfx('sfx-trap-card-activated');
-      } else if (action === 'end-turn') {
-        this.playSfx('sfx-menu-button-select');
-      }
-
-      // Process action
-      await this.battleUI.processPlayerAction(action, {});
-
-      // Get updated battle state
-      const updatedState = this.battleUI.getCurrentBattle();
-      if (updatedState) {
-        // Check if battle ended FIRST - never render after completion
-        if (updatedState.isComplete) {
-          await this.handleBattleComplete(updatedState);
-          return;
-        }
-
-        // Create updated battle display with fresh state
-        const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
-          updatedState,
-          null  // No attack animation
-        );
-
-        // Update battle display binding - this should trigger UI refresh
-        if (updatedDisplay) {
-          // console.log('[BloomBeastsGame] Updating battle display with health:', {
-          //   playerHealth: updatedDisplay.playerHealth,
-          //   opponentHealth: updatedDisplay.opponentHealth
-          // });
-          this.battleDisplayBinding.set(updatedDisplay);
-          this.triggerRender();
-        }
-      }
-    }
-
-    /**
-     * Handle battle completion (victory or defeat)
-     */
-    private async handleBattleComplete(battleState: any): Promise<void> {
-      // console.log('[BloomBeastsGame] Handling battle completion...');
-      if (!this.playerData) return;
-
-      // Capture playerData in local const for TypeScript null safety in callbacks
-      const playerData = this.playerData;
-
-      // Stop all timers immediately
-      if (this.battleScreen) {
-        this.battleScreen.cleanup();
-      }
-
-      // Keep battle visible in background while popup shows
-      // Battle display will be cleared when user clicks Continue
-      const battleId = this.currentBattleId; // Save before clearing
-      this.currentBattleId = null;
-
-      // console.log('[BloomBeastsGame] Battle complete, checking rewards:', {
-      //   hasRewards: !!battleState.rewards,
-      //   rewards: battleState.rewards
-      // });
-
-      if (battleState.rewards) {
-        // Victory!
-        // console.log('[BloomBeastsGame] Mission victory!', battleState.rewards);
-
-        // Award XP
-        this.addXP(battleState.rewards.xpGained);
-
-        // Award card XP
-        const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
-        this.cardCollectionManager.awardDeckExperience(
-          cardXP,
-          playerData.cards.deck,
-          playerData.cards.collected
-        );
-
-        // Add cards to collection
-        battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
-          this.cardCollectionManager.addCardReward(card, playerData.cards.collected, index);
-        });
-
-        // Add items to inventory
-        if (battleState.rewards.itemsReceived) {
-          battleState.rewards.itemsReceived.forEach((itemReward: any) => {
-            this.addItems(itemReward.itemId, itemReward.quantity);
-          });
-        }
-
-        // Track mission completion
-        if (battleId) {
-          this.trackMissionCompletion(battleId);
-        }
-
-        // Play win sound
-        this.playSfx('sfx-win');
-
-        // Save game data
-        await this.saveGameData();
-
-        // Show mission complete popup
-        // console.log('[BloomBeastsGame] Setting victory popup...');
-        const popupData = {
-          mission: battleState.mission,
-          rewards: battleState.rewards,
-          chestOpened: false,
-          onClaimRewards: () => {
-            // console.log('[BloomBeastsGame] Claim rewards clicked');
-            // Chest animation could go here
-            const current = this.missionCompletePopupValue;
-            if (current) {
-              const updatedData = {
-                ...current,
-                chestOpened: true
-              };
-              this.missionCompletePopupValue = updatedData;
-              this.missionCompletePopupBinding.set(updatedData);
-              // console.log('[BloomBeastsGame] Chest opened, triggering render');
-              this.triggerRender();
-            }
-          },
-          onContinue: () => {
-            // console.log('[BloomBeastsGame] Victory continue clicked');
-            // Clear battle display and close popup
-            this.battleDisplayBinding.set(null);
-            this.missionCompletePopupValue = null;
-            this.missionCompletePopupBinding.set(null);
-            this.navigate('missions');
-          }
-        };
-
-        // Set both tracked value and binding
-        this.missionCompletePopupValue = popupData;
-        this.missionCompletePopupBinding.set(popupData);
-        // console.log('[BloomBeastsGame] Victory popup set');
-        this.triggerRender();
-        // console.log('[BloomBeastsGame] Render triggered after victory popup');
-      } else {
-        // Defeat
-        // console.log('[BloomBeastsGame] Mission failed!');
-
-        // Play lose sound
-        this.playSfx('sfx-lose');
-
-        // Show mission failed popup
-        const failedPopupProps = {
-          mission: battleState.mission,
-          rewards: null, // null indicates failure
-          chestOpened: false,
-          onContinue: () => {
-            // Clear battle display and close popup
-            this.battleDisplayBinding.set(null);
-            this.missionCompletePopupValue = null;
-            this.missionCompletePopupBinding.set(null);
-            this.navigate('missions');
-          }
-        };
-        // console.log('[BloomBeastsGame] Setting mission failed popup:', failedPopupProps);
-        this.missionCompletePopupValue = failedPopupProps;
-        this.missionCompletePopupBinding.set(failedPopupProps);
-        // console.log('[BloomBeastsGame] After set, mission failed popup set');
-        this.triggerRender();
-        // console.log('[BloomBeastsGame] Render triggered after mission failed');
-      }
-
-      // Resume background music
-      this.playMusic('music-background', true);
-
-      // Note: Navigation happens when user clicks Continue in the popup
-    }
-
-    /**
-     * Create the main UI tree
-     * This is created once and updated reactively via bindings
-     */
-    private createUI(): UINode {
-      const { View } = this.UI;
-
-      // Create all screens upfront
-      const loadingScreen = this.createLoadingScreen();
-      const menuScreen = this.menuScreen.createUI();
-      const cardsScreen = this.cardsScreen.createUI();
-      const missionsScreen = this.missionScreen.createUI();
-      const battleScreen = this.battleScreen.createUI();
-      const settingsScreen = this.settingsScreen.createUI();
-
-      // Use conditional rendering to show the right screen based on currentScreenBinding
-      const createConditionalScreen = (screenName: string, screenUI: UINode) => {
-        if (this.UI.UINode && this.UI.UINode.if) {
-          return this.UI.UINode.if(
-            this.currentScreenBinding.derive((current: string) => current === screenName),
-            screenUI
-          );
-        }
-        return screenUI;
-      };
-
-      // Build main UI with conditional screens
-      const children: any[] = [
-        createConditionalScreen('loading', loadingScreen),
-        createConditionalScreen('menu', menuScreen),
-        createConditionalScreen('cards', cardsScreen),
-        createConditionalScreen('missions', missionsScreen),
-        createConditionalScreen('battle', battleScreen),
-        createConditionalScreen('settings', settingsScreen),
-      ];
-
-      // Add popups (these already use UINode.if)
-      if (this.UI.UINode) {
-        children.push(
-          this.UI.UINode.if(
-            this.UI.Binding.derive(
-              [this.missionCompletePopupBinding],
-              (props) => {
-                // Update tracked value
-                this.missionCompletePopupValue = props;
-                return props !== null;
-              }
-            ),
-            createMissionCompletePopup(this.UI, this.missionCompletePopupValue || {
-              mission: {
-                id: 'fallback-mission',
-                name: 'Loading...',
-                affinity: 'Forest'
-              },
-              rewards: null,
-              chestOpened: false,
-              onContinue: () => {}
-            })
-          )
-        );
-      }
-
-      if (this.UI.UINode) {
-        children.push(
-          this.UI.UINode.if(
-            this.UI.Binding.derive(
-              [this.forfeitPopupBinding],
-              (props) => {
-                // Update tracked value
-                this.forfeitPopupValue = props;
-                return props !== null;
-              }
-            ),
-            createButtonPopup(this.UI, this.forfeitPopupValue || {
-              title: '',
-              message: '',
-              buttons: [],
-              onButtonClick: () => {}
-            })
-          )
-        );
-      }
-
-      if (this.UI.UINode) {
-        children.push(
-          this.UI.UINode.if(
-            this.UI.Binding.derive(
-              [this.cardDetailPopupBinding],
-              (props: any) => {
-                // Update tracked value
-                this.cardDetailPopupValue = props;
-                return props !== null;
-              }
-            ),
-            createCardDetailPopup(this.UI, this.cardDetailPopupValue || {
-              cardDetail: {
-                card: {
-                  id: null, // No ID so CardRenderer returns null for images
-                  name: '',
-                  type: 'Bloom',
-                  level: 1,
-                  experience: 0,
-                  count: 0,
-                  description: ''
-                },
-                buttons: [],
-                isInDeck: false
-              },
-              onButtonClick: () => {}
-            })
-          )
-        );
-      }
-
-      return View({
-        style: {
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'blue',
-        },
-        children,
-      });
-    }
-
-    /**
-     * Create the loading screen UI
-     */
-    private createLoadingScreen(): UINode {
-      const { View } = this.UI;
-
-      return View({
-        style: {
-          flex: 1,
-          backgroundColor: '#1a1a2e', // Dark background as fallback
-        },
-        children: [
-          // Note: Background image removed since assets aren't loaded during initialization
-          // The loading screen is only shown briefly before assets load anyway
-
-          // Loading text centered
-          View({
-            style: {
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-            },
-            children: this.UI.Text({
-              text: this.UI.Binding ? new this.UI.Binding('Loading...') : 'Loading...',
-              style: {
-                fontSize: 32,
-                color: '#ffffff',
-                fontWeight: 'bold',
-                textShadowColor: '#000000',
-                textShadowOffset: { width: 2, height: 2 },
-                textShadowRadius: 4,
-              }
-            })
-          })
         ]
-      });
-    }
-
-
-    /**
-     * Show attack animation
-     */
-    private async showAttackAnimation(
-      attackerPlayer: 'player' | 'opponent',
-      attackerIndex: number,
-      targetPlayer: 'player' | 'opponent' | 'health',
-      targetIndex?: number
-    ): Promise<void> {
-      const currentState = this.battleUI.getCurrentBattle();
-      if (!currentState) return;
-
-      // Show animation (attacker glows green, target glows red)
-      const displayWithAnimation = this.battleDisplayManager.createBattleDisplay(
-        currentState,
-        {
-          attackerPlayer,
-          attackerIndex,
-          targetPlayer,
-          targetIndex
-        }
-      );
-
-      if (displayWithAnimation) {
-        this.battleDisplayBinding.set(displayWithAnimation);
-        this.triggerRender();
+      },
+      {
+        id: "boss-icon",
+        type: "ui",
+        category: "icon",
+        name: "Boss Icon",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "808398125136052",
+            path: "assets/images/affinity_boss-icon.png"
+          }
+        ]
+      },
+      {
+        id: "boss-mission",
+        type: "mission",
+        affinity: "boss",
+        name: "Cluck Norris",
+        description: "Boss mission",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "1358389912362012",
+            path: "assets/images/cards_boss-mission.png"
+          }
+        ]
       }
-
-      // Wait for animation duration
-      await new Promise(resolve => this.asyncMethods.setTimeout(resolve, 500));
-
-      // Clear animation
-      const displayWithoutAnimation = this.battleDisplayManager.createBattleDisplay(
-        currentState,
-        null  // No animation
-      );
-
-      if (displayWithoutAnimation) {
-        this.battleDisplayBinding.set(displayWithoutAnimation);
-        this.triggerRender();
-      }
-    }
-
-    /**
-     * Dispose resources
-     */
-    dispose(): void {
-      this.menuScreen.dispose();
-      // TODO: Dispose other resources
-    }
-  }
+    ]
+  };
 
   // ==================== bloombeasts\catalogs\buffAssets.ts ====================
 
@@ -19257,7 +19304,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.GainResource,
-                  target: AbilityTarget.PlayerGardener,
+                  target: AbilityTarget.Player,
                   resource: ResourceType.Nectar,
                   value: 1
                 }
@@ -19683,20 +19730,6 @@ namespace BloomBeasts {
         ]
       },
       {
-        id: "icon-ability",
-        type: "ui",
-        category: "icon",
-        name: "Ability Icon",
-        description: "Ability indicator icon",
-        assets: [
-          {
-            type: "image",
-            horizonAssetId: "1550821249252575",
-            path: "assets/images/icon_ability.png"
-          }
-        ]
-      },
-      {
         id: "icon-attack",
         type: "ui",
         category: "icon",
@@ -19710,6 +19743,7 @@ namespace BloomBeasts {
           }
         ]
       },
+      // Counter icons removed - counter system deprecated
       {
         id: "lose-image",
         type: "ui",
@@ -19721,35 +19755,6 @@ namespace BloomBeasts {
             type: "image",
             horizonAssetId: "2155452308310801",
             path: "assets/images/misc_lose-image.png"
-          }
-        ]
-      },
-      {
-        id: "boss-mission",
-        type: "mission",
-        affinity: "boss",
-        missionNumber: 5,
-        name: "The Bloom Master",
-        description: "Final boss mission",
-        assets: [
-          {
-            type: "image",
-            horizonAssetId: "1879466909654800",
-            path: "assets/images/cards_boss-mission.png"
-          }
-        ]
-      },
-      {
-        id: "the-bloom-master",
-        type: "ui",
-        category: "other",
-        name: "The Bloom Master",
-        description: "Boss card image",
-        assets: [
-          {
-            type: "image",
-            horizonAssetId: "1948729499041670",
-            path: "assets/images/cards_the-bloom-master.png"
           }
         ]
       },
@@ -19876,6 +19881,90 @@ namespace BloomBeasts {
             type: "audio",
             horizonAssetId: "668023946362739",
             path: "assets/audio/music_battle.mp3"
+          }
+        ]
+      },
+      {
+        id: "upgrade-coin-boost",
+        type: "ui",
+        category: "upgrade",
+        name: "Coin Boost Upgrade",
+        description: "Coin boost upgrade icon",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "1059820639487262",
+            path: "assets/images/upgrade_coin-boost.png"
+          }
+        ]
+      },
+      {
+        id: "upgrade-container-card",
+        type: "ui",
+        category: "upgrade",
+        name: "Container Card Upgrade",
+        description: "Container card upgrade icon",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "852906320567105",
+            path: "assets/images/upgrade_container-card.png"
+          }
+        ]
+      },
+      {
+        id: "upgrade-exp-boost",
+        type: "ui",
+        category: "upgrade",
+        name: "Experience Boost Upgrade",
+        description: "Experience boost upgrade icon",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "662687460055242",
+            path: "assets/images/upgrade_exp-boost.png"
+          }
+        ]
+      },
+      {
+        id: "upgrade-luck-boost",
+        type: "ui",
+        category: "upgrade",
+        name: "Luck Boost Upgrade",
+        description: "Luck boost upgrade icon",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "2054672501734665",
+            path: "assets/images/upgrade_luck-boost.png"
+          }
+        ]
+      },
+      {
+        id: "upgrade-rooster",
+        type: "ui",
+        category: "upgrade",
+        name: "Rooster Upgrade",
+        description: "Rooster upgrade icon",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "1504708944108154",
+            path: "assets/images/upgrade_rooster.png"
+          }
+        ]
+      },
+      {
+        id: "upgrade-upgraded-box",
+        type: "ui",
+        category: "upgrade",
+        name: "Upgraded Box",
+        description: "Upgraded box icon",
+        assets: [
+          {
+            type: "image",
+            horizonAssetId: "814844064745019",
+            path: "assets/images/upgrade_upgraded-box.png"
           }
         ]
       }
@@ -20055,9 +20144,8 @@ namespace BloomBeasts {
               trigger: AbilityTrigger.OnAttack,
               effects: [
                 {
-                  type: EffectType.ApplyCounter,
+                  type: EffectType.DealDamage,
                   target: AbilityTarget.Target,
-                  counter: "Burn",
                   value: 1
                 }
               ]
@@ -20110,9 +20198,8 @@ namespace BloomBeasts {
                     trigger: AbilityTrigger.OnAttack,
                     effects: [
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.Target,
-                        counter: "Burn",
                         value: 2
                       }
                     ]
@@ -20130,9 +20217,8 @@ namespace BloomBeasts {
                     },
                     effects: [
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.AllEnemies,
-                        counter: "Burn",
                         value: 2
                       }
                     ]
@@ -20146,9 +20232,8 @@ namespace BloomBeasts {
                     trigger: AbilityTrigger.OnAttack,
                     effects: [
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.Target,
-                        counter: "Burn",
                         value: 3
                       }
                     ]
@@ -20158,14 +20243,13 @@ namespace BloomBeasts {
                     trigger: AbilityTrigger.OnSummon,
                     effects: [
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.AllEnemies,
-                        counter: "Burn",
                         value: 3
                       },
                       {
                         type: EffectType.DealDamage,
-                        target: "OpponentGardener",
+                        target: "Opponent",
                         value: 2
                       }
                     ]
@@ -20261,9 +20345,8 @@ namespace BloomBeasts {
                         value: 2
                       },
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.Attacker,
-                        counter: "Burn",
                         value: 1
                       }
                     ]
@@ -20286,9 +20369,8 @@ namespace BloomBeasts {
                         duration: EffectDuration.WhileOnField
                       },
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.Target,
-                        counter: "Soot",
                         value: 2
                       }
                     ]
@@ -20311,9 +20393,8 @@ namespace BloomBeasts {
                         duration: EffectDuration.WhileOnField
                       },
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.Attacker,
-                        counter: "Burn",
                         value: 3
                       }
                     ]
@@ -20328,9 +20409,8 @@ namespace BloomBeasts {
                         value: "reflected"
                       },
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.Attacker,
-                        counter: "Burn",
                         value: 2
                       }
                     ]
@@ -20439,7 +20519,7 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.DealDamage,
-                        target: "OpponentGardener",
+                        target: "Opponent",
                         value: 5
                       },
                       {
@@ -20476,7 +20556,7 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.DealDamage,
-                        target: "OpponentGardener",
+                        target: "Opponent",
                         value: 8
                       },
                       {
@@ -20553,7 +20633,6 @@ namespace BloomBeasts {
         id: "fire-mission",
         type: "mission",
         affinity: "fire",
-        missionNumber: 1,
         name: "Fire Mission",
         description: "Fire affinity mission",
         assets: [
@@ -20709,7 +20788,7 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.GainResource,
-                        target: AbilityTarget.PlayerGardener,
+                        target: AbilityTarget.Player,
                         resource: ResourceType.Nectar,
                         value: 2
                       }
@@ -20758,13 +20837,13 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.GainResource,
-                        target: AbilityTarget.PlayerGardener,
+                        target: AbilityTarget.Player,
                         resource: ResourceType.Nectar,
                         value: 2
                       },
                       {
                         type: EffectType.DrawCards,
-                        target: AbilityTarget.PlayerGardener,
+                        target: AbilityTarget.Player,
                         value: 1
                       }
                     ]
@@ -20804,7 +20883,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.DrawCards,
-                  target: AbilityTarget.PlayerGardener,
+                  target: AbilityTarget.Player,
                   value: 1
                 }
               ]
@@ -20858,7 +20937,7 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.DrawCards,
-                        target: AbilityTarget.PlayerGardener,
+                        target: AbilityTarget.Player,
                         value: 2
                       }
                     ]
@@ -21059,9 +21138,8 @@ namespace BloomBeasts {
               trigger: AbilityTrigger.OnSummon,
               effects: [
                 {
-                  type: EffectType.ApplyCounter,
+                  type: EffectType.DealDamage,
                   target: AbilityTarget.AllEnemies,
-                  counter: "Spore",
                   value: 2
                 }
               ]
@@ -21114,9 +21192,8 @@ namespace BloomBeasts {
                     trigger: AbilityTrigger.OnSummon,
                     effects: [
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.AllEnemies,
-                        counter: "Spore",
                         value: 3
                       }
                     ]
@@ -21130,9 +21207,8 @@ namespace BloomBeasts {
                     trigger: AbilityTrigger.OnDestroy,
                     effects: [
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.AllEnemies,
-                        counter: "Spore",
                         value: 2
                       }
                     ]
@@ -21148,11 +21224,7 @@ namespace BloomBeasts {
                       {
                         type: EffectType.DealDamage,
                         target: AbilityTarget.AllEnemies,
-                        value: 1,
-                        condition: {
-                          type: ConditionType.HasCounter,
-                          value: "Spore"
-                        }
+                        value: 1
                       }
                     ]
                   }
@@ -21222,7 +21294,6 @@ namespace BloomBeasts {
         id: "forest-mission",
         type: "mission",
         affinity: "forest",
-        missionNumber: 2,
         name: "Forest Mission",
         description: "Forest affinity mission",
         assets: [
@@ -21352,12 +21423,8 @@ namespace BloomBeasts {
               trigger: AbilityTrigger.OnSummon,
               effects: [
                 {
-                  type: EffectType.RemoveCounter,
-                  target: "AllUnits"
-                },
-                {
                   type: EffectType.DrawCards,
-                  target: "PlayerGardener",
+                  target: "Player",
                   value: 1
                 }
               ]
@@ -21454,7 +21521,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: "GainResource",
-                  target: "PlayerGardener",
+                  target: "Player",
                   resource: "Nectar",
                   value: 2,
                   duration: "ThisTurn"
@@ -21488,14 +21555,14 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: "GainResource",
-                  target: "PlayerGardener",
+                  target: "Player",
                   resource: "Nectar",
                   value: 2,
                   duration: "ThisTurn"
                 },
                 {
                   type: EffectType.DrawCards,
-                  target: "PlayerGardener",
+                  target: "Player",
                   value: 1
                 }
               ]
@@ -21527,14 +21594,14 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: "GainResource",
-                  target: "PlayerGardener",
+                  target: "Player",
                   resource: "Nectar",
                   value: 3,
                   duration: "ThisTurn"
                 },
                 {
                   type: EffectType.DrawCards,
-                  target: "PlayerGardener",
+                  target: "Player",
                   value: 1
                 }
               ]
@@ -21633,8 +21700,9 @@ namespace BloomBeasts {
               trigger: AbilityTrigger.OnSummon,
               effects: [
                 {
-                  type: EffectType.RemoveCounter,
-                  target: AbilityTarget.Target
+                  type: EffectType.Heal,
+                  target: AbilityTarget.Target,
+                  value: 3
                 }
               ]
             }
@@ -21683,7 +21751,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.DrawCards,
-                  target: AbilityTarget.PlayerGardener,
+                  target: AbilityTarget.Player,
                   value: 1
                 }
               ]
@@ -21737,7 +21805,7 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.DrawCards,
-                        target: AbilityTarget.PlayerGardener,
+                        target: AbilityTarget.Player,
                         value: 2
                       }
                     ]
@@ -21752,7 +21820,7 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.DrawCards,
-                        target: AbilityTarget.PlayerGardener,
+                        target: AbilityTarget.Player,
                         value: 2
                       }
                     ]
@@ -21777,7 +21845,7 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.DrawCards,
-                        target: AbilityTarget.PlayerGardener,
+                        target: AbilityTarget.Player,
                         value: 3
                       },
                       {
@@ -21811,7 +21879,7 @@ namespace BloomBeasts {
                       },
                       {
                         type: EffectType.DrawCards,
-                        target: AbilityTarget.PlayerGardener,
+                        target: AbilityTarget.Player,
                         value: 2
                       }
                     ]
@@ -22251,7 +22319,7 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.DrawCards,
-                        target: AbilityTarget.PlayerGardener,
+                        target: AbilityTarget.Player,
                         value: 3
                       },
                       {
@@ -22301,7 +22369,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.DrawCards,
-                  target: AbilityTarget.PlayerGardener,
+                  target: AbilityTarget.Player,
                   value: 1
                 }
               ]
@@ -22330,7 +22398,6 @@ namespace BloomBeasts {
         id: "sky-mission",
         type: "mission",
         affinity: "sky",
-        missionNumber: 4,
         name: "Sky Mission",
         description: "Sky affinity mission",
         assets: [
@@ -22462,7 +22529,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.DrawCards,
-                  target: AbilityTarget.PlayerGardener,
+                  target: AbilityTarget.Player,
                   value: 2
                 }
               ]
@@ -22533,7 +22600,7 @@ namespace BloomBeasts {
                 },
                 {
                   type: EffectType.DrawCards,
-                  target: AbilityTarget.PlayerGardener,
+                  target: AbilityTarget.Player,
                   value: 1
                 }
               ]
@@ -22675,9 +22742,9 @@ namespace BloomBeasts {
               trigger: AbilityTrigger.OnSummon,
               effects: [
                 {
-                  type: EffectType.RemoveCounter,
+                  type: EffectType.DealDamage,
                   target: AbilityTarget.Attacker,
-                  counter: "XP"
+                  value: 2
                 }
               ]
             }
@@ -23091,7 +23158,7 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.DealDamage,
-                        target: AbilityTarget.OpponentGardener,
+                        target: AbilityTarget.Opponent,
                         value: 3
                       }
                     ]
@@ -23144,13 +23211,12 @@ namespace BloomBeasts {
                     effects: [
                       {
                         type: EffectType.DealDamage,
-                        target: AbilityTarget.OpponentGardener,
+                        target: AbilityTarget.Opponent,
                         value: 5
                       },
                       {
-                        type: EffectType.ApplyCounter,
+                        type: EffectType.DealDamage,
                         target: AbilityTarget.RandomEnemy,
-                        counter: "Freeze",
                         value: 1
                       }
                     ]
@@ -23309,9 +23375,7 @@ namespace BloomBeasts {
                       {
                         type: "Retaliation",
                         target: AbilityTarget.Self,
-                        value: 0,
-                        applyCounter: "Entangle",
-                        counterValue: 1
+                        value: 1
                       }
                     ]
                   }
@@ -23380,7 +23444,6 @@ namespace BloomBeasts {
         id: "water-mission",
         type: "mission",
         affinity: "water",
-        missionNumber: 3,
         name: "Water Mission",
         description: "Water affinity mission",
         assets: [
@@ -23459,6 +23522,7 @@ namespace BloomBeasts {
   // Export all catalogs as array for easy loading
 
   export const allCatalogs: AssetCatalog[] = [
+    bossAssets,
     buffAssets,
     commonAssets,
     fireAssets,

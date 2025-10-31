@@ -57,12 +57,8 @@ export const magicAssets: AssetCatalog = {
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
-                type: EffectType.RemoveCounter,
-                target: "AllUnits"
-              },
-              {
                 type: EffectType.DrawCards,
-                target: "PlayerGardener",
+                target: "Player",
                 value: 1
               }
             ]
@@ -159,7 +155,7 @@ export const magicAssets: AssetCatalog = {
             effects: [
               {
                 type: "GainResource",
-                target: "PlayerGardener",
+                target: "Player",
                 resource: "Nectar",
                 value: 2,
                 duration: "ThisTurn"
@@ -193,14 +189,14 @@ export const magicAssets: AssetCatalog = {
             effects: [
               {
                 type: "GainResource",
-                target: "PlayerGardener",
+                target: "Player",
                 resource: "Nectar",
                 value: 2,
                 duration: "ThisTurn"
               },
               {
                 type: EffectType.DrawCards,
-                target: "PlayerGardener",
+                target: "Player",
                 value: 1
               }
             ]
@@ -232,14 +228,14 @@ export const magicAssets: AssetCatalog = {
             effects: [
               {
                 type: "GainResource",
-                target: "PlayerGardener",
+                target: "Player",
                 resource: "Nectar",
                 value: 3,
                 duration: "ThisTurn"
               },
               {
                 type: EffectType.DrawCards,
-                target: "PlayerGardener",
+                target: "Player",
                 value: 1
               }
             ]
@@ -338,8 +334,9 @@ export const magicAssets: AssetCatalog = {
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
-                type: EffectType.RemoveCounter,
-                target: AbilityTarget.Target
+                type: EffectType.Heal,
+                target: AbilityTarget.Target,
+                value: 3
               }
             ]
           }

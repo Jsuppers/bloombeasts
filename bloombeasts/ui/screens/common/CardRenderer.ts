@@ -9,7 +9,8 @@ import type { CardInstance } from '../../../screens/cards/types';
 import { computeCardDisplay, type CardDisplayData } from '../../../utils/cardUtils';
 import { getCardDescription } from '../../../engine/utils/cardDescriptionGenerator';
 import { UINodeType } from '../ScreenUtils';
-import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
+import type { PlayerData, UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
+import { BindingType, UIState } from '../../types/BindingManager';
 
 export interface CardRendererProps {
   card: CardDisplayData;
@@ -97,23 +98,14 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
     console.log(`[CardRenderer] ✅ ${card.name} (${card.type}): "${abilityText}"`);
   }
 
-  // Cache assetIdToImageSource to ensure it's captured properly in closures
-  const getImageSource = ui.assetIdToImageSource!;
+  const imageSourceKey = card.type === 'Bloom' ? beastImageKey : cardImageKey;
 
   const children = [
       // Layer 1: Card/Beast artwork image (185x185)
       // For Bloom cards: use beast image
       // For other cards (Magic/Trap/Buff/Habitat): use card artwork image
       ui.Image({
-        source: ui.Binding.derive(
-          [ui.assetsLoadedBinding],
-          (assetsLoaded: boolean) => {
-            if (!assetsLoaded) return null;
-            const imageKey = card.type === 'Bloom' ? beastImageKey : cardImageKey;
-            if (!imageKey) return null;
-            return getImageSource(imageKey);
-          }
-        ),
+        source: ui.assetIdToImageSource?.(imageSourceKey) || null,
         style: {
           width: beastImageWidth,
           height: beastImageHeight,
@@ -125,10 +117,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
 
       // Layer 2: Base card frame (210x280) - ALL cards use BaseCard.png
       ui.Image({
-        source: ui.Binding.derive(
-          [ui.assetsLoadedBinding],
-          (assetsLoaded: boolean) => assetsLoaded ? getImageSource(baseCardKey) : null
-        ),
+        source: ui.assetIdToImageSource?.(baseCardKey) || null,
         style: {
           width: cardWidth,
           height: cardHeight,
@@ -141,10 +130,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Layer 2.5: Template overlay for non-Bloom cards (Magic/Trap/Buff/Habitat)
       ...(templateKey ? [
         ui.Image({
-          source: ui.Binding.derive(
-            [ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? getImageSource(templateKey) : null
-          ),
+          source: ui.assetIdToImageSource?.(templateKey) || null,
           style: {
             width: cardWidth,
             height: cardHeight,
@@ -158,10 +144,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Layer 3: Affinity icon (for Bloom cards)
       ...(card.type === 'Bloom' && card.affinity && affinityKey ? [
         ui.Image({
-          source: ui.Binding.derive(
-            [ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? getImageSource(affinityKey) : null
-          ),
+          source: ui.assetIdToImageSource?.(affinityKey) || null,
           style: {
             width: 30,
             height: 30,
@@ -175,10 +158,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Layer 4: Experience bar (for Bloom cards with level)
       ...(card.type === 'Bloom' && card.level ? [
         ui.Image({
-          source: ui.Binding.derive(
-            [ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? getImageSource(expBarKey) : null
-          ),
+          source: ui.assetIdToImageSource?.(expBarKey) || null,
           style: {
             width: 120,
             height: 20,
@@ -192,7 +172,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Layer 5: Text overlays
       // Card name
       ui.Text({
-        text: new ui.Binding(card.name || ''),
+        text: card.name || '',
         style: {
           position: 'absolute',
           top: positions.name.y,
@@ -207,7 +187,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Cost (top-left)
       ...(card.cost !== undefined ? [
         ui.Text({
-          text: new ui.Binding(String(card.cost)),
+          text: String(card.cost),
           style: {
             position: 'absolute',
             top: positions.cost.y,
@@ -254,7 +234,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Level (for all cards)
       ...(card.level !== undefined ? [
         ui.Text({
-          text: new ui.Binding(`Level ${card.level}`),
+          text: `Level ${card.level}`,
           style: {
             position: 'absolute',
             top: positions.level.y,
@@ -270,7 +250,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Ability/Effect text (for all cards)
       ...(abilityText ? [
         ui.Text({
-          text: new ui.Binding(abilityText),
+          text: abilityText,
           numberOfLines: 3,
           style: {
             position: 'absolute',
@@ -330,46 +310,35 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
 
 /**
  * Props for reactive card component that uses bindings
- * Supports two modes:
- * 1. Slot-based: Use slotIndex + cardsPerPage + scrollOffsetBinding (for grids)
- * 2. ID-based: Use cardIdBinding (for popups/single cards)
  */
 export interface ReactiveCardRendererProps {
-  // Source playerData binding
-  playerDataBinding: any;
 
-  // Slot-based selection (for grids)
-  scrollOffsetBinding?: any; // Binding<number>
+  // Mode selection
+  mode: 'selectedCard' | 'slot';
+
+  // Slot-based selection (required for slot mode)
   slotIndex?: number;
   cardsPerPage?: number;
 
-  // ID-based selection (for popups)
-  cardIdBinding?: any; // Binding<string | null>
-
-  onClick?: (cardId: string) => void;
+  onClick?: () => void;
   showDeckIndicator?: boolean;
 }
 
 /**
  * Create a reactive card UI component using bindings
- * Supports two modes:
- * - Slot-based (grids): Derives card from slotIndex + scrollOffset
- * - ID-based (popups): Derives card from cardIdBinding
  */
 export function createReactiveCardComponent(ui: UIMethodMappings, props: ReactiveCardRendererProps): UINodeType {
   const {
-    playerDataBinding,
-    scrollOffsetBinding,
+    mode,
     slotIndex,
     cardsPerPage,
-    cardIdBinding,
     onClick,
     showDeckIndicator = true
   } = props;
 
   // Determine which mode we're in
-  const isIdMode = cardIdBinding !== undefined;
-  const isSlotMode = slotIndex !== undefined && cardsPerPage !== undefined && scrollOffsetBinding !== undefined;
+  const isSelectedCardMode = mode === 'selectedCard';
+  const isSlotMode = mode === 'slot';
 
   // Standard card dimensions
   const cardWidth = 210;
@@ -398,36 +367,21 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     return id.replace(/-\d+-\d+$/, '');
   };
 
-  // Create dependencies array based on mode
-  // Use playerDataBinding directly in dependencies to avoid nesting
-  // ALWAYS include assetsLoadedBinding as first dependency to prevent premature asset lookups
-  let dependencies: any[];
-  if (isIdMode && cardIdBinding) {
-    dependencies = [ui.assetsLoadedBinding, playerDataBinding, cardIdBinding];
-  } else if (isSlotMode && scrollOffsetBinding) {
-    dependencies = [ui.assetsLoadedBinding, playerDataBinding, scrollOffsetBinding];
-  } else {
-    dependencies = [ui.assetsLoadedBinding, playerDataBinding];
-  }
-
-  // Helper to get card based on mode
-  // Now computes display data on-demand from CardInstance
-  // args[0] = assetsLoadedBinding, args[1] = playerDataBinding, args[2] = cardIdBinding or scrollOffsetBinding
-  const getCard = (args: any[]): CardDisplayData | null => {
-    // Extract card instances from PlayerData (now at args[1])
-    const cardInstances: CardInstance[] = args[1]?.cards?.collected || [];
+  // Helper to get card from combined data
+  // Now accepts both uiState and playerData to properly react to changes
+  const getCard = (uiState: UIState, playerData: PlayerData): CardDisplayData | null => {
+    const cardInstances: CardInstance[] = playerData?.cards?.collected || [];
 
     let instance: CardInstance | null = null;
 
-    if (isIdMode && cardIdBinding) {
-      // ID-based mode: find card by ID (now at args[2])
-      const cardId: string | null = args[2];
+    if (isSelectedCardMode) {
+      const cardId = uiState.cards?.selectedCardId;
+      // ID-based mode: find card by ID
       if (!cardId) return null;
       instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;
-    } else if (isSlotMode && slotIndex !== undefined && cardsPerPage !== undefined && scrollOffsetBinding) {
-      // Slot-based mode: find card by slot index (offset now at args[2])
-      const offset: number = args[2];
-      const pageStart = offset * cardsPerPage;
+    } else if (isSlotMode && slotIndex !== undefined && cardsPerPage !== undefined) {
+      // Slot-based mode: find card by slot index
+      const pageStart = (uiState.cards?.scrollOffset ?? 0) * cardsPerPage;
       const cardIndex = pageStart + slotIndex;
       instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
     }
@@ -436,84 +390,61 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     return instance ? computeCardDisplay(instance) : null;
   };
 
-  // Helper to get current card ID from bindings (for onClick handler)
-  const getCurrentCardId = (): string | null => {
-    if (isIdMode && cardIdBinding) {
-      // For ID mode, directly get the ID from the binding
-      return cardIdBinding.get ? cardIdBinding.get() : null;
-    } else if (isSlotMode && scrollOffsetBinding) {
-      // For slot mode, calculate from current player data and scroll offset
-      const playerData = playerDataBinding.get ? playerDataBinding.get() : null;
-      const cardInstances: CardInstance[] = playerData?.cards?.collected || [];
-      const offset = scrollOffsetBinding.get ? scrollOffsetBinding.get() : 0;
-      const pageStart = offset * cardsPerPage!;
-      const cardIndex = pageStart + slotIndex!;
-      const instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
-      return instance?.id || null;
-    }
-    return null;
-  };
 
   // Helper to check if card is in deck
-  const isCardInDeck = (args: any[], cardId: string | undefined): boolean => {
+  const isCardInDeck = (playerData: PlayerData, cardId: string | undefined): boolean => {
     if (!showDeckIndicator || !cardId) return false;
-
-    // PlayerData is now at args[1] (args[0] is assetsLoadedBinding)
-    const deckCardIds: string[] = args[1]?.cards?.deck || [];
+    const deckCardIds: string[] = playerData?.cards?.deck || [];
     return deckCardIds.includes(cardId);
   };
 
-  // Create reactive text bindings directly from source bindings
-  // This avoids nesting by deriving each property separately from the same sources
-  const cardNameBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const card = getCard(args);
+  // Create reactive text bindings that watch BOTH UIState and PlayerData
+  // This ensures the bindings update when either the selected card changes OR the card data changes
+  const cardNameBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+    const card = getCard(uiState, playerData);
     return card?.name || '';
   });
 
-  const cardCostBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const card = getCard(args);
+  const cardCostBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+    const card = getCard(uiState, playerData);
     return card && card.cost !== undefined ? String(card.cost) : '';
   });
 
-  const cardAttackBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const card = getCard(args);
+  const cardAttackBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+    const card = getCard(uiState, playerData);
     if (!card || card.type !== 'Bloom') return '';
     const bloomCard = card as any;
     return String(bloomCard.currentAttack ?? bloomCard.baseAttack ?? 0);
   });
 
-  const cardHealthBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const card = getCard(args);
+  const cardHealthBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+    const card = getCard(uiState, playerData);
     if (!card || card.type !== 'Bloom') return '';
     const bloomCard = card as any;
     return String(bloomCard.currentHealth ?? bloomCard.baseHealth ?? 0);
   });
 
-  const cardLevelBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const card = getCard(args);
+  const cardLevelBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+    const card = getCard(uiState, playerData);
     return card && card.level !== undefined ? `Level ${card.level}` : '';
   });
 
-  const abilityTextBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const card = getCard(args);
+  const abilityTextBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+    const card = getCard(uiState, playerData);
     return card ? getCardDescription(card) : '';
   });
 
-  // Create image source bindings
-  const baseCardImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding now
-    if (!assetsLoaded) return null;
-    const card = getCard(args);
+  // Create image source bindings that watch BOTH UIState and PlayerData
+  const baseCardImageBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+    const card = getCard(uiState, playerData);
     if (!card) return null;
     const baseId = extractBaseId(card.id, card.name);
-    if (!baseId) return null; // Don't try to load empty asset IDs
+    if (!baseId) return null;
     return ui.assetIdToImageSource?.(baseId) ?? null;
   });
 
-  const templateImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding now
-    if (!assetsLoaded) return null;
-    const card = getCard(args);
+  const templateImageBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+    const card = getCard(uiState, playerData);
     if (!card) return null;
 
     let templateAssetId = '';
@@ -526,13 +457,11 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     return templateAssetId ? (ui.assetIdToImageSource?.(templateAssetId) ?? null) : null;
   });
 
-  const affinityIconBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
-    if (!assetsLoaded) return null;
-    const card = getCard(args);
+  const affinityIconBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+    const card = getCard(uiState, playerData);
     if (!card || card.type !== 'Bloom' || !card.affinity) return null;
     const affinityAssetId = `${card.affinity.toLowerCase()}-icon`;
-    if (!affinityAssetId) return null; // Don't try to load empty asset IDs
+    if (!affinityAssetId) return null;
     return ui.assetIdToImageSource?.(affinityAssetId) ?? null;
   });
 
@@ -554,10 +483,8 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
 
     // Layer 2: Base card frame
     ui.Image({
-      source: ui.Binding.derive(dependencies, (...args: any[]) => {
-        const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
-        if (!assetsLoaded) return null;
-        const card = getCard(args);
+      source: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+        const card = getCard(uiState, playerData);
         return card ? ui.assetIdToImageSource?.('base-card') : null;
       }),
       style: {
@@ -595,10 +522,8 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
 
     // Layer 5: Experience bar
     ui.Image({
-      source: ui.Binding.derive(dependencies, (...args: any[]) => {
-        const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
-        if (!assetsLoaded) return null;
-        const card = getCard(args);
+      source: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+        const card = getCard(uiState, playerData);
         if (!card || card.type !== 'Bloom' || card.level === undefined) return null;
         return ui.assetIdToImageSource?.('experience-bar');
       }),
@@ -699,9 +624,9 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
 
     // Layer 7: Deck indicator border (only if showDeckIndicator is true)
     ...(showDeckIndicator ? [ui.View({
-      style: ui.Binding.derive(dependencies, (...args: any[]) => {
-        const card = getCard(args);
-        const isInDeck = isCardInDeck(args, card?.id);
+      style: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+        const card = getCard(uiState, playerData);
+        const inDeck = isCardInDeck(playerData, card?.id);
 
         return {
           position: 'absolute',
@@ -709,7 +634,7 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
           left: 0,
           width: cardWidth,
           height: cardHeight,
-          borderWidth: isInDeck ? 4 : 0,
+          borderWidth: inDeck ? 4 : 0,
           borderColor: COLORS.success,
           borderRadius: 8,
         };
@@ -723,14 +648,8 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
   if (onClick) {
     return ui.Pressable({
       onClick: () => {
-        const cardId = getCurrentCardId();
-        console.log('[CardRenderer] Pressable clicked, cardId:', cardId);
-        if (cardId) {
-          console.log('[CardRenderer] Calling onClick with cardId:', cardId);
-          onClick(cardId);
-        } else {
-          console.log('[CardRenderer] cardId is null, not calling onClick');
-        }
+        console.log('[CardRenderer] Pressable clicked');
+        onClick();
       },
       style: {
         width: cardWidth,

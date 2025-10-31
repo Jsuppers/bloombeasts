@@ -107,9 +107,9 @@ export class CardCollectionManager {
             baseAttack: cardDef.baseAttack || 0,
             baseHealth: cardDef.baseHealth || 0,
             abilities: abilities.abilities,
-            level: level, // Include computed level for beast instance
+            level: level, // Include computed level for beast instance (added to Card interface)
             levelingConfig: {} as any, // Not used in battle
-          } as any;
+          };
 
           deckCards.push(bloomCard);
         } else {

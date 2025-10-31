@@ -21,7 +21,7 @@ export interface CardAssetEntry {
   id: string;
   type: 'beast' | 'buff' | 'trap' | 'magic' | 'habitat';
   cardType?: 'Bloom' | 'Magic' | 'Trap' | 'Buff'; // Game engine card type
-  affinity?: 'fire' | 'forest' | 'sky' | 'water'; // For beasts and habitats
+  affinity?: 'fire' | 'forest' | 'sky' | 'water' | 'boss'; // For beasts and habitats
   data: {
     id: string;
     name: string;
@@ -41,7 +41,6 @@ export interface MissionAssetEntry {
   id: string;
   type: 'mission';
   affinity?: 'fire' | 'forest' | 'sky' | 'water' | 'boss';
-  missionNumber: number;
   name: string;
   description: string;
   assets: AssetReference[];
@@ -50,7 +49,7 @@ export interface MissionAssetEntry {
 export interface UIAssetEntry {
   id: string;
   type: 'ui';
-  category: 'frame' | 'button' | 'background' | 'icon' | 'chest' | 'container' | 'card-template' | 'other';
+  category: 'frame' | 'button' | 'background' | 'icon' | 'chest' | 'container' | 'card-template' | 'upgrade' | 'other';
   name: string;
   description?: string;
   assets: AssetReference[];
@@ -58,7 +57,7 @@ export interface UIAssetEntry {
 
 export interface AssetCatalog {
   version: string;
-  category: 'fire' | 'forest' | 'sky' | 'water' | 'buff' | 'trap' | 'magic' | 'common';
+  category: 'fire' | 'forest' | 'sky' | 'water' | 'buff' | 'trap' | 'magic' | 'common' | 'boss';
   description: string;
   data: (CardAssetEntry | MissionAssetEntry | UIAssetEntry)[];
 }

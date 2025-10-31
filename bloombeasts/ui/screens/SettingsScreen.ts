@@ -7,16 +7,16 @@
 import { COLORS } from '../styles/colors';
 import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { DIMENSIONS } from '../styles/dimensions';
-import type { SoundSettings, MenuStats } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu } from './common/SideMenu';
+import { BindingType } from '../types/BindingManager';
 
 export interface SettingsScreenProps {
   ui: UIMethodMappings;
-  playerDataBinding: any; // PlayerData binding - screen derives settings
   onSettingChange?: (settingId: string, value: any) => void;
   onNavigate?: (screen: string) => void;
   onRenderNeeded?: () => void;
+  playSfx?: (sfxId: string) => void;
 }
 
 /**
@@ -25,22 +25,19 @@ export interface SettingsScreenProps {
 export class SettingsScreen {
   // UI methods (injected)
   private ui: UIMethodMappings;
-
-  private playerDataBinding: any;
-
-  // Track binding values separately (as per Horizon docs - no .get() method)
   private settingsValue: any = {};
 
   private onSettingChange?: (settingId: string, value: any) => void;
   private onNavigate?: (screen: string) => void;
   private onRenderNeeded?: () => void;
+  private playSfx?: (sfxId: string) => void;
 
   constructor(props: SettingsScreenProps) {
     this.ui = props.ui;
-    this.playerDataBinding = props.playerDataBinding;
     this.onSettingChange = props.onSettingChange;
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
+    this.playSfx = props.playSfx;
     console.log('[SettingsScreen] constructor, onRenderNeeded:', this.onRenderNeeded ? 'defined' : 'undefined');
   }
 
@@ -54,10 +51,7 @@ export class SettingsScreen {
       children: [
         // Background
         this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
-          ),
+          source: this.ui.assetIdToImageSource?.('background') || null,
           style: {
             position: 'absolute',
             width: '100%',
@@ -68,10 +62,7 @@ export class SettingsScreen {
         }),
         // Cards Container image as background
         this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('cards-container') : null
-          ),
+          source: this.ui.assetIdToImageSource?.('cards-container') || null,
           style: {
             position: 'absolute',
             left: 40,
@@ -111,7 +102,7 @@ export class SettingsScreen {
             },
             disabled: false,
           },
-          playerDataBinding: this.playerDataBinding,
+          playSfx: this.playSfx,
         }),
       ],
     });
@@ -140,7 +131,7 @@ export class SettingsScreen {
           },
           children: [
             this.ui.Text({
-              text: new this.ui.Binding(label),
+              text: label,
               style: {
                 fontSize: DIMENSIONS.fontSize.xl,
                 color: COLORS.textPrimary,
@@ -173,7 +164,7 @@ export class SettingsScreen {
                     marginRight: 15,
                   },
                   children: this.ui.Text({
-                    text: new this.ui.Binding('-'),
+                    text: '-',
                     style: {
                       fontSize: DIMENSIONS.fontSize.xl,
                       color: COLORS.textPrimary,
@@ -184,15 +175,12 @@ export class SettingsScreen {
                 }),
                 // Volume display
                 this.ui.Text({
-                  text: this.ui.Binding.derive(
-                    [this.playerDataBinding],
-                    (pd: any) => {
-                      const settings = pd?.settings;
-                      this.settingsValue = settings;
-                      const volume = settings?.[settingKey];
-                      return `${volume !== undefined && volume !== null && typeof volume === 'number' ? Math.round(volume) : 0}%`;
-                    }
-                  ),
+                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
+                    const settings = pd?.settings;
+                    this.settingsValue = settings;
+                    const volume = settings?.[settingKey];
+                    return `${volume !== undefined && volume !== null && typeof volume === 'number' ? Math.round(volume) : 0}%`;
+                  }),
                   style: {
                     fontSize: DIMENSIONS.fontSize.xl,
                     color: COLORS.success,
@@ -220,7 +208,7 @@ export class SettingsScreen {
                     marginLeft: 15,
                   },
                   children: this.ui.Text({
-                    text: new this.ui.Binding('+'),
+                    text: '+',
                     style: {
                       fontSize: DIMENSIONS.fontSize.xl,
                       color: COLORS.textPrimary,
@@ -254,7 +242,7 @@ export class SettingsScreen {
       },
       children: [
         this.ui.Text({
-          text: new this.ui.Binding(label),
+          text: label,
           style: {
             fontSize: DIMENSIONS.fontSize.xl,
             color: COLORS.textPrimary,
@@ -285,14 +273,10 @@ export class SettingsScreen {
           children: [
             // Button background image (standard or green based on state)
             this.ui.Image({
-              source: this.ui.Binding.derive(
-                [this.ui.assetsLoadedBinding, this.playerDataBinding],
-                (assetsLoaded: boolean, pd: any) => {
-                  if (!assetsLoaded) return null;
-                  const settings = pd?.settings;
-                  return this.ui.assetIdToImageSource?.(settings?.[settingKey] ? 'green-button' : 'standard-button') ?? null;
-                }
-              ),
+              source: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
+                const settings = pd?.settings;
+                return this.ui.assetIdToImageSource?.(settings?.[settingKey] ? 'green-button' : 'standard-button') ?? null;
+              }),
               style: {
                 position: 'absolute',
                 width: 120,
@@ -309,13 +293,10 @@ export class SettingsScreen {
                 alignItems: 'center',
               },
               children: this.ui.Text({
-                text: this.ui.Binding.derive(
-                  [this.playerDataBinding],
-                  (pd: any) => {
-                    const settings = pd?.settings;
-                    return settings?.[settingKey] ? 'ON' : 'OFF';
-                  }
-                ),
+                text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
+                  const settings = pd?.settings;
+                  return settings?.[settingKey] ? 'ON' : 'OFF';
+                }),
                 style: {
                   fontSize: DIMENSIONS.fontSize.md,
                   color: COLORS.textPrimary,

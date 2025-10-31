@@ -1,20 +1,18 @@
 /**
- * Player and opponent info displays (health, nectar, deck count)
+ * Player and opponent info displays (health, nectar, deck count, timer)
  */
 
-import type { BattleComponentProps } from './types';
-import { battleBoardAssetPositions } from './types';
+import type { InfoDisplaysProps } from './types';
 import { nectarEmoji, deckEmoji } from '../../constants/emojis';
 import { UINodeType } from '../ScreenUtils';
 import { BattleDisplay } from '../../../gameManager';
+import { BindingType, UIState } from '../../types/BindingManager';
 
 export class InfoDisplays {
-  private ui: BattleComponentProps['ui'];
-  private battleDisplay: BattleComponentProps['battleDisplay'];
+  private ui: InfoDisplaysProps['ui'];
 
-  constructor(props: BattleComponentProps) {
+  constructor(props: InfoDisplaysProps) {
     this.ui = props.ui;
-    this.battleDisplay = props.battleDisplay;
   }
 
   /**
@@ -31,12 +29,16 @@ export class InfoDisplays {
         left: centerX - boxWidth / 2,
         top: topY,
         width: boxWidth,
+        height: 125,
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         borderRadius: 12,
         borderWidth: 2,
         borderColor: 'rgba(74, 142, 194, 0.8)',
         flexDirection: 'row',
-        padding: 10,
+        paddingTop: 15,
+        paddingBottom: 10,
+        paddingLeft: 10,
+        paddingRight: 10,
         gap: 10,
       },
       children: [
@@ -52,7 +54,7 @@ export class InfoDisplays {
           },
           children: [
             this.ui.Text({
-              text: new this.ui.Binding('Opponent'),
+              text: 'Opponent',
               style: {
                 fontSize: 16,
                 fontWeight: 'bold',
@@ -60,10 +62,23 @@ export class InfoDisplays {
                 textAlign: 'center',
               },
             }),
+            // Timer
             this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => state ? `❤️ ${state.opponentHealth}/${state.opponentMaxHealth}` : '❤️ 20/20'
+              text: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
+                state.battle?.opponentTimer ? `⏱️ ${state.battle.opponentTimer}` : '⏱️ 0:00'
+              ),
+              style: {
+                fontSize: 15,
+                fontWeight: 'bold',
+                color: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
+                  state.battle?.opponentTimer ? '#ff6b6b' : '#fff'
+                ),
+                textAlign: 'center',
+              },
+            }),
+            this.ui.Text({
+              text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                state ? `❤️ ${state?.opponentHealth}/${state?.opponentMaxHealth}` : '❤️ 20/20'
               ),
               style: {
                 fontSize: 15,
@@ -72,9 +87,8 @@ export class InfoDisplays {
               },
             }),
             this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => state ? `${nectarEmoji} ${state.opponentNectar}/10` : `${nectarEmoji} 0/10`
+              text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                state ? `${nectarEmoji} ${state.opponentNectar}/10` : `${nectarEmoji} 0/10`
               ),
               style: {
                 fontSize: 15,
@@ -83,9 +97,8 @@ export class InfoDisplays {
               },
             }),
             this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => state ? `${deckEmoji} ${state.opponentDeckCount}/30` : `${deckEmoji} 30/30`
+              text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                state ? `${deckEmoji} ${state.opponentDeckCount}/30` : `${deckEmoji} 30/30`
               ),
               style: {
                 fontSize: 15,
@@ -106,7 +119,7 @@ export class InfoDisplays {
           },
           children: [
             this.ui.Text({
-              text: new this.ui.Binding('Player'),
+              text: 'Player',
               style: {
                 fontSize: 16,
                 fontWeight: 'bold',
@@ -114,10 +127,23 @@ export class InfoDisplays {
                 textAlign: 'center',
               },
             }),
+            // Timer
             this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => state ? `❤️ ${state.playerHealth}/${state.playerMaxHealth}` : '❤️ 20/20'
+              text: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
+                state.battle?.playerTimer ? `⏱️ ${state.battle.playerTimer}` : '⏱️ 0:00'
+              ),
+              style: {
+                fontSize: 15,
+                fontWeight: 'bold',
+                color: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
+                  state.battle?.playerTimer ? '#4a8ec2' : '#fff'
+                ),
+                textAlign: 'center',
+              },
+            }),
+            this.ui.Text({
+              text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                state ? `❤️ ${state.playerHealth}/${state.playerMaxHealth}` : '❤️ 20/20'
               ),
               style: {
                 fontSize: 15,
@@ -126,9 +152,8 @@ export class InfoDisplays {
               },
             }),
             this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => state ? `${nectarEmoji} ${state.playerNectar}/10` : `${nectarEmoji} 0/10`
+              text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                state ? `${nectarEmoji} ${state.playerNectar}/10` : `${nectarEmoji} 0/10`
               ),
               style: {
                 fontSize: 15,
@@ -137,9 +162,8 @@ export class InfoDisplays {
               },
             }),
             this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => state ? `${deckEmoji} ${state.playerDeckCount}/30` : `${deckEmoji} 30/30`
+              text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                state ? `${deckEmoji} ${state?.playerDeckCount}/30` : `${deckEmoji} 30/30`
               ),
               style: {
                 fontSize: 15,

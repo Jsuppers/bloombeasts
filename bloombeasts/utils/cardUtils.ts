@@ -28,7 +28,6 @@ export interface CardBattleStats {
   currentAttack?: number;
   baseHealth?: number;
   currentHealth?: number;
-  counters?: Array<{ type: string; amount: number }>;
   abilities?: any[];
 }
 

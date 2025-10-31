@@ -92,7 +92,7 @@ export const DIMENSIONS = {
  */
 export const GAPS = {
   cards: 15,
-  buttons: 15,
+  buttons: 3,
   missions: 10,
   stats: 20,
   sections: 30,

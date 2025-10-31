@@ -6,36 +6,28 @@ import type { PlayerHandProps } from './types';
 import { standardCardDimensions, gameDimensions } from './types';
 import { UINodeType } from '../ScreenUtils';
 import { BattleDisplay } from '../../../gameManager';
+import { BindingType, UIState } from '../../types/BindingManager';
 
 export class PlayerHand {
   private ui: PlayerHandProps['ui'];
-  private battleDisplay: PlayerHandProps['battleDisplay'];
   private getBattleDisplayValue: () => any | null;
-  private showHand: PlayerHandProps['showHand'];
-  private handScrollOffset: PlayerHandProps['handScrollOffset'];
-  private showHandValue: boolean;
-  private handScrollOffsetValue: number;
   private onAction?: (action: string) => void;
   private onShowHandChange?: (newValue: boolean) => void;
   private onScrollOffsetChange?: (newValue: number) => void;
   private onRenderNeeded?: () => void;
   private showPlayedCard?: (card: any, callback?: () => void) => void;
 
+  // Combined binding to avoid creating multiple multi-binding derives
+  private handDataBinding: any;
+
   constructor(props: PlayerHandProps) {
     this.ui = props.ui;
-    this.battleDisplay = props.battleDisplay;
     this.getBattleDisplayValue = props.getBattleDisplayValue;
-    this.showHand = props.showHand;
-    this.handScrollOffset = props.handScrollOffset;
-    this.showHandValue = props.showHandValue;
-    this.handScrollOffsetValue = props.handScrollOffsetValue;
     this.onAction = props.onAction;
     this.onShowHandChange = props.onShowHandChange;
     this.onScrollOffsetChange = props.onScrollOffsetChange;
     this.onRenderNeeded = props.onRenderNeeded;
     this.showPlayedCard = props.showPlayedCard;
-
-    console.log('[PlayerHand] Constructor - onAction:', this.onAction ? 'DEFINED' : 'UNDEFINED');
   }
 
   /**
@@ -59,12 +51,13 @@ export class PlayerHand {
     };
 
     return [
-      // Layer 1: Card/Beast artwork image - reactive source
+      // Layer 1: Card/Beast artwork image
       this.ui.Image({
-        source: this.ui.Binding.derive(
-          [this.battleDisplay, this.handScrollOffset],
-          (display: BattleDisplay | null, scrollOffset: number) => {
+        source: this.ui.bindingManager.derive(
+          [BindingType.BattleDisplay, BindingType.UIState],
+          ( display: BattleDisplay | null, uiState: UIState) => {
             if (!display || !display.playerHand) return null;
+            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
             const actualIndex = scrollOffset * cardsPerPage + slotIndex;
             const card = display.playerHand[actualIndex];
             if (!card) return null;
@@ -95,10 +88,11 @@ export class PlayerHand {
 
       // Layer 3: Type-specific template overlay - reactive source
       this.ui.Image({
-        source: this.ui.Binding.derive(
-          [this.battleDisplay, this.handScrollOffset],
-          (display: BattleDisplay | null, scrollOffset: number) => {
+        source: this.ui.bindingManager.derive(
+          [BindingType.BattleDisplay, BindingType.UIState],
+          ( display: BattleDisplay | null, uiState: UIState) => {
             if (!display || !display.playerHand) return null;
+            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
             const actualIndex = scrollOffset * cardsPerPage + slotIndex;
             const card = display.playerHand[actualIndex];
             if (!card || card.type === 'Bloom') return null;
@@ -121,12 +115,14 @@ export class PlayerHand {
         },
       }),
 
+
       // Layer 4: Affinity icon (for Bloom cards) - reactive source
       this.ui.Image({
-        source: this.ui.Binding.derive(
-          [this.battleDisplay, this.handScrollOffset],
-          (display: BattleDisplay | null, scrollOffset: number) => {
+        source: this.ui.bindingManager.derive(
+          [BindingType.BattleDisplay, BindingType.UIState],
+          ( display: BattleDisplay | null, uiState: UIState) => {
             if (!display || !display.playerHand) return null;
+            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
             const actualIndex = scrollOffset * cardsPerPage + slotIndex;
             const card = display.playerHand[actualIndex];
             if (!card || card.type !== 'Bloom' || !card.affinity) return null;
@@ -144,10 +140,11 @@ export class PlayerHand {
 
       // Layer 5: Card name - reactive text
       this.ui.Text({
-        text: this.ui.Binding.derive(
-          [this.battleDisplay, this.handScrollOffset],
-          (display: BattleDisplay | null, scrollOffset: number) => {
+        text: this.ui.bindingManager.derive(
+          [BindingType.BattleDisplay, BindingType.UIState],
+          (display: BattleDisplay | null, uiState: UIState) => {
             if (!display || !display.playerHand) return '';
+            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
             const actualIndex = scrollOffset * cardsPerPage + slotIndex;
             const card = display.playerHand[actualIndex];
             return card?.name || '';
@@ -164,11 +161,12 @@ export class PlayerHand {
         },
       }),
 
-      // Layer 6: Cost - reactive text
+      // Layer 6: Cost
       this.ui.Text({
-        text: this.ui.Binding.derive(
-          [this.battleDisplay, this.handScrollOffset],
-          (display: BattleDisplay | null, scrollOffset: number) => {
+        text: this.ui.bindingManager.derive(
+          [BindingType.BattleDisplay, BindingType.UIState],
+          (display: BattleDisplay | null, uiState: UIState) => {
+            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
             if (!display || !display.playerHand) return '';
             const actualIndex = scrollOffset * cardsPerPage + slotIndex;
             const card = display.playerHand[actualIndex];
@@ -188,9 +186,10 @@ export class PlayerHand {
 
       // Layer 7: Attack (for Bloom cards) - reactive text
       this.ui.Text({
-        text: this.ui.Binding.derive(
-          [this.battleDisplay, this.handScrollOffset],
-          (display: BattleDisplay | null, scrollOffset: number) => {
+        text: this.ui.bindingManager.derive(
+          [BindingType.BattleDisplay, BindingType.UIState],
+          (display: BattleDisplay | null, uiState: UIState) => {
+            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
             if (!display || !display.playerHand) return '';
             const actualIndex = scrollOffset * cardsPerPage + slotIndex;
             const card = display.playerHand[actualIndex];
@@ -209,11 +208,13 @@ export class PlayerHand {
         },
       }),
 
+
       // Layer 8: Health (for Bloom cards) - reactive text
       this.ui.Text({
-        text: this.ui.Binding.derive(
-          [this.battleDisplay, this.handScrollOffset],
-          (display: BattleDisplay | null, scrollOffset: number) => {
+        text: this.ui.bindingManager.derive(
+          [BindingType.BattleDisplay, BindingType.UIState],
+          (display: BattleDisplay | null, uiState: UIState) => {
+            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
             if (!display || !display.playerHand) return '';
             const actualIndex = scrollOffset * cardsPerPage + slotIndex;
             const card = display.playerHand[actualIndex];
@@ -234,9 +235,10 @@ export class PlayerHand {
 
       // Layer 9: Ability text (for non-Bloom cards) - reactive text
       this.ui.Text({
-        text: this.ui.Binding.derive(
-          [this.battleDisplay, this.handScrollOffset],
-          (display: BattleDisplay | null, scrollOffset: number) => {
+        text: this.ui.bindingManager.derive(
+          [BindingType.BattleDisplay, BindingType.UIState],
+          (display: BattleDisplay | null, uiState: UIState) => {
+            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
             if (!display || !display.playerHand) return '';
             const actualIndex = scrollOffset * cardsPerPage + slotIndex;
             const card = display.playerHand[actualIndex];
@@ -291,9 +293,10 @@ export class PlayerHand {
           width: cardWidth,
           height: cardHeight,
           // Hide slot if no card - derive directly from battleDisplay and handScrollOffset
-          display: this.ui.Binding.derive(
-            [this.battleDisplay, this.handScrollOffset],
-            (display: BattleDisplay | null, scrollOffset: number) => {
+          display: this.ui.bindingManager.derive(
+            [BindingType.BattleDisplay, BindingType.UIState],
+            (display: BattleDisplay | null, uiState: UIState) => {
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
               if (!display || !display.playerHand) return 'none';
               const actualIndex = scrollOffset * cardsPerPage + slotIndex;
               const card = display.playerHand[actualIndex];
@@ -311,7 +314,8 @@ export class PlayerHand {
             children: this.ui.Pressable({
               onClick: () => {
                 console.log('[PlayerHand] onClick fired! slotIndex:', slotIndex);
-                const actualIndex = this.handScrollOffsetValue * cardsPerPage + slotIndex;
+                const scrollOffset = this.ui.bindingManager.getSnapshot(BindingType.UIState).battle?.handScrollOffset ?? 0;
+                const actualIndex = scrollOffset * cardsPerPage + slotIndex;
                 // Get current card state from cached value
                 const display = this.getBattleDisplayValue();
                 console.log('[PlayerHand] display:', display ? 'EXISTS' : 'NULL', 'actualIndex:', actualIndex);
@@ -357,9 +361,10 @@ export class PlayerHand {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: this.ui.Binding.derive(
-                [this.battleDisplay, this.handScrollOffset],
-                (display: BattleDisplay | null, scrollOffset: number) => {
+              backgroundColor: this.ui.bindingManager.derive(
+                [BindingType.BattleDisplay, BindingType.UIState],
+                (display: BattleDisplay | null, uiState: UIState) => {
+                  const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
                   if (!display || !display.playerHand) return 'transparent';
                   const actualIndex = scrollOffset * cardsPerPage + slotIndex;
                   const card = display.playerHand[actualIndex];
@@ -378,14 +383,20 @@ export class PlayerHand {
       style: {
         position: 'absolute',
         left: 40,
-        top: this.ui.Binding.derive(
-          [this.showHand],
-          (showFull: boolean) => showFull ? (gameDimensions.panelHeight - 300) : 640
+        top: this.ui.bindingManager.derive(
+          [BindingType.UIState],
+          (uiState: UIState) => {
+            const showFull = uiState.battle?.showHand ?? false;
+            return showFull ? (gameDimensions.panelHeight - 300) : 640;
+          }
         ),
         width: overlayWidth,
-        height: this.ui.Binding.derive(
-          [this.showHand],
-          (showFull: boolean) => showFull ? 300 : 80
+        height: this.ui.bindingManager.derive(
+          [BindingType.UIState],
+          (uiState: UIState) => {
+            const showFull = uiState.battle?.showHand ?? false;
+            return showFull ? 300 : 80;
+          }
         ),
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         borderWidth: 3,
@@ -398,10 +409,16 @@ export class PlayerHand {
         // Toggle button
         this.ui.Pressable({
           onClick: () => {
-            console.log('[PlayerHand] Toggle button clicked, current showHandValue:', this.showHandValue);
-            const newShowHand = !this.showHandValue;
-            console.log('[PlayerHand] Setting showHandValue to:', newShowHand);
-            this.showHandValue = newShowHand;
+            const snapshot = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+            const showFull = snapshot.battle?.showHand ?? false;
+            const newShowHand = !showFull;
+            this.ui.bindingManager.setBinding(BindingType.UIState, {
+              ...snapshot,
+              battle: {
+                ...snapshot.battle,
+                showHand: newShowHand,
+              },
+            });
             this.onShowHandChange?.(newShowHand);
             this.onAction?.('toggle-hand');
           },
@@ -417,9 +434,12 @@ export class PlayerHand {
             alignItems: 'center',
           },
           children: this.ui.Text({
-            text: this.ui.Binding.derive(
-              [this.showHand],
-              (showFull: boolean) => showFull ? 'X' : '↑'
+            text: this.ui.bindingManager.derive(
+              [BindingType.UIState],
+              (uiState: UIState) => {
+                const showFull = uiState.battle?.showHand ?? false;
+                return showFull ? 'X' : '↑';
+              }
             ),
             style: {
               fontSize: 24,
@@ -433,12 +453,17 @@ export class PlayerHand {
         // Up button (positioned below toggle button)
         this.ui.Pressable({
           onClick: () => {
-            const newOffset = Math.max(0, this.handScrollOffsetValue - 1);
+            const snapshot = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+            const scrollOffset = snapshot.battle?.handScrollOffset ?? 0;
+            const newOffset = Math.max(0, scrollOffset - 1);
             this.onScrollOffsetChange?.(newOffset);
           },
-          disabled: this.ui.Binding.derive(
-            [this.handScrollOffset],
-            (offset: number) => offset <= 0
+          disabled: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (uiState: UIState) => {
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+              return scrollOffset <= 0;
+            }
           ),
           style: {
             position: 'absolute',
@@ -446,24 +471,33 @@ export class PlayerHand {
             top: 10 + 50 + 10, // Below toggle button
             width: 60,
             height: 50,
-            backgroundColor: this.ui.Binding.derive(
-              [this.handScrollOffset],
-              (offset: number) => offset > 0 ? '#4a8ec2' : '#666'
+            backgroundColor: this.ui.bindingManager.derive(
+              [BindingType.UIState],
+              (uiState: UIState) => {
+                const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                return scrollOffset > 0 ? '#4a8ec2' : '#666';
+              }
             ),
             borderRadius: 8,
             justifyContent: 'center',
             alignItems: 'center',
-            opacity: this.ui.Binding.derive(
-              [this.handScrollOffset],
-              (offset: number) => offset > 0 ? 1 : 0.5
+            opacity: this.ui.bindingManager.derive(
+              [BindingType.UIState],
+              (uiState: UIState) => {
+                const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                return scrollOffset > 0 ? 1 : 0.5;
+              }
             ),
-            display: this.ui.Binding.derive(
-              [this.showHand],
-              (showFull: boolean) => showFull ? 'flex' : 'none'
+            display: this.ui.bindingManager.derive(
+              [BindingType.UIState],
+              (uiState: UIState) => {
+                const showFull = uiState.battle?.showHand ?? false;
+                return showFull ? 'flex' : 'none';
+              }
             ),
           },
           children: this.ui.Text({
-            text: new this.ui.Binding('⬆'),
+            text: 'UP',
             style: {
               fontSize: 24,
               fontWeight: 'bold',
@@ -475,14 +509,17 @@ export class PlayerHand {
         // Down button (positioned below up button)
         this.ui.Pressable({
           onClick: () => {
-            this.onScrollOffsetChange?.(this.handScrollOffsetValue + 1);
+            const snapshot = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+            const scrollOffset = snapshot.battle?.handScrollOffset ?? 0;
+            const newOffset = scrollOffset + 1;
+            this.onScrollOffsetChange?.(newOffset);
           },
-          disabled: this.ui.Binding.derive(
-            [this.handScrollOffset, this.battleDisplay],
-            (offset: number, state: BattleDisplay | null) => {
-              if (!state || !state.playerHand) return true;
-              const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
-              return offset >= totalPages - 1 || state.playerHand.length <= cardsPerPage;
+          disabled: this.ui.bindingManager.derive(
+            [BindingType.UIState, BindingType.BattleDisplay],
+            (uiState: UIState, display: BattleDisplay | null) => {
+              const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+              const totalPages = Math.ceil(display?.playerHand?.length ?? 0 / cardsPerPage);
+              return scrollOffset >= totalPages - 1 || (display?.playerHand?.length ?? 0) <= cardsPerPage;
             }
           ),
           style: {
@@ -491,32 +528,35 @@ export class PlayerHand {
             top: 10 + 50 + 10 + 50 + 10, // Below up button
             width: 60,
             height: 50,
-            backgroundColor: this.ui.Binding.derive(
-              [this.handScrollOffset, this.battleDisplay],
-              (offset: number, state: BattleDisplay | null) => {
-                if (!state || !state.playerHand) return '#666';
-                const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
-                return (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? '#4a8ec2' : '#666';
+            backgroundColor: this.ui.bindingManager.derive(
+              [BindingType.UIState, BindingType.BattleDisplay],
+              (uiState: UIState, display: BattleDisplay | null) => {
+                const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                const totalPages = Math.ceil(display?.playerHand?.length ?? 0 / cardsPerPage);
+                return (scrollOffset < totalPages - 1 && (display?.playerHand?.length ?? 0) > cardsPerPage) ? '#4a8ec2' : '#666';
               }
             ),
             borderRadius: 8,
             justifyContent: 'center',
             alignItems: 'center',
-            opacity: this.ui.Binding.derive(
-              [this.handScrollOffset, this.battleDisplay],
-              (offset: number, state: BattleDisplay | null) => {
-                if (!state || !state.playerHand) return 0.5;
-                const totalPages = Math.ceil(state.playerHand.length / cardsPerPage);
-                return (offset < totalPages - 1 && state.playerHand.length > cardsPerPage) ? 1 : 0.5;
+            opacity: this.ui.bindingManager.derive(
+              [BindingType.UIState, BindingType.BattleDisplay],
+              (uiState: UIState, display: BattleDisplay | null) => {
+                const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+                const totalPages = Math.ceil(display?.playerHand?.length ?? 0 / cardsPerPage);
+                return (scrollOffset < totalPages - 1 && (display?.playerHand?.length ?? 0) > cardsPerPage) ? 1 : 0.5;
               }
             ),
-            display: this.ui.Binding.derive(
-              [this.showHand],
-              (showFull: boolean) => showFull ? 'flex' : 'none'
+            display: this.ui.bindingManager.derive(
+              [BindingType.UIState],
+              (uiState: UIState) => {
+                const showFull = uiState.battle?.showHand ?? false;
+                return showFull ? 'flex' : 'none';
+              }
             ),
           },
           children: this.ui.Text({
-            text: new this.ui.Binding('↓'),
+            text: 'DOWN',
             style: {
               fontSize: 24,
               fontWeight: 'bold',

@@ -2,7 +2,7 @@
  * Comprehensive ability system types for Bloom Beasts
  */
 
-import { CounterType, Affinity } from './core';
+import { Affinity } from './core';
 
 /**
  * Target types for abilities
@@ -15,8 +15,8 @@ export enum AbilityTarget {
   AllEnemies = 'all-enemies',                  // All enemy Bloom Beasts
   AdjacentAllies = 'adjacent-allies',          // Adjacent allied units
   AdjacentEnemies = 'adjacent-enemies',        // Adjacent enemy units
-  OpponentGardener = 'opponent-gardener',      // The opponent player
-  PlayerGardener = 'player-gardener',          // The controlling player
+  Opponent = 'opponent',                       // The opponent player
+  Player = 'player',                           // The controlling player
   RandomEnemy = 'random-enemy',                // Random enemy unit
   AllUnits = 'all-units',                      // All units on board
   DamagedEnemies = 'damaged-enemies',          // All damaged enemy units
@@ -51,8 +51,6 @@ export enum EffectType {
   Heal = 'heal',
   DrawCards = 'draw-cards',
   DiscardCards = 'discard-cards',
-  ApplyCounter = 'apply-counter',
-  RemoveCounter = 'remove-counter',
   Immunity = 'immunity',
   CannotBeTargeted = 'cannot-be-targeted',
   RemoveSummoningSickness = 'remove-summoning-sickness',
@@ -76,7 +74,6 @@ export enum EffectType {
  * Condition types for abilities
  */
 export enum ConditionType {
-  HasCounter = 'has-counter',
   HealthBelow = 'health-below',
   HealthAbove = 'health-above',
   CostAbove = 'cost-above',
@@ -134,8 +131,7 @@ export enum ResourceType {
 export enum CostType {
   Nectar = 'nectar',
   Discard = 'discard',
-  Sacrifice = 'sacrifice',
-  RemoveCounter = 'remove-counter'
+  Sacrifice = 'sacrifice'
 }
 
 /**
@@ -143,7 +139,7 @@ export enum CostType {
  */
 export interface AbilityCondition {
   type: ConditionType;
-  value?: number | Affinity | CounterType;
+  value?: number | Affinity;
   comparison?: Comparison;
 }
 
@@ -217,22 +213,7 @@ export interface DrawCardEffect extends BaseEffect {
   value: number;
 }
 
-/**
- * Counter application effect
- */
-export interface ApplyCounterEffect extends BaseEffect {
-  type: EffectType.ApplyCounter;
-  counter: CounterType;
-  value: number;
-}
-
-/**
- * Counter removal effect
- */
-export interface RemoveCounterEffect extends BaseEffect {
-  type: EffectType.RemoveCounter;
-  counter?: CounterType;
-}
+// Counter effects removed to reduce game complexity
 
 /**
  * Immunity types
@@ -242,7 +223,6 @@ export enum ImmunityType {
   Trap = 'trap',
   Abilities = 'abilities',
   Attacks = 'attacks',
-  Counters = 'counters',
   Damage = 'damage',
   Targeting = 'targeting',
   NegativeEffects = 'negative-effects'
@@ -340,8 +320,6 @@ export interface DamageReductionEffect extends BaseEffect {
 export interface RetaliationEffect extends BaseEffect {
   type: EffectType.Retaliation;
   value: number | 'reflected'; // Fixed damage or reflect all damage
-  applyCounter?: CounterType; // Optional counter to apply
-  counterValue?: number;
 }
 
 /**
@@ -399,8 +377,6 @@ export type AbilityEffect =
   | DamageEffect
   | HealEffect
   | DrawCardEffect
-  | ApplyCounterEffect
-  | RemoveCounterEffect
   | ImmunityEffect
   | CannotBeTargetedEffect
   | AttackModificationEffect
@@ -425,7 +401,6 @@ export type AbilityEffect =
 export interface AbilityCost {
   type: CostType;
   value?: number;
-  counter?: CounterType;
 }
 
 /**

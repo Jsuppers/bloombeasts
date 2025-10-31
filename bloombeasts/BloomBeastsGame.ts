@@ -10,15 +10,19 @@
 
 import { MenuScreen } from './ui/screens/MenuScreen';
 import { CardsScreen } from './ui/screens/CardsScreen';
+import { UpgradeScreen } from './ui/screens/UpgradeScreen';
 import { MissionScreen } from './ui/screens/MissionScreen';
 import { BattleScreen } from './ui/screens/BattleScreen';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
+import { LeaderboardScreen, type LeaderboardData } from './ui/screens/LeaderboardScreen';
+import { UPGRADE_COSTS, COIN_BOOST, EXP_BOOST, LUCK_BOOST, ROOSTER } from './constants/upgrades';
 import { createMissionCompletePopup } from './ui/screens/common/MissionCompletePopup';
 import { createButtonPopup } from './ui/screens/common/ButtonPopup';
 import { createCardDetailPopup } from './ui/screens/common/CardDetailPopup';
 import { GameEngine } from './engine/systems/GameEngine';
 import { CardCollectionManager } from './systems/CardCollectionManager';
 import { BattleDisplayManager } from './systems/BattleDisplayManager';
+import { BindingManager, BindingType, UIState } from './ui/types/BindingManager';
 import { MissionManager } from './screens/missions/MissionManager';
 import { MissionSelectionUI } from './screens/missions/MissionSelectionUI';
 import { MissionBattleUI } from './screens/missions/MissionBattleUI';
@@ -30,6 +34,7 @@ import { Logger } from './engine/utils/Logger';
 import type { AsyncMethods } from './ui/types/bindings';
 import { normalizeSoundId } from './AssetCatalog';
 import type { MenuStats, MissionDisplay, BattleDisplay, ObjectiveDisplay, CardDetailDisplay, SoundSettings } from './gameManager';
+import { gameDimensions } from './ui/screens/battle';
 
 /**
  * XP thresholds for player leveling (cumulative)
@@ -174,17 +179,11 @@ export interface UIMethodMappings {
   // Matches Horizon's actual signature
   UINode?: any;
 
-  // Data binding
-  Binding: BindingConstructor;
-  AnimatedBinding?: any;
-
-  // Animation
-  Animation?: any;
-  Easing?: any;
+  // Centralized binding manager - ONLY way to create/access bindings
+  bindingManager: BindingManager;
 
   // Platform-specific helpers
   assetIdToImageSource?: (assetId: string) => any; // Convert asset ID to ImageSource (Horizon) or string (Web)
-  assetsLoadedBinding?: any; // Binding<boolean> - true when assets are loaded (prevents race conditions)
 }
 
 /**
@@ -206,6 +205,9 @@ export interface PlayerData {
   name: string;
   totalXP: number; // Level is derived from this via getPlayerLevel()
 
+  // Currency
+  coins: number;
+
   // Card collection and deck (SINGLE SOURCE OF TRUTH)
   cards: {
     collected: CardInstance[]; // All owned card instances
@@ -217,8 +219,13 @@ export interface PlayerData {
     completedMissions: { [missionId: string]: number }; // Mission ID -> completion count
   };
 
-  // Item inventory
+  // Item inventory (only special items like serums)
   items: PlayerItem[];
+
+  // Boost upgrades (0-6 levels per boost)
+  boosts: {
+    [boostId: string]: number; // Boost ID -> upgrade level (0-6)
+  };
 
   // UI preferences (not persisted on all platforms)
   settings?: SoundSettings;
@@ -273,7 +280,7 @@ export interface PlatformConfig {
 
   /**
    * Load player data from persistent storage
-   * Return null if no data exists
+   * Platform must ensure valid PlayerData is returned (create default if none exists)
    */
   getPlayerData: () => PlayerData | null;
 
@@ -295,8 +302,8 @@ export interface PlatformConfig {
   /**
    * Get platform-specific UI method implementations
    *
-   * For web: Returns web-specific View, Text, Image, Pressable, Binding
-   * For horizon: Returns hz.View, hz.Text, hz.Image, hz.Pressable, hz.Binding
+   * For web: Returns web-specific View, Text, Image, Pressable
+   * For horizon: Returns hz.View, hz.Text, hz.Image, hz.Pressable
    */
   getUIMethodMappings: () => UIMethodMappings;
 
@@ -327,6 +334,25 @@ export interface PlatformConfig {
   setSfxVolume?: (volume: number) => void;
   setMusicEnabled?: (enabled: boolean) => void;
   setSfxEnabled?: (enabled: boolean) => void;
+
+  /**
+   * World Variables (optional)
+   * Implement if your platform supports world variables (e.g., Horizon)
+   *
+   * For Horizon: Use world.getVariable() and world.setVariable()
+   * For web: Use mock data or skip
+   */
+  getWorldVariable?: (variableGroup: string, variableName: string) => any;
+  setWorldVariable?: (variableGroup: string, variableName: string, value: any) => void;
+
+  /**
+   * Network Events (optional)
+   * Implement if your platform supports network events (e.g., Horizon)
+   *
+   * For Horizon: Use world.sendNetworkEvent()
+   * For web: Use mock/skip
+   */
+  sendNetworkEvent?: (eventName: string, data: any) => void;
 }
 
 /**
@@ -362,35 +388,18 @@ export class BloomBeastsGame {
 
   // Game state
   private isInitializing: boolean = true;  // Prevent renders during initialization
-  private currentScreen: string = 'loading';  // Current active screen
   private currentBattleId: string | null = null;
+  private battleStartTime: number | null = null;  // Track battle start time for leaderboard
 
-  // UI State bindings
-  private playerDataBinding: BindingInterface<PlayerData | null>;
-  private currentScreenBinding: BindingInterface<string>;
-  private missionsBinding: BindingInterface<MissionDisplay[]>;
-
-  // Battle-specific UI bindings (UI-only state)
-  private battleStateBinding: BindingInterface<string>;
-  private battleMessageBinding: BindingInterface<string>;
-  private battleDisplayBinding: BindingInterface<BattleDisplay | null>;
-
-  // Popup bindings (UI-only state)
-  private missionCompletePopupBinding: BindingInterface<any>;
-  private forfeitPopupBinding: BindingInterface<any>;
-  private cardDetailPopupBinding: BindingInterface<any>;
-
-  // Track binding values separately (as per Horizon docs - no .get() method)
-  private missionCompletePopupValue: any = null;
-  private forfeitPopupValue: any = null;
-  private cardDetailPopupValue: any = null;
 
   // Screen instances
   private menuScreen: MenuScreen;
   private cardsScreen: CardsScreen;
+  private upgradeScreen: UpgradeScreen;
   private missionScreen: MissionScreen;
   private battleScreen: BattleScreen;
   private settingsScreen: SettingsScreen;
+  private leaderboardScreen: LeaderboardScreen;
 
   // UI tree (created once, updated reactively)
   // Public so platform wrappers can access it (needed for Horizon's initializeUI)
@@ -398,9 +407,6 @@ export class BloomBeastsGame {
 
   constructor(config: PlatformConfig) {
     this.platform = config;
-
-    // Get platform-specific UI methods
-    this.UI = config.getUIMethodMappings();
 
     // Get platform-specific async methods
     this.asyncMethods = config.async;
@@ -417,85 +423,66 @@ export class BloomBeastsGame {
     this.missionManager = new MissionManager(config.catalogManager);
     this.missionUI = new MissionSelectionUI(this.missionManager);
     this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine, this.asyncMethods);
-
-    // Set up render callback for battle UI to update display during opponent turns
-    (this.battleUI as any).renderCallback = () => {
-      const currentState = this.battleUI.getCurrentBattle();
-      if (currentState && !currentState.isComplete) {
-        const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
-          currentState,
-          null
-        );
-        if (updatedDisplay) {
-          // console.log('[BloomBeastsGame] renderCallback: Updating battleDisplayBinding with turnPlayer:', updatedDisplay.turnPlayer);
-          this.battleDisplayBinding.set(updatedDisplay);
-          this.triggerRender();
-        }
-      }
-    };
-
     this.cardCollectionManager = new CardCollectionManager(config.catalogManager);
     this.battleDisplayManager = new BattleDisplayManager(config.catalogManager);
 
-    // Initialize bindings using platform's Binding class
-    const BindingClass = this.UI.Binding as any;
-    this.playerDataBinding = new BindingClass(null);  // Start null - data loads in initialize()
-    this.currentScreenBinding = new BindingClass('loading');  // Start with loading
-    this.missionsBinding = new BindingClass([]);
-
-    // Battle UI bindings
-    this.battleStateBinding = new BindingClass('initializing');
-    this.battleMessageBinding = new BindingClass('Preparing for battle...');
-    this.battleDisplayBinding = new BindingClass(null);
-
-    // Popup bindings
-    this.missionCompletePopupBinding = new BindingClass(null);
-    this.forfeitPopupBinding = new BindingClass(null);
-    this.cardDetailPopupBinding = new BindingClass(null);
+    // Get platform-specific UI methods and add bindingManager to them
+    this.UI = config.getUIMethodMappings() as UIMethodMappings;
 
     // Create screen instances (pass UI methods and playerData binding)
     this.menuScreen = new MenuScreen({
       ui: this.UI,
-      async: this.asyncMethods,
-      playerDataBinding: this.playerDataBinding,
       onButtonClick: this.handleButtonClick.bind(this),
       onNavigate: this.navigate.bind(this),
-      onRenderNeeded: this.triggerRender.bind(this)
+      onRenderNeeded: this.triggerRender.bind(this),
+      playSfx: this.playSfx.bind(this)
     });
 
     this.cardsScreen = new CardsScreen({
       ui: this.UI,
-      playerDataBinding: this.playerDataBinding,
       onCardSelect: this.handleCardSelect.bind(this),
       onNavigate: this.navigate.bind(this),
-      onRenderNeeded: this.triggerRender.bind(this)
+      onRenderNeeded: this.triggerRender.bind(this),
+      playSfx: this.playSfx.bind(this)
+    });
+
+    this.upgradeScreen = new UpgradeScreen({
+      ui: this.UI,
+      onNavigate: this.navigate.bind(this),
+      onUpgrade: this.handleUpgrade.bind(this),
+      playSfx: this.playSfx.bind(this)
     });
 
     this.missionScreen = new MissionScreen({
       ui: this.UI,
-      missions: this.missionsBinding,
-      playerDataBinding: this.playerDataBinding,
       onMissionSelect: this.handleMissionSelect.bind(this),
       onNavigate: this.navigate.bind(this),
-      onRenderNeeded: this.triggerRender.bind(this)
+      onRenderNeeded: this.triggerRender.bind(this),
+      playSfx: this.playSfx.bind(this)
     });
 
     this.battleScreen = new BattleScreen({
       ui: this.UI,
       async: this.asyncMethods,
-      battleDisplay: this.battleDisplayBinding,
       onAction: this.handleBattleAction.bind(this),
       onNavigate: this.navigate.bind(this),
       onRenderNeeded: this.triggerRender.bind(this),
-      onShowCardDetail: this.showCardDetailPopup.bind(this)
+      onShowCardDetail: this.showCardDetailPopup.bind(this),
+      playSfx: this.playSfx.bind(this)
     });
 
     this.settingsScreen = new SettingsScreen({
       ui: this.UI,
-      playerDataBinding: this.playerDataBinding,
       onSettingChange: this.handleSettingsChange.bind(this),
       onNavigate: this.navigate.bind(this),
-      onRenderNeeded: this.triggerRender.bind(this)
+      onRenderNeeded: this.triggerRender.bind(this),
+      playSfx: this.playSfx.bind(this)
+    });
+
+    this.leaderboardScreen = new LeaderboardScreen({
+      ui: this.UI,
+      onNavigate: this.navigate.bind(this),
+      playSfx: this.playSfx.bind(this)
     });
 
     // All screens are now created, enable rendering
@@ -556,52 +543,19 @@ export class BloomBeastsGame {
   }
 
   /**
-   * Create default player data structure
-   */
-  private createDefaultPlayerData(): PlayerData {
-    return {
-      name: 'Player',
-      totalXP: 0,
-      items: [],
-      cards: {
-        collected: [],
-        deck: []
-      },
-      missions: {
-        completedMissions: {}
-      },
-      settings: {
-        musicVolume: 10,
-        sfxVolume: 50,
-        musicEnabled: true,
-        sfxEnabled: true
-      }
-    };
-  }
-
-  /**
    * Load game data from platform storage
-   * Creates default data if none exists
+   * Platform is responsible for creating default data if none exists
    */
   private async loadGameData(): Promise<void> {
-    try {
-      const savedData = this.platform.getPlayerData?.();
+    const savedData = this.platform.getPlayerData?.();
 
-      if (savedData && Object.keys(savedData).length > 0) {
-        // Use saved data directly
-        this.playerData = savedData;
-        Logger.info(`[BloomBeastsGame] Loaded player data with ${savedData.cards.collected.length} cards`);
-      } else {
-        // Create default player data
-        this.playerData = this.createDefaultPlayerData();
-        Logger.info('[BloomBeastsGame] Created default player data');
-      }
-    } catch (error) {
-      Logger.error('[BloomBeastsGame] Error loading player data:', error);
-      // Create default player data on error
-      this.playerData = this.createDefaultPlayerData();
-      Logger.info('[BloomBeastsGame] Using default player data');
+    if (!savedData || Object.keys(savedData).length === 0) {
+      throw new Error('Platform must provide valid PlayerData (either loaded or newly created)');
     }
+
+    // Use platform-provided data directly
+    this.playerData = savedData;
+    Logger.info(`[BloomBeastsGame] Loaded player data for "${this.playerData.name}" with ${savedData.cards.collected.length} cards`);
 
     Logger.info(`[BloomBeastsGame] Restored deck with ${this.playerData.cards.deck.length} cards`);
 
@@ -636,31 +590,6 @@ export class BloomBeastsGame {
     }
     this.platform.setPlayerData?.(this.playerData);
     Logger.debug('[BloomBeastsGame] Player data saved');
-  }
-
-  /**
-   * Update player data (single update method)
-   * This is the ONLY way to update playerData - ensures binding stays in sync
-   */
-  private async updatePlayerData(updates: Partial<PlayerData> | ((current: PlayerData) => PlayerData)): Promise<void> {
-    // Data must be loaded before updates
-    if (!this.playerData) {
-      Logger.error('[BloomBeastsGame] Cannot update player data before it is loaded');
-      return;
-    }
-
-    // Support both object updates and function updates
-    if (typeof updates === 'function') {
-      this.playerData = updates(this.playerData);
-    } else {
-      this.playerData = { ...this.playerData, ...updates };
-    }
-
-    // Update binding
-    this.playerDataBinding.set(this.playerData);
-
-    // Auto-save
-    await this.saveGameData();
   }
 
   /**
@@ -765,6 +694,9 @@ export class BloomBeastsGame {
     if (!this.playerData) return;
     this.playerData.totalXP += amount;
     Logger.debug(`[BloomBeastsGame] Added ${amount} XP (total: ${this.playerData.totalXP}, level: ${this.playerLevel})`);
+
+    // Submit experience to leaderboard
+    this.submitLeaderboardScore('experience', this.playerData.totalXP);
   }
 
   /**
@@ -822,7 +754,7 @@ export class BloomBeastsGame {
    */
   private async updateBindingsFromGameState(): Promise<void> {
     // Update player data binding (screens derive what they need from this)
-    this.playerDataBinding.set(this.playerData);
+    this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
 
     // Update missions binding (still separate as it includes availability logic)
     this.missionUI.setPlayerLevel(this.playerLevel);
@@ -842,15 +774,20 @@ export class BloomBeastsGame {
     // Debug: Log first 3 missions
     console.log('[BloomBeastsGame] First 3 display missions:', displayMissions.slice(0, 3).map(m => ({id: m.id, isAvailable: m.isAvailable})));
 
-    this.missionsBinding.set(displayMissions);
+    this.UI.bindingManager.setBinding(BindingType.Missions, displayMissions);
   }
 
   /**
    * Navigate to a different screen
    */
   private navigate(screen: string): void {
-    this.currentScreen = screen;
-    this.currentScreenBinding.set(screen);
+    this.UI.bindingManager.setBinding(BindingType.CurrentScreen, screen);
+
+    // Load leaderboard data when navigating to leaderboard screen
+    if (screen === 'leaderboard') {
+      this.loadLeaderboardData();
+    }
+
     this.triggerRender();
   }
 
@@ -888,6 +825,10 @@ export class BloomBeastsGame {
       case 'btn-cards':
         this.navigate('cards');
         break;
+      case 'upgrades':
+      case 'btn-upgrades':
+        this.navigate('upgrades');
+        break;
       case 'missions':
         this.navigate('missions');
         break;
@@ -914,26 +855,26 @@ export class BloomBeastsGame {
    * Show forfeit confirmation popup
    */
   private showForfeitConfirmation(): void {
-    this.forfeitPopupBinding.set({
+    this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, {
       title: 'Are you sure?',
       message: 'You will lose this battle.',
-      useContainer: true, // Use mission-container background
       buttons: [
         {
           text: 'Yes',
           onClick: () => {
             this.handleForfeit();
           },
-          color: '#DC2626', // Red color
+          color: 'red',
         },
         {
           text: 'No',
           onClick: () => {
-            this.forfeitPopupBinding.set(null);
+            this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, null);
           },
-          color: '#6B7280', // Gray color
+          color: 'default',
         },
       ],
+      playSfx: this.playSfx.bind(this),
     });
   }
 
@@ -944,24 +885,22 @@ export class BloomBeastsGame {
     console.log('[BloomBeastsGame] Showing card detail popup:', card.name, 'for', durationMs, 'ms');
 
     // Set the card detail popup
-    this.cardDetailPopupValue = {
+    this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, {
       cardDetail: {
         card: card,
         stats: null,
       },
       onButtonClick: () => {
         // Close button clicked
-        this.cardDetailPopupValue = null;
-        this.cardDetailPopupBinding.set(null);
-      }
-    };
-    this.cardDetailPopupBinding.set(this.cardDetailPopupValue);
+        this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, null);
+      },
+      playSfx: this.playSfx.bind(this)
+    });
     this.triggerRender();
 
     // After duration, close the popup and execute callback
     this.asyncMethods.setTimeout(() => {
-      this.cardDetailPopupValue = null;
-      this.cardDetailPopupBinding.set(null);
+      this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, null);
       this.triggerRender();
       callback?.();
     }, durationMs);
@@ -972,7 +911,7 @@ export class BloomBeastsGame {
    */
   private handleForfeit(): void {
     // Close popup
-    this.forfeitPopupBinding.set(null);
+    this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, null);
 
     // Play lose sound
     this.playSfx('sfx-lose');
@@ -1080,14 +1019,14 @@ export class BloomBeastsGame {
 
     if (success) {
       // console.log('[BloomBeastsGame] Mission started successfully');
-      // Initialize battle with player's deck cards
-      const battleState = this.battleUI.initializeBattle(playerDeckCards);
+      // Initialize battle with player's deck cards and name
+      const battleState = this.battleUI.initializeBattle(playerDeckCards, this.playerData.name);
       // console.log('[BloomBeastsGame] battleState:', battleState);
 
       if (battleState) {
         // console.log('[BloomBeastsGame] Battle state is valid, initializing...');
-        this.currentScreen = 'battle';
         this.currentBattleId = missionId;
+        this.battleStartTime = Date.now();  // Track start time for leaderboard
 
         // Create battle display from battle state
         const battleDisplay = this.battleDisplayManager.createBattleDisplay(
@@ -1099,14 +1038,14 @@ export class BloomBeastsGame {
         // Update battle display binding
         if (battleDisplay) {
           // console.log('[BloomBeastsGame] Setting battle display binding...');
-          this.battleDisplayBinding.set(battleDisplay);
+          this.UI.bindingManager.setBinding(BindingType.BattleDisplay, battleDisplay);
         } else {
           console.error('[BloomBeastsGame] battleDisplay is null!');
         }
 
         // Navigate to battle screen
         // console.log('[BloomBeastsGame] Navigating to battle screen');
-        this.currentScreenBinding.set('battle');
+        this.UI.bindingManager.setBinding(BindingType.CurrentScreen, 'battle');
 
         // Trigger re-render to show battle screen
         // console.log('[BloomBeastsGame] Triggering re-render');
@@ -1160,10 +1099,67 @@ export class BloomBeastsGame {
     console.log('[BloomBeastsGame] Current soundSettings after change:', this.playerData.settings);
 
     // Save settings and update binding
-    this.playerDataBinding.set(this.playerData);
+    this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
     this.saveGameData();
 
     // Trigger re-render to update UI
+    this.triggerRender();
+  }
+
+  /**
+   * Handle upgrade purchase
+   */
+  private handleUpgrade(boostId: string): void {
+    if (!this.playerData) return;
+
+    // Get current boost level
+    const currentLevel = this.playerData.boosts?.[boostId] || 0;
+
+    // Check if already at max level
+    if (currentLevel >= 6) {
+      console.log('[BloomBeastsGame] Boost already at max level:', boostId);
+      return;
+    }
+
+    // Get cost for next level based on current level
+    const costs = UPGRADE_COSTS[boostId];
+    if (!costs) {
+      console.log('[BloomBeastsGame] Unknown boost ID:', boostId);
+      return;
+    }
+
+    const cost = costs[currentLevel];
+
+    // Check if player has enough coins
+    if (this.playerData.coins < cost) {
+      console.log('[BloomBeastsGame] Not enough coins:', this.playerData.coins, 'need:', cost);
+      return;
+    }
+
+    // Deduct coins
+    this.playerData.coins -= cost;
+
+    // Initialize boosts if not present
+    if (!this.playerData.boosts) {
+      this.playerData.boosts = {
+        [COIN_BOOST.id]: 0,
+        [EXP_BOOST.id]: 0,
+        [LUCK_BOOST.id]: 0,
+        [ROOSTER.id]: 0
+      };
+    }
+
+    // Increment boost level
+    this.playerData.boosts[boostId] = currentLevel + 1;
+
+    console.log('[BloomBeastsGame] Upgraded boost:', boostId, 'to level', this.playerData.boosts[boostId], 'for', cost, 'coins');
+
+    // Play success sound
+    this.playSfx('sfx-menu-button-select');
+
+    // Save and update
+    this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
+    this.saveGameData();
     this.triggerRender();
   }
 
@@ -1224,7 +1220,7 @@ export class BloomBeastsGame {
           null
         );
         if (updatedDisplay) {
-          this.battleDisplayBinding.set(updatedDisplay);
+          this.UI.bindingManager.setBinding(BindingType.BattleDisplay, updatedDisplay);
           this.triggerRender();
         }
       }
@@ -1269,7 +1265,7 @@ export class BloomBeastsGame {
         //   playerHealth: updatedDisplay.playerHealth,
         //   opponentHealth: updatedDisplay.opponentHealth
         // });
-        this.battleDisplayBinding.set(updatedDisplay);
+        this.UI.bindingManager.setBinding(BindingType.BattleDisplay, updatedDisplay);
         this.triggerRender();
       }
     }
@@ -1304,6 +1300,54 @@ export class BloomBeastsGame {
       // Victory!
       // console.log('[BloomBeastsGame] Mission victory!', battleState.rewards);
 
+      // Apply boost multipliers to rewards
+      const coinBoostLevel = playerData.boosts?.[COIN_BOOST.id] || 0;
+      const expBoostLevel = playerData.boosts?.[EXP_BOOST.id] || 0;
+      const luckBoostLevel = playerData.boosts?.[LUCK_BOOST.id] || 0;
+
+      let coinBoostPercent = 0;
+      let expBoostPercent = 0;
+      let luckBoostPercent = 0;
+
+      // Calculate and apply coin boost
+      if (coinBoostLevel > 0 && COIN_BOOST.values && battleState.rewards.coinsReceived) {
+        coinBoostPercent = COIN_BOOST.values[coinBoostLevel - 1];
+        const multiplier = (coinBoostPercent / 100) + 1;
+        const boostedCoins = Math.floor(battleState.rewards.coinsReceived * multiplier);
+        battleState.rewards.coinsReceived = boostedCoins;
+      }
+
+      // Calculate and apply exp boost
+      if (expBoostLevel > 0 && EXP_BOOST.values) {
+        expBoostPercent = EXP_BOOST.values[expBoostLevel - 1];
+        const multiplier = (expBoostPercent / 100) + 1;
+        const boostedXP = Math.floor(battleState.rewards.xpGained * multiplier);
+        const boostedBeastXP = Math.floor(battleState.rewards.beastXP * multiplier);
+        battleState.rewards.xpGained = boostedXP;
+        battleState.rewards.beastXP = boostedBeastXP;
+      }
+
+      // Calculate luck boost (affects drop chances - already rolled, so no effect on this implementation)
+      if (luckBoostLevel > 0 && LUCK_BOOST.values) {
+        luckBoostPercent = LUCK_BOOST.values[luckBoostLevel - 1];
+        // Luck boost would affect drop chances, but rewards are already generated
+        // This is shown for informational purposes
+      }
+
+      // Add boost info to rewards for display
+      if (!battleState.rewards.bonusRewards) {
+        battleState.rewards.bonusRewards = [];
+      }
+      if (coinBoostPercent > 0) {
+        battleState.rewards.bonusRewards.push(`Coin Boost: +${coinBoostPercent}%`);
+      }
+      if (expBoostPercent > 0) {
+        battleState.rewards.bonusRewards.push(`EXP Boost: +${expBoostPercent}%`);
+      }
+      if (luckBoostPercent > 0) {
+        battleState.rewards.bonusRewards.push(`Luck Boost: +${luckBoostPercent}%`);
+      }
+
       // Award XP
       this.addXP(battleState.rewards.xpGained);
 
@@ -1320,6 +1364,11 @@ export class BloomBeastsGame {
         this.cardCollectionManager.addCardReward(card, playerData.cards.collected, index);
       });
 
+      // Add coins
+      if (battleState.rewards.coinsReceived) {
+        playerData.coins += battleState.rewards.coinsReceived;
+      }
+
       // Add items to inventory
       if (battleState.rewards.itemsReceived) {
         battleState.rewards.itemsReceived.forEach((itemReward: any) => {
@@ -1330,7 +1379,16 @@ export class BloomBeastsGame {
       // Track mission completion
       if (battleId) {
         this.trackMissionCompletion(battleId);
+
+        // If this is Cluck Norris mission, submit time to leaderboard
+        if (battleId === 'mission17' && this.battleStartTime) {
+          const completionTime = (Date.now() - this.battleStartTime) / 1000; // Convert to seconds
+          this.submitLeaderboardScore('cluckNorris', completionTime);
+        }
       }
+
+      // Reset battle start time
+      this.battleStartTime = null;
 
       // Play win sound
       this.playSfx('sfx-win');
@@ -1347,14 +1405,13 @@ export class BloomBeastsGame {
         onClaimRewards: () => {
           // console.log('[BloomBeastsGame] Claim rewards clicked');
           // Chest animation could go here
-          const current = this.missionCompletePopupValue;
+          const current = this.UI.bindingManager.getSnapshot(BindingType.MissionCompletePopup);
           if (current) {
             const updatedData = {
               ...current,
               chestOpened: true
             };
-            this.missionCompletePopupValue = updatedData;
-            this.missionCompletePopupBinding.set(updatedData);
+            this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, updatedData);
             // console.log('[BloomBeastsGame] Chest opened, triggering render');
             this.triggerRender();
           }
@@ -1362,22 +1419,24 @@ export class BloomBeastsGame {
         onContinue: () => {
           // console.log('[BloomBeastsGame] Victory continue clicked');
           // Clear battle display and close popup
-          this.battleDisplayBinding.set(null);
-          this.missionCompletePopupValue = null;
-          this.missionCompletePopupBinding.set(null);
+          this.UI.bindingManager.setBinding(BindingType.BattleDisplay, null);
+          this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, null);
           this.navigate('missions');
-        }
+        },
+        playSfx: this.playSfx.bind(this)
       };
 
       // Set both tracked value and binding
-      this.missionCompletePopupValue = popupData;
-      this.missionCompletePopupBinding.set(popupData);
+      this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, popupData);
       // console.log('[BloomBeastsGame] Victory popup set');
       this.triggerRender();
       // console.log('[BloomBeastsGame] Render triggered after victory popup');
     } else {
       // Defeat
       // console.log('[BloomBeastsGame] Mission failed!');
+
+      // Reset battle start time
+      this.battleStartTime = null;
 
       // Play lose sound
       this.playSfx('sfx-lose');
@@ -1389,15 +1448,14 @@ export class BloomBeastsGame {
         chestOpened: false,
         onContinue: () => {
           // Clear battle display and close popup
-          this.battleDisplayBinding.set(null);
-          this.missionCompletePopupValue = null;
-          this.missionCompletePopupBinding.set(null);
+          this.UI.bindingManager.setBinding(BindingType.BattleDisplay, null);
+          this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, null);
           this.navigate('missions');
-        }
+        },
+        playSfx: this.playSfx.bind(this)
       };
       // console.log('[BloomBeastsGame] Setting mission failed popup:', failedPopupProps);
-      this.missionCompletePopupValue = failedPopupProps;
-      this.missionCompletePopupBinding.set(failedPopupProps);
+      this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, failedPopupProps);
       // console.log('[BloomBeastsGame] After set, mission failed popup set');
       this.triggerRender();
       // console.log('[BloomBeastsGame] Render triggered after mission failed');
@@ -1410,54 +1468,106 @@ export class BloomBeastsGame {
   }
 
   /**
+   * Load leaderboard data from world variables
+   */
+  private loadLeaderboardData(): void {
+    if (!this.platform.getWorldVariable) {
+      // World variables not supported on this platform, use mock data
+      this.UI.bindingManager.setBinding(BindingType.LeaderboardData, {
+        topExperience: [
+          { playerName: 'Player 1', score: 10000, level: 7 },
+          { playerName: 'Player 2', score: 5000, level: 6 },
+          { playerName: 'Player 3', score: 3000, level: 5 },
+        ],
+        fastestCluckNorris: [
+          { playerName: 'Speed Runner', score: 45 },
+          { playerName: 'Fast Player', score: 60 },
+          { playerName: 'Quick Win', score: 75 },
+        ],
+      });
+      return;
+    }
+
+    try {
+      // Get leaderboard data from world variable
+      const leaderboardData = this.platform.getWorldVariable('BloomBeastsData', 'leaderboard');
+
+      if (leaderboardData) {
+        this.UI.bindingManager.setBinding(BindingType.LeaderboardData, leaderboardData);
+      } else {
+        // No data yet, set empty arrays
+        this.UI.bindingManager.setBinding(BindingType.LeaderboardData, {
+          topExperience: [],
+          fastestCluckNorris: [],
+        });
+      }
+    } catch (error) {
+      console.error('[BloomBeastsGame] Failed to load leaderboard data:', error);
+      this.UI.bindingManager.setBinding(BindingType.LeaderboardData, {
+        topExperience: [],
+        fastestCluckNorris: [],
+      });
+    }
+  }
+
+  /**
+   * Submit player score to leaderboard via network event
+   */
+  private submitLeaderboardScore(type: 'experience' | 'cluckNorris', score: number): void {
+    if (!this.platform.sendNetworkEvent) {
+      // Network events not supported on this platform
+      console.log('[BloomBeastsGame] Network events not supported, skipping leaderboard submission');
+      return;
+    }
+
+    if (!this.playerData) {
+      console.warn('[BloomBeastsGame] Cannot submit score: player data not loaded');
+      return;
+    }
+
+    try {
+      const playerName = this.playerData.name || 'Unknown Player';
+      const eventData = {
+        playerName,
+        type,
+        score,
+        level: type === 'experience' ? getPlayerLevel(this.playerData.totalXP) : undefined,
+      };
+
+      this.platform.sendNetworkEvent('leaderboard_score_submit', eventData);
+      console.log('[BloomBeastsGame] Submitted leaderboard score:', eventData);
+    } catch (error) {
+      console.error('[BloomBeastsGame] Failed to submit leaderboard score:', error);
+    }
+  }
+
+  /**
    * Create the main UI tree
    * This is created once and updated reactively via bindings
    */
   private createUI(): UINode {
     const { View } = this.UI;
 
-    // Create all screens upfront
-    const loadingScreen = this.createLoadingScreen();
-    const menuScreen = this.menuScreen.createUI();
-    const cardsScreen = this.cardsScreen.createUI();
-    const missionsScreen = this.missionScreen.createUI();
-    const battleScreen = this.battleScreen.createUI();
-    const settingsScreen = this.settingsScreen.createUI();
-
-    // Use conditional rendering to show the right screen based on currentScreenBinding
-    const createConditionalScreen = (screenName: string, screenUI: UINode) => {
-      if (this.UI.UINode && this.UI.UINode.if) {
-        return this.UI.UINode.if(
-          this.currentScreenBinding.derive((current: string) => current === screenName),
-          screenUI
-        );
-      }
-      return screenUI;
-    };
-
     // Build main UI with conditional screens
     const children: any[] = [
-      createConditionalScreen('loading', loadingScreen),
-      createConditionalScreen('menu', menuScreen),
-      createConditionalScreen('cards', cardsScreen),
-      createConditionalScreen('missions', missionsScreen),
-      createConditionalScreen('battle', battleScreen),
-      createConditionalScreen('settings', settingsScreen),
+      this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'loading'), this.createLoadingScreen()) : null,
+      this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'menu'), this.menuScreen.createUI()) : null,
+      this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'cards'), this.cardsScreen.createUI()) : null,
+      this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'upgrades'), this.upgradeScreen.createUI()) : null,
+      this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'missions'), this.missionScreen.createUI()) : null,
+      this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'battle'), this.battleScreen.createUI()) : null,
+      this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'settings'), this.settingsScreen.createUI()) : null,
+      this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'leaderboard'), this.leaderboardScreen.createUI()) : null,
     ];
 
     // Add popups (these already use UINode.if)
     if (this.UI.UINode) {
       children.push(
         this.UI.UINode.if(
-          this.UI.Binding.derive(
-            [this.missionCompletePopupBinding],
-            (props) => {
-              // Update tracked value
-              this.missionCompletePopupValue = props;
-              return props !== null;
-            }
-          ),
-          createMissionCompletePopup(this.UI, this.missionCompletePopupValue || {
+          this.UI.bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+            return props !== null;
+          }),
+          createMissionCompletePopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.MissionCompletePopup) || {
             mission: {
               id: 'fallback-mission',
               name: 'Loading...',
@@ -1465,7 +1575,8 @@ export class BloomBeastsGame {
             },
             rewards: null,
             chestOpened: false,
-            onContinue: () => {}
+            onContinue: () => {},
+            playSfx: this.playSfx.bind(this)
           })
         )
       );
@@ -1474,19 +1585,14 @@ export class BloomBeastsGame {
     if (this.UI.UINode) {
       children.push(
         this.UI.UINode.if(
-          this.UI.Binding.derive(
-            [this.forfeitPopupBinding],
-            (props) => {
-              // Update tracked value
-              this.forfeitPopupValue = props;
-              return props !== null;
-            }
-          ),
-          createButtonPopup(this.UI, this.forfeitPopupValue || {
+          this.UI.bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+            return props !== null;
+          }),
+          createButtonPopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.ForfeitPopup) || {
             title: '',
             message: '',
             buttons: [],
-            onButtonClick: () => {}
+            playSfx: this.playSfx.bind(this)
           })
         )
       );
@@ -1495,15 +1601,10 @@ export class BloomBeastsGame {
     if (this.UI.UINode) {
       children.push(
         this.UI.UINode.if(
-          this.UI.Binding.derive(
-            [this.cardDetailPopupBinding],
-            (props: any) => {
-              // Update tracked value
-              this.cardDetailPopupValue = props;
-              return props !== null;
-            }
-          ),
-          createCardDetailPopup(this.UI, this.cardDetailPopupValue || {
+          this.UI.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+            return props !== null;
+          }),
+          createCardDetailPopup(this.UI, this.UI.bindingManager.getSnapshot(BindingType.CardDetailPopup) || {
             cardDetail: {
               card: {
                 id: null, // No ID so CardRenderer returns null for images
@@ -1517,7 +1618,8 @@ export class BloomBeastsGame {
               buttons: [],
               isInDeck: false
             },
-            onButtonClick: () => {}
+            onButtonClick: () => {},
+            playSfx: this.playSfx.bind(this)
           })
         )
       );
@@ -1528,8 +1630,22 @@ export class BloomBeastsGame {
         width: '100%',
         height: '100%',
         backgroundColor: 'blue',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
       },
-      children,
+      children: [
+        // Inner container with aspect ratio that scales content
+        View({
+          style: {
+            width: '100%',
+            height: '100%',
+            position: 'relative',
+            aspectRatio: `${gameDimensions.panelWidth}/${gameDimensions.panelHeight}`
+          },
+          children,
+        })
+      ],
     });
   }
 
@@ -1556,7 +1672,7 @@ export class BloomBeastsGame {
             alignItems: 'center',
           },
           children: this.UI.Text({
-            text: this.UI.Binding ? new this.UI.Binding('Loading...') : 'Loading...',
+            text: 'Loading...',
             style: {
               fontSize: 32,
               color: '#ffffff',
@@ -1596,7 +1712,7 @@ export class BloomBeastsGame {
     );
 
     if (displayWithAnimation) {
-      this.battleDisplayBinding.set(displayWithAnimation);
+      this.UI.bindingManager.setBinding(BindingType.BattleDisplay, displayWithAnimation);
       this.triggerRender();
     }
 
@@ -1610,7 +1726,7 @@ export class BloomBeastsGame {
     );
 
     if (displayWithoutAnimation) {
-      this.battleDisplayBinding.set(displayWithoutAnimation);
+      this.UI.bindingManager.setBinding(BindingType.BattleDisplay, displayWithoutAnimation);
       this.triggerRender();
     }
   }

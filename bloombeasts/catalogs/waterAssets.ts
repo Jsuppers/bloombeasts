@@ -395,7 +395,7 @@ export const waterAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.DealDamage,
-                      target: AbilityTarget.OpponentGardener,
+                      target: AbilityTarget.Opponent,
                       value: 3
                     }
                   ]
@@ -448,13 +448,12 @@ export const waterAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.DealDamage,
-                      target: AbilityTarget.OpponentGardener,
+                      target: AbilityTarget.Opponent,
                       value: 5
                     },
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.RandomEnemy,
-                      counter: "Freeze",
                       value: 1
                     }
                   ]
@@ -613,9 +612,7 @@ export const waterAssets: AssetCatalog = {
                     {
                       type: "Retaliation",
                       target: AbilityTarget.Self,
-                      value: 0,
-                      applyCounter: "Entangle",
-                      counterValue: 1
+                      value: 1
                     }
                   ]
                 }
@@ -684,7 +681,6 @@ export const waterAssets: AssetCatalog = {
       id: "water-mission",
       type: "mission",
       affinity: "water",
-      missionNumber: 3,
       name: "Water Mission",
       description: "Water affinity mission",
       assets: [

@@ -74,7 +74,6 @@ export const battleBoardAssetPositions = {
  */
 export interface BattleComponentProps {
   ui: UIMethodMappings;
-  battleDisplay: any; // BattleDisplay binding
 }
 
 /**
@@ -90,10 +89,6 @@ export interface BattleComponentWithCallbacks extends BattleComponentProps {
  * Props for PlayerHand component
  */
 export interface PlayerHandProps extends BattleComponentProps {
-  showHand: any; // Binding for show/hide state
-  handScrollOffset: any; // Binding for scroll offset
-  showHandValue: boolean; // Current show/hide value
-  handScrollOffsetValue: number; // Current scroll value
   getBattleDisplayValue: () => any | null; // Function to get current battle display value for onClick handlers
   onAction?: (action: string) => void;
   onShowHandChange?: (newValue: boolean) => void;
@@ -106,9 +101,15 @@ export interface PlayerHandProps extends BattleComponentProps {
  * Props for BattleSideMenu component
  */
 export interface BattleSideMenuProps extends BattleComponentProps {
-  endTurnButtonText: any; // Binding for button text
   getIsPlayerTurn: () => boolean; // Function to get current turn state
   getHasAttackableBeasts: () => boolean; // Function to check if player has beasts that can attack
   onAction?: (action: string) => void;
   onStopTurnTimer?: () => void;
+  playSfx?: (sfxId: string) => void;
+}
+
+/**
+ * Props for InfoDisplays component
+ */
+export interface InfoDisplaysProps extends BattleComponentProps {
 }

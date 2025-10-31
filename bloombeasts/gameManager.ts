@@ -13,8 +13,7 @@ import type { CardDisplayData } from './utils/cardUtils';
 export interface MenuStats {
   playerLevel: number;
   totalXP: number;
-  tokens: number;
-  diamonds: number;
+  coins: number;
   serums: number;
 }
 

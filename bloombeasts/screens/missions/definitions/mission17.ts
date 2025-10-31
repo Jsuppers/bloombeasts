@@ -1,42 +1,68 @@
 /**
- * Mission 17: The Bloom Master
- * Final Boss Mission
+ * Mission 17: Cluck Norris
+ * Boss Mission
  */
 
 import { Mission } from '../types';
-import { getAllStarterDecks } from '../../../engine/utils/deckBuilder';
+import { DeckList } from '../../../engine/utils/deckBuilder';
+import { BloomBeastCard } from '../../../engine/types/core';
 
-// Create the ultimate deck with cards from all affinities
-const getMasterDeck = () => {
-  const allDecks = getAllStarterDecks();
-  const masterCards: any[] = [];
+// Get Cluck Norris deck - 3 level 9 Cluck Norris beasts
+const getCluckNorrisDeck = (): DeckList => {
+  // This function will be called after catalogs are loaded
+  // Access the catalog manager through the global game instance
+  const game = (globalThis as any).bloomBeastsGame;
+  if (!game?.catalogManager) {
+    console.error('[mission17] Catalog manager not available');
+    return {
+      name: 'Cluck Norris Deck',
+      affinity: 'Forest',
+      cards: [],
+      totalCards: 0,
+    };
+  }
 
-  // Take the best 7-8 cards from each affinity
-  allDecks.forEach(deck => {
-    masterCards.push(...deck.cards.slice(0, 8));
-  });
+  // Get the Cluck Norris card from the boss catalog
+  const cluckNorrisCard = game.catalogManager.getCard('cluck-norris') as BloomBeastCard;
 
-  // Shuffle and limit to 30 cards
-  const finalCards = masterCards.sort(() => Math.random() - 0.5).slice(0, 30);
+  if (!cluckNorrisCard) {
+    console.error('[mission17] Cluck Norris card not found in catalog');
+    return {
+      name: 'Cluck Norris Deck',
+      affinity: 'Forest',
+      cards: [],
+      totalCards: 0,
+    };
+  }
+
+  // Create 3 instances of Cluck Norris at level 9
+  const cluckNorrisCards: BloomBeastCard[] = [];
+  for (let i = 1; i <= 3; i++) {
+    cluckNorrisCards.push({
+      ...cluckNorrisCard,
+      instanceId: `cluck-norris-${i}`,
+      // Keep base stats at 99/99 as defined in the catalog
+    });
+  }
 
   return {
-    name: 'Bloom Master Deck',
-    affinity: 'Forest' as const, // Uses all affinities but default to Forest
-    cards: finalCards,
-    totalCards: finalCards.length,
+    name: 'Cluck Norris Deck',
+    affinity: 'Forest',
+    cards: cluckNorrisCards,
+    totalCards: cluckNorrisCards.length,
   };
 };
 
 export const mission17: Mission = {
   id: 'mission-17',
-  name: 'Bloom Master',
-  description: 'Face the legendary Bloom Master who commands all four affinities.',
+  name: 'Cluck Norris',
+  description: 'Face the legendary Cluck Norris, the ultimate rooster warrior!',
   difficulty: 'expert',
   level: 17,
   affinity: 'Boss',
-  beastId: 'The Bloom Master',
+  beastId: 'Cluck Norris',
 
-  opponentDeck: () => getMasterDeck(),
+  opponentDeck: () => getCluckNorrisDeck(),
 
   rewards: {
     guaranteedXP: 500,

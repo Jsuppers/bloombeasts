@@ -5,12 +5,13 @@
 
 import { COLORS } from '../../styles/colors';
 import { DIMENSIONS } from '../../styles/dimensions';
-import { sideMenuButtonDimensions } from '../../constants/dimensions';
 import { sideMenuPositions } from '../../constants/positions';
 import type { MenuStats } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
 import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 import type { ValueBindingBase } from '../../types/bindings';
+import { createButton } from '../../common/Button';
+import { BindingType } from '../../types/BindingManager';
 
 // SideMenu-specific constants
 const sideMenuDimensions = {
@@ -34,12 +35,10 @@ export interface SideMenuConfig {
     buttons?: SideMenuButton[];
     /** Bottom button at headerStartPosition */
     bottomButton?: SideMenuButton;
-    /** PlayerData binding for deriving player info */
-    playerDataBinding?: any;
-    /** Stats binding for player info (deprecated - use playerDataBinding) */
-    stats?: ValueBindingBase<MenuStats | null> | any;
     /** Callback for XP bar click */
     onXPBarClick?: (title: string, message: string) => void;
+    /** Callback for playing sound effects */
+    playSfx?: (sfxId: string) => void;
 }
 
 /**
@@ -66,7 +65,7 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
                     top: headerRelativeY,
                 },
                 children: ui.Text({
-                    text: typeof config.title === 'string' ? new ui.Binding(config.title) : config.title,
+                    text: config.title,
                     style: {
                         fontSize: DIMENSIONS.fontSize.md,
                         color: COLORS.textPrimary,
@@ -103,14 +102,17 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
                     flexDirection: 'column',
                 },
                 children: config.buttons.map(button =>
-                    createSideMenuButton(
+                    createButton({
                         ui,
-                        button.label,
-                        0,
-                        button.yOffset !== undefined ? button.yOffset : 0,
-                        button.onClick,
-                        button.disabled
-                    )
+                        label: button.label,
+                        onClick: button.onClick,
+                        disabled: button.disabled,
+                        playSfx: config.playSfx,
+                        style: {
+                            position: 'relative',
+                            top: button.yOffset !== undefined ? button.yOffset : 0,
+                        },
+                    })
                 ),
             })
         );
@@ -126,21 +128,25 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
                 width: sideMenuDimensions.width,
                 height: 50,
             },
-            children: createPlayerInfo(ui, config.playerDataBinding, config.stats, config.onXPBarClick),
+            children: createPlayerInfo(ui, config.onXPBarClick),
         })
     );
 
     // Bottom button (if provided, at headerStartPosition)
     if (config.bottomButton) {
         children.push(
-            createSideMenuButton(
+            createButton({
                 ui,
-                config.bottomButton.label,
-                headerRelativeX,
-                headerRelativeY,
-                config.bottomButton.onClick,
-                config.bottomButton.disabled
-            )
+                label: config.bottomButton.label,
+                onClick: config.bottomButton.onClick,
+                disabled: config.bottomButton.disabled,
+                playSfx: config.playSfx,
+                style: {
+                    position: 'absolute',
+                    left: headerRelativeX,
+                    top: headerRelativeY,
+                },
+            })
         );
     }
 
@@ -154,12 +160,9 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
             flexDirection: 'column',
         },
         children: [
-            // Sidebar background image
+            // Sidebar background image - assets preload automatically
             ui.Image({
-                source: ui.Binding.derive(
-                    [ui.assetsLoadedBinding],
-                    (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('side-menu') : null
-                ),
+                source: ui.assetIdToImageSource?.('side-menu') || null,
                 style: {
                     position: 'absolute',
                     width: sideMenuDimensions.width,
@@ -175,109 +178,11 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
 }
 
 /**
- * Create a side menu button with image background
- */
-function createSideMenuButton(
-    ui: UIMethodMappings,
-    label: string | ValueBindingBase<string>,
-    x: number,
-    y: number,
-    onClick: () => void,
-    disabled?: boolean | ValueBindingBase<boolean>
-): UINodeType {
-    const labelBinding = typeof label === 'string' ? new ui.Binding(label) : label;
-    const disabledValue = typeof disabled === 'boolean' ? disabled : false;
-    const disabledBinding = typeof disabled === 'object' && 'get' in disabled ? disabled : undefined;
-
-    // Create hover state binding for opacity effect
-    const hoverBinding = new ui.Binding(false);
-
-    // Calculate opacity based on hover and disabled state (reactive to binding if present)
-    const opacityBinding = disabledBinding
-        ? ui.Binding.derive(
-            [hoverBinding, disabledBinding],
-            (isHovered: boolean, isDisabled: boolean) => {
-                if (isDisabled) return 0.5;
-                return isHovered ? 0.8 : 1.0;
-            }
-        )
-        : ui.Binding.derive(
-            [hoverBinding],
-            (isHovered: boolean) => {
-                if (disabledValue) return 0.5;
-                return isHovered ? 0.8 : 1.0;
-            }
-        );
-
-    return ui.Pressable({
-        onClick: onClick,
-        disabled: disabledBinding || disabledValue,
-        onHoverIn: () => {
-            if (!disabledValue) {
-                hoverBinding.set(true);
-            }
-        },
-        onHoverOut: () => {
-            hoverBinding.set(false);
-        },
-        style: {
-            position: 'absolute',
-            left: x,
-            top: y,
-            width: sideMenuButtonDimensions.width,
-            height: sideMenuButtonDimensions.height,
-        },
-        children: [
-            // Button background image
-            ui.Image({
-                source: ui.Binding.derive(
-                    [ui.assetsLoadedBinding],
-                    (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('standard-button') : null
-                ),
-                style: {
-                    position: 'absolute',
-                    width: sideMenuButtonDimensions.width,
-                    height: sideMenuButtonDimensions.height,
-                    opacity: opacityBinding,
-                },
-            }),
-            // Button text centered
-            ui.View({
-                style: {
-                    position: 'absolute',
-                    width: sideMenuButtonDimensions.width,
-                    height: sideMenuButtonDimensions.height,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                },
-                children: ui.Text({
-                    text: labelBinding,
-                    style: {
-                        fontSize: DIMENSIONS.fontSize.md,
-                        color: disabledBinding
-                            ? ui.Binding.derive(
-                                [disabledBinding],
-                                (isDisabled: boolean) => isDisabled ? '#888' : COLORS.textPrimary
-                            )
-                            : (disabledValue ? '#888' : COLORS.textPrimary),
-                        textAlign: 'center',
-                        fontWeight: 'bold',
-                        textAlignVertical: 'center',
-                    },
-                }),
-            }),
-        ],
-    });
-}
-
-/**
- * Create player info display (name, level, XP bar)
+ * Create player info display (name, level and XP text)
  * Positioned using sideMenuPositions
  */
 function createPlayerInfo(
     ui: UIMethodMappings,
-    playerDataBinding: any | undefined,
-    stats: ValueBindingBase<MenuStats | null> | any | undefined,
     onXPBarClick?: (title: string, message: string) => void
 ): UINodeType {
     // Helper to get item quantity
@@ -292,21 +197,16 @@ function createPlayerInfo(
         return {
             playerLevel: pd.playerLevel || 1,
             totalXP: pd.totalXP || 0,
-            tokens: getItemQuantity(pd.items || [], 'token'),
-            diamonds: getItemQuantity(pd.items || [], 'diamond'),
+            coins: pd.coins || 0,
             serums: getItemQuantity(pd.items || [], 'serum'),
         };
     };
 
-    // Use playerDataBinding if provided, otherwise use stats
-    // Derive directly from the source binding to avoid nesting
-    const sourceBinding = playerDataBinding || stats;
+    // Single binding for level and XP text
+    const levelXPTextBinding = ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+        const statsVal = extractStats(data);
+        if (!statsVal) return 'Level 1\n0/100';
 
-    // Create derived bindings for reactive values (Horizon best practice)
-    // Derive final values directly from base binding to avoid chaining
-    const xpWidthBinding = sourceBinding.derive((data: any) => {
-        const statsVal = playerDataBinding ? extractStats(data) : data;
-        if (!statsVal) return '0%';
         const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
         const currentLevel = statsVal.playerLevel;
         const totalXP = statsVal.totalXP;
@@ -314,13 +214,8 @@ function createPlayerInfo(
         const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
         const currentXP = totalXP - xpForCurrentLevel;
         const xpNeeded = xpForNextLevel - xpForCurrentLevel;
-        const xpPercent = Math.min(100, (currentXP / xpNeeded) * 100);
-        return `${xpPercent}%`;
-    });
 
-    const levelTextBinding = sourceBinding.derive((data: any) => {
-        const statsVal = playerDataBinding ? extractStats(data) : data;
-        return statsVal ? `${statsVal.playerLevel}` : '1';
+        return `Level ${currentLevel}\n${currentXP}/${xpNeeded}`;
     });
 
     return ui.View({
@@ -336,7 +231,7 @@ function createPlayerInfo(
                     top: 0,
                 },
                 children: ui.Text({
-                    text: new ui.Binding('Player'),
+                    text: 'Player',
                     style: {
                         fontSize: sideMenuPositions.playerName.size,
                         color: COLORS.textPrimary,
@@ -345,89 +240,20 @@ function createPlayerInfo(
                 }),
             }),
 
-            // XP Bar
+            // Level and XP text
             ui.View({
                 style: {
                     position: 'absolute',
-                    left: sideMenuPositions.playerExperienceBar.x,
-                    top: 19, // Offset from player name
-                    width: sideMenuPositions.playerExperienceBar.maxWidth,
-                    height: 11,
-                },
-                children: (() => {
-                    // Create a variable to hold the current stats value
-                    let currentStats: MenuStats | null = null;
-
-                    // Use a derived binding to keep currentStats updated
-                    // This binding is used in the XP width calculation, so it will be evaluated
-                    const xpWidthWithTracking = ui.Binding.derive(
-                        [sourceBinding],
-                        (data: any) => {
-                            const statsVal = playerDataBinding ? extractStats(data) : data;
-                            currentStats = statsVal; // Track the current value
-                            if (!statsVal) return 0;
-                            const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
-                            const currentLevel = statsVal.playerLevel;
-                            const totalXP = statsVal.totalXP;
-                            const xpForCurrentLevel = xpThresholds[currentLevel - 1];
-                            const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
-                            const currentXP = totalXP - xpForCurrentLevel;
-                            const xpNeeded = xpForNextLevel - xpForCurrentLevel;
-                            const progress = xpNeeded > 0 ? (currentXP / xpNeeded) : 1;
-                            return Math.round(progress * sideMenuPositions.playerExperienceBar.maxWidth);
-                        }
-                    );
-
-                    return ui.Pressable({
-                        onClick: () => {
-                            if (onXPBarClick && currentStats) {
-                                const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
-                                const currentLevel = currentStats.playerLevel;
-                                const totalXP = currentStats.totalXP;
-                                const xpForCurrentLevel = xpThresholds[currentLevel - 1];
-                                const xpForNextLevel = currentLevel < 9 ? xpThresholds[currentLevel] : xpThresholds[8];
-                                const currentXP = totalXP - xpForCurrentLevel;
-                                const xpNeeded = xpForNextLevel - xpForCurrentLevel;
-                                const title = `Level ${currentLevel}`;
-                                const message = `Current XP: ${currentXP} / ${xpNeeded}\n\nTotal XP: ${totalXP}`;
-                                onXPBarClick(title, message);
-                            }
-                        },
-                        style: {
-                            width: '100%',
-                            height: '100%',
-                        },
-                        children: ui.Image({
-                            source: ui.Binding.derive(
-                                [ui.assetsLoadedBinding],
-                                (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('experience-bar') : null
-                            ),
-                            style: {
-                                width: xpWidthWithTracking,
-                                height: 11,
-                            },
-                        }),
-                    });
-                })(),
-            }),
-
-            // Level text (centered on XP bar)
-            ui.View({
-                style: {
-                    position: 'absolute',
-                    left: sideMenuPositions.playerLevel.x,
+                    left: sideMenuPositions.playerName.x,
                     top: 19,
-                    width: 20,
-                    height: 11,
-                    justifyContent: 'center',
-                    alignItems: 'center',
                 },
                 children: ui.Text({
-                    text: levelTextBinding,
+                    text: levelXPTextBinding,
+                    numberOfLines: 2,
                     style: {
-                        fontSize: sideMenuPositions.playerLevel.size,
-                        color: COLORS.textPrimary,
-                        textAlign: 'center',
+                        fontSize: DIMENSIONS.fontSize.xs,
+                        color: COLORS.textSecondary,
+                        lineHeight: 12,
                     },
                 }),
             }),
@@ -445,7 +271,7 @@ export function createTextRow(ui: UIMethodMappings, text: string | ValueBindingB
             top: top,
         },
         children: ui.Text({
-            text: typeof text === 'string' ? new ui.Binding(text) : text,
+            text: text,
             style: {
                 fontSize: DIMENSIONS.fontSize.md,
                 color: COLORS.textPrimary,
@@ -463,7 +289,7 @@ export function createResourceRow(ui: UIMethodMappings,
     top: number = 0
 ): UINodeType {
     const amountText = typeof amount === 'number'
-        ? new ui.Binding(`${emoji} ${amount}`)
+        ? `${emoji} ${amount}`
         : (amount as any).derive((a: number) => `${emoji} ${a}`);
 
     return ui.View({

@@ -11,7 +11,7 @@ import {
   validateStatGainsProgression,
   loadCardFromJSON,
 } from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+import { StructuredAbility, AbilityTrigger } from '../../types/abilities.js';
 
 const BUBBLEFIN = loadCardFromJSON('bubblefin', 'water');
 
@@ -42,7 +42,7 @@ describe('Bubblefin Card', () => {
     });
 
     test('should have correct trigger', () => {
-      expect(BUBBLEFIN.abilities[0].trigger).toBe('Passive');
+      expect(BUBBLEFIN.abilities[0].trigger).toBe(AbilityTrigger.WhileOnField);
     });
 
     test('should have correct effects', () => {
@@ -87,7 +87,7 @@ describe('Bubblefin Card', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnDamage');
+      expect(ability.trigger).toBe(AbilityTrigger.OnDamage);
     });
   });
 
@@ -110,7 +110,7 @@ describe('Bubblefin Card', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('Passive');
+      expect(ability.trigger).toBe(AbilityTrigger.WhileOnField);
     });
   });
 
@@ -133,7 +133,7 @@ describe('Bubblefin Card', () => {
       const upgrade = BUBBLEFIN.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('Passive');
+      expect(ability.trigger).toBe(AbilityTrigger.WhileOnField);
     });
   });
 

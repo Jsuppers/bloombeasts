@@ -11,7 +11,7 @@ import {
   validateStatGainsProgression,
   loadCardFromJSON,
 } from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+import { StructuredAbility, AbilityTrigger } from '../../types/abilities.js';
 
 const ROOTLING = loadCardFromJSON('rootling', 'forest');
 
@@ -42,7 +42,7 @@ describe('Rootling Card', () => {
     });
 
     test('should have correct trigger', () => {
-      expect(ROOTLING.abilities[0].trigger).toBe('Passive');
+      expect(ROOTLING.abilities[0].trigger).toBe(AbilityTrigger.WhileOnField);
     });
 
     test('should have correct effects', () => {
@@ -87,7 +87,7 @@ describe('Rootling Card', () => {
       const upgrade = ROOTLING.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnDestroy');
+      expect(ability.trigger).toBe(AbilityTrigger.OnDestroy);
     });
   });
 
@@ -110,7 +110,7 @@ describe('Rootling Card', () => {
       const upgrade = ROOTLING.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('Passive');
+      expect(ability.trigger).toBe(AbilityTrigger.WhileOnField);
     });
   });
 
@@ -133,7 +133,7 @@ describe('Rootling Card', () => {
       const upgrade = ROOTLING.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('Passive');
+      expect(ability.trigger).toBe(AbilityTrigger.WhileOnField);
     });
   });
 

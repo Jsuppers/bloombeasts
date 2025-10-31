@@ -190,7 +190,6 @@ export class OpponentAI {
           currentAttack: playedCard.baseAttack,
           currentHealth: playedCard.baseHealth,
           maxHealth: playedCard.baseHealth,
-          counters: [],
           statusEffects: [],
           slotIndex: opponent.field.length,
           summoningSickness: true,

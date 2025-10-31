@@ -4,7 +4,7 @@
 
 import { BloomBeastInstance } from '../types/leveling';
 import { GameState, Player } from '../types/game';
-import { BloomBeastCard, Counter, CounterType } from '../types/core';
+import { BloomBeastCard } from '../types/core';
 import { getAllBeasts, getAdjacentBeasts } from '../utils/fieldUtils';
 import { pickRandom } from '../utils/random';
 import { IAbilityProcessor } from './interfaces';
@@ -18,7 +18,6 @@ import {
   DamageEffect,
   HealEffect,
   DrawCardEffect,
-  ApplyCounterEffect,
   ImmunityEffect,
   CannotBeTargetedEffect,
   AttackModificationEffect,
@@ -58,7 +57,6 @@ export class AbilityProcessor implements IAbilityProcessor {
   private cloneBeast(beast: BloomBeastInstance): BloomBeastInstance {
     return {
       ...beast,
-      counters: beast.counters.map(c => ({ ...c })),
       temporaryEffects: beast.temporaryEffects?.map(e => ({ ...e })) || [],
       statusEffects: [...beast.statusEffects],
       immunities: beast.immunities ? [...beast.immunities] : undefined,
@@ -111,14 +109,7 @@ export class AbilityProcessor implements IAbilityProcessor {
             return false;
           }
           break;
-        case 'remove-counter':
-          const counter = context.gameState.habitatCounters?.find(
-            c => c.type === ability.cost!.counter
-          );
-          if (!counter || counter.amount < (ability.cost.value || 1)) {
-            return false;
-          }
-          break;
+        // Counter costs removed
       }
     }
 
@@ -139,7 +130,7 @@ export class AbilityProcessor implements IAbilityProcessor {
 
     // Get targets
     const targets = this.resolveTargets(effect.target, context);
-    if (targets.length === 0 && effect.target !== AbilityTarget.OpponentGardener && effect.target !== AbilityTarget.PlayerGardener) {
+    if (targets.length === 0 && effect.target !== AbilityTarget.Opponent && effect.target !== AbilityTarget.Player) {
       return { success: false, message: 'No valid targets' };
     }
 
@@ -153,8 +144,7 @@ export class AbilityProcessor implements IAbilityProcessor {
         return this.processHeal(effect as HealEffect, targets, context);
       case EffectType.DrawCards:
         return this.processDrawCards(effect as DrawCardEffect, context);
-      case EffectType.ApplyCounter:
-        return this.processApplyCounter(effect as ApplyCounterEffect, targets, context);
+      // Counter effects removed
       case EffectType.Immunity:
         return this.processImmunity(effect as ImmunityEffect, targets, context);
       case EffectType.CannotBeTargeted:
@@ -270,8 +260,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     context: AbilityContext
   ): boolean {
     switch (condition.type) {
-      case ConditionType.HasCounter:
-        return context.source.counters.some(c => c.type === condition.value);
+      // Counter conditions removed
       case ConditionType.HealthBelow:
         return context.source.currentHealth < (condition.value as number);
       case ConditionType.HealthAbove:
@@ -364,14 +353,14 @@ export class AbilityProcessor implements IAbilityProcessor {
       modifiedUnits.push(modified);
     }
 
-    // Handle damage to gardener
-    if (effect.target === AbilityTarget.OpponentGardener) {
+    // Handle damage to opponent
+    if (effect.target === AbilityTarget.Opponent) {
       const damage = effect.value === 'attack-value'
         ? context.source.currentAttack
         : effect.value;
       return {
         success: true,
-        message: `Dealt ${damage} damage to opponent Gardener`,
+        message: `Dealt ${damage} damage to opponent`,
         modifiedState: {
           players: [
             context.gameState.players[0] === context.opposingPlayer
@@ -431,11 +420,11 @@ export class AbilityProcessor implements IAbilityProcessor {
   ): EffectResult {
     // Determine which player should draw based on target
     let drawForPlayerIndex: 0 | 1;
-    if (effect.target === AbilityTarget.OpponentGardener) {
+    if (effect.target === AbilityTarget.Opponent) {
       // Draw for opponent
       drawForPlayerIndex = context.gameState.players[0] === context.opposingPlayer ? 0 : 1;
     } else {
-      // Default: PlayerGardener or other - draw for controlling player
+      // Default: Player or other - draw for controlling player
       drawForPlayerIndex = context.gameState.players[0] === context.controllingPlayer ? 0 : 1;
     }
 
@@ -449,55 +438,7 @@ export class AbilityProcessor implements IAbilityProcessor {
     };
   }
 
-  /**
-   * Process apply counter effect
-   */
-  private processApplyCounter(
-    effect: ApplyCounterEffect,
-    targets: BloomBeastInstance[],
-    context: AbilityContext
-  ): EffectResult {
-    const modifiedUnits: BloomBeastInstance[] = [];
-
-    for (const target of targets) {
-      const modified = this.cloneBeast(target);
-      const existingCounter = modified.counters.find(c => c.type === effect.counter);
-
-      if (existingCounter) {
-        existingCounter.amount += effect.value;
-      } else {
-        modified.counters.push({
-          type: effect.counter,
-          amount: effect.value,
-        });
-      }
-
-      modifiedUnits.push(modified);
-    }
-
-    // Handle habitat counters
-    if (effect.target === 'self' && effect.counter === 'Spore') {
-      return {
-        success: true,
-        message: `Added ${effect.value} ${effect.counter} counter(s) to Habitat`,
-        modifiedState: {
-          habitatCounters: [
-            ...(context.gameState.habitatCounters || []).filter(c => c.type !== 'Spore'),
-            {
-              type: 'Spore',
-              amount: ((context.gameState.habitatCounters || []).find(c => c.type === 'Spore')?.amount || 0) + effect.value,
-            },
-          ],
-        },
-      };
-    }
-
-    return {
-      success: true,
-      modifiedUnits,
-      message: `Applied ${effect.value} ${effect.counter} counter(s)`,
-    };
-  }
+  // Counter processing removed to reduce game complexity
 
   /**
    * Process immunity effect

@@ -64,7 +64,7 @@ export const trapAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.DrawCards,
-                target: AbilityTarget.PlayerGardener,
+                target: AbilityTarget.Player,
                 value: 2
               }
             ]
@@ -135,7 +135,7 @@ export const trapAssets: AssetCatalog = {
               },
               {
                 type: EffectType.DrawCards,
-                target: AbilityTarget.PlayerGardener,
+                target: AbilityTarget.Player,
                 value: 1
               }
             ]
@@ -277,9 +277,9 @@ export const trapAssets: AssetCatalog = {
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
-                type: EffectType.RemoveCounter,
+                type: EffectType.DealDamage,
                 target: AbilityTarget.Attacker,
-                counter: "XP"
+                value: 2
               }
             ]
           }

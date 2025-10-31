@@ -5,14 +5,14 @@
  */
 
 import { DIMENSIONS } from '../../styles/dimensions';
+import { COLORS } from '../../styles/colors';
 import {
   missionCompleteCardDimensions,
   chestImageMissionCompleteDimensions,
-  longButtonDimensions,
 } from '../../constants/dimensions';
-import { missionCompleteCardPositions } from '../../constants/positions';
 import { UINodeType } from '../ScreenUtils';
 import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
+import { createPopup, type PopupButton } from '../../common/Popup';
 
 export interface MissionCompletePopupProps {
   mission: {
@@ -23,6 +23,7 @@ export interface MissionCompletePopupProps {
   rewards: {
     xpGained: number;
     beastXP: number;
+    coinsReceived?: number;
     completionTimeSeconds: number;
     cardsReceived: any[];
     itemsReceived: Array<{
@@ -31,201 +32,94 @@ export interface MissionCompletePopupProps {
       emoji?: string;
       name?: string;
     }>;
+    bonusRewards?: string[];
   } | null; // null for mission failed
   chestOpened: boolean;
   onClaimRewards?: () => void;
   onContinue?: () => void;
+  playSfx?: (sfxId: string) => void;
 }
 
 /**
- * Unified Mission Complete Popup that exactly replicates canvas version
+ * Unified Mission Complete Popup using common Popup component
  */
 export function createMissionCompletePopup(ui: UIMethodMappings, props: MissionCompletePopupProps): UINodeType {
-  const { mission, rewards, chestOpened, onClaimRewards, onContinue } = props;
+  const { mission, rewards, chestOpened, onClaimRewards, onContinue, playSfx } = props;
   const isFailed = !rewards;
 
-  const containerWidth = missionCompleteCardDimensions.width;
-  const containerHeight = missionCompleteCardDimensions.height;
-  const centerX = (1280 - containerWidth) / 2;
-  const centerY = (720 - containerHeight) / 2;
-
-  return ui.View({
-    style: {
-      position: 'absolute',
-      width: '100%',
-      height: '100%',
-      top: 0,
-      left: 0,
-      zIndex: 2000, // Ensure popup is on top of everything
-    },
-    children: [
-      // Semi-transparent backdrop
-      ui.View({
-        style: {
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        },
-      }),
-
-      // Content container (centered)
-      ui.View({
-        style: {
-          position: 'absolute',
-          left: centerX,
-          top: centerY,
-          width: containerWidth,
-          height: containerHeight,
-        },
-        children: [
-          // Container background image
-          ui.Image({
-            source: ui.Binding.derive(
-              [ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('mission-container') : null
-            ),
+  // Create content for the popup
+  const content: UINodeType[] = [
+    // Chest or lose image
+    ui.View({
+      style: {
+        width: '100%',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginTop: 10,
+        marginBottom: 20,
+      },
+      children: isFailed
+        ? ui.Image({
+            source: ui.assetIdToImageSource?.('lose-image') || null,
             style: {
-              position: 'absolute',
-              width: containerWidth,
-              height: containerHeight,
+              width: chestImageMissionCompleteDimensions.width,
+              height: chestImageMissionCompleteDimensions.height,
+            },
+          })
+        : ui.Image({
+            source: ui.assetIdToImageSource?.(
+              chestOpened
+                ? `${mission.affinity || 'Forest'}-chest-opened`.toLowerCase()
+                : `${mission.affinity || 'Forest'}-chest-closed`.toLowerCase()
+            ) || null,
+            style: {
+              width: chestImageMissionCompleteDimensions.width,
+              height: chestImageMissionCompleteDimensions.height,
             },
           }),
-
-          // Content overlay
-          ui.View({
-            style: {
-              position: 'absolute',
-              width: containerWidth,
-              height: containerHeight,
-            },
-            children: [
-          // Title
-          ui.View({
-            style: {
-              position: 'absolute',
-              left: missionCompleteCardPositions.title.x,
-              top: missionCompleteCardPositions.title.y,
-              width: containerWidth - missionCompleteCardPositions.title.x * 2,
-            },
-            children: ui.Text({
-              text: isFailed ? 'MISSION FAILED' : 'MISSION COMPLETE!',
-              style: {
-                fontSize: missionCompleteCardPositions.title.size,
-                fontWeight: 'bold',
-                color: isFailed ? '#FF4444' : '#FFD700',
-                textAlign: missionCompleteCardPositions.title.textAlign as any,
-              },
-            }),
-          }),
-
-          // Chest or lose image
-          isFailed
-            ? ui.Image({
-                source: ui.Binding.derive(
-                  [ui.assetsLoadedBinding],
-                  (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('lose-image') : null
-                ),
-                style: {
-                  position: 'absolute',
-                  left: missionCompleteCardPositions.chestImage.x,
-                  top: missionCompleteCardPositions.chestImage.y,
-                  width: chestImageMissionCompleteDimensions.width,
-                  height: chestImageMissionCompleteDimensions.height,
-                },
-              })
-            : ui.Image({
-                source: ui.Binding.derive(
-                  [ui.assetsLoadedBinding],
-                  (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.(
-                    chestOpened
-                      ? `${mission.affinity || 'Forest'}-chest-opened`.toLowerCase()
-                      : `${mission.affinity || 'Forest'}-chest-closed`.toLowerCase()
-                  ) : null
-                ),
-                style: {
-                  position: 'absolute',
-                  left: missionCompleteCardPositions.chestImage.x,
-                  top: missionCompleteCardPositions.chestImage.y,
-                  width: chestImageMissionCompleteDimensions.width,
-                  height: chestImageMissionCompleteDimensions.height,
-                },
-              }),
-
-          // Info text
-          ui.View({
-            style: {
-              position: 'absolute',
-              left: missionCompleteCardPositions.infoText.x,
-              top: missionCompleteCardPositions.infoText.y,
-              width: containerWidth - missionCompleteCardPositions.infoText.x - 30, // 30px right margin
-            },
-            children: isFailed
-              ? createFailedInfo(ui)
-              : chestOpened
-              ? createDetailedRewards(ui, rewards)
-              : createBasicInfo(ui, rewards),
-          }),
-
-          // Claim/Continue button
-          ui.Pressable({
-            onClick: () => {
-              console.log('[MissionCompletePopup] Button clicked, isFailed:', isFailed, 'chestOpened:', chestOpened);
-              if (isFailed || chestOpened) {
-                console.log('[MissionCompletePopup] Calling onContinue');
-                onContinue?.();
-              } else {
-                console.log('[MissionCompletePopup] Calling onClaimRewards');
-                onClaimRewards?.();
-              }
-            },
-            style: {
-              position: 'absolute',
-              left: missionCompleteCardPositions.claimRewardButton.x,
-              top: missionCompleteCardPositions.claimRewardButton.y,
-              width: longButtonDimensions.width,
-              height: longButtonDimensions.height,
-              zIndex: 10, // Ensure button is on top
-            },
-            children: [
-              // Button background image
-              ui.Image({
-                source: ui.Binding.derive(
-                  [ui.assetsLoadedBinding],
-                  (assetsLoaded: boolean) => assetsLoaded ? ui.assetIdToImageSource?.('long-green-button') : null
-                ),
-                style: {
-                  position: 'absolute',
-                  width: longButtonDimensions.width,
-                  height: longButtonDimensions.height,
-                },
-              }),
-              // Button text
-              ui.View({
-                style: {
-                  position: 'absolute',
-                  width: longButtonDimensions.width,
-                  height: longButtonDimensions.height,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                },
-                children: ui.Text({
-                  text: isFailed ? 'CONTINUE' : chestOpened ? 'CONTINUE' : 'CLAIM REWARDS',
-                  style: {
-                    fontSize: 18,
-                    fontWeight: 'bold',
-                    color: '#FFFFFF',
-                    textAlign: 'center',
-                  },
-                }),
-              }),
-            ],
-          }),
-          ],
-        }),
-      ],
     }),
-    ],
+
+    // Info text
+    ui.View({
+      style: {
+        width: '100%',
+        paddingLeft: 20,
+        paddingRight: 20,
+      },
+      children: isFailed
+        ? createFailedInfo(ui)
+        : chestOpened
+        ? createDetailedRewards(ui, rewards)
+        : createBasicInfo(ui, rewards),
+    }),
+  ];
+
+  // Create button
+  const popupButton: PopupButton = {
+    label: isFailed ? 'CONTINUE' : chestOpened ? 'CONTINUE' : 'CLAIM REWARDS',
+    onClick: () => {
+      console.log('[MissionCompletePopup] Button clicked, isFailed:', isFailed, 'chestOpened:', chestOpened);
+      if (isFailed || chestOpened) {
+        console.log('[MissionCompletePopup] Calling onContinue');
+        onContinue?.();
+      } else {
+        console.log('[MissionCompletePopup] Calling onClaimRewards');
+        onClaimRewards?.();
+      }
+    },
+    type: 'long',
+    color: 'green',
+  };
+
+  return createPopup({
+    ui,
+    title: isFailed ? 'MISSION FAILED' : 'MISSION COMPLETE!',
+    titleColor: isFailed ? '#FF4444' : '#FFD700',
+    content,
+    buttons: [popupButton],
+    playSfx,
+    width: missionCompleteCardDimensions.width,
+    height: missionCompleteCardDimensions.height,
   });
 }
 
@@ -243,9 +137,9 @@ function createFailedInfo(ui: UIMethodMappings): UINodeType {
       ui.Text({
         text: 'Better luck next time!\n\nKeep training your beasts\nand try again.',
         style: {
-          fontSize: 14,
-          lineHeight: 18,
-          color: '#FFFFFF',
+          fontSize: DIMENSIONS.fontSize.md,
+          lineHeight: 20,
+          color: COLORS.textPrimary,
           textAlign: 'center',
         },
       }),
@@ -263,17 +157,32 @@ function createBasicInfo(ui: UIMethodMappings, rewards: any): UINodeType {
 
   const lines = [`Time: ${timeString}`, '', `Player XP: +${rewards.xpGained}`, `Beast XP: +${rewards.beastXP}`];
 
+  // Add coins if present
+  if (rewards.coinsReceived) {
+    lines.push(`Coins: +${rewards.coinsReceived}`);
+  }
+
+  // Add bonus rewards if present
+  if (rewards.bonusRewards && rewards.bonusRewards.length > 0) {
+    lines.push('');
+    rewards.bonusRewards.forEach((bonus: string) => {
+      lines.push(bonus);
+    });
+  }
+
   return ui.View({
     style: {
       flexDirection: 'column',
+      alignItems: 'center',
+      width: '100%',
     },
     children: lines.map((line, index) =>
       ui.Text({
         text: line,
         style: {
-          fontSize: missionCompleteCardPositions.infoText.size,
-          color: '#FFFFFF',
-          textAlign: missionCompleteCardPositions.infoText.textAlign as any,
+          fontSize: DIMENSIONS.fontSize.md,
+          color: line.includes('Boost:') ? '#FFD700' : COLORS.textPrimary,
+          textAlign: 'center',
           marginBottom: 5,
         },
       })
@@ -287,16 +196,55 @@ function createBasicInfo(ui: UIMethodMappings, rewards: any): UINodeType {
 function createDetailedRewards(ui: UIMethodMappings, rewards: any): UINodeType {
   const elements: UINodeType[] = [];
 
+  // Coins received
+  if (rewards.coinsReceived) {
+    elements.push(
+      ui.Text({
+        text: `🪙 ${rewards.coinsReceived} Coins`,
+        style: {
+          fontSize: DIMENSIONS.fontSize.md,
+          color: '#FFD700',
+          textAlign: 'center',
+          marginBottom: 10,
+          fontWeight: 'bold',
+        },
+      })
+    );
+  }
+
+  // Bonus rewards (boosts)
+  if (rewards.bonusRewards && rewards.bonusRewards.length > 0) {
+    rewards.bonusRewards.forEach((bonus: string) => {
+      elements.push(
+        ui.Text({
+          text: bonus,
+          style: {
+            fontSize: DIMENSIONS.fontSize.sm,
+            color: '#FFD700',
+            textAlign: 'center',
+            marginBottom: 5,
+          },
+        })
+      );
+    });
+    elements.push(
+      ui.View({
+        style: { height: 10 },
+      })
+    );
+  }
+
   // Cards received
   if (rewards.cardsReceived && rewards.cardsReceived.length > 0) {
     elements.push(
       ui.Text({
         text: 'Cards Received:',
         style: {
-          fontSize: missionCompleteCardPositions.infoText.size,
+          fontSize: DIMENSIONS.fontSize.md,
           color: '#FFD700',
-          textAlign: missionCompleteCardPositions.infoText.textAlign as any,
+          textAlign: 'center',
           marginBottom: 5,
+          fontWeight: 'bold',
         },
       })
     );
@@ -304,11 +252,11 @@ function createDetailedRewards(ui: UIMethodMappings, rewards: any): UINodeType {
     rewards.cardsReceived.forEach((card: any, index: number) => {
       elements.push(
         ui.Text({
-          text: `  • ${card.name}`,
+          text: `• ${card.name}`,
           style: {
-            fontSize: missionCompleteCardPositions.infoText.size,
-            color: '#FFFFFF',
-            textAlign: missionCompleteCardPositions.infoText.textAlign as any,
+            fontSize: DIMENSIONS.fontSize.sm,
+            color: COLORS.textPrimary,
+            textAlign: 'center',
             marginBottom: 5,
           },
         })
@@ -329,10 +277,11 @@ function createDetailedRewards(ui: UIMethodMappings, rewards: any): UINodeType {
       ui.Text({
         text: 'Items Received:',
         style: {
-          fontSize: missionCompleteCardPositions.infoText.size,
+          fontSize: DIMENSIONS.fontSize.md,
           color: '#FFD700',
-          textAlign: missionCompleteCardPositions.infoText.textAlign as any,
+          textAlign: 'center',
           marginBottom: 5,
+          fontWeight: 'bold',
         },
       })
     );
@@ -342,11 +291,11 @@ function createDetailedRewards(ui: UIMethodMappings, rewards: any): UINodeType {
       const itemName = itemReward.name || itemReward.itemId;
       elements.push(
         ui.Text({
-          text: `  ${emoji} ${itemName} x${itemReward.quantity}`,
+          text: `${emoji} ${itemName} x${itemReward.quantity}`,
           style: {
-            fontSize: missionCompleteCardPositions.infoText.size,
-            color: '#FFFFFF',
-            textAlign: missionCompleteCardPositions.infoText.textAlign as any,
+            fontSize: DIMENSIONS.fontSize.sm,
+            color: COLORS.textPrimary,
+            textAlign: 'center',
             marginBottom: 5,
           },
         })
@@ -364,6 +313,8 @@ function createDetailedRewards(ui: UIMethodMappings, rewards: any): UINodeType {
   return ui.View({
     style: {
       flexDirection: 'column',
+      alignItems: 'center',
+      width: '100%',
     },
     children: elements,
   });

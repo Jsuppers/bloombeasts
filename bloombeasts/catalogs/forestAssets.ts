@@ -87,7 +87,7 @@ export const forestAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.GainResource,
-                      target: AbilityTarget.PlayerGardener,
+                      target: AbilityTarget.Player,
                       resource: ResourceType.Nectar,
                       value: 2
                     }
@@ -136,13 +136,13 @@ export const forestAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.GainResource,
-                      target: AbilityTarget.PlayerGardener,
+                      target: AbilityTarget.Player,
                       resource: ResourceType.Nectar,
                       value: 2
                     },
                     {
                       type: EffectType.DrawCards,
-                      target: AbilityTarget.PlayerGardener,
+                      target: AbilityTarget.Player,
                       value: 1
                     }
                   ]
@@ -182,7 +182,7 @@ export const forestAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.DrawCards,
-                target: AbilityTarget.PlayerGardener,
+                target: AbilityTarget.Player,
                 value: 1
               }
             ]
@@ -236,7 +236,7 @@ export const forestAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.DrawCards,
-                      target: AbilityTarget.PlayerGardener,
+                      target: AbilityTarget.Player,
                       value: 2
                     }
                   ]
@@ -437,9 +437,8 @@ export const forestAssets: AssetCatalog = {
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
-                type: EffectType.ApplyCounter,
+                type: EffectType.DealDamage,
                 target: AbilityTarget.AllEnemies,
-                counter: "Spore",
                 value: 2
               }
             ]
@@ -492,9 +491,8 @@ export const forestAssets: AssetCatalog = {
                   trigger: AbilityTrigger.OnSummon,
                   effects: [
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.AllEnemies,
-                      counter: "Spore",
                       value: 3
                     }
                   ]
@@ -508,9 +506,8 @@ export const forestAssets: AssetCatalog = {
                   trigger: AbilityTrigger.OnDestroy,
                   effects: [
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.AllEnemies,
-                      counter: "Spore",
                       value: 2
                     }
                   ]
@@ -526,11 +523,7 @@ export const forestAssets: AssetCatalog = {
                     {
                       type: EffectType.DealDamage,
                       target: AbilityTarget.AllEnemies,
-                      value: 1,
-                      condition: {
-                        type: ConditionType.HasCounter,
-                        value: "Spore"
-                      }
+                      value: 1
                     }
                   ]
                 }
@@ -600,7 +593,6 @@ export const forestAssets: AssetCatalog = {
       id: "forest-mission",
       type: "mission",
       affinity: "forest",
-      missionNumber: 2,
       name: "Forest Mission",
       description: "Forest affinity mission",
       assets: [

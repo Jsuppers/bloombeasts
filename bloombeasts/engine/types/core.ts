@@ -4,16 +4,11 @@
 
 import type { StructuredAbility, AbilityEffect } from './abilities';
 
-export type Affinity = 'Forest' | 'Fire' | 'Water' | 'Sky' | 'Generic';
+export type Affinity = 'Forest' | 'Fire' | 'Water' | 'Sky' | 'Generic' | 'Boss';
 
 export type CardType = 'Magic' | 'Trap' | 'Bloom' | 'Habitat' | 'Buff';
 
-export type CounterType = 'XP' | 'Spore' | 'Burn' | 'Freeze' | 'Soot' | 'Entangle';
-
-export interface Counter {
-  type: CounterType;
-  amount: number;
-}
+// Counter types removed to reduce game complexity
 
 /**
  * Base card interface
@@ -24,6 +19,8 @@ export interface Card {
   type: CardType;
   cost: number;
   titleColor?: string;  // Optional custom color for card title (hex color, e.g., '#000000')
+  instanceId?: string;  // Optional instance ID for tracking unique card instances in battle
+  level?: number;  // Optional runtime level for card instances (not present in card definitions)
 }
 
 /**
@@ -78,7 +75,6 @@ export interface TrapCard extends Card {
   type: 'Trap';
   activation: TrapActivation;  // Structured activation instead of string
   abilities: Ability[];         // Standardized to use abilities like BloomBeast cards
-  counters?: Counter[];  // Optional counters on the trap card
 }
 
 /**
@@ -88,7 +84,6 @@ export interface HabitatCard extends Card {
   type: 'Habitat';
   affinity: Affinity;
   abilities: Ability[];  // Standardized to use abilities like BloomBeast cards
-  counters?: Counter[];  // Optional counters on the habitat card
 }
 
 /**
@@ -99,7 +94,6 @@ export interface BuffCard extends Card {
   affinity?: Affinity;  // Optional affinity for buff cards
   abilities: Ability[];  // Standardized to use abilities like BloomBeast cards
   duration?: number;  // Optional turn duration (undefined = permanent)
-  counters?: Counter[];  // Optional counters on the buff card
 }
 
 /**

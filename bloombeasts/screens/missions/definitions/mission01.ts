@@ -36,20 +36,11 @@ export const mission01: Mission = {
         dropChance: 1.0,
       },
     ],
-    itemRewards: [
-      {
-        itemId: 'token',
-        minAmount: 5,
-        maxAmount: 15,
-        dropChance: 0.8,
-      },
-      {
-        itemId: 'diamond',
-        minAmount: 1,
-        maxAmount: 3,
-        dropChance: 0.3,
-      },
-    ],
+    coinRewards: {
+      minAmount: 50,
+      maxAmount: 150,
+      dropChance: 1.0,
+    },
   },
 
   timesCompleted: 0,

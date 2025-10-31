@@ -233,22 +233,20 @@ export function validateStatGainsProgression(card: BloomBeastCard): void {
  * @returns The card data from the JSON catalog
  */
 export function loadCardFromJSON(cardId: string, catalogName: string): any {
-  const fs = require('fs');
-  const path = require('path');
+  // Import the catalog dynamically from TypeScript files
+  const catalogs = require('../../../catalogs');
+  const catalogKey = `${catalogName}Assets`;
+  const catalog = catalogs[catalogKey];
 
-  // Path to catalog file from test location
-  // Tests are in bloombeasts/engine/cards/__tests__/
-  // Catalogs are in assets/catalogs/
-  const catalogPath = path.join(__dirname, '../../../../assets/catalogs', `${catalogName}Assets.json`);
-
-  // Read and parse the JSON file
-  const catalogData = JSON.parse(fs.readFileSync(catalogPath, 'utf-8'));
+  if (!catalog) {
+    throw new Error(`Catalog '${catalogKey}' not found. Available catalogs: ${Object.keys(catalogs).join(', ')}`);
+  }
 
   // Find the card by ID in the data array
-  const cardEntry = catalogData.data.find((entry: any) => entry.id === cardId);
+  const cardEntry = catalog.data.find((entry: any) => entry.id === cardId);
 
   if (!cardEntry) {
-    throw new Error(`Card '${cardId}' not found in ${catalogName}Assets.json`);
+    throw new Error(`Card '${cardId}' not found in ${catalogKey}`);
   }
 
   // Return the card data
@@ -256,11 +254,11 @@ export function loadCardFromJSON(cardId: string, catalogName: string): any {
 }
 
 /**
- * Load multiple cards from JSON catalog by IDs
+ * Load multiple cards from TypeScript catalog by IDs
  *
  * @param cardIds - Array of card IDs to load
  * @param catalogName - The catalog name
- * @returns Array of card data from the JSON catalog
+ * @returns Array of card data from the TypeScript catalog
  */
 export function loadCardsFromJSON(cardIds: string[], catalogName: string): any[] {
   return cardIds.map(id => loadCardFromJSON(id, catalogName));

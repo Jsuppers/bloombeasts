@@ -171,9 +171,8 @@ export const fireAssets: AssetCatalog = {
             trigger: AbilityTrigger.OnAttack,
             effects: [
               {
-                type: EffectType.ApplyCounter,
+                type: EffectType.DealDamage,
                 target: AbilityTarget.Target,
-                counter: "Burn",
                 value: 1
               }
             ]
@@ -226,9 +225,8 @@ export const fireAssets: AssetCatalog = {
                   trigger: AbilityTrigger.OnAttack,
                   effects: [
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.Target,
-                      counter: "Burn",
                       value: 2
                     }
                   ]
@@ -246,9 +244,8 @@ export const fireAssets: AssetCatalog = {
                   },
                   effects: [
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.AllEnemies,
-                      counter: "Burn",
                       value: 2
                     }
                   ]
@@ -262,9 +259,8 @@ export const fireAssets: AssetCatalog = {
                   trigger: AbilityTrigger.OnAttack,
                   effects: [
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.Target,
-                      counter: "Burn",
                       value: 3
                     }
                   ]
@@ -274,14 +270,13 @@ export const fireAssets: AssetCatalog = {
                   trigger: AbilityTrigger.OnSummon,
                   effects: [
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.AllEnemies,
-                      counter: "Burn",
                       value: 3
                     },
                     {
                       type: EffectType.DealDamage,
-                      target: "OpponentGardener",
+                      target: "Opponent",
                       value: 2
                     }
                   ]
@@ -377,9 +372,8 @@ export const fireAssets: AssetCatalog = {
                       value: 2
                     },
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.Attacker,
-                      counter: "Burn",
                       value: 1
                     }
                   ]
@@ -402,9 +396,8 @@ export const fireAssets: AssetCatalog = {
                       duration: EffectDuration.WhileOnField
                     },
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.Target,
-                      counter: "Soot",
                       value: 2
                     }
                   ]
@@ -427,9 +420,8 @@ export const fireAssets: AssetCatalog = {
                       duration: EffectDuration.WhileOnField
                     },
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.Attacker,
-                      counter: "Burn",
                       value: 3
                     }
                   ]
@@ -444,9 +436,8 @@ export const fireAssets: AssetCatalog = {
                       value: "reflected"
                     },
                     {
-                      type: EffectType.ApplyCounter,
+                      type: EffectType.DealDamage,
                       target: AbilityTarget.Attacker,
-                      counter: "Burn",
                       value: 2
                     }
                   ]
@@ -555,7 +546,7 @@ export const fireAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.DealDamage,
-                      target: "OpponentGardener",
+                      target: "Opponent",
                       value: 5
                     },
                     {
@@ -592,7 +583,7 @@ export const fireAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.DealDamage,
-                      target: "OpponentGardener",
+                      target: "Opponent",
                       value: 8
                     },
                     {
@@ -669,7 +660,6 @@ export const fireAssets: AssetCatalog = {
       id: "fire-mission",
       type: "mission",
       affinity: "fire",
-      missionNumber: 1,
       name: "Fire Mission",
       description: "Fire affinity mission",
       assets: [

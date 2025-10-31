@@ -11,7 +11,7 @@ import {
   validateStatGainsProgression,
   loadCardFromJSON,
 } from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+import { StructuredAbility, AbilityTrigger } from '../../types/abilities.js';
 
 const AQUA_PEBBLE = loadCardFromJSON('aqua-pebble', 'water');
 
@@ -42,7 +42,7 @@ describe('Aqua Pebble Card', () => {
     });
 
     test('should have correct trigger', () => {
-      expect(AQUA_PEBBLE.abilities[0].trigger).toBe('OnAllySummon');
+      expect(AQUA_PEBBLE.abilities[0].trigger).toBe(AbilityTrigger.OnAllySummon);
     });
 
     test('should have correct effects', () => {
@@ -87,7 +87,7 @@ describe('Aqua Pebble Card', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnAllySummon');
+      expect(ability.trigger).toBe(AbilityTrigger.OnAllySummon);
     });
   });
 
@@ -110,7 +110,7 @@ describe('Aqua Pebble Card', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnOwnEndOfTurn');
+      expect(ability.trigger).toBe(AbilityTrigger.OnOwnEndOfTurn);
     });
   });
 
@@ -133,7 +133,7 @@ describe('Aqua Pebble Card', () => {
       const upgrade = AQUA_PEBBLE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnAllySummon');
+      expect(ability.trigger).toBe(AbilityTrigger.OnAllySummon);
     });
   });
 

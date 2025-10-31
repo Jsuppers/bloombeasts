@@ -42,17 +42,7 @@ export function canAttack(beast: BloomBeastInstance): boolean {
     return false;
   }
 
-  // Check freeze status
-  const frozen = beast.counters.find(c => c.type === 'Freeze');
-  if (frozen && frozen.amount > 0) {
-    return false;
-  }
-
-  // Check entangle status
-  const entangled = beast.counters.find(c => c.type === 'Entangle');
-  if (entangled && entangled.amount > 0) {
-    return false;
-  }
+  // Counter checks removed
 
   // Check attack prevention effects
   const preventAttack = beast.statusEffects?.find(e => e.type === 'prevent-attack');

@@ -129,7 +129,7 @@ export const buffAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.GainResource,
-                target: AbilityTarget.PlayerGardener,
+                target: AbilityTarget.Player,
                 resource: ResourceType.Nectar,
                 value: 1
               }

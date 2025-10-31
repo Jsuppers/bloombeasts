@@ -11,7 +11,7 @@ import {
   validateStatGainsProgression,
   loadCardFromJSON,
 } from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+import { StructuredAbility, AbilityTrigger } from '../../types/abilities.js';
 
 const CINDER_PUP = loadCardFromJSON('cinder-pup', 'fire');
 
@@ -42,7 +42,7 @@ describe('Cinder Pup Card', () => {
     });
 
     test('should have correct trigger', () => {
-      expect(CINDER_PUP.abilities[0].trigger).toBe('OnAttack');
+      expect(CINDER_PUP.abilities[0].trigger).toBe(AbilityTrigger.OnAttack);
     });
 
     test('should have correct effects', () => {
@@ -87,7 +87,7 @@ describe('Cinder Pup Card', () => {
       const upgrade = CINDER_PUP.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnAttack');
+      expect(ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
   });
 
@@ -110,7 +110,7 @@ describe('Cinder Pup Card', () => {
       const upgrade = CINDER_PUP.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('Activated');
+      expect(ability.trigger).toBe(AbilityTrigger.OnSummon);
     });
   });
 
@@ -133,7 +133,7 @@ describe('Cinder Pup Card', () => {
       const upgrade = CINDER_PUP.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnAttack');
+      expect(ability.trigger).toBe(AbilityTrigger.OnAttack);
     });
   });
 

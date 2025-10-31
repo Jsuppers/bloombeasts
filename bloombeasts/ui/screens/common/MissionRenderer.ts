@@ -8,6 +8,7 @@ import { DIMENSIONS } from '../../styles/dimensions';
 import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 import type { MissionDisplay } from '../../../../bloombeasts/gameManager';
 import type { UINodeType } from '../ScreenUtils';
+import { BindingType, UIState } from '../../types/BindingManager';
 
 /**
  * Mission card dimensions
@@ -21,9 +22,6 @@ export const MISSION_DIMENSIONS = {
  * Props for reactive mission component
  */
 export interface ReactiveMissionRendererProps {
-  // Source bindings (not derived)
-  missionsBinding: any; // Binding<MissionDisplay[]>
-  scrollOffsetBinding: any; // Binding<number>
   slotIndex: number;
   missionsPerPage: number;
   onClick?: (missionId: string) => void;
@@ -31,12 +29,9 @@ export interface ReactiveMissionRendererProps {
 
 /**
  * Create a reactive mission component that updates based on bindings
- * Uses Horizon-compatible pattern without UINode.if() to avoid type checking errors
  */
 export function createReactiveMissionComponent(ui: UIMethodMappings, props: ReactiveMissionRendererProps): UINodeType {
   const {
-    missionsBinding,
-    scrollOffsetBinding,
     slotIndex,
     missionsPerPage,
     onClick,
@@ -45,41 +40,19 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
   // Track mission data for click handler
   let trackedMission: MissionDisplay | null = null;
 
-  // Create dependencies array
-  // ALWAYS include assetsLoadedBinding as first dependency to prevent premature asset lookups
-  const dependencies = [ui.assetsLoadedBinding, missionsBinding, scrollOffsetBinding];
-
   // Mission card positions
   const positions = {
-    name: { x: 97, y: 10 },
     image: { x: 16, y: 16 },
-    level: { x: 97, y: 43 },
-    difficulty: { x: 97, y: 66 },
-    description: { x: 13, y: 98 },
+    text: { x: 97, y: 10 },
   };
 
   const cardWidth = MISSION_DIMENSIONS.width;
   const cardHeight = MISSION_DIMENSIONS.height;
   const beastSize = 70;
 
-  // Helper to get difficulty color
-  const getDifficultyColor = (difficulty: string): string => {
-    switch (difficulty) {
-      case 'tutorial': return '#90EE90';
-      case 'easy': return '#87CEEB';
-      case 'normal': return '#FFD700';
-      case 'hard': return '#FF6347';
-      case 'expert': return '#8B008B';
-      case 'legendary': return '#FF1493';
-      default: return COLORS.textSecondary;
-    }
-  };
-
-  // Create reactive bindings for all mission properties
-  // args[0] = assetsLoadedBinding, args[1] = missionsBinding, args[2] = scrollOffsetBinding
-  const missionNameBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[1];
-    const offset: number = args[2];
+  // Create a single binding for all text content
+  const missionTextBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+    const offset: number = uiState.missions?.scrollOffset ?? 0;
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -87,54 +60,17 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
     // Track the mission for click handler
     trackedMission = mission;
 
-    return mission?.name || '';
-  });
-
-  const levelTextBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[1];
-    const offset: number = args[2];
-    const pageStart = offset * missionsPerPage;
-    const missionIndex = pageStart + slotIndex;
-    const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-    return mission ? `Level ${mission.level}` : '';
-  });
-
-  const difficultyTextBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[1];
-    const offset: number = args[2];
-    const pageStart = offset * missionsPerPage;
-    const missionIndex = pageStart + slotIndex;
-    const mission = missionIndex < missions.length ? missions[missionIndex] : null;
     if (!mission) return '';
 
     // Format difficulty nicely (capitalize first letter)
     const formattedDifficulty = mission.difficulty.charAt(0).toUpperCase() + mission.difficulty.slice(1);
-    return formattedDifficulty;
+
+    // Combine all text with line breaks
+    return `${mission.name}\nLevel ${mission.level} - ${formattedDifficulty}\n\n${mission.description}`;
   });
 
-  const difficultyColorBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[1];
-    const offset: number = args[2];
-    const pageStart = offset * missionsPerPage;
-    const missionIndex = pageStart + slotIndex;
-    const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-    return mission ? getDifficultyColor(mission.difficulty) : COLORS.textSecondary;
-  });
-
-  const descriptionBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[1];
-    const offset: number = args[2];
-    const pageStart = offset * missionsPerPage;
-    const missionIndex = pageStart + slotIndex;
-    const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-    return mission?.description || '';
-  });
-
-  const missionImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
-    if (!assetsLoaded) return null;
-    const missions: MissionDisplay[] = args[1];
-    const offset: number = args[2];
+  const missionImageBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+    const offset: number = uiState.missions?.scrollOffset ?? 0;
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -151,11 +87,8 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
     return ui.assetIdToImageSource?.(missionImageName) ?? null;
   });
 
-  const beastImageBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const assetsLoaded = args[0]; // First dependency is always assetsLoadedBinding
-    if (!assetsLoaded) return null;
-    const missions: MissionDisplay[] = args[1];
-    const offset: number = args[2];
+  const beastImageBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+    const offset: number = uiState.missions?.scrollOffset ?? 0;
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -167,18 +100,16 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
     return ui.assetIdToImageSource?.(beastAssetId) ?? null;
   });
 
-  const opacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[1];
-    const offset: number = args[2];
+  const opacityBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+    const offset: number = uiState.missions?.scrollOffset ?? 0;
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
     return mission?.isAvailable ? 1 : 0.4;
   });
 
-  const lockOverlayOpacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[1];
-    const offset: number = args[2];
+  const lockOverlayOpacityBinding = ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+    const offset: number = uiState.missions?.scrollOffset ?? 0;
     const pageStart = offset * missionsPerPage;
     const missionIndex = pageStart + slotIndex;
     const mission = missionIndex < missions.length ? missions[missionIndex] : null;
@@ -190,15 +121,6 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
     }
 
     return lockOpacity;
-  });
-
-  const checkmarkOpacityBinding = ui.Binding.derive(dependencies, (...args: any[]) => {
-    const missions: MissionDisplay[] = args[1];
-    const offset: number = args[2];
-    const pageStart = offset * missionsPerPage;
-    const missionIndex = pageStart + slotIndex;
-    const mission = missionIndex < missions.length ? missions[missionIndex] : null;
-    return (mission && mission.isCompleted) ? 1 : 0;
   });
 
   // Render all layers - use opacity to hide/show
@@ -228,56 +150,18 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
       },
     }),
 
-    // Mission name
+    // All mission text (name, level, difficulty, description)
     ui.Text({
-      text: missionNameBinding,
-      numberOfLines: 1,
+      text: missionTextBinding,
+      numberOfLines: 8,
       style: {
         position: 'absolute',
-        left: positions.name.x,
-        top: positions.name.y,
-        fontSize: DIMENSIONS.fontSize.xl,
-        color: COLORS.textPrimary,
-        fontWeight: 'bold',
-      },
-    }),
-
-    // Level
-    ui.Text({
-      text: levelTextBinding,
-      style: {
-        position: 'absolute',
-        left: positions.level.x,
-        top: positions.level.y,
-        fontSize: DIMENSIONS.fontSize.xs,
-        color: COLORS.textSecondary,
-      },
-    }),
-
-    // Difficulty (below level, aligned left with name and level)
-    ui.Text({
-      text: difficultyTextBinding,
-      style: {
-          position: 'absolute',
-          left: positions.difficulty.x,
-          top: positions.difficulty.y,
-          fontSize: DIMENSIONS.fontSize.xs,
-          color: difficultyColorBinding,
-          fontWeight: 'bold',
-        },
-    }),
-
-    // Description
-    ui.Text({
-      text: descriptionBinding,
-      numberOfLines: 3,
-      style: {
-        position: 'absolute',
-        left: positions.description.x,
-        top: positions.description.y,
-        width: cardWidth - 26,
+        left: positions.text.x,
+        top: positions.text.y,
+        width: cardWidth - positions.text.x - 10,
         fontSize: DIMENSIONS.fontSize.sm,
         color: COLORS.textPrimary,
+        lineHeight: 16,
       },
     }),
 
@@ -293,7 +177,7 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
         opacity: lockOverlayOpacityBinding,
       },
       children: ui.Text({
-        text: new ui.Binding('🔒'),
+        text: '🔒',
         style: {
           position: 'absolute',
           left: cardWidth / 2 - 15,
@@ -302,18 +186,6 @@ export function createReactiveMissionComponent(ui: UIMethodMappings, props: Reac
           color: COLORS.textPrimary,
         },
       }),
-    }),
-
-    // Completed checkmark
-    ui.Text({
-      text: new ui.Binding('✅'),
-      style: {
-        position: 'absolute',
-        right: 10,
-        top: 10,
-        fontSize: 20,
-        opacity: checkmarkOpacityBinding,
-      },
     }),
   ];
 

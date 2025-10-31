@@ -14,14 +14,11 @@ export class BattleBackground {
   }
 
   /**
-   * Create full-screen background
+   * Create full-screen background - assets preload automatically
    */
   createBackground(): UINodeType {
     return this.ui.Image({
-      source: this.ui.Binding.derive(
-        [this.ui.assetsLoadedBinding],
-        (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
-      ),
+      source: this.ui.assetIdToImageSource?.('background') || null,
       style: {
         position: 'absolute',
         width: gameDimensions.panelWidth,
@@ -33,14 +30,11 @@ export class BattleBackground {
   }
 
   /**
-   * Create playboard overlay image
+   * Create playboard overlay image - assets preload automatically
    */
   createPlayboard(): UINodeType {
     return this.ui.Image({
-      source: this.ui.Binding.derive(
-        [this.ui.assetsLoadedBinding],
-        (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('playboard') : null
-      ),
+      source: this.ui.assetIdToImageSource?.('playboard') || null,
       style: {
         position: 'absolute',
         width: gameDimensions.panelWidth,

@@ -54,6 +54,7 @@ export type LayoutStyle = {
     alignItems?: 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline';
     alignSelf?: 'auto' | 'flex-start' | 'flex-end' | 'center' | 'stretch' | 'baseline';
     overflow?: 'visible' | 'hidden';
+    gap?: Bindable<number>;  // Gap between flex children
 
     flex?: number;
     flexGrow?: number;

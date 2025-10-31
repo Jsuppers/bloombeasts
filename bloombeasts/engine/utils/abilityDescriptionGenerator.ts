@@ -104,9 +104,7 @@ function getCostText(cost: any): string {
   if (cost.type === 'sacrifice') {
     return `Sacrifice ${cost.value} unit${cost.value > 1 ? 's' : ''}:`;
   }
-  if (cost.type === 'remove-counter') {
-    return `Remove ${cost.value} ${cost.counter} counter${cost.value > 1 ? 's' : ''}:`;
-  }
+  // Counter costs removed
   return '';
 }
 
@@ -129,9 +127,9 @@ function getTargetText(target: AbilityTarget): string {
       return 'adjacent allies';
     case AbilityTarget.AdjacentEnemies:
       return 'adjacent enemies';
-    case AbilityTarget.OpponentGardener:
+    case AbilityTarget.Opponent:
       return 'opponent';
-    case AbilityTarget.PlayerGardener:
+    case AbilityTarget.Player:
       return 'you';
     case AbilityTarget.RandomEnemy:
       return 'random enemy';
@@ -220,16 +218,7 @@ function getEffectText(effect: AbilityEffect): string {
       return `draw ${effect.value} card${effect.value > 1 ? 's' : ''}`;
     }
 
-    case EffectType.ApplyCounter: {
-      return `place ${effect.value} ${effect.counter} counter${effect.value > 1 ? 's' : ''} on ${target}`;
-    }
-
-    case EffectType.RemoveCounter: {
-      if (effect.counter) {
-        return `remove ${effect.counter} counters from ${target}`;
-      }
-      return `remove all counters from ${target}`;
-    }
+    // Counter effects removed
 
     case EffectType.CannotBeTargeted: {
       const byWhat = effect.by.join(', ').replace(/,([^,]*)$/, ' or$1');

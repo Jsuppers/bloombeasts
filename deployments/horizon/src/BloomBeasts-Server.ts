@@ -11,9 +11,12 @@
 import * as hz from 'horizon/core';
 import { Component, Player, NetworkEvent } from 'horizon/core';
 
-// Import types from standalone bundle
+// Import types and utilities from standalone bundle
 import { BloomBeasts } from './BloomBeasts-GameEngine-Standalone';
 type PlayerData = BloomBeasts.PlayerData;
+
+// Import shared utility for creating default player data
+const createDefaultPlayerData = BloomBeasts.createDefaultPlayerData;
 
 /**
  * NetworkEvent payload types for communication with client
@@ -191,18 +194,41 @@ class BloomBeastsServer extends Component {
         varKey
       );
 
-      if (result === null || result === 0 || result === undefined) {
-        console.log('[Server] No saved data for player:', player.name);
-        return null;
+      if (result === null || result === 0 || result === undefined ||
+          (typeof result === 'object' && Object.keys(result).length === 0)) {
+        console.log('[Server] No saved data for player:', player.name, '- creating default data');
+
+        // Create default player data with Horizon player name
+        const defaultData = createDefaultPlayerData(player.name.get());
+
+        // Save it to persistent storage
+        this.world.persistentStorage.setPlayerVariable(
+          player,
+          varKey,
+          defaultData as any
+        );
+
+        console.log('[Server] ✅ Created and saved default player data for:', player.name);
+        return defaultData;
       }
 
-      if (typeof result !== 'object' || Object.keys(result).length === 0) {
-        console.log('[Server] Empty or invalid data for player:', player.name);
-        return null;
+      const playerData = result as unknown as PlayerData;
+
+      // Sync player name with Horizon player name if different
+      if (playerData.name !== player.name.get()) {
+        console.log(`[Server] Syncing player name from "${playerData.name}" to "${player.name}"`);
+        playerData.name = player.name.get();
+
+        // Save the updated name
+        this.world.persistentStorage.setPlayerVariable(
+          player,
+          varKey,
+          playerData as any
+        );
       }
 
       console.log('[Server] ✅ Loaded player data for:', player.name);
-      return result as unknown as PlayerData;
+      return playerData;
     } catch (error) {
       console.error('[Server] ❌ Failed to load player data:', error);
       return null;

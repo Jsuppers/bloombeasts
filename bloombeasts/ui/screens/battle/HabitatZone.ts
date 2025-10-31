@@ -2,6 +2,7 @@
  * Habitat zone rendering (center of board)
  */
 
+import { BindingType } from '../../types/BindingManager';
 import { BattleDisplay } from '../../../gameManager';
 import { UINodeType } from '../ScreenUtils';
 import type { BattleComponentWithCallbacks } from './types';
@@ -9,12 +10,10 @@ import { habitatShiftCardDimensions, battleBoardAssetPositions } from './types';
 
 export class HabitatZone {
   private ui: BattleComponentWithCallbacks['ui'];
-  private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
   private onCardDetailSelected?: (card: any) => void;
 
   constructor(props: BattleComponentWithCallbacks) {
     this.ui = props.ui;
-    this.battleDisplay = props.battleDisplay;
     this.onCardDetailSelected = props.onCardDetailSelected;
   }
 
@@ -33,9 +32,8 @@ export class HabitatZone {
         width: habitatShiftCardDimensions.width,
         height: habitatShiftCardDimensions.height,
         // Hide if no habitat
-        display: this.ui.Binding.derive(
-          [this.battleDisplay],
-          (state: BattleDisplay | null) => state?.habitatZone ? 'flex' : 'none'
+        display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) =>
+          state?.habitatZone ? 'flex' : 'none'
         ),
       },
       children: [
@@ -44,7 +42,7 @@ export class HabitatZone {
           onClick: () => {
             console.log('[HabitatZone] Habitat card clicked, showing detail');
             // Get current habitat at click time
-            const state = this.battleDisplay;
+            const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay);
             if (state && typeof state === 'object' && 'habitatZone' in state) {
               const habitat = (state as any).habitatZone;
               if (habitat) {
@@ -71,14 +69,11 @@ export class HabitatZone {
                 height: 70,
               },
               children: this.ui.Image({
-                source: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay | null) => {
-                    if (!state?.habitatZone) return null;
-                    const habitat = state.habitatZone;
-                    return this.ui.assetIdToImageSource?.(habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-'));
-                  }
-                ),
+                source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+                  if (!state?.habitatZone) return null;
+                  const habitat = state?.habitatZone;
+                  return this.ui.assetIdToImageSource?.(habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-'));
+                }),
                 style: {
                   width: 70,
                   height: 70,
@@ -101,71 +96,9 @@ export class HabitatZone {
                 shadowRadius: 10,
               },
             }),
-
-            // TODO: Counter badges - need to implement without Binding.derive in children
-            // For now, counter badges are disabled until we implement proper reactive rendering
           ],
         }),
       ],
-    });
-  }
-
-  /**
-   * Create counter badges for habitat
-   */
-  private createCounterBadges(counters: any[], basePos: { x: number; y: number }): UINodeType {
-    const counterMap = new Map<string, number>();
-    counters.forEach((counter: any) => {
-      const current = counterMap.get(counter.type) || 0;
-      counterMap.set(counter.type, current + counter.amount);
-    });
-
-    const counterConfigs: Record<string, { emoji: string; color: string }> = {
-      'Spore': { emoji: '🍄', color: '#51cf66' },
-    };
-
-    const badges = Array.from(counterMap.entries()).map(([type, amount], index) => {
-      if (amount <= 0) return null;
-
-      const config = counterConfigs[type] || { emoji: '●', color: '#868e96' };
-      const badgeSize = 28;
-      const badgeSpacing = 32;
-
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          right: 10 + (index * badgeSpacing),
-          top: 5,
-          width: badgeSize,
-          height: badgeSize,
-          backgroundColor: config.color,
-          borderRadius: badgeSize / 2,
-          borderWidth: 2,
-          borderColor: '#fff',
-          justifyContent: 'center',
-          alignItems: 'center',
-        },
-        children: this.ui.Text({
-          text: `${config.emoji} ${amount}`,
-          style: {
-            fontSize: 16,
-            fontWeight: 'bold',
-            color: '#fff',
-            textAlign: 'center',
-          },
-        }),
-      });
-    }).filter(Boolean);
-
-    return this.ui.View({
-      style: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-      },
-      children: badges,
     });
   }
 }

@@ -87,7 +87,6 @@ export interface UIMissionDisplay {
   progress?: number;
   requirement?: number;
   rewards?: {
-    tokens?: number;
-    diamonds?: number;
+    coins?: number;
   };
 }

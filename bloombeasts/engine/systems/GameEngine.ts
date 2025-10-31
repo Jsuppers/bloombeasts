@@ -2,7 +2,7 @@
  * Game Engine - Main game controller and state manager
  */
 
-import { GameState, Player, Phase, BloomBeastInstance, BattleState } from '../types/game';
+import { GameState, Player, Phase, BloomBeastInstance, BattlePhase } from '../types/game';
 import { AnyCard, BloomBeastCard, TrapCard, MagicCard, HabitatCard, TrapTrigger } from '../types/core';
 import { CombatSystem } from './CombatSystem';
 import { AbilityProcessor } from './AbilityProcessor';
@@ -94,7 +94,7 @@ export class GameEngine {
     return {
       turn: 1,
       phase: 'Setup',
-      battleState: BattleState.Setup,
+      battleState: BattlePhase.Setup,
       activePlayer: 0,
       players: [
         this.createPlayer('Player 1'),
@@ -122,7 +122,6 @@ export class GameEngine {
       buffZone: [null, null],
       graveyard: [],
       summonsThisTurn: 0,
-      habitatCounters: new SimpleMap(),
     };
   }
 
@@ -163,7 +162,7 @@ export class GameEngine {
 
     // Transition to first player's turn
     this.state.phase = 'Main';
-    this.state.battleState = BattleState.Player1StartOfTurn;
+    this.state.battleState = BattlePhase.Player1StartOfTurn;
     await this.transitionState();
   }
 
@@ -173,7 +172,7 @@ export class GameEngine {
   private async transitionState(): Promise<void> {
     // Check for win condition before any state processing
     if (this.checkForBattleEnd()) {
-      this.state.battleState = BattleState.Finished;
+      this.state.battleState = BattlePhase.Finished;
       return;
     }
 
@@ -181,39 +180,39 @@ export class GameEngine {
     Logger.debug(`Transitioning from state: ${currentState}`);
 
     switch (currentState) {
-      case BattleState.Player1StartOfTurn:
+      case BattlePhase.Player1StartOfTurn:
         await this.processPlayerStartOfTurn(0);
-        this.state.battleState = BattleState.Player1Playing;
+        this.state.battleState = BattlePhase.Player1Playing;
         break;
 
-      case BattleState.Player1Playing:
+      case BattlePhase.Player1Playing:
         // This state waits for player input (endTurn call)
         break;
 
-      case BattleState.Player1EndOfTurn:
+      case BattlePhase.Player1EndOfTurn:
         await this.processPlayerEndOfTurn(0);
-        this.state.battleState = BattleState.Player2StartOfTurn;
+        this.state.battleState = BattlePhase.Player2StartOfTurn;
         await this.transitionState();
         break;
 
-      case BattleState.Player2StartOfTurn:
+      case BattlePhase.Player2StartOfTurn:
         await this.processPlayerStartOfTurn(1);
-        this.state.battleState = BattleState.Player2Playing;
+        this.state.battleState = BattlePhase.Player2Playing;
         break;
 
-      case BattleState.Player2Playing:
+      case BattlePhase.Player2Playing:
         // This state waits for player input (endTurn call)
         break;
 
-      case BattleState.Player2EndOfTurn:
+      case BattlePhase.Player2EndOfTurn:
         await this.processPlayerEndOfTurn(1);
         // Increment turn counter after both players have played
         this.state.turn++;
-        this.state.battleState = BattleState.Player1StartOfTurn;
+        this.state.battleState = BattlePhase.Player1StartOfTurn;
         await this.transitionState();
         break;
 
-      case BattleState.Finished:
+      case BattlePhase.Finished:
         // Battle has ended
         const result = this.combatSystem.checkWinCondition(this.state);
         this.endMatch(result);
@@ -249,12 +248,11 @@ export class GameEngine {
       }
     }
 
-    // Process counter effects (burn, freeze, etc.)
-    await this.processCounterEffects(activePlayer);
+    // Counter effects removed
 
-    // Check for death after counter effects
+    // Check for death
     if (this.checkForBattleEnd()) {
-      this.state.battleState = BattleState.Finished;
+      this.state.battleState = BattlePhase.Finished;
       return;
     }
 
@@ -284,7 +282,7 @@ export class GameEngine {
 
     // Check for death after end of turn effects
     if (this.checkForBattleEnd()) {
-      this.state.battleState = BattleState.Finished;
+      this.state.battleState = BattlePhase.Finished;
       return;
     }
   }
@@ -306,10 +304,10 @@ export class GameEngine {
     const state = this.ensureGameState();
 
     // Determine which end of turn state to transition to
-    if (state.battleState === BattleState.Player1Playing) {
-      state.battleState = BattleState.Player1EndOfTurn;
-    } else if (state.battleState === BattleState.Player2Playing) {
-      state.battleState = BattleState.Player2EndOfTurn;
+    if (state.battleState === BattlePhase.Player1Playing) {
+      state.battleState = BattlePhase.Player1EndOfTurn;
+    } else if (state.battleState === BattlePhase.Player2Playing) {
+      state.battleState = BattlePhase.Player2EndOfTurn;
     } else {
       Logger.error(`Unexpected state during endTurn: ${state.battleState}`);
       return;
@@ -356,7 +354,6 @@ export class GameEngine {
       currentHealth: (beastCard as any).baseHealth || 0,
       maxHealth: (beastCard as any).baseHealth || 0,
       statusEffects: [],
-      counters: [],
       summoningSickness: true,
       slotIndex: position,
     };
@@ -504,32 +501,7 @@ export class GameEngine {
               this.drawCards(player, effect.value);
               break;
 
-            case EffectType.RemoveCounter:
-              // Remove counters based on target
-              if (effect.target === AbilityTarget.AllUnits) {
-                // Remove from all beasts on both sides
-                for (const beast of player.field) {
-                  if (beast) {
-                    if (effect.counter) {
-                      // Remove specific counter type
-                      beast.counters = beast.counters.filter(c => c.type !== effect.counter);
-                    } else {
-                      // Remove all counters
-                      beast.counters = [];
-                    }
-                  }
-                }
-                for (const beast of opponent.field) {
-                  if (beast) {
-                    if (effect.counter) {
-                      beast.counters = beast.counters.filter(c => c.type !== effect.counter);
-                    } else {
-                      beast.counters = [];
-                    }
-                  }
-                }
-              }
-              break;
+            // Counter effects removed
 
             // Add more effect types as needed
             default:
@@ -574,29 +546,7 @@ export class GameEngine {
    */
   private processHabitatEffect(effect: AbilityEffect, activePlayer: Player, opposingPlayer: Player): void {
     switch (effect.type) {
-      case EffectType.RemoveCounter:
-        // Remove counters from all units
-        if (effect.target === AbilityTarget.AllUnits) {
-          for (const beast of activePlayer.field) {
-            if (beast) {
-              if (effect.counter) {
-                beast.counters = beast.counters.filter(c => c.type !== effect.counter);
-              } else {
-                beast.counters = [];
-              }
-            }
-          }
-          for (const beast of opposingPlayer.field) {
-            if (beast) {
-              if (effect.counter) {
-                beast.counters = beast.counters.filter(c => c.type !== effect.counter);
-              } else {
-                beast.counters = [];
-              }
-            }
-          }
-        }
-        break;
+      // Counter effects removed
 
       // Ongoing effects like stat boosts are handled by the AbilityProcessor during combat
       case EffectType.ModifyStats:
@@ -828,7 +778,7 @@ export class GameEngine {
 
       // Check for battle end after ability effects
       if (this.checkForBattleEnd()) {
-        this.state.battleState = BattleState.Finished;
+        this.state.battleState = BattlePhase.Finished;
       }
     }
   }
@@ -923,39 +873,7 @@ export class GameEngine {
     }
   }
 
-  /**
-   * Process counter effects (burn, freeze, etc.)
-   */
-  private async processCounterEffects(player: Player): Promise<void> {
-    for (const beast of player.field) {
-      if (!beast) continue;
-
-      // Process burn counters
-      const burnCounter = beast.counters.find(c => c.type === 'Burn');
-      if (burnCounter && burnCounter.amount > 0) {
-        beast.currentHealth = Math.max(0, beast.currentHealth - burnCounter.amount);
-        Logger.debug(`${beast.instanceId} took ${burnCounter.amount} burn damage`);
-      }
-
-      // Process freeze counters (reduce by 1 each turn)
-      const freezeCounter = beast.counters.find(c => c.type === 'Freeze');
-      if (freezeCounter && freezeCounter.amount > 0) {
-        freezeCounter.amount--;
-        if (freezeCounter.amount === 0) {
-          beast.counters = beast.counters.filter(c => c.type !== 'Freeze');
-        }
-      }
-
-      // Remove dead beasts
-      if (beast.currentHealth <= 0) {
-        const index = player.field.indexOf(beast);
-        if (index !== -1) {
-          player.field[index] = null;
-          player.graveyard.push(beast as any);
-        }
-      }
-    }
-  }
+  // Counter effects removed to reduce game complexity
 
   /**
    * Clear temporary effects from a beast and revert stat modifications
@@ -1146,7 +1064,7 @@ export class GameEngine {
 
           // Check for battle end immediately
           if (this.checkForBattleEnd()) {
-            this.state.battleState = BattleState.Finished;
+            this.state.battleState = BattlePhase.Finished;
             await this.transitionState();
           }
           return true; // Combat ends, defender died before counter-attacking
@@ -1172,7 +1090,7 @@ export class GameEngine {
 
             // Check for battle end
             if (this.checkForBattleEnd()) {
-              this.state.battleState = BattleState.Finished;
+              this.state.battleState = BattlePhase.Finished;
               await this.transitionState();
             }
           }
@@ -1222,7 +1140,7 @@ export class GameEngine {
 
         // Check for battle end after any death
         if (this.checkForBattleEnd()) {
-          this.state.battleState = BattleState.Finished;
+          this.state.battleState = BattlePhase.Finished;
           await this.transitionState();
         }
       }
@@ -1235,14 +1153,14 @@ export class GameEngine {
       // Check if player was defeated
       if (defendingPlayer.health <= 0) {
         Logger.debug(`${defendingPlayer.name} was defeated!`);
-        this.state.battleState = BattleState.Finished;
+        this.state.battleState = BattlePhase.Finished;
         await this.transitionState();
       }
     }
 
     // Always check for battle end after any damage
     if (this.checkForBattleEnd()) {
-      this.state.battleState = BattleState.Finished;
+      this.state.battleState = BattlePhase.Finished;
       await this.transitionState();
     }
 
@@ -1384,7 +1302,7 @@ export class GameEngine {
                     }
                   }
                 }
-              } else if (effect.target === AbilityTarget.OpponentGardener) {
+              } else if (effect.target === AbilityTarget.Opponent) {
                 const damage = typeof effect.value === 'number' ? effect.value : 0;
                 opponent.health = Math.max(0, opponent.health - damage);
               }
@@ -1431,9 +1349,6 @@ export class GameEngine {
         if (result.modifiedState.players) {
           this.state.players = result.modifiedState.players;
         }
-        if (result.modifiedState.habitatCounters) {
-          this.state.habitatCounters = result.modifiedState.habitatCounters;
-        }
         if (result.modifiedState.drawCardsQueued !== undefined) {
           const playerIndex = result.modifiedState.drawForPlayerIndex ?? this.state.activePlayer;
           const player = this.state.players[playerIndex];
@@ -1449,7 +1364,7 @@ export class GameEngine {
 
     // Always check for battle end after applying ability results
     if (this.checkForBattleEnd()) {
-      this.state.battleState = BattleState.Finished;
+      this.state.battleState = BattlePhase.Finished;
       // Don't transition immediately here as we might be in the middle of processing
       // The next game loop iteration will handle the transition
     }

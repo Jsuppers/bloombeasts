@@ -9,18 +9,20 @@ import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { DIMENSIONS, GAPS } from '../styles/dimensions';
 import { sideMenuButtonDimensions } from '../constants/dimensions';
 import { deckEmoji } from '../constants/emojis';
-import type { MenuStats, CardDetailDisplay } from '../../../bloombeasts/gameManager';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu, createTextRow } from './common/SideMenu';
-import { createCardComponent, createReactiveCardComponent, CARD_DIMENSIONS } from './common/CardRenderer';
+import { createReactiveCardComponent } from './common/CardRenderer';
+import { type PopupButton } from '../common/Popup';
+import type { ButtonColor } from '../common/Button';
+import { BindingType, UIState } from '../types/BindingManager';
 import { createReactiveCardDetailPopup } from './common/CardDetailPopup';
 
 export interface CardsScreenProps {
   ui: UIMethodMappings;
-  playerDataBinding: any; // PlayerData binding - screens derive what they need
   onCardSelect?: (cardId: string) => void;
   onNavigate?: (screen: string) => void;
   onRenderNeeded?: () => void;
+  playSfx?: (sfxId: string) => void;
 }
 
 /**
@@ -30,29 +32,23 @@ export class CardsScreen {
   // UI methods (injected)
   private ui: UIMethodMappings;
 
-  private playerDataBinding: any;
-  private scrollOffset: any;
-  private selectedCardId: any; // Binding<string | null>
-
-  // Track scroll offset for button handlers (can't use .get() in Horizon)
-  private scrollOffsetValue: number = 0;
-
   private cardsPerRow = 4;
   private rowsPerPage = 2;
   private onCardSelect?: (cardId: string) => void;
   private onNavigate?: (screen: string) => void;
   private onRenderNeeded?: () => void;
+  private playSfx?: (sfxId: string) => void;
 
   constructor(props: CardsScreenProps) {
     this.ui = props.ui;
-    this.selectedCardId = new this.ui.Binding<string | null>(null);
-    this.playerDataBinding = props.playerDataBinding;
     this.onCardSelect = props.onCardSelect;
     this.onNavigate = props.onNavigate;
     this.onRenderNeeded = props.onRenderNeeded;
-    this.scrollOffset = new this.ui.Binding(0);
+    this.playSfx = props.playSfx;
+
   }
 
+  
   /**
    * Create a single card slot using reactive card component
    * Passes playerDataBinding to avoid binding nesting
@@ -67,11 +63,16 @@ export class CardsScreen {
         marginRight: hasMarginRight ? GAPS.cards : 0,
       },
       children: createReactiveCardComponent(this.ui, {
-        playerDataBinding: this.playerDataBinding,
-        scrollOffsetBinding: this.scrollOffset,
+        mode: 'slot',
         slotIndex,
         cardsPerPage,
-        onClick: (cardId: string) => this.handleCardClick(cardId),
+        onClick: () => {
+          const state = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+          const cardId = state.cards?.selectedCardId;
+          if (cardId) {
+            this.handleCardClick(cardId);
+          }
+        },
         showDeckIndicator: true,
       }),
     });
@@ -83,7 +84,6 @@ export class CardsScreen {
    */
   private createCardGrid(): UINodeType {
     const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-
     return this.ui.View({
       style: {
         position: 'absolute',
@@ -95,7 +95,7 @@ export class CardsScreen {
       children: [
         // Empty state - derive directly from playerDataBinding
         ...(this.ui.UINode ? [this.ui.UINode.if(
-          this.playerDataBinding.derive((pd: any) => {
+          this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
             const cards = pd?.cards?.collected || [];
             console.log('[CardsScreen] Empty state check - cards.length:', cards.length);
             return cards.length === 0 ? true : false;
@@ -107,7 +107,7 @@ export class CardsScreen {
               alignItems: 'center',
             },
             children: this.ui.Text({
-              text: new this.ui.Binding('No cards in your collection yet.'),
+              text: 'No cards in your collection yet.',
               style: {
                 fontSize: DIMENSIONS.fontSize.xl,
                 color: COLORS.textPrimary,
@@ -143,31 +143,49 @@ export class CardsScreen {
   createUI(): UINodeType {
 
     // Create scroll buttons for the side menu
-    // Note: Derive directly from playerDataBinding to avoid nesting (cards is already a derived binding)
+    // Check bounds inside onClick to avoid multi-binding derives (which create new bindings)
     const scrollButtons = [
       {
         label: '↑',
         onClick: () => {
-          // Reactive disabled state prevents invalid scrolling, so just decrement
-          this.scrollOffsetValue--;
-          this.scrollOffset.set(this.scrollOffsetValue);
+          // Check bounds before scrolling
+          const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+          if (currentState.cards?.scrollOffset > 0) {
+            // Update UIState binding
+            this.ui.bindingManager.setBinding(BindingType.UIState, {
+              ...currentState,
+              cards: {
+                ...currentState.cards,
+                scrollOffset: currentState.cards?.scrollOffset - 1
+              }
+            });
+          }
         },
-        disabled: this.ui.Binding.derive(
-          [this.playerDataBinding, this.scrollOffset],
-          (pd: any, offset: number) => offset <= 0 ? true : false
-        ) as any,
         yOffset: 0,
       },
       {
         label: '↓',
         onClick: () => {
           // Reactive disabled state prevents invalid scrolling, so just increment
-          this.scrollOffsetValue++;
-          this.scrollOffset.set(this.scrollOffsetValue);
+          const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+          const cards = currentState.playerData?.cards?.collected || [];
+          const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+          const totalPages = Math.ceil(cards.length / cardsPerPage);
+          if (currentState.cards?.scrollOffset < totalPages - 1) {
+            this.ui.bindingManager.setBinding(BindingType.UIState, {
+              ...currentState,
+              cards: {
+                ...currentState.cards,
+                scrollOffset: currentState.cards?.scrollOffset + 1
+              }
+            });
+          }
         },
-        disabled: this.ui.Binding.derive(
-          [this.playerDataBinding, this.scrollOffset],
-          (pd: any, offset: number) => {
+        disabled: this.ui.bindingManager.derive(
+          [BindingType.UIState],
+          ( uiState: UIState) => {
+            const pd = this.ui.bindingManager.getSnapshot(BindingType.PlayerData);
+            const offset = uiState.cards?.scrollOffset ?? 0;
             const cards = pd?.cards?.collected || [];
             const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
             const totalPages = Math.ceil(cards.length / cardsPerPage);
@@ -179,7 +197,7 @@ export class CardsScreen {
     ];
 
     // Deck info text - derive directly from playerDataBinding to avoid nesting
-    const deckInfoText = this.playerDataBinding.derive((pd: any) => `${deckEmoji} ${pd?.cards?.deck?.length || 0}/30`);
+    const deckInfoText = this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => `${deckEmoji} ${pd?.cards?.deck?.length || 0}/30`);
 
     return this.ui.View({
       style: {
@@ -190,10 +208,7 @@ export class CardsScreen {
       children: [
         // Background
         this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('background') : null
-          ),
+          source: this.ui.assetIdToImageSource?.('background') || null,
           style: {
             position: 'absolute',
             width: '100%',
@@ -204,10 +219,7 @@ export class CardsScreen {
         }),
         // Cards Container image as background
         this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('cards-container') : null
-          ),
+          source: this.ui.assetIdToImageSource?.('cards-container') || null,
           style: {
             position: 'absolute',
             left: 40,
@@ -233,16 +245,13 @@ export class CardsScreen {
             },
             disabled: false,
           },
-          playerDataBinding: this.playerDataBinding,
+          playSfx: this.playSfx,
         }),
 
         // Card detail popup overlay container (conditionally rendered)
         // Uses UINode.if() for proper conditional rendering per Horizon docs
         ...(this.ui.UINode ? [this.ui.UINode.if(
-          this.ui.Binding.derive(
-            [this.selectedCardId],
-            (cardId: string | null) => cardId !== null ? true : false
-          ),
+          this.ui.bindingManager.derive([BindingType.UIState], (state: any) => (state.cards?.selectedCardId ?? null) !== null),
           this.ui.View({
             style: {
               position: 'absolute',
@@ -252,10 +261,9 @@ export class CardsScreen {
               left: 0,
             },
             children: createReactiveCardDetailPopup(this.ui, {
-              cardIdBinding: this.selectedCardId,
-              playerDataBinding: this.playerDataBinding,
               onClose: () => this.closePopup(),
-              sideContent: (ui, deps) => this.createPopupButtons(deps),
+              buttons: this.createPopupButtons(),
+              playSfx: this.playSfx,
             }),
           })
         )] : []),
@@ -268,160 +276,81 @@ export class CardsScreen {
    */
   private handleCardClick(cardId: string): void {
     console.log('[CardsScreen] handleCardClick called with cardId:', cardId);
-    this.selectedCardId.set(cardId);
+    const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+    this.ui.bindingManager.setBinding(BindingType.UIState, {
+      ...currentState,
+      cards: {
+        ...currentState.cards,
+        selectedCardId: cardId
+      }
+    });
   }
 
   /**
    * Close the popup
    */
   private closePopup(): void {
-    this.selectedCardId.set(null);
+    const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+    this.ui.bindingManager.setBinding(BindingType.UIState, {
+      ...currentState,
+      cards: {
+        ...currentState.cards,
+        selectedCardId: null
+      }
+    });
   }
 
   /**
    * Create reactive popup buttons
-   * Returns Add/Remove and Close buttons with reactive state
+   * Returns Add/Remove and Close buttons as PopupButton array
    */
-  private createPopupButtons(deps: {
-    cardIdBinding: any;
-    playerDataBinding: any;
-  }): UINodeType[] {
-    const { cardIdBinding, playerDataBinding } = deps;
-    const buttonWidth = sideMenuButtonDimensions.width;
-    const buttonHeight = sideMenuButtonDimensions.height;
-    const buttonSpacing = GAPS.buttons;
-
-    // Track cardId for onClick handler
-    let currentCardId: string | null = null;
-    const cardIdTracker = this.ui.Binding.derive(
-      [cardIdBinding],
-      (cardId: string | null) => {
-        currentCardId = cardId;
-        return cardId;
+  private createPopupButtons(): PopupButton[] {
+    // Derive button label (Add/Remove) based on deck status
+    const buttonLabel = this.ui.bindingManager.derive(
+      [BindingType.PlayerData],
+      (pd: any) => {
+        const state = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+        const cardId = state.cards?.selectedCardId ?? null;
+        if (!cardId) return '';
+        const deckCardIds: string[] = pd?.cards?.deck || [];
+        const isInDeck = deckCardIds.includes(cardId);
+        return isInDeck ? 'Remove' : 'Add';
       }
     );
 
-    // Hover state bindings for buttons
-    const actionButtonHover = new this.ui.Binding(false);
-    const closeButtonHover = new this.ui.Binding(false);
+    // Derive button color based on deck status
+    const buttonColor = this.ui.bindingManager.derive(
+      [BindingType.PlayerData],
+      (pd: any) => {
+        const state = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+        const cardId = state.cards?.selectedCardId ?? null;
+        if (!cardId) return 'default' as ButtonColor;
+        const deckCardIds: string[] = pd?.cards?.deck || [];
+        const isInDeck = deckCardIds.includes(cardId);
+        return (isInDeck ? 'red' : 'green') as ButtonColor;
+      }
+    );
 
     return [
       // Add/Remove button
-      this.ui.Pressable({
+      {
+        label: buttonLabel,
         onClick: () => {
-          if (currentCardId && this.onCardSelect) {
-            this.onCardSelect(currentCardId);
+          const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+          const cardId = currentState.cards?.selectedCardId ?? null;
+          if (cardId && this.onCardSelect) {
+            this.onCardSelect(cardId);
           }
         },
-        onHoverIn: () => actionButtonHover.set(true),
-        onHoverOut: () => actionButtonHover.set(false),
-        style: {
-          width: buttonWidth,
-          height: buttonHeight,
-          position: 'relative',
-          marginBottom: buttonSpacing,
-        },
-        children: [
-          // Button background
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding, playerDataBinding, cardIdBinding],
-              (...args: any[]) => {
-                const assetsLoaded: boolean = args[0];
-                const pd: any = args[1];
-                const cardId: string | null = args[2];
-                if (!assetsLoaded || !cardId) return null;
-                const deckCardIds: string[] = pd?.cards?.deck || [];
-                const isInDeck = deckCardIds.includes(cardId);
-                return this.ui.assetIdToImageSource?.(isInDeck ? 'red-button' : 'green-button');
-              }
-            ),
-            style: {
-              position: 'absolute',
-              width: buttonWidth,
-              height: buttonHeight,
-              top: 0,
-              left: 0,
-              opacity: this.ui.Binding.derive([actionButtonHover], (hover) => hover ? 0.8 : 1.0),
-            },
-          }),
-          // Button text
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              width: buttonWidth,
-              height: buttonHeight,
-              justifyContent: 'center',
-              alignItems: 'center',
-            },
-            children: this.ui.Text({
-              text: this.ui.Binding.derive(
-                [playerDataBinding, cardIdBinding],
-                (...args: any[]) => {
-                  const pd: any = args[0];
-                  const cardId: string | null = args[1];
-                  if (!cardId) return '';
-                  const deckCardIds: string[] = pd?.cards?.deck || [];
-                  const isInDeck = deckCardIds.includes(cardId);
-                  return isInDeck ? 'Remove' : 'Add';
-                }
-              ),
-              style: {
-                fontSize: DIMENSIONS.fontSize.md,
-                color: COLORS.textPrimary,
-                fontWeight: 'bold',
-              },
-            }),
-          }),
-        ],
-      }),
+        color: buttonColor as any,
+      },
 
       // Close button
-      this.ui.Pressable({
+      {
+        label: 'Close',
         onClick: () => this.closePopup(),
-        onHoverIn: () => closeButtonHover.set(true),
-        onHoverOut: () => closeButtonHover.set(false),
-        style: {
-          width: buttonWidth,
-          height: buttonHeight,
-          position: 'relative',
-        },
-        children: [
-          // Button background
-          this.ui.Image({
-            source: this.ui.Binding.derive(
-              [this.ui.assetsLoadedBinding],
-              (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('standard-button') : null
-            ),
-            style: {
-              position: 'absolute',
-              width: buttonWidth,
-              height: buttonHeight,
-              top: 0,
-              left: 0,
-              opacity: this.ui.Binding.derive([closeButtonHover], (hover) => hover ? 0.8 : 1.0),
-            },
-          }),
-          // Button text
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              width: buttonWidth,
-              height: buttonHeight,
-              justifyContent: 'center',
-              alignItems: 'center',
-            },
-            children: this.ui.Text({
-              text: new this.ui.Binding('Close'),
-              style: {
-                fontSize: DIMENSIONS.fontSize.md,
-                color: COLORS.textPrimary,
-                fontWeight: 'bold',
-              },
-            }),
-          }),
-        ],
-      }),
+        color: 'default',
+      },
     ];
   }
 

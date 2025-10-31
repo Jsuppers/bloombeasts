@@ -24,6 +24,13 @@ import { type Player, AudioGizmo, NetworkEvent } from 'horizon/core';
 // Import from standalone bundle (includes catalogs as regular TypeScript!)
 import { BloomBeasts } from './BloomBeasts-GameEngine-Standalone';
 
+// Import types from the namespace
+type BindingManager = BloomBeasts.BindingManager;
+type AsyncMethods = BloomBeasts.AsyncMethods;
+
+// Access class from the namespace
+const BindingManager = BloomBeasts.BindingManager;
+
 // Type aliases from the BloomBeasts namespace
 type BloomBeastsGame = BloomBeasts.BloomBeastsGame;
 type PlatformConfig = BloomBeasts.PlatformConfig;
@@ -164,33 +171,36 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
   }
 
   /**
-   * Create a hidden preload block that statically references all image assets
-   * This is CRITICAL for Horizon - it needs to see the ImageSource.fromTextureAsset calls
-   * in the UI tree for proper asset preloading, even if the element is hidden
+   * Create a minimal preload block for only the most essential UI assets
+   * Reduced to save UI size - other assets will be loaded on-demand
    */
   private createAssetPreloadBlock(): UINode {
-    console.log('[Client] Creating asset preload block...');
+    console.log('[Client] Creating minimal asset preload block...');
+
+    const essentialAssets = [
+      'background',
+      'base-card',
+      'cards-container',
+      'ui-container-side-menu',
+      'ui-button-standard-default',
+    ];
 
     const preloadImages: UINode[] = [];
 
-    // Iterate through all catalogs and create hidden Image nodes for each asset
-    allCatalogs.forEach(catalog => {
-      catalog.data.forEach((entry: any) => {
-        entry.assets.forEach((asset: any) => {
-          if (asset.type === 'image' && asset.horizonAssetId) {
-            // Create a hidden image that forces Horizon to preload the asset
-            preloadImages.push(
-              Image({
-                source: ImageSource.fromTextureAsset(new hz.Asset(BigInt(asset.horizonAssetId))),
-                style: { width: 1, height: 1, opacity: 0 } // Invisible but still preloads
-              })
-            );
-          }
-        });
-      });
+    // Only preload essential UI assets
+    essentialAssets.forEach(assetId => {
+      const horizonId = this.catalogManager.getHorizonAssetId(assetId, 'image');
+      if (horizonId && horizonId !== 'PLACEHOLDER_HORIZON_ID') {
+        preloadImages.push(
+          Image({
+            source: ImageSource.fromTextureAsset(new hz.Asset(BigInt(horizonId))),
+            style: { width: 1, height: 1, opacity: 0 }
+          })
+        );
+      }
     });
 
-    console.log(`[Client] Created preload block with ${preloadImages.length} images`);
+    console.log(`[Client] Created preload block with ${preloadImages.length} essential images`);
 
     // Wrap in a hidden View
     return View({
@@ -199,7 +209,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
         width: 1,
         height: 1,
         opacity: 0,
-        top: -1000, // Move offscreen
+        top: -1000,
         left: -1000
       },
       children: preloadImages
@@ -210,6 +220,14 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
    * Create the platform configuration for Horizon
    */
   private createPlatformConfig(): PlatformConfig {
+    const asyncMethods: AsyncMethods = {
+      setTimeout: (callback: (...args: any[]) => void, timeout?: number) => this.async.setTimeout(callback, timeout),
+      clearTimeout: (id: number) => this.async.clearTimeout(id),
+      setInterval: (callback: (...args: any[]) => void, timeout?: number) => this.async.setInterval(callback, timeout),
+      clearInterval: (id: number) => this.async.clearInterval(id)
+    };
+    const bindingManager = new BindingManager(Binding, asyncMethods);
+
     return {
       // Storage: Horizon Persistent Variables
       setPlayerData: (data: PlayerData) => {
@@ -218,6 +236,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
 
       getPlayerData: () => {
         // Return cached player data (loaded from server once in receiveOwnership)
+        // Note: Server creates default data if none exists, so this always returns valid data
         console.log('[Client] getPlayerData called, returning cached data', this.cachedPlayerData);
         return this.cachedPlayerData;
       },
@@ -335,22 +354,13 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
           Image: (props: any) => Image(unwrapValue(props)), // Direct passthrough
           Pressable: (props: any) => Pressable(unwrapValue(props)),
           UINode: UINode,
-          Binding: PlatformBinding,
-          AnimatedBinding,
-          Animation,
-          Easing,
+          bindingManager: bindingManager,
           assetIdToImageSource, // Expose for explicit conversion
-          assetsLoadedBinding: this.assetsLoadedBinding, // Binding for UI to check before rendering images
         };
       },
 
       // Async methods: Horizon async API from component
-      async: {
-        setTimeout: (callback, timeout) => this.async.setTimeout(callback, timeout),
-        clearTimeout: (id) => this.async.clearTimeout(id),
-        setInterval: (callback, timeout) => this.async.setInterval(callback, timeout),
-        clearInterval: (id) => this.async.clearInterval(id)
-      },
+      async: asyncMethods,
 
       // Rendering: No-op for Horizon
       // Horizon uses reactive bindings - the UI tree is built once in initializeUI()
@@ -482,7 +492,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     this.game = new BloomBeastsGame(platformConfig);
 
     // Create the asset preload block - CRITICAL for Horizon asset loading!
-    const preloadBlock = this.createAssetPreloadBlock();
+    // const preloadBlock = this.createAssetPreloadBlock();
 
     // Return both the game UI tree AND the preload block
     // The preload block is hidden but forces Horizon to load all assets
@@ -490,7 +500,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
       style: { width: '100%', height: '100%' },
       children: [
         this.game.uiTree,  // Main game UI
-        preloadBlock        // Hidden preload block (critical for asset loading!)
+        // preloadBlock        // Hidden preload block (critical for asset loading!)
       ]
     });
   }
@@ -525,6 +535,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
       }
 
       // Player data received - now load assets
+      // TODO IS THIS NEEDED?
       this.loadAssetsAndInitialize();
     });
 

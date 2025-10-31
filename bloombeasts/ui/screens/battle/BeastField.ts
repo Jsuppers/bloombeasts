@@ -6,16 +6,15 @@ import type { BattleComponentWithCallbacks } from './types';
 import { standardCardDimensions, battleBoardAssetPositions } from './types';
 import { UINodeType } from '../ScreenUtils';
 import { BattleDisplay } from '../../../gameManager';
+import { BindingType } from '../../types/BindingManager';
 
 export class BeastField {
   private ui: BattleComponentWithCallbacks['ui'];
-  private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
   private onAction?: (action: string) => void;
   private showPlayedCard?: (card: any, callback?: () => void) => void;
 
   constructor(props: BattleComponentWithCallbacks) {
     this.ui = props.ui;
-    this.battleDisplay = props.battleDisplay;
     this.onAction = props.onAction;
     this.showPlayedCard = props.showPlayedCard;
   }
@@ -42,17 +41,14 @@ export class BeastField {
     return [
       // Layer 1: Beast artwork image - reactive source
       this.ui.Image({
-        source: this.ui.Binding.derive(
-          [this.battleDisplay],
-          (state: BattleDisplay | null) => {
+        source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
             if (!state) return null;
             const field = player === 'player' ? state.playerField : state.opponentField;
             const beast = field?.[slotIndex];
             if (!beast) return null;
             const baseId = beast.id?.replace(/-\d+-\d+$/, '') || beast.name.toLowerCase().replace(/\s+/g, '-');
             return this.ui.assetIdToImageSource?.(baseId) || null;
-          }
-        ),
+          }),
         style: {
           width: beastImageWidth,
           height: beastImageHeight,
@@ -76,9 +72,7 @@ export class BeastField {
 
       // Layer 3: Affinity icon - reactive source
       this.ui.Image({
-        source: this.ui.Binding.derive(
-          [this.battleDisplay],
-          (state: BattleDisplay | null) => {
+        source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
             if (!state) return null;
             const field = player === 'player' ? state.playerField : state.opponentField;
             const beast = field?.[slotIndex];
@@ -97,9 +91,7 @@ export class BeastField {
 
       // Layer 4: Card name - reactive text
       this.ui.Text({
-        text: this.ui.Binding.derive(
-          [this.battleDisplay],
-          (state: BattleDisplay | null) => {
+        text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
             if (!state) return '';
             const field = player === 'player' ? state.playerField : state.opponentField;
             const beast = field?.[slotIndex];
@@ -119,9 +111,7 @@ export class BeastField {
 
       // Layer 5: Cost - reactive text
       this.ui.Text({
-        text: this.ui.Binding.derive(
-          [this.battleDisplay],
-          (state: BattleDisplay | null) => {
+        text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
             if (!state) return '';
             const field = player === 'player' ? state.playerField : state.opponentField;
             const beast = field?.[slotIndex];
@@ -141,9 +131,7 @@ export class BeastField {
 
       // Layer 6: Attack - reactive text
       this.ui.Text({
-        text: this.ui.Binding.derive(
-          [this.battleDisplay],
-          (state: BattleDisplay | null) => {
+        text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
             if (!state) return '';
             const field = player === 'player' ? state.playerField : state.opponentField;
             const beast = field?.[slotIndex];
@@ -163,9 +151,7 @@ export class BeastField {
 
       // Layer 7: Health - reactive text
       this.ui.Text({
-        text: this.ui.Binding.derive(
-          [this.battleDisplay],
-          (state: BattleDisplay | null) => {
+        text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
             if (!state) return '';
             const field = player === 'player' ? state.playerField : state.opponentField;
             const beast = field?.[slotIndex];
@@ -182,6 +168,8 @@ export class BeastField {
           textAlign: 'center',
         },
       }),
+
+      // Counter icons removed to reduce UI size
     ];
   }
 
@@ -206,9 +194,7 @@ export class BeastField {
           width: standardCardDimensions.width,
           height: standardCardDimensions.height,
           // Hide slot if no beast - derive directly from battleDisplay
-          display: this.ui.Binding.derive(
-            [this.battleDisplay],
-            (state: BattleDisplay | null) => {
+          display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
               if (!state) return 'none';
               const field = player === 'player' ? state.playerField : state.opponentField;
               const beast = field?.[index];
@@ -239,9 +225,7 @@ export class BeastField {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay | null) => {
+              backgroundColor: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
                   const isAttacking = state?.attackAnimation?.attackerPlayer === player &&
                                      state?.attackAnimation?.attackerIndex === index;
                   const isTarget = state?.attackAnimation?.targetPlayer === player &&
@@ -252,9 +236,7 @@ export class BeastField {
                 }
               ),
               borderRadius: 12,
-              display: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay | null) => {
+              display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
                   const isAttacking = state?.attackAnimation?.attackerPlayer === player &&
                                      state?.attackAnimation?.attackerIndex === index;
                   const isTarget = state?.attackAnimation?.targetPlayer === player &&
@@ -274,9 +256,7 @@ export class BeastField {
               width: 26,
               height: 26,
               // Hide when no beast or beast has summoning sickness
-              display: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay | null) => {
+              display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
                   if (!state) return 'none';
                   const field = player === 'player' ? state.playerField : state.opponentField;
                   const beast = field?.[index];

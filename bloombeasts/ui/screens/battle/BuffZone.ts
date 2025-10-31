@@ -6,15 +6,14 @@ import { BattleDisplay } from '../../../gameManager';
 import type { BattleComponentWithCallbacks } from './types';
 import { buffCardDimensions, battleBoardAssetPositions } from './types';
 import { UINodeType } from '../ScreenUtils';
+import { BindingType } from '../../types/BindingManager';
 
 export class BuffZone {
   private ui: BattleComponentWithCallbacks['ui'];
-  private battleDisplay: BattleComponentWithCallbacks['battleDisplay'];
   private onCardDetailSelected?: (card: any) => void;
 
   constructor(props: BattleComponentWithCallbacks) {
     this.ui = props.ui;
-    this.battleDisplay = props.battleDisplay;
     this.onCardDetailSelected = props.onCardDetailSelected;
   }
 
@@ -40,16 +39,13 @@ export class BuffZone {
           top: pos.y,
           width: buffCardDimensions.width,
           height: buffCardDimensions.height,
-          // Hide slot if no buff - derive directly from battleDisplay
-          display: this.ui.Binding.derive(
-            [this.battleDisplay],
-            (state: BattleDisplay | null) => {
-              if (!state) return 'none';
-              const buffZone = player === 'player' ? state.playerBuffZone : state.opponentBuffZone;
-              const buff = buffZone?.[index];
-              return buff ? 'flex' : 'none';
-            }
-          ),
+          // Hide slot if no buff - derive from battleDisplay
+          display: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+            if (!state) return 'none';
+            const buffZone = player === 'player' ? state.playerBuffZone : state.opponentBuffZone;
+            const buff = buffZone?.[index];
+            return buff ? 'flex' : 'none';
+          }),
         },
         children: [
           // Clickable wrapper for buff card
@@ -57,7 +53,7 @@ export class BuffZone {
             onClick: () => {
               console.log(`[BuffZone] Buff card clicked: ${player}-${index}, showing detail`);
               // Get current buff at click time
-              const state = this.battleDisplay;
+              const state = this.ui.bindingManager.getSnapshot(BindingType.BattleDisplay);
               if (state && typeof state === 'object' && 'playerBuffZone' in state) {
                 const buffZone = player === 'player' ? (state as any).playerBuffZone : (state as any).opponentBuffZone;
                 const buff = buffZone?.[index];
@@ -93,16 +89,13 @@ export class BuffZone {
                   height: 100,
                 },
                 children: this.ui.Image({
-                  source: this.ui.Binding.derive(
-                    [this.battleDisplay],
-                    (state: BattleDisplay | null) => {
-                      if (!state) return null;
-                      const buffZone = player === 'player' ? state.playerBuffZone : state.opponentBuffZone;
-                      const buff = buffZone?.[index];
-                      if (!buff) return null;
-                      return this.ui.assetIdToImageSource?.(buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-'));
-                    }
-                  ),
+                  source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
+                    if (!state) return null;
+                    const buffZone = player === 'player' ? state?.playerBuffZone : state?.opponentBuffZone;
+                    const buff = buffZone?.[index];
+                    if (!buff) return null;
+                    return this.ui.assetIdToImageSource?.(buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-'));
+                  }),
                   style: {
                     width: 100,
                     height: 100,

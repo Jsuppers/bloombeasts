@@ -5,28 +5,28 @@
 import type { BattleSideMenuProps } from './types';
 import { sideMenuPositions } from '../../constants/positions';
 import { sideMenuButtonDimensions } from '../../constants/dimensions';
-import { DIMENSIONS } from '../../styles/dimensions';
 import { UINodeType } from '../ScreenUtils';
 import { BattleDisplay } from '../../../gameManager';
 import { canAttack } from '../../../engine/utils/combatHelpers';
+import { createButton } from '../../common/Button';
+import { BindingType } from '../../types/BindingManager';
+import { COLORS } from '../../styles/colors';
 
 export class BattleSideMenu {
   private ui: BattleSideMenuProps['ui'];
-  private battleDisplay: BattleSideMenuProps['battleDisplay'];
-  private endTurnButtonText: BattleSideMenuProps['endTurnButtonText'];
   private getIsPlayerTurn: () => boolean;
   private getHasAttackableBeasts: () => boolean;
   private onAction?: (action: string) => void;
   private onStopTurnTimer?: () => void;
+  private playSfx?: (sfxId: string) => void;
 
   constructor(props: BattleSideMenuProps) {
     this.ui = props.ui;
-    this.battleDisplay = props.battleDisplay;
-    this.endTurnButtonText = props.endTurnButtonText;
     this.getIsPlayerTurn = props.getIsPlayerTurn;
     this.getHasAttackableBeasts = props.getHasAttackableBeasts;
     this.onAction = props.onAction;
     this.onStopTurnTimer = props.onStopTurnTimer;
+    this.playSfx = props.playSfx;
 
     console.log('[BattleSideMenu] Constructor - onAction:', this.onAction ? 'DEFINED' : 'UNDEFINED');
   }
@@ -44,12 +44,8 @@ export class BattleSideMenu {
         height: 465,
       },
       children: [
-        // Side menu background
         this.ui.Image({
-          source: this.ui.Binding.derive(
-            [this.ui.assetsLoadedBinding],
-            (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('side-menu') : null
-          ),
+          source: this.ui.assetIdToImageSource?.('side-menu') || null,
           style: {
             position: 'absolute',
             width: 127,
@@ -58,51 +54,20 @@ export class BattleSideMenu {
         }),
 
         // Forfeit button (at header position)
-        this.ui.Pressable({
+        createButton({
+          ui: this.ui,
+          label: 'Forfeit',
           onClick: () => {
             console.log('[BattleSideMenu] Forfeit button clicked');
             this.onAction?.('btn-forfeit');
           },
+          color: 'default',
+          playSfx: this.playSfx,
           style: {
             position: 'absolute',
             left: sideMenuPositions.headerStartPosition.x - sideMenuPositions.x,
             top: sideMenuPositions.headerStartPosition.y - sideMenuPositions.y,
-            width: sideMenuButtonDimensions.width,
-            height: sideMenuButtonDimensions.height,
           },
-          children: [
-            // Button background image
-            this.ui.Image({
-              source: this.ui.Binding.derive(
-                [this.ui.assetsLoadedBinding],
-                (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('standard-button') : null
-              ),
-              style: {
-                position: 'absolute',
-                width: sideMenuButtonDimensions.width,
-                height: sideMenuButtonDimensions.height,
-              },
-            }),
-            // Button text centered over image
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                width: sideMenuButtonDimensions.width,
-                height: sideMenuButtonDimensions.height,
-                justifyContent: 'center',
-                alignItems: 'center',
-              },
-              children: this.ui.Text({
-                text: 'Forfeit',
-                style: {
-                  fontSize: DIMENSIONS.fontSize.md,
-                  fontWeight: 'bold',
-                  color: '#fff',
-                  textAlign: 'center',
-                },
-              }),
-            }),
-          ],
         }),
 
         // Battle info text
@@ -114,7 +79,7 @@ export class BattleSideMenu {
           },
           children: [
             this.ui.Text({
-              text: new this.ui.Binding('Battle'),
+              text: 'Battle',
               style: {
                 fontSize: 20,
                 fontWeight: 'bold',
@@ -123,9 +88,8 @@ export class BattleSideMenu {
               },
             }),
             this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay) => state ? `Turn ${state.currentTurn}` : 'Turn 1'
+              text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+                state ? `Turn ${state.currentTurn}` : 'Turn 1'
               ),
               style: {
                 fontSize: 18,
@@ -133,33 +97,13 @@ export class BattleSideMenu {
                 marginBottom: 5,
               },
             }),
-            // Deathmatch warning (reactive) - always rendered, conditionally visible
-            this.ui.Text({
-              text: this.ui.Binding.derive(
-                [this.battleDisplay],
-                (state: BattleDisplay | null) => {
-                  if (!state || state.currentTurn < 30) return '';
-                  const deathmatchDamage = Math.floor((state.currentTurn - 30) / 5) + 1;
-                  return `Deathmatch! -${deathmatchDamage} HP`;
-                }
-              ),
-              style: {
-                fontSize: 16,
-                color: '#ff6b6b',
-                fontWeight: 'bold',
-                display: this.ui.Binding.derive(
-                  [this.battleDisplay],
-                  (state: BattleDisplay | null) => {
-                    return (state && state.currentTurn >= 30) ? 'flex' : 'none';
-                  }
-                ),
-              },
-            }),
           ],
         }),
 
         // Attack button (red) - positioned above End Turn button
-        this.ui.Pressable({
+        createButton({
+          ui: this.ui,
+          label: 'Attack',
           onClick: () => {
             console.log('[BattleSideMenu] Attack button onClick fired!');
             const currentIsPlayerTurn = this.getIsPlayerTurn();
@@ -177,7 +121,49 @@ export class BattleSideMenu {
               console.log('[BattleSideMenu] Attack button cannot be used - turn:', currentIsPlayerTurn, 'attackable:', hasAttackable);
             }
           },
-          disabled: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => {
+          // Use complete bindings (avoids .derive() on derived bindings)
+          imageSource: this.ui.assetIdToImageSource?.('red-button') || null,
+          opacity: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
+            // Disabled if state not ready
+            if (!state) return 0.5;
+
+            // Disabled if not player turn
+            if (state.turnPlayer !== 'player') return 0.5;
+
+            // Check if player has any attackable beasts
+            let hasAttackable = false;
+            if (state.playerField && Array.isArray(state.playerField)) {
+              for (const beast of state.playerField) {
+                if (beast && canAttack(beast)) {
+                  hasAttackable = true;
+                  break;
+                }
+              }
+            }
+
+            return hasAttackable ? 1.0 : 0.5;
+          }),
+          textColor: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
+            // Disabled if state not ready
+            if (!state) return '#888';
+
+            // Disabled if not player turn
+            if (state.turnPlayer !== 'player') return '#888';
+
+            // Check if player has any attackable beasts
+            let hasAttackable = false;
+            if (state.playerField && Array.isArray(state.playerField)) {
+              for (const beast of state.playerField) {
+                if (beast && canAttack(beast)) {
+                  hasAttackable = true;
+                  break;
+                }
+              }
+            }
+
+            return hasAttackable ? COLORS.textPrimary : '#888';
+          }),
+          disabled: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
             // Disabled if state not ready
             if (!state) return true;
 
@@ -199,66 +185,20 @@ export class BattleSideMenu {
             // Disabled if no attackable beasts
             return !hasAttackable;
           }),
+          playSfx: this.playSfx,
           style: {
             position: 'absolute',
             left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
             top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y - sideMenuButtonDimensions.height - 10,
-            width: sideMenuButtonDimensions.width,
-            height: sideMenuButtonDimensions.height,
-            opacity: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => {
-              if (!state || state.turnPlayer !== 'player') return 0.3;
-
-              // Check if has attackable beasts
-              let hasAttackable = false;
-              if (state.playerField && Array.isArray(state.playerField)) {
-                for (const beast of state.playerField) {
-                  if (beast && canAttack(beast)) {
-                    hasAttackable = true;
-                    break;
-                  }
-                }
-              }
-
-              return hasAttackable ? 1 : 0.3;
-            }),
           },
-          children: [
-            // Red button background
-            this.ui.Image({
-              source: this.ui.Binding.derive(
-                [this.ui.assetsLoadedBinding],
-                (assetsLoaded: boolean) => assetsLoaded ? this.ui.assetIdToImageSource?.('red-button') : null
-              ),
-              style: {
-                position: 'absolute',
-                width: sideMenuButtonDimensions.width,
-                height: sideMenuButtonDimensions.height,
-              },
-            }),
-            // Button text centered over image
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                width: sideMenuButtonDimensions.width,
-                height: sideMenuButtonDimensions.height,
-                justifyContent: 'center',
-                alignItems: 'center',
-              },
-              children: this.ui.Text({
-                text: 'Attack',
-                style: {
-                  fontSize: DIMENSIONS.fontSize.md,
-                  fontWeight: 'bold',
-                  color: '#fff',
-                  textAlign: 'center',
-                },
-              }),
-            }),
-          ],
         }),
 
         // End Turn button with timer - uses derived bindings for reactive updates
-        this.ui.Pressable({
+        createButton({
+          ui: this.ui,
+          label: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+            state?.turnPlayer === 'player' ? 'End Turn' : 'Enemy Turn'
+          ),
           onClick: () => {
             console.log('[BattleSideMenu] End Turn button onClick fired!');
             const currentIsPlayerTurn = this.getIsPlayerTurn();
@@ -272,53 +212,27 @@ export class BattleSideMenu {
               console.log('[BattleSideMenu] End Turn clicked but not player turn');
             }
           },
-          disabled: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => {
-            return state?.turnPlayer !== 'player';
+          // Use complete bindings (avoids .derive() on derived bindings)
+          imageSource: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
+            const color = state?.turnPlayer === 'player' ? 'green' : 'default';
+            const assetId = color === 'green' ? 'green-button' : 'standard-button';
+            return this.ui.assetIdToImageSource?.(assetId) || null;
           }),
+          opacity: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+            state?.turnPlayer !== 'player' ? 0.5 : 1.0
+          ),
+          textColor: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+            state?.turnPlayer !== 'player' ? '#888' : COLORS.textPrimary
+          ),
+          disabled: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
+            state?.turnPlayer !== 'player'
+          ),
+          playSfx: this.playSfx,
           style: {
             position: 'absolute',
             left: sideMenuPositions.buttonStartPosition.x - sideMenuPositions.x,
             top: sideMenuPositions.buttonStartPosition.y - sideMenuPositions.y,
-            width: sideMenuButtonDimensions.width,
-            height: sideMenuButtonDimensions.height,
-            opacity: this.ui.Binding.derive([this.battleDisplay], (state: BattleDisplay) => state?.turnPlayer === 'player' ? 1 : 0.5),
           },
-          children: [
-            // Button background image - green when player turn, standard when opponent turn
-            this.ui.Image({
-              source: this.ui.Binding.derive(
-                [this.ui.assetsLoadedBinding, this.battleDisplay],
-                (assetsLoaded: boolean, state: BattleDisplay) => {
-                  if (!assetsLoaded) return null;
-                  return this.ui.assetIdToImageSource?.(state?.turnPlayer === 'player' ? 'green-button' : 'standard-button') ?? null;
-                }
-              ),
-              style: {
-                position: 'absolute',
-                width: sideMenuButtonDimensions.width,
-                height: sideMenuButtonDimensions.height,
-              },
-            }),
-            // Button text centered over image
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                width: sideMenuButtonDimensions.width,
-                height: sideMenuButtonDimensions.height,
-                justifyContent: 'center',
-                alignItems: 'center',
-              },
-              children: this.ui.Text({
-                text: this.endTurnButtonText,
-                style: {
-                  fontSize: DIMENSIONS.fontSize.md,
-                  fontWeight: 'bold',
-                  color: '#fff',
-                  textAlign: 'center',
-                },
-              }),
-            }),
-          ],
         }),
       ],
     });

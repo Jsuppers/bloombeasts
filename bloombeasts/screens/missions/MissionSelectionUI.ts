@@ -157,13 +157,6 @@ export class MissionSelectionUI {
       details.push(`  • Defeat the opponent`);
     }
 
-    if (mission.specialRules && mission.specialRules.length > 0) {
-      details.push('');
-      details.push('⚡ Special Rules:');
-      mission.specialRules.forEach(rule => {
-        details.push(`  • ${rule.name}: ${rule.description}`);
-      });
-    }
 
     if (mission.turnLimit) {
       details.push('');

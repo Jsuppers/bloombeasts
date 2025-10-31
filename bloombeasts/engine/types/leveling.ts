@@ -2,7 +2,7 @@
  * Type definitions for the leveling and progression system
  */
 
-import { Affinity, Counter } from './core';
+import { Affinity } from './core';
 
 export type Level = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
@@ -94,8 +94,7 @@ export interface BloomBeastInstance {
   // Stat modification tracking
   statModifiers?: StatModifier[];
 
-  // Counters and effects
-  counters: Counter[];
+  // Status effects (counters removed to reduce complexity)
   statusEffects: any[];  // Status effects like burn, freeze, etc.
 
   // Positioning

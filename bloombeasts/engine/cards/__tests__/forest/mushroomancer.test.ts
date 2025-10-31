@@ -11,7 +11,7 @@ import {
   validateStatGainsProgression,
   loadCardFromJSON,
 } from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+import { StructuredAbility, AbilityTrigger } from '../../types/abilities.js';
 
 const MUSHROOMANCER = loadCardFromJSON('mushroomancer', 'forest');
 
@@ -42,7 +42,7 @@ describe('Mushroomancer Card', () => {
     });
 
     test('should have correct trigger', () => {
-      expect(MUSHROOMANCER.abilities[0].trigger).toBe('OnSummon');
+      expect(MUSHROOMANCER.abilities[0].trigger).toBe(AbilityTrigger.OnSummon);
     });
 
     test('should have correct effects', () => {
@@ -87,7 +87,7 @@ describe('Mushroomancer Card', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnSummon');
+      expect(ability.trigger).toBe(AbilityTrigger.OnSummon);
     });
   });
 
@@ -110,7 +110,7 @@ describe('Mushroomancer Card', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnDestroy');
+      expect(ability.trigger).toBe(AbilityTrigger.OnDestroy);
     });
   });
 
@@ -133,7 +133,7 @@ describe('Mushroomancer Card', () => {
       const upgrade = MUSHROOMANCER.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnOwnEndOfTurn');
+      expect(ability.trigger).toBe(AbilityTrigger.OnOwnEndOfTurn);
     });
   });
 

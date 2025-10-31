@@ -3,7 +3,7 @@
  */
 
 import { BloomBeastInstance, Level, XPSource } from '../types/leveling';
-import { BloomBeastCard, Counter } from '../types/core';
+import { BloomBeastCard } from '../types/core';
 import { XP_REQUIREMENTS, STAT_PROGRESSION, MAX_LEVEL, NECTAR_XP_COST } from '../constants/leveling';
 import { ILevelingSystem } from './interfaces';
 
@@ -190,7 +190,6 @@ createBeastInstance(
       currentAttack: stats.attack,
       currentHealth: stats.health,
       maxHealth: stats.health,
-      counters: [],
       statusEffects: [],
       slotIndex,
       summoningSickness: true,

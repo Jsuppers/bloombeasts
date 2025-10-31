@@ -11,7 +11,7 @@ import {
   validateStatGainsProgression,
   loadCardFromJSON,
 } from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+import { StructuredAbility, AbilityTrigger } from '../../types/abilities.js';
 
 const LEAF_SPRITE = loadCardFromJSON('leaf-sprite', 'forest');
 
@@ -42,7 +42,7 @@ describe('Leaf Sprite Card', () => {
     });
 
     test('should have correct trigger', () => {
-      expect(LEAF_SPRITE.abilities[0].trigger).toBe('OnSummon');
+      expect(LEAF_SPRITE.abilities[0].trigger).toBe(AbilityTrigger.OnSummon);
     });
 
     test('should have correct effects', () => {
@@ -87,7 +87,7 @@ describe('Leaf Sprite Card', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[4];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnSummon');
+      expect(ability.trigger).toBe(AbilityTrigger.OnSummon);
     });
   });
 
@@ -110,7 +110,7 @@ describe('Leaf Sprite Card', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[7];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('Passive');
+      expect(ability.trigger).toBe(AbilityTrigger.WhileOnField);
     });
   });
 
@@ -133,7 +133,7 @@ describe('Leaf Sprite Card', () => {
       const upgrade = LEAF_SPRITE.levelingConfig?.abilityUpgrades?.[9];
       expect(upgrade).toBeDefined();
       const ability = upgrade!.abilities[0] as StructuredAbility;
-      expect(ability.trigger).toBe('OnSummon');
+      expect(ability.trigger).toBe(AbilityTrigger.OnSummon);
     });
   });
 

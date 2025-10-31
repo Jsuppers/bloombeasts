@@ -107,7 +107,6 @@ export class BattleStateManager {
       currentAttack: bloomCard.baseAttack,
       currentHealth: bloomCard.baseHealth,
       maxHealth: bloomCard.baseHealth,
-      counters: [],
       statusEffects: [],
       slotIndex: player.field.length,
       summoningSickness: true,
@@ -428,20 +427,6 @@ export class BattleStateManager {
           if (card) player.graveyard.push(card);
         }
         break;
-
-      case 'remove-counter':
-        const habitat = gameState.habitatZone as any;
-        if (!habitat || !habitat.counters || !Array.isArray(habitat.counters)) {
-          return { success: false, message: 'No habitat on field' };
-        }
-        const counterCost = cost.value || 1;
-        const removedCount = Math.min(counterCost, habitat.counters.length);
-        if (removedCount < counterCost) {
-          return { success: false, message: 'No counters available on habitat' };
-        }
-        habitat.counters.splice(0, removedCount);
-        Logger.debug(`Removed ${removedCount} counter(s) from ${habitat.name}`);
-        break;
     }
 
     return { success: true };
@@ -525,23 +510,6 @@ export class BattleStateManager {
           source.statusEffects.push(immunityEffect);
           Logger.debug(`${source.name} gained immunity to ${effect.immuneTo || 'all'}`);
         }
-        break;
-
-      case 'apply-counter':
-        // Handle counter application (on habitat or beasts)
-        if (!source.counters) {
-          source.counters = [];
-        }
-        const existingCounter = source.counters.find((c: any) => c.type === effect.counter);
-        if (existingCounter) {
-          existingCounter.amount += effect.value || 1;
-        } else {
-          source.counters.push({
-            type: effect.counter,
-            amount: effect.value || 1,
-          });
-        }
-        Logger.debug(`Added ${effect.value || 1} ${effect.counter} counter(s) to ${source.name}`);
         break;
 
       case 'draw-cards':
@@ -672,22 +640,6 @@ export class BattleStateManager {
         }
         break;
 
-      case 'remove-counter':
-        const removeTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
-        removeTargets.forEach((target: any) => {
-          if (target.counters && Array.isArray(target.counters)) {
-            if (effect.counter) {
-              target.counters = target.counters.filter((c: any) => c.type !== effect.counter);
-              Logger.debug(`Removed ${effect.counter} counters from ${target.name || 'target'}`);
-            } else {
-              const counterCount = target.counters.length;
-              target.counters = [];
-              Logger.debug(`Removed all counters from ${target.name || 'target'} (${counterCount} counters)`);
-            }
-          }
-        });
-        break;
-
       default:
         Logger.debug(`Unhandled magic effect type: ${effect.type}`);
     }
@@ -751,22 +703,6 @@ export class BattleStateManager {
         }
         break;
 
-      case 'remove-counter':
-        const removeTargetsHabitat = this.getEffectTargets(effect.target, player, opponent, effect.condition);
-        removeTargetsHabitat.forEach((target: any) => {
-          if (target.counters && Array.isArray(target.counters)) {
-            if (effect.counter) {
-              target.counters = target.counters.filter((c: any) => c.type !== effect.counter);
-              Logger.debug(`Removed ${effect.counter} counters from ${target.name || 'target'}`);
-            } else {
-              const counterCount = target.counters.length;
-              target.counters = [];
-              Logger.debug(`Removed all counters from ${target.name || 'target'} (${counterCount} counters)`);
-            }
-          }
-        });
-        break;
-
       case 'deal-damage':
         const damageTargetsHabitat = this.getEffectTargets(effect.target, player, opponent, effect.condition);
         damageTargetsHabitat.forEach((target: any) => {
@@ -810,10 +746,10 @@ export class BattleStateManager {
         const randomEnemy = pickRandom(opponent.field);
         targets = randomEnemy ? [randomEnemy] : [];
         break;
-      case 'opponent-gardener':
+      case 'opponent':
         targets = [opponent];
         break;
-      case 'player-gardener':
+      case 'player':
         targets = [player];
         break;
       case 'all-units':
@@ -880,13 +816,6 @@ export class BattleStateManager {
 
       case 'cost-below':
         return target.cost < (condition.value || 0);
-
-      case 'has-counter':
-        if (!target.counters || !Array.isArray(target.counters)) return false;
-        if (condition.value) {
-          return target.counters.some((c: any) => c.type === condition.value);
-        }
-        return target.counters.length > 0;
 
       default:
         Logger.debug(`Unknown condition type: ${condition.type}`);

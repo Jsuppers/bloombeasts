@@ -9,12 +9,22 @@ import { BloomBeastInstance } from '../../types/leveling';
 import { DeckList } from '../../utils/deckBuilder';
 import { SimpleMap } from '../../../utils/polyfills';
 import { STARTING_HEALTH, FIELD_SIZE } from '../../constants/gameRules';
+import { AssetCatalogManager } from '../../../AssetCatalogManager';
+import { allCatalogs } from '../../../catalogs';
 
 /**
  * Create a test game engine with two players
  */
 export function createTestGame(): GameEngine {
-  return new GameEngine();
+  // Create and load asset catalog manager for tests
+  const catalogManager = new AssetCatalogManager();
+
+  // Load all catalogs from TypeScript files
+  allCatalogs.forEach(catalog => {
+    catalogManager.loadCatalog(catalog);
+  });
+
+  return new GameEngine(catalogManager);
 }
 
 /**
@@ -189,21 +199,6 @@ export function findBeastByCardId(
   cardId: string
 ): BloomBeastInstance | null {
   return player.field.find(b => b && b.cardId === cardId) || null;
-}
-
-/**
- * Check if beast has counter
- */
-export function hasCounter(beast: BloomBeastInstance, counterType: string): boolean {
-  return beast.counters.some(c => c.type === counterType && c.amount > 0);
-}
-
-/**
- * Get counter amount
- */
-export function getCounterAmount(beast: BloomBeastInstance, counterType: string): number {
-  const counter = beast.counters.find(c => c.type === counterType);
-  return counter ? counter.amount : 0;
 }
 
 /**

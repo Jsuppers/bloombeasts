@@ -30,7 +30,7 @@ export const skyAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.DrawCards,
-                target: AbilityTarget.PlayerGardener,
+                target: AbilityTarget.Player,
                 value: 1
               }
             ]
@@ -84,7 +84,7 @@ export const skyAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.DrawCards,
-                      target: AbilityTarget.PlayerGardener,
+                      target: AbilityTarget.Player,
                       value: 2
                     }
                   ]
@@ -99,7 +99,7 @@ export const skyAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.DrawCards,
-                      target: AbilityTarget.PlayerGardener,
+                      target: AbilityTarget.Player,
                       value: 2
                     }
                   ]
@@ -124,7 +124,7 @@ export const skyAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.DrawCards,
-                      target: AbilityTarget.PlayerGardener,
+                      target: AbilityTarget.Player,
                       value: 3
                     },
                     {
@@ -158,7 +158,7 @@ export const skyAssets: AssetCatalog = {
                     },
                     {
                       type: EffectType.DrawCards,
-                      target: AbilityTarget.PlayerGardener,
+                      target: AbilityTarget.Player,
                       value: 2
                     }
                   ]
@@ -598,7 +598,7 @@ export const skyAssets: AssetCatalog = {
                   effects: [
                     {
                       type: EffectType.DrawCards,
-                      target: AbilityTarget.PlayerGardener,
+                      target: AbilityTarget.Player,
                       value: 3
                     },
                     {
@@ -648,7 +648,7 @@ export const skyAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.DrawCards,
-                target: AbilityTarget.PlayerGardener,
+                target: AbilityTarget.Player,
                 value: 1
               }
             ]
@@ -677,7 +677,6 @@ export const skyAssets: AssetCatalog = {
       id: "sky-mission",
       type: "mission",
       affinity: "sky",
-      missionNumber: 4,
       name: "Sky Mission",
       description: "Sky affinity mission",
       assets: [
