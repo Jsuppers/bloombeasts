@@ -104,11 +104,11 @@ export const uiSafeZoneText: UITextSafeZone = {
  * The side menu contains player info, text, and buttons
  */
 export const sideMenuPositions: SideMenuPositions = {
-  x: 1145,
+  x: 1045,  // Moved 100px left
   y: 128,
-  headerStartPosition: { x: 1156, y: 139 },
-  textStartPosition: { x: 1162, y: 188 },
-  buttonStartPosition: { x: 1156, y: 369 },
+  headerStartPosition: { x: 1070, y: 152 },  // Moved 100px left
+  textStartPosition: { x: 1082, y: 240 },  // Moved 100px left
+  buttonStartPosition: { x: 1070, y: 304 },  // Moved 100px left and up (text area now half size)
   playerName: { x: 10, y: 426, textAlign: 'left', textBaseline: 'top', size: DIMENSIONS.fontSize.sm },
   playerLevel: { x: 64, y: 445, textAlign: 'center', textBaseline: 'top', size: DIMENSIONS.fontSize.xs },
   playerExperienceBar: { x: 9, y: 445, maxWidth: 109 },

@@ -262,8 +262,8 @@ export class BattleStateManager {
     // Process OnAttack trigger
     this.processOnAttackTrigger(attacker, player, opponent);
 
-    // Check for trap activation - pass the attacking beast
-    this.checkAndActivateTraps(opponent, attacker, 'attack', onTrapCallback);
+    // Check for trap activation - pass the trap owner and attacking player
+    this.checkAndActivateTraps(opponent, player, attacker, 'attack', onTrapCallback);
 
     // Deal damage to each other
     const attackerDamage = attacker.currentAttack || 0;
@@ -333,8 +333,8 @@ export class BattleStateManager {
     // Process OnAttack trigger
     this.processOnAttackTrigger(attacker, player, opponent);
 
-    // Check for trap activation - pass the attacking beast
-    this.checkAndActivateTraps(opponent, attacker, 'attack', onTrapCallback);
+    // Check for trap activation - pass the trap owner and attacking player
+    this.checkAndActivateTraps(opponent, player, attacker, 'attack', onTrapCallback);
 
     opponent.health -= damage;
 
@@ -964,15 +964,16 @@ export class BattleStateManager {
    * Check and activate traps based on trigger event
    */
   checkAndActivateTraps(
-    defender: any,
-    attacker: any,
+    trapOwner: any,
+    attackingPlayer: any,
+    attackingBeast: any,
     triggerType: string,
     onTrapCallback?: (trapName: string) => void
   ): void {
-    if (!defender.trapZone || defender.trapZone.length === 0) return;
+    if (!trapOwner.trapZone || trapOwner.trapZone.length === 0) return;
 
-    for (let i = defender.trapZone.length - 1; i >= 0; i--) {
-      const trap: any = defender.trapZone[i];
+    for (let i = trapOwner.trapZone.length - 1; i >= 0; i--) {
+      const trap: any = trapOwner.trapZone[i];
 
       // Check the activation trigger correctly - trap cards have activation.trigger property
       const trapTrigger = trap.activation?.trigger || trap.trigger;
@@ -997,15 +998,16 @@ export class BattleStateManager {
           for (const ability of trap.abilities) {
             if (ability.effects && Array.isArray(ability.effects)) {
               for (const effect of ability.effects) {
-                this.processMagicEffect(effect, defender, attacker, { attacker: attacker });
+                // Trap owner is the caster, attacking player is the opponent
+                this.processMagicEffect(effect, trapOwner, attackingPlayer, { attacker: attackingBeast });
               }
             }
           }
         }
 
         // Remove trap from zone
-        const activatedTrap = defender.trapZone.splice(i, 1)[0];
-        defender.graveyard.push(activatedTrap);
+        const activatedTrap = trapOwner.trapZone.splice(i, 1)[0];
+        trapOwner.graveyard.push(activatedTrap);
 
         // Only activate ONE trap per event
         break;

@@ -619,6 +619,10 @@ export class UIRenderer {
             if (height === 'auto') height = parentBox.height;
         }
 
+        // Calculate final dimensions first (needed for bottom/right positioning)
+        const finalWidth = width === 'auto' ? parentBox.width : (typeof width === 'number' ? width : parentBox.width);
+        const finalHeight = height === 'auto' ? parentBox.height : (typeof height === 'number' ? height : parentBox.height);
+
         let x = parentBox.x;
         let y = parentBox.y;
 
@@ -632,14 +636,21 @@ export class UIRenderer {
                 const topOffset = this.resolveDimension(style.top, parentBox.height, 0);
                 y = parentBox.y + (typeof topOffset === 'number' ? topOffset : 0);
             }
+            // Handle bottom positioning (calculate from bottom edge)
+            if (style.bottom !== undefined && style.top === undefined) {
+                const bottomOffset = this.resolveDimension(style.bottom, parentBox.height, 0);
+                y = parentBox.y + parentBox.height - finalHeight - (typeof bottomOffset === 'number' ? bottomOffset : 0);
+            }
+            // Handle right positioning (calculate from right edge)
+            if (style.right !== undefined && style.left === undefined) {
+                const rightOffset = this.resolveDimension(style.right, parentBox.width, 0);
+                x = parentBox.x + parentBox.width - finalWidth - (typeof rightOffset === 'number' ? rightOffset : 0);
+            }
         }
 
         // Apply margins (only affect position, not size for now)
         const marginLeft = this.resolveDimension(style.marginLeft || style.margin, parentBox.width, 0);
         const marginTop = this.resolveDimension(style.marginTop || style.margin, parentBox.height, 0);
-
-        const finalWidth = width === 'auto' ? parentBox.width : (typeof width === 'number' ? width : parentBox.width);
-        const finalHeight = height === 'auto' ? parentBox.height : (typeof height === 'number' ? height : parentBox.height);
 
         const ml = typeof marginLeft === 'number' ? marginLeft : 0;
         const mt = typeof marginTop === 'number' ? marginTop : 0;

@@ -123,9 +123,12 @@ export class BattleController {
     const player1 = this.currentBattle.gameState.players[0];
     const player2 = this.currentBattle.gameState.players[1];
 
+    Logger.debug(`[BattleController] Checking battle end: P1(${player1.id}) HP=${player1.health}, P2(${player2.id}) HP=${player2.health}`);
+
     // Check if either player is defeated
     if (player1.health <= 0 && player2.health <= 0) {
       // Both died (rare tie case)
+      Logger.debug('[BattleController] Both players died - tie!');
       return {
         winner: null,
         turns: this.currentBattle.turn,
@@ -134,6 +137,7 @@ export class BattleController {
       };
     } else if (player1.health <= 0) {
       // Player 1 lost
+      Logger.debug('[BattleController] Player 1 died - Player 2 wins!');
       return {
         winner: 'player2',
         turns: this.currentBattle.turn,
@@ -142,6 +146,7 @@ export class BattleController {
       };
     } else if (player2.health <= 0) {
       // Player 2 lost
+      Logger.debug('[BattleController] Player 2 died - Player 1 wins!');
       return {
         winner: 'player1',
         turns: this.currentBattle.turn,
@@ -151,7 +156,8 @@ export class BattleController {
     }
 
     // Check deck-out condition (no cards left to draw)
-    if (player1.deck.length === 0 && player1.hand.length === 0 && player1.field.every(b => !b)) {
+    // Only consider it a deck-out if field has beasts but all are null, or field is empty AND they have no resources left
+    if (player1.deck.length === 0 && player1.hand.length === 0 && player1.field.length > 0 && player1.field.every(b => !b)) {
       return {
         winner: 'player2',
         turns: this.currentBattle.turn,
@@ -159,7 +165,7 @@ export class BattleController {
         player2Health: player2.health,
       };
     }
-    if (player2.deck.length === 0 && player2.hand.length === 0 && player2.field.every(b => !b)) {
+    if (player2.deck.length === 0 && player2.hand.length === 0 && player2.field.length > 0 && player2.field.every(b => !b)) {
       return {
         winner: 'player1',
         turns: this.currentBattle.turn,

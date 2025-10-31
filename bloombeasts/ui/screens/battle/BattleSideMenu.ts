@@ -18,6 +18,7 @@ export class BattleSideMenu {
   private getIsPlayerTurn: () => boolean;
   private getHasAttackableBeasts: () => boolean;
   private onAction?: (action: string) => void;
+  private onActionAsync?: (action: string) => Promise<void>;
   private onStopTurnTimer?: () => void;
   private playSfx?: (sfxId: string) => void;
 
@@ -26,6 +27,7 @@ export class BattleSideMenu {
     this.getIsPlayerTurn = props.getIsPlayerTurn;
     this.getHasAttackableBeasts = props.getHasAttackableBeasts;
     this.onAction = props.onAction;
+    this.onActionAsync = props.onActionAsync;
     this.onStopTurnTimer = props.onStopTurnTimer;
     this.playSfx = props.playSfx;
   }
@@ -39,16 +41,16 @@ export class BattleSideMenu {
         position: 'absolute',
         left: sideMenuPositions.x,
         top: sideMenuPositions.y,
-        width: 127,
-        height: 465,
+        width: 225,
+        height: 497,
       },
       children: [
         this.ui.Image({
-          source: this.ui.assetIdToImageSource?.('side-menu') || null,
+          source: this.ui.assetIdToImageSource?.('container-side-menu') || null,
           style: {
             position: 'absolute',
-            width: 127,
-            height: 465,
+            width: 225,
+            height: 497,
           },
         }),
 
@@ -68,47 +70,17 @@ export class BattleSideMenu {
           },
         }),
 
-        // Battle info text
-        this.ui.View({
-          style: {
-            position: 'absolute',
-            left: sideMenuPositions.textStartPosition.x - sideMenuPositions.x,
-            top: sideMenuPositions.textStartPosition.y - sideMenuPositions.y,
-          },
-          children: [
-            this.ui.Text({
-              text: 'Battle',
-              style: {
-                fontSize: 20,
-                fontWeight: 'bold',
-                color: '#fff',
-                marginBottom: 5,
-              },
-            }),
-            this.ui.Text({
-              text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
-                state ? `Turn ${state.currentTurn}` : 'Turn 1'
-              ),
-              style: {
-                fontSize: 18,
-                color: '#fff',
-                marginBottom: 5,
-              },
-            }),
-          ],
-        }),
-
         // Attack button (red) - positioned above End Turn button
         createButton({
           ui: this.ui,
           label: 'Attack',
-          onClick: () => {
+          onClick: async () => {
             const currentIsPlayerTurn = this.getIsPlayerTurn();
             const hasAttackable = this.getHasAttackableBeasts();
 
             if (currentIsPlayerTurn && hasAttackable) {
-              this.onAction?.('auto-attack-all');
-              // Auto end turn after attacking
+              // Attack and wait for it to complete, then auto end turn
+              await this.onActionAsync?.('auto-attack-all');
               this.onStopTurnTimer?.();
               this.onAction?.('end-turn');
             }
@@ -185,11 +157,11 @@ export class BattleSideMenu {
           },
         }),
 
-        // End Turn button with timer - uses derived bindings for reactive updates
+        // Skip button with timer - uses derived bindings for reactive updates
         createButton({
           ui: this.ui,
           label: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
-            state?.turnPlayer === 'player' ? 'End Turn' : 'Enemy Turn'
+            state?.turnPlayer === 'player' ? 'Skip' : 'Enemy Turn'
           ),
           onClick: () => {
             const currentIsPlayerTurn = this.getIsPlayerTurn();

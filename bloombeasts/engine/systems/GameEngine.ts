@@ -479,7 +479,9 @@ export class GameEngine {
    * Process magic card effects using structured effects
    */
   private processMagicCard(card: MagicCard, player: Player, target?: any): void {
-    const opponent = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+    // Determine which player is playing the card and get the other player as opponent
+    const playerIndex = this.state.players.indexOf(player);
+    const opponent = this.state.players[playerIndex === 0 ? 1 : 0];
 
     // Process each ability in the magic card (usually just one with OnSummon trigger)
     for (const ability of card.abilities) {
@@ -562,7 +564,9 @@ export class GameEngine {
    * Apply buff card effects when played
    */
   private applyBuffCardEffects(buffCard: any, player: Player): void {
-    const opponent = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+    // Determine which player is playing the buff and get the other player as opponent
+    const playerIndex = this.state.players.indexOf(player);
+    const opponent = this.state.players[playerIndex === 0 ? 1 : 0];
 
     // Process each ability in the buff card
     for (const ability of buffCard.abilities) {
@@ -840,7 +844,9 @@ export class GameEngine {
    * Trigger OnAllySummon abilities on other beasts when a new ally is summoned
    */
   private triggerAllySummonAbilities(summonedBeast: BloomBeastInstance, controllingPlayer: Player): void {
-    const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+    // Determine which player controls the summoned beast and get the other player as opponent
+    const controllingPlayerIndex = this.state.players.indexOf(controllingPlayer);
+    const opposingPlayer = this.state.players[controllingPlayerIndex === 0 ? 1 : 0];
 
     // Get the summoned beast's card definition for checking affinity condition
     const summonedCardDef = this.getCardDefinition(summonedBeast.cardId);
@@ -1012,7 +1018,9 @@ export class GameEngine {
       return false;
     }
 
-    const defendingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
+    // Determine which player is attacking and get the other player as defender
+    const attackingPlayerIndex = this.state.players.indexOf(attackingPlayer);
+    const defendingPlayer = this.state.players[attackingPlayerIndex === 0 ? 1 : 0];
 
     // Check for traps on attack
     const attackData = { attackNegated: false };

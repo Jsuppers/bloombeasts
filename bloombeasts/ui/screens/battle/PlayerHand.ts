@@ -74,9 +74,19 @@ export class PlayerHand {
         },
       }),
 
-      // Layer 2: Base card frame
+      // Layer 2: Base card frame (only for Bloom cards)
       this.ui.Image({
-        source: this.ui.assetIdToImageSource?.('base-card') || null,
+        source: this.ui.bindingManager.derive(
+          [BindingType.BattleDisplay, BindingType.UIState],
+          ( display: BattleDisplay | null, uiState: UIState) => {
+            if (!display || !display.playerHand) return null;
+            const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
+            const actualIndex = scrollOffset * cardsPerPage + slotIndex;
+            const card = display.playerHand[actualIndex];
+            if (!card || card.type !== 'Bloom') return null;
+            return this.ui.assetIdToImageSource?.('base-card') || null;
+          }
+        ),
         style: {
           width: cardWidth,
           height: cardHeight,
@@ -372,14 +382,8 @@ export class PlayerHand {
     return this.ui.View({
       style: {
         position: 'absolute',
-        left: 40,
-        top: this.ui.bindingManager.derive(
-          [BindingType.UIState],
-          (uiState: UIState) => {
-            const showFull = uiState.battle?.showHand ?? false;
-            return showFull ? (gameDimensions.panelHeight - 300) : 640;
-          }
-        ),
+        left: (gameDimensions.panelWidth - overlayWidth) / 2,
+        bottom: 0,
         width: overlayWidth,
         height: this.ui.bindingManager.derive(
           [BindingType.UIState],
@@ -393,6 +397,22 @@ export class PlayerHand {
         borderColor: '#4a8ec2',
       },
       children: [
+        // Background blocker to prevent clicks passing through
+        this.ui.Pressable({
+          onClick: () => {
+            // Consume clicks to prevent them from passing through
+          },
+          style: {
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: -1,
+          },
+          children: [],
+        }),
+
         // Render all card slots (they show/hide based on bindings)
         ...cardSlots,
 
@@ -414,7 +434,7 @@ export class PlayerHand {
           },
           style: {
             position: 'absolute',
-            left: overlayWidth - 50,
+            left: overlayWidth - 80,
             top: 10,
             width: 60,
             height: 50,
@@ -457,7 +477,7 @@ export class PlayerHand {
           ),
           style: {
             position: 'absolute',
-            left: overlayWidth - 50,
+            left: overlayWidth - 80,
             top: 10 + 50 + 10, // Below toggle button
             width: 60,
             height: 50,
@@ -487,10 +507,9 @@ export class PlayerHand {
             ),
           },
           children: this.ui.Text({
-            text: 'UP',
+            text: '⬆',
             style: {
-              fontSize: 24,
-              fontWeight: 'bold',
+              fontSize: 32,
               color: '#fff',
             },
           }),
@@ -514,7 +533,7 @@ export class PlayerHand {
           ),
           style: {
             position: 'absolute',
-            left: overlayWidth - 50,
+            left: overlayWidth - 80,
             top: 10 + 50 + 10 + 50 + 10, // Below up button
             width: 60,
             height: 50,
@@ -546,10 +565,9 @@ export class PlayerHand {
             ),
           },
           children: this.ui.Text({
-            text: 'DOWN',
+            text: '⬇',
             style: {
-              fontSize: 24,
-              fontWeight: 'bold',
+              fontSize: 32,
               color: '#fff',
             },
           }),

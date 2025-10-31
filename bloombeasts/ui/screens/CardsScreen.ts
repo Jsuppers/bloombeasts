@@ -141,7 +141,7 @@ export class CardsScreen {
     // Check bounds inside onClick to avoid multi-binding derives (which create new bindings)
     const scrollButtons = [
       {
-        label: '↑',
+        label: 'Previous',
         onClick: () => {
           // Check bounds before scrolling
           const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
@@ -167,11 +167,25 @@ export class CardsScreen {
             const offset = uiState.cards?.scrollOffset ?? 0;
             return offset <= 0;
           }
-        ) as any,
+        ),
+        opacity: this.ui.bindingManager.derive(
+          [BindingType.UIState],
+          (uiState: UIState) => {
+            const offset = uiState.cards?.scrollOffset ?? 0;
+            return offset <= 0 ? 0.5 : 1.0;
+          }
+        ),
+        textColor: this.ui.bindingManager.derive(
+          [BindingType.UIState],
+          (uiState: UIState) => {
+            const offset = uiState.cards?.scrollOffset ?? 0;
+            return offset <= 0 ? '#888' : '#fff';
+          }
+        ),
         yOffset: 0,
       },
       {
-        label: '↓',
+        label: 'Next',
         onClick: () => {
           // Reactive disabled state prevents invalid scrolling, so just increment
           const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
@@ -203,7 +217,27 @@ export class CardsScreen {
             const totalPages = Math.ceil(cards.length / cardsPerPage);
             return offset >= totalPages - 1;
           }
-        ) as any,
+        ),
+        opacity: this.ui.bindingManager.derive(
+          [BindingType.UIState, BindingType.PlayerData],
+          (uiState: UIState, pd: any) => {
+            const offset = uiState.cards?.scrollOffset ?? 0;
+            const cards = pd?.cards?.collected || [];
+            const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+            const totalPages = Math.ceil(cards.length / cardsPerPage);
+            return offset >= totalPages - 1 ? 0.5 : 1.0;
+          }
+        ),
+        textColor: this.ui.bindingManager.derive(
+          [BindingType.UIState, BindingType.PlayerData],
+          (uiState: UIState, pd: any) => {
+            const offset = uiState.cards?.scrollOffset ?? 0;
+            const cards = pd?.cards?.collected || [];
+            const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+            const totalPages = Math.ceil(cards.length / cardsPerPage);
+            return offset >= totalPages - 1 ? '#888' : '#fff';
+          }
+        ),
         yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
       },
     ];

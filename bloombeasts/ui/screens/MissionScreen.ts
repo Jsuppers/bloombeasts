@@ -238,7 +238,7 @@ export class MissionScreen {
       ],
       buttons: [
         {
-          label: 'Up',
+          label: 'Previous',
           onClick: () => {
             const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
             // Reactive disabled state prevents invalid scrolling, so just decrement
@@ -254,10 +254,18 @@ export class MissionScreen {
             const offset: number = uiState.missions?.scrollOffset ?? 0;
             return offset <= 0 ? true : false;
           }),
+          opacity: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+            const offset: number = uiState.missions?.scrollOffset ?? 0;
+            return offset <= 0 ? 0.5 : 1.0;
+          }),
+          textColor: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+            const offset: number = uiState.missions?.scrollOffset ?? 0;
+            return offset <= 0 ? '#888' : '#fff';
+          }),
           yOffset: 0,
         },
         {
-          label: 'Down',
+          label: 'Next',
           onClick: () => {
             const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
             // Reactive disabled state prevents invalid scrolling, so just increment
@@ -274,6 +282,18 @@ export class MissionScreen {
             const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
             const totalPages = Math.ceil(missions.length / missionsPerPage);
             return offset >= totalPages - 1 ? true : false;
+          }),
+          opacity: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+            const offset: number = uiState.missions?.scrollOffset ?? 0;
+            const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+            const totalPages = Math.ceil(missions.length / missionsPerPage);
+            return offset >= totalPages - 1 ? 0.5 : 1.0;
+          }),
+          textColor: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
+            const offset: number = uiState.missions?.scrollOffset ?? 0;
+            const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+            const totalPages = Math.ceil(missions.length / missionsPerPage);
+            return offset >= totalPages - 1 ? '#888' : '#fff';
           }),
           yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
         },

@@ -213,6 +213,17 @@ export class BattleScreen {
       getIsPlayerTurn: () => this.isPlayerTurnValue,
       getHasAttackableBeasts: () => this.hasAttackableBeasts,
       onAction: this.onAction,
+      onActionAsync: async (action: string) => {
+        // Call the action and wait for animations to complete
+        if (this.onAction) {
+          this.onAction!(action);
+          // Wait for attack animations to complete (auto-attack-all can have multiple animations)
+          // Each attack takes about 1 second, and there can be up to 3 attacks
+          await new Promise<void>((resolve) => {
+            this.async.setTimeout(() => resolve(), 3500);
+          });
+        }
+      },
       onStopTurnTimer: () => this.stopTurnTimer(),
       playSfx: this.playSfx,
     });
@@ -277,7 +288,8 @@ export class BattleScreen {
           },
           children: [
               // Layer 2: Playboard overlay
-              this.backgroundComponent.createPlayboard(),
+              // TODO futre
+              // this.backgroundComponent.createPlayboard(),
 
               // Layer 3: Battle zones (beasts, traps, buffs, habitat)
               ...this.beastFieldComponent.createBeastField('player'),
@@ -380,16 +392,16 @@ export class BattleScreen {
                 backgroundColor: 'rgba(0, 0, 0, 0.7)',
               },
             }),
-            // Card display
-            this.ui.Text({
-              text: 'Selected Card Detail - TODO: Implement with reactive card rendering',
+            // Card display centered on screen with reactive rendering
+            this.ui.View({
               style: {
                 position: 'absolute',
-                top: '50%',
-                left: '50%',
-                color: '#fff',
-                fontSize: 20,
-              }
+                width: '100%',
+                height: '100%',
+                justifyContent: 'center',
+                alignItems: 'center',
+              },
+              children: this.createBattleCardDisplay(),
             }),
           ],
         })
@@ -413,6 +425,203 @@ export class BattleScreen {
    * Forfeit popup is now handled at the root level in BloomBeastsGame.ts
    * This method has been removed to avoid duplicate popups
    */
+
+  /**
+   * Create battle card display with reactive bindings for selectedCardDetail
+   */
+  private createBattleCardDisplay(): UINodeType {
+    const cardWidth = standardCardDimensions.width;
+    const cardHeight = standardCardDimensions.height;
+    const beastImageWidth = 185;
+    const beastImageHeight = 185;
+
+    const positions = {
+      beastImage: { x: 12, y: 13 },
+      cost: { x: 20, y: 10 },
+      affinity: { x: 175, y: 7 },
+      name: { x: 105, y: 13 },
+      ability: { x: 21, y: 212 },
+      attack: { x: 20, y: 176 },
+      health: { x: 188, y: 176 },
+    };
+
+    return this.ui.View({
+      style: {
+        width: cardWidth,
+        height: cardHeight,
+        position: 'relative',
+      },
+      children: [
+        // Layer 1: Card/Beast artwork image
+        this.ui.Image({
+          source: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (state: UIState) => {
+              const card = state.battle?.selectedCardDetail;
+              if (!card) return null;
+              const baseId = card.id?.replace(/-\d+-\d+$/, '') || card.name?.toLowerCase().replace(/\s+/g, '-');
+              return this.ui.assetIdToImageSource?.(baseId) || null;
+            }
+          ),
+          style: {
+            width: beastImageWidth,
+            height: beastImageHeight,
+            position: 'absolute',
+            top: positions.beastImage.y,
+            left: positions.beastImage.x,
+          },
+        }),
+
+        // Layer 2: Base card frame (only for Bloom cards) or type-specific template
+        this.ui.Image({
+          source: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (state: UIState) => {
+              const card = state.battle?.selectedCardDetail;
+              if (!card) return null;
+
+              let templateKey = '';
+              if (card.type === 'Bloom') {
+                templateKey = 'base-card';
+              } else if (card.type === 'Habitat' && card.affinity) {
+                templateKey = `${card.affinity.toLowerCase()}-habitat`;
+              } else {
+                templateKey = `${card.type.toLowerCase()}-card`;
+              }
+              return this.ui.assetIdToImageSource?.(templateKey) || null;
+            }
+          ),
+          style: {
+            width: cardWidth,
+            height: cardHeight,
+            position: 'absolute',
+            top: 0,
+            left: 0,
+          },
+        }),
+
+        // Layer 3: Affinity icon (for Bloom cards)
+        this.ui.Image({
+          source: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (state: UIState) => {
+              const card = state.battle?.selectedCardDetail;
+              if (!card || card.type !== 'Bloom' || !card.affinity) return null;
+              return this.ui.assetIdToImageSource?.(`${card.affinity.toLowerCase()}-icon`) || null;
+            }
+          ),
+          style: {
+            width: 30,
+            height: 30,
+            position: 'absolute',
+            top: positions.affinity.y,
+            left: positions.affinity.x,
+          },
+        }),
+
+        // Layer 4: Card name
+        this.ui.Text({
+          text: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (state: UIState) => state.battle?.selectedCardDetail?.name || ''
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.name.y,
+            left: 0,
+            width: cardWidth,
+            fontSize: 14,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 5: Cost
+        this.ui.Text({
+          text: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (state: UIState) => {
+              const card = state.battle?.selectedCardDetail;
+              return card && card.cost !== undefined ? String(card.cost) : '';
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.cost.y,
+            left: positions.cost.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 6: Attack (for Bloom cards)
+        this.ui.Text({
+          text: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (state: UIState) => {
+              const card = state.battle?.selectedCardDetail;
+              if (!card || card.type !== 'Bloom') return '';
+              return String((card as any).currentAttack ?? (card as any).baseAttack ?? 0);
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.attack.y,
+            left: positions.attack.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 7: Health (for Bloom cards)
+        this.ui.Text({
+          text: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (state: UIState) => {
+              const card = state.battle?.selectedCardDetail;
+              if (!card || card.type !== 'Bloom') return '';
+              return String((card as any).currentHealth ?? (card as any).baseHealth ?? 0);
+            }
+          ),
+          style: {
+            position: 'absolute',
+            top: positions.health.y,
+            left: positions.health.x - 10,
+            width: 20,
+            fontSize: 24,
+            color: '#fff',
+            textAlign: 'center',
+          },
+        }),
+
+        // Layer 8: Ability text (for non-Bloom cards)
+        this.ui.Text({
+          text: this.ui.bindingManager.derive(
+            [BindingType.UIState],
+            (state: UIState) => {
+              const card = state.battle?.selectedCardDetail;
+              if (!card || card.type === 'Bloom') return '';
+              return card.abilities?.[0]?.description || '';
+            }
+          ),
+          numberOfLines: 3,
+          style: {
+            position: 'absolute',
+            top: positions.ability.y,
+            left: positions.ability.x,
+            width: 168,
+            fontSize: 10,
+            color: '#fff',
+            textAlign: 'left',
+          },
+        }),
+      ],
+    });
+  }
 
   /**
    * Create card popup overlay

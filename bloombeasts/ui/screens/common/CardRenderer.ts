@@ -23,12 +23,11 @@ export interface CardRendererProps {
  * Create a card UI component with proper multi-layer rendering
  * This follows the standard card format:
  * - Layer 1: Card artwork (185x185) - beast image for Bloom, card art for others
- * - Layer 2: Base card frame (210x280) - BaseCard.png
- * - Layer 3: Type-specific template overlay (MagicCard, TrapCard, etc.)
- * - Layer 4: Affinity icon (for Bloom cards)
- * - Layer 5: Experience bar (for Bloom cards with levels)
- * - Layer 6: Text overlays (name, cost, stats, level, ability)
- * - Layer 7: Deck indicator (if showDeckIndicator is true)
+ * - Layer 2: Card frame (210x280) - base-card for Bloom, type-specific for others (buff-card, magic-card, etc.)
+ * - Layer 3: Affinity icon (for Bloom cards)
+ * - Layer 4: Experience bar (for Bloom cards with levels)
+ * - Layer 5: Text overlays (name, cost, stats, level, ability)
+ * - Layer 6: Deck indicator (if showDeckIndicator is true)
  */
 export function createCardComponent(ui: UIMethodMappings, props: CardRendererProps): UINodeType {
   const { card, isInDeck = false, onClick, showDeckIndicator = true } = props;
@@ -70,16 +69,15 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
   const baseId = extractBaseId(card.id);
   const cardImageKey = baseId; // Card images use the base card ID
   const beastImageKey = baseId; // Beast images use the base card ID
-  const baseCardKey = 'base-card'; // All cards use base-card as the frame
 
-  // Type-specific template overlay
-  // Habitat cards use habitat templates from affinity folders
-  let templateKey = '';
-  if (card.type === 'Habitat' && card.affinity) {
-    // Template key format: affinity-habitat (e.g., 'forest-habitat')
-    templateKey = `${card.affinity.toLowerCase()}-habitat`;
-  } else if (card.type !== 'Bloom') {
-    templateKey = `${card.type.toLowerCase()}-card`;
+  // Card frame key: Bloom cards use base-card, others use type-specific frames
+  let cardFrameKey = '';
+  if (card.type === 'Bloom') {
+    cardFrameKey = 'base-card';
+  } else if (card.type === 'Habitat' && card.affinity) {
+    cardFrameKey = `${card.affinity.toLowerCase()}-habitat`;
+  } else {
+    cardFrameKey = `${card.type.toLowerCase()}-card`;
   }
 
   // Affinity icon key format: affinity-icon (e.g., 'forest-icon', 'fire-icon')
@@ -111,9 +109,9 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         },
       }),
 
-      // Layer 2: Base card frame (210x280) - ALL cards use BaseCard.png
+      // Layer 2: Card frame - Bloom cards use base-card, others use type-specific frames
       ui.Image({
-        source: ui.assetIdToImageSource?.(baseCardKey) || null,
+        source: ui.assetIdToImageSource?.(cardFrameKey) || null,
         style: {
           width: cardWidth,
           height: cardHeight,
@@ -122,20 +120,6 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
           left: 0,
         },
       }),
-
-      // Layer 2.5: Template overlay for non-Bloom cards (Magic/Trap/Buff/Habitat)
-      ...(templateKey ? [
-        ui.Image({
-          source: ui.assetIdToImageSource?.(templateKey) || null,
-          style: {
-            width: cardWidth,
-            height: cardHeight,
-            position: 'absolute',
-            top: 0,
-            left: 0,
-          },
-        })
-      ] : []),
 
       // Layer 3: Affinity icon (for Bloom cards)
       ...(card.type === 'Bloom' && card.affinity && affinityKey ? [
@@ -468,24 +452,27 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
       },
     }),
 
-    // Layer 2: Base card frame
+    // Layer 2: Card frame (base-card for Bloom, type-specific for others)
     ui.Image({
       source: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
         const card = getCard(uiState, playerData);
-        return card ? ui.assetIdToImageSource?.('base-card') : null;
-      }),
-      style: {
-        width: cardWidth,
-        height: cardHeight,
-        position: 'absolute',
-        top: 0,
-        left: 0,
-      },
-    }),
+        if (!card) return null;
 
-    // Layer 3: Template overlay
-    ui.Image({
-      source: templateImageBinding,
+        // Bloom cards use base-card
+        if (card.type === 'Bloom') {
+          return ui.assetIdToImageSource?.('base-card') ?? null;
+        }
+
+        // Other cards use their type-specific frame
+        let frameAssetId = '';
+        if (card.type === 'Habitat' && card.affinity) {
+          frameAssetId = `${card.affinity.toLowerCase()}-habitat`;
+        } else {
+          frameAssetId = `${card.type.toLowerCase()}-card`;
+        }
+
+        return frameAssetId ? (ui.assetIdToImageSource?.(frameAssetId) ?? null) : null;
+      }),
       style: {
         width: cardWidth,
         height: cardHeight,

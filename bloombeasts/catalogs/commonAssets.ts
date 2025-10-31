@@ -86,12 +86,12 @@ export const commonAssets: AssetCatalog = {
       type: "ui",
       category: "button",
       name: "Standard Button",
-      description: "Default button style",
+      description: "Default button style (175x72)",
       assets: [
         {
           type: "image",
-          horizonAssetId: "740500362349295",
-          path: "assets/images/misc_standard-button.png"
+          horizonAssetId: "1976060856578244",
+          path: "assets/images/ui_button_standard_default.png"
         }
       ]
     },
@@ -100,12 +100,12 @@ export const commonAssets: AssetCatalog = {
       type: "ui",
       category: "button",
       name: "Green Button",
-      description: "Green variant button",
+      description: "Green variant button (175x72)",
       assets: [
         {
           type: "image",
-          horizonAssetId: "1454989832255109",
-          path: "assets/images/misc_green-button.png"
+          horizonAssetId: "3694695314172287",
+          path: "assets/images/ui_button_standard_green.png"
         }
       ]
     },
@@ -114,12 +114,26 @@ export const commonAssets: AssetCatalog = {
       type: "ui",
       category: "button",
       name: "Red Button",
-      description: "Red variant button",
+      description: "Red variant button (175x72)",
       assets: [
         {
           type: "image",
-          horizonAssetId: "1365262285015644",
-          path: "assets/images/misc_red-button.png"
+          horizonAssetId: "1607838330179321",
+          path: "assets/images/ui_button_standard_red.png"
+        }
+      ]
+    },
+    {
+      id: "yellow-button",
+      type: "ui",
+      category: "button",
+      name: "Yellow Button",
+      description: "Yellow variant button (175x72)",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "1977156269826109",
+          path: "assets/images/ui_button_standard_yellow.png"
         }
       ]
     },
@@ -138,16 +152,30 @@ export const commonAssets: AssetCatalog = {
       ]
     },
     {
-      id: "side-menu",
+      id: "small-button",
       type: "ui",
-      category: "container",
-      name: "Side Menu",
-      description: "Side menu panel",
+      category: "button",
+      name: "Small Button",
+      description: "Small button variant (89x89)",
       assets: [
         {
           type: "image",
-          horizonAssetId: "794839683168713",
-          path: "assets/images/misc_side-menu.png"
+          horizonAssetId: "726833263789403",
+          path: "assets/images/ui_button_small.png"
+        }
+      ]
+    },
+    {
+      id: "container-side-menu",
+      type: "ui",
+      category: "container",
+      name: "Side Menu Container",
+      description: "Side menu panel container (225x497)",
+      assets: [
+        {
+          type: "image",
+          horizonAssetId: "4238983773013268",
+          path: "assets/images/ui_container_side-menu.png"
         }
       ]
     },
@@ -160,7 +188,7 @@ export const commonAssets: AssetCatalog = {
       assets: [
         {
           type: "image",
-          horizonAssetId: "PLACEHOLDER_ID",
+          horizonAssetId: "2596874604027595",
           path: "assets/images/ui_container_player-stats.png"
         }
       ]
@@ -440,7 +468,7 @@ export const commonAssets: AssetCatalog = {
       assets: [
         {
           type: "image",
-          horizonAssetId: "PLACEHOLDER_ID",
+          horizonAssetId: "4103662979871750",
           path: "assets/images/icon_coin.png"
         }
       ]
@@ -454,7 +482,7 @@ export const commonAssets: AssetCatalog = {
       assets: [
         {
           type: "image",
-          horizonAssetId: "PLACEHOLDER_ID",
+          horizonAssetId: "1152818320384366",
           path: "assets/images/icon_serum.png"
         }
       ]
@@ -651,7 +679,7 @@ export const commonAssets: AssetCatalog = {
       assets: [
         {
           type: "image",
-          horizonAssetId: "852906320567105",
+          horizonAssetId: "3158472954326260",
           path: "assets/images/upgrade_container-card.png"
         }
       ]

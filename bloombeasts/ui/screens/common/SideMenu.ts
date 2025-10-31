@@ -15,14 +15,16 @@ import { BindingType } from '../../types/BindingManager';
 
 // SideMenu-specific constants
 const sideMenuDimensions = {
-  width: 127,
-  height: 465,
+  width: 225,
+  height: 497,
 };
 
 export interface SideMenuButton {
     label: string | ValueBindingBase<string>;
     onClick: () => void;
     disabled?: boolean | ValueBindingBase<boolean>;
+    opacity?: any; // Binding or static opacity value
+    textColor?: any; // Binding or static text color value
     yOffset?: number; // Vertical offset from buttonStartPosition
 }
 
@@ -118,19 +120,7 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
         );
     }
 
-    // Player info at bottom of sidebar (aligned to bottom like web deployment)
-    children.push(
-        ui.View({
-            style: {
-                position: 'absolute',
-                left: 0,
-                top: sideMenuDimensions.height - 40,
-                width: sideMenuDimensions.width,
-                height: 50,
-            },
-            children: createPlayerInfo(ui, config.onXPBarClick),
-        })
-    );
+    // Player info removed - no longer displayed in side menu
 
     // Bottom button (if provided, at headerStartPosition)
     if (config.bottomButton) {
@@ -162,7 +152,7 @@ export function createSideMenu(ui: UIMethodMappings, config: SideMenuConfig): UI
         children: [
             // Sidebar background image - assets preload automatically
             ui.Image({
-                source: ui.assetIdToImageSource?.('side-menu') || null,
+                source: ui.assetIdToImageSource?.('container-side-menu') || null,
                 style: {
                     position: 'absolute',
                     width: sideMenuDimensions.width,
@@ -202,10 +192,10 @@ function createPlayerInfo(
         };
     };
 
-    // Single binding for level and XP text
-    const levelXPTextBinding = ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+    // XP text only (level is now in player stats container)
+    const xpTextBinding = ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
         const statsVal = extractStats(data);
-        if (!statsVal) return 'lvl 1. 0/100';
+        if (!statsVal) return '0/100';
 
         const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
         const currentLevel = statsVal.playerLevel;
@@ -215,7 +205,7 @@ function createPlayerInfo(
         const currentXP = totalXP - xpForCurrentLevel;
         const xpNeeded = xpForNextLevel - xpForCurrentLevel;
 
-        return `lvl ${currentLevel}. ${currentXP}/${xpNeeded}`;
+        return `${currentXP}/${xpNeeded}`;
     });
 
     return ui.View({
@@ -240,7 +230,7 @@ function createPlayerInfo(
                 }),
             }),
 
-            // Level and XP text
+            // XP text only
             ui.View({
                 style: {
                     position: 'absolute',
@@ -248,7 +238,7 @@ function createPlayerInfo(
                     top: 19,
                 },
                 children: ui.Text({
-                    text: levelXPTextBinding,
+                    text: xpTextBinding,
                     style: {
                         fontSize: DIMENSIONS.fontSize.xs,
                         color: COLORS.textSecondary,

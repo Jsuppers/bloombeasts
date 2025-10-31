@@ -112,6 +112,10 @@ export class MissionBattleUI {
     // Resolve the opponent deck
     const opponentDeck = resolveDeck(mission.opponentDeck);
 
+    // Configure opponent health (mission 1 has reduced health for tutorial)
+    const opponentHealth = mission.id === 'mission-01' ? 1 : 30;
+    const opponentMaxHealth = mission.id === 'mission-01' ? 1 : 30;
+
     // Configure battle
     const battleConfig: BattleConfig = {
       player1: {
@@ -125,8 +129,8 @@ export class MissionBattleUI {
         id: 'opponent',
         name: mission.name,  // Use mission name as opponent name (e.g., "Rootling")
         deck: opponentDeck.cards,
-        health: 30,
-        maxHealth: 30,
+        health: opponentHealth,
+        maxHealth: opponentMaxHealth,
         isAI: true,
       },
     };
@@ -261,8 +265,19 @@ export class MissionBattleUI {
       return { success: false };
     }
 
+    // Check if battle is already complete (e.g., player just won)
+    if (this.currentBattle.isComplete) {
+      return { success: false };
+    }
+
     const player = this.currentBattle.gameState.players[0];
     const opponent = this.currentBattle.gameState.players[1];
+
+    // Check if battle has ended before processing end-of-turn
+    const battleResultBeforeTurn = this.battleController.checkBattleEnd();
+    if (battleResultBeforeTurn) {
+      return { success: false };
+    }
 
     // Process end-of-turn effects
     player.field.forEach((beast: any) => {
@@ -378,19 +393,30 @@ export class MissionBattleUI {
     const battleResult = this.battleController.checkBattleEnd();
     if (!battleResult) return;
 
+    Logger.info(`[MissionBattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
+
     this.shouldStopAI = true;
     this.currentBattle.isComplete = true;
 
-    // Calculate rewards for victory
+    // Calculate rewards based on winner
     if (battleResult.winner === 'player1') {
+      // Player won!
+      Logger.info('[MissionBattleUI] Player 1 won! Awarding rewards.');
       this.currentBattle.rewards = this.missionManager.completeMission();
       this.battleController.completeBattle('player1');
-    } else {
+    } else if (battleResult.winner === 'player2') {
+      // Player lost
+      Logger.info('[MissionBattleUI] Player 2 won! No rewards.');
       this.currentBattle.rewards = null;
       this.battleController.completeBattle('player2');
+    } else {
+      // Tie (both died) - treat as loss for now
+      Logger.info('[MissionBattleUI] Tie! No rewards.');
+      this.currentBattle.rewards = null;
+      this.battleController.completeBattle(null);
     }
 
-    Logger.info(`[MissionBattleUI] Battle ended. Winner: ${battleResult.winner}`);
+    Logger.info(`[MissionBattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}`);
   }
 
   /**

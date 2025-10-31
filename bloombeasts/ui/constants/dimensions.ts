@@ -16,11 +16,16 @@ export const chestImageMissionCompleteDimensions = {
 
 // Multi-use button dimensions
 export const sideMenuButtonDimensions = {
-  width: 105,
-  height: 36,
+  width: 175,
+  height: 72,
 };
 
 export const longButtonDimensions = {
   width: 201,
   height: 35,
+};
+
+export const smallButtonDimensions = {
+  width: 89,
+  height: 89,
 };

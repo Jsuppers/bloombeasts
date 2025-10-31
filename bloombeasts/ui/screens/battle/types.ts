@@ -104,6 +104,7 @@ export interface BattleSideMenuProps extends BattleComponentProps {
   getIsPlayerTurn: () => boolean; // Function to get current turn state
   getHasAttackableBeasts: () => boolean; // Function to check if player has beasts that can attack
   onAction?: (action: string) => void;
+  onActionAsync?: (action: string) => Promise<void>; // Async version for actions that need to wait
   onStopTurnTimer?: () => void;
   playSfx?: (sfxId: string) => void;
 }

@@ -27,6 +27,7 @@ import { BloomBeasts } from './BloomBeasts-GameEngine-Standalone';
 // Import types from the namespace
 type BindingManager = BloomBeasts.BindingManager;
 type AsyncMethods = BloomBeasts.AsyncMethods;
+const getAllImageAssetIds = BloomBeasts.getAllImageAssetIds;
 
 // Access class from the namespace
 const BindingManager = BloomBeasts.BindingManager;
@@ -183,14 +184,14 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
       'background',
       'base-card',
       'cards-container',
-      'ui-container-side-menu',
-      'ui-button-standard-default',
+      'container-side-menu',
+      'standard-button',
     ];
 
+    const allAssets = getAllImageAssetIds(this.catalogManager);
     const preloadImages: UINode[] = [];
-
     // Only preload essential UI assets
-    essentialAssets.forEach(assetId => {
+    allAssets.forEach((assetId: string) => {
       const horizonId = this.catalogManager.getHorizonAssetId(assetId, 'image');
       if (horizonId && horizonId !== 'PLACEHOLDER_HORIZON_ID') {
         preloadImages.push(
@@ -494,7 +495,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     this.game = new BloomBeastsGame(platformConfig);
 
     // Create the asset preload block - CRITICAL for Horizon asset loading!
-    // const preloadBlock = this.createAssetPreloadBlock();
+    const preloadBlock = this.createAssetPreloadBlock();
 
     // Return both the game UI tree AND the preload block
     // The preload block is hidden but forces Horizon to load all assets
@@ -502,7 +503,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
       style: { width: '100%', height: '100%' },
       children: [
         this.game.uiTree,  // Main game UI
-        // preloadBlock        // Hidden preload block (critical for asset loading!)
+        preloadBlock        // Hidden preload block (critical for asset loading!)
       ]
     });
   }

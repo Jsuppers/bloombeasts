@@ -96,8 +96,18 @@ export function createButton(props: ButtonProps): UINodeType {
 
   // Use custom bindings if provided, otherwise compute from color/disabled
   const imageSource = customImageSource ?? (ui.assetIdToImageSource?.(getButtonAssetId(color, type)) || null);
-  const opacity = customOpacity ?? (disabled ? 0.5 : 1.0);
-  const textColor = customTextColor ?? (disabled ? '#888' : COLORS.textPrimary);
+
+  // For opacity and textColor:
+  // - If custom values provided, use them (supports reactive bindings)
+  // - If disabled is a static boolean, use it to determine appearance
+  // - If disabled is a binding, use enabled appearance by default
+  //   (caller should provide customOpacity/customTextColor for reactive appearance)
+  const opacity = customOpacity ?? (
+    (typeof disabled === 'boolean' && disabled) ? 0.5 : 1.0
+  );
+  const textColor = customTextColor ?? (
+    (typeof disabled === 'boolean' && disabled) ? '#888' : COLORS.textPrimary
+  );
 
   return ui.Pressable({
     onClick: () => {
@@ -135,11 +145,12 @@ export function createButton(props: ButtonProps): UINodeType {
         children: ui.Text({
           text: label,
           style: {
-            fontSize: DIMENSIONS.fontSize.md,
+            fontSize: style.fontSize ?? DIMENSIONS.fontSize.md,
             color: textColor,
-            textAlign: 'center',
-            fontWeight: 'bold',
+            textAlign: style.textAlign ?? 'center',
+            fontWeight: style.fontWeight ?? 'bold',
             textAlignVertical: 'center',
+            marginTop: style.paddingTop ?? 0,
           },
         }),
       }),

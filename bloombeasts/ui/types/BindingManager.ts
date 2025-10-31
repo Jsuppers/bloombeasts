@@ -174,13 +174,9 @@ export class BindingManager implements BindingManagerInterface {
       return binding.binding;
     });
 
-    // For single binding, use the binding's derive method (doesn't create new binding)
     if (actualBindings.length === 1) {
       return actualBindings[0].derive(deriveFn);
     }
-
-    // For multiple bindings, must use Binding.derive (creates new binding - avoid if possible!)
-    console.warn(`[BindingManager] Creating multi-binding derive for ${bindingTypes.join(', ')} - this uses a binding slot!`);
     return this.BindingClass.derive(actualBindings, deriveFn);
   }
 

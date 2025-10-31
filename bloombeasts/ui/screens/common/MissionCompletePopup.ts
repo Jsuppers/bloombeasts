@@ -104,41 +104,44 @@ export function createMissionCompletePopup(ui: UIMethodMappings, bindingManager:
 
   // Create content
   const content: UINodeType[] = [
-    // Chest or lose image
     ui.View({
       style: {
         width: '100%',
+        flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
+        gap: 20,
         marginTop: 10,
         marginBottom: 20,
       },
-      children: ui.Image({
-        source: chestImageSource as any,
-        style: {
-          width: chestImageMissionCompleteDimensions.width,
-          height: chestImageMissionCompleteDimensions.height,
-        },
-      }),
-    }),
+      children: [
+        // Chest or lose image
+        ui.Image({
+          source: chestImageSource as any,
+          style: {
+            width: chestImageMissionCompleteDimensions.width,
+            height: chestImageMissionCompleteDimensions.height,
+          },
+        }),
 
-    // Info text
-    ui.View({
-      style: {
-        width: '100%',
-        paddingLeft: 20,
-        paddingRight: 20,
-      },
-      children: ui.Text({
-        text: infoText as any,
-        numberOfLines: 15,
-        style: {
-          fontSize: DIMENSIONS.fontSize.md,
-          color: COLORS.textPrimary,
-          textAlign: 'center',
-          lineHeight: 20,
-        },
-      }),
+        // Info text
+        ui.View({
+          style: {
+            flex: 1,
+            paddingRight: 20,
+          },
+          children: ui.Text({
+            text: infoText as any,
+            numberOfLines: 15,
+            style: {
+              fontSize: DIMENSIONS.fontSize.md,
+              color: COLORS.textPrimary,
+              textAlign: 'left',
+              lineHeight: 20,
+            },
+          }),
+        }),
+      ],
     }),
   ];
 

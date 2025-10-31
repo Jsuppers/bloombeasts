@@ -1561,7 +1561,7 @@ export class BloomBeastsGame {
       style: {
         width: '100%',
         height: '100%',
-        backgroundColor: 'blue',
+        backgroundColor: 'black',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',

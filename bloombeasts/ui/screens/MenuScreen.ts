@@ -11,6 +11,7 @@ import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { UINodeType } from './ScreenUtils';
 import { createSideMenu } from './common/SideMenu';
 import { BindingType } from '../types/BindingManager';
+import { createButton } from '../common/Button';
 
 export interface MenuScreenProps {
   ui: UIMethodMappings;
@@ -57,7 +58,7 @@ export class MenuScreen {
    * Create the unified menu UI - uses common side menu
    */
   createUI(): UINodeType {
-    const menuOptions = ['missions', 'cards', 'upgrades', 'leaderboard', 'settings'];
+    const menuOptions = ['cards', 'upgrades', 'leaderboard', 'settings'];  // Removed 'missions'
     const lineHeight = DIMENSIONS.fontSize.lg + 5;
 
     // Create menu buttons for the side menu
@@ -86,11 +87,11 @@ export class MenuScreen {
             style: {
               position: 'absolute',
               top: 0,
-              width: 110,
+              width: 150,
             },
             children: this.ui.Text({
               text: this.quotes[0], // TODO: listen on intervaled binding to change the quote
-              numberOfLines: 3,
+              numberOfLines: 2,
               style: {
                 fontSize: DIMENSIONS.fontSize.lg,
                 color: COLORS.textPrimary,
@@ -138,13 +139,41 @@ export class MenuScreen {
                 // }),
                 style: {
                   position: 'absolute',
-                  left: 250,
-                  top: 4,
+                  left: 290,
+                  top: 40,
                   width: 675,
                   height: 630,
                 },
               }),
           ],
+        }),
+
+        // Player stats container at top middle
+        this.createPlayerStatsContainer(),
+
+        // "Play" button in the middle of the page, slightly down
+        createButton({
+          ui: this.ui,
+          label: 'Play',
+          onClick: () => {
+            if (this.onButtonClick) {
+              this.onButtonClick('btn-missions');
+            }
+            if (this.onNavigate) {
+              this.onNavigate('missions');
+            }
+          },
+          imageSource: this.ui.assetIdToImageSource?.('yellow-button') || null,
+          playSfx: this.playSfx,
+          style: {
+            fontSize: 32,
+            fontWeight: 'bold',
+            textAlign: 'center',
+            // paddingTop: 4,
+            position: 'absolute',
+            left: 552,  // Centered horizontally (1280/2 - 175/2 ≈ 552)
+            top: 400,   // Slightly down from center
+          },
         }),
 
         // Side menu (positioned absolutely on top)
@@ -179,6 +208,157 @@ export class MenuScreen {
       settings: 'Settings',
     };
     return labels[option] || option;
+  }
+
+  /**
+   * Create player stats container at top middle
+   */
+  private createPlayerStatsContainer(): UINodeType {
+    const containerWidth = 487;
+    const containerHeight = 82;
+    const screenWidth = 1280;
+    const containerX = (screenWidth - containerWidth) / 2;
+    const containerY = 20;
+
+    // Icon dimensions
+    const iconSize = 28;
+
+    // Helper to get item quantity
+    const getItemQuantity = (items: any[], itemId: string) => {
+      const item = items?.find((i: any) => i.itemId === itemId);
+      return item ? item.quantity : 0;
+    };
+
+    // Binding for level text with XP
+    const levelTextBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+      if (!data) return 'Lvl 1. 0/100';
+      const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
+      const playerLevel = data.playerLevel || 1;
+      const totalXP = data.totalXP || 0;
+      const xpForCurrentLevel = xpThresholds[playerLevel - 1];
+      const xpForNextLevel = playerLevel < 9 ? xpThresholds[playerLevel] : xpThresholds[8];
+      const currentXP = totalXP - xpForCurrentLevel;
+      const xpNeeded = xpForNextLevel - xpForCurrentLevel;
+      return `Lvl ${playerLevel}. ${currentXP}/${xpNeeded}`;
+    });
+
+    // Binding for coins
+    const coinsBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+      if (!data) return '0';
+      return String(data.coins || 0);
+    });
+
+    // Binding for serums
+    const serumsBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+      if (!data) return '0';
+      const serums = getItemQuantity(data.items || [], 'serum');
+      return String(serums);
+    });
+
+    return this.ui.View({
+      style: {
+        position: 'absolute',
+        left: containerX,
+        top: containerY,
+        width: containerWidth,
+        height: containerHeight,
+      },
+      children: [
+        // Background container image
+        this.ui.Image({
+          source: this.ui.assetIdToImageSource?.('player-stats-container') || null,
+          style: {
+            position: 'absolute',
+            width: containerWidth,
+            height: containerHeight,
+            top: 0,
+            left: 0,
+          },
+        }),
+
+        // Level text - left aligned
+        this.ui.View({
+          style: {
+            position: 'absolute',
+            left: 85,
+            top: 29,
+          },
+          children: this.ui.Text({
+            text: levelTextBinding,
+            style: {
+              fontSize: DIMENSIONS.fontSize.lg,
+              color: COLORS.textPrimary,
+              fontWeight: 'bold',
+              textAlign: 'left',
+            },
+          }),
+        }),
+
+        // Coins section (icon + text) - centered in middle section
+        this.ui.View({
+          style: {
+            position: 'absolute',
+            left: 250,
+            top: 28,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          },
+          children: [
+            // Coin icon
+            this.ui.Image({
+              source: this.ui.assetIdToImageSource?.('icon-coin') || null,
+              style: {
+                width: iconSize,
+                height: iconSize,
+              },
+            }),
+            // Coin amount - black text
+            this.ui.Text({
+              text: coinsBinding,
+              style: {
+                fontSize: DIMENSIONS.fontSize.lg,
+                color: '#000000',
+                fontWeight: 'bold',
+                marginLeft: 4,
+              },
+            }),
+          ],
+        }),
+
+        // Serums section (icon + text) - centered in right section
+        this.ui.View({
+          style: {
+            position: 'absolute',
+            left: 370,
+            top: 28,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+          },
+          children: [
+            // Serum icon
+            this.ui.Image({
+              source: this.ui.assetIdToImageSource?.('icon-serum') || null,
+              style: {
+                width: iconSize,
+                height: iconSize,
+              },
+            }),
+            // Serum amount - black text
+            this.ui.Text({
+              text: serumsBinding,
+              style: {
+                fontSize: DIMENSIONS.fontSize.lg,
+                color: '#000000',
+                fontWeight: 'bold',
+                marginLeft: 4,
+              },
+            }),
+          ],
+        }),
+      ],
+    });
   }
 
   dispose() {

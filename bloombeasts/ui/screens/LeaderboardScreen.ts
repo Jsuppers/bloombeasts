@@ -201,7 +201,23 @@ export class LeaderboardScreen {
         // Sidebar with common side menu
         createSideMenu(this.ui, {
           title: 'Leaderboard',
-          customTextContent: [],
+          customTextContent: [
+            this.ui.View({
+              style: {
+                position: 'relative',
+                width: 150,
+              },
+              children: this.ui.Text({
+                text: 'Who is the Cluck Mister?',
+                numberOfLines: 2,
+                style: {
+                  fontSize: DIMENSIONS.fontSize.lg,
+                  color: COLORS.textPrimary,
+                  lineHeight: DIMENSIONS.fontSize.lg + 5,
+                },
+              }),
+            }),
+          ],
           buttons: [],
           bottomButton: {
             label: 'Back',
