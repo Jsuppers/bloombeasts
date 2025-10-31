@@ -31,17 +31,17 @@ export const mission03: Mission = {
     const cards = [];
 
     // Add 2 Mosslets
-    for (let i = 1; i <= 2; i++) {
+    for (let i = 1; i <= 5; i++) {
       cards.push({ ...mossletCard, instanceId: `mosslet-${i}` });
     }
 
     // Add 2 Rootlings
-    for (let i = 1; i <= 2; i++) {
+    for (let i = 1; i <= 5; i++) {
       cards.push({ ...rootlingCard, instanceId: `rootling-${i}` });
     }
 
     // Add 3 Nectar Blocks
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 5; i++) {
       cards.push({ ...nectarBlockCard, instanceId: `nectar-block-${i}` });
     }
 

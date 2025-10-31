@@ -17,49 +17,19 @@ export const mission01: Mission = {
 
   // Use a function to build the deck on demand (after catalogs are loaded)
   opponentDeck: () => {
-    // Get the catalog manager to access cards
-    const game = (globalThis as any).bloomBeastsGame;
-    if (!game?.catalogManager) {
-      console.error('[mission01] Catalog manager not available');
-      return { name: 'Rootling Deck', affinity: 'Forest', cards: [], totalCards: 0 };
+    // Use the proper Forest starter deck builder for a balanced deck
+    const deck = buildForestDeck();
+
+    // Safety check - return empty deck if builder failed
+    if (!deck || deck.cards.length === 0) {
+      console.error('[mission01] Failed to build Forest deck');
+      return { name: 'Rootling Deck', affinity: 'Forest' as const, cards: [], totalCards: 0 };
     }
 
-    // Get Rootling card
-    const rootlingCard = game.catalogManager.getCard('rootling');
-    if (!rootlingCard) {
-      console.error('[mission01] Rootling card not found');
-      return { name: 'Rootling Deck', affinity: 'Forest', cards: [], totalCards: 0 };
-    }
-
-    // Create a very simple deck for tutorial (3 weak Rootlings + 2 basic Sproutlings)
-    const cards = [];
-
-    // Add 3 Rootlings (weakened to 2/2 for tutorial)
-    for (let i = 0; i < 3; i++) {
-      cards.push({
-        ...rootlingCard,
-        baseAttack: 2,
-        baseHealth: 2,
-        instanceId: `rootling-${i + 1}`,
-      });
-    }
-
-    // Add 2 Sproutlings if available (basic 1-cost cards)
-    const sproutlingCard = game.catalogManager.getCard('sproutling');
-    if (sproutlingCard) {
-      for (let i = 0; i < 2; i++) {
-        cards.push({
-          ...sproutlingCard,
-          instanceId: `sproutling-${i + 1}`,
-        });
-      }
-    }
-
+    // Override the name for tutorial context
     return {
-      name: 'Rootling (Tutorial)',
-      affinity: 'Forest' as const,
-      cards: cards,
-      totalCards: cards.length,
+      ...deck,
+      name: 'Rootling (Tutorial Deck)',
     };
   },
 

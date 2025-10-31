@@ -18,7 +18,7 @@ import { LeaderboardScreen, type LeaderboardData } from './ui/screens/Leaderboar
 import { UPGRADE_COSTS, COIN_BOOST, EXP_BOOST, LUCK_BOOST, ROOSTER } from './constants/upgrades';
 import { createMissionCompletePopup } from './ui/screens/common/MissionCompletePopup';
 import { createButtonPopup } from './ui/screens/common/ButtonPopup';
-import { createCardDetailPopup } from './ui/screens/common/CardDetailPopup';
+import { createCardDetailPopup, createReactiveCardDetailPopupFromBinding } from './ui/screens/common/CardDetailPopup';
 import { GameEngine } from './engine/systems/GameEngine';
 import { CardCollectionManager } from './systems/CardCollectionManager';
 import { BattleDisplayManager } from './systems/BattleDisplayManager';
@@ -1152,6 +1152,13 @@ export class BloomBeastsGame {
       return;
     }
 
+    // CRITICAL: Check if battle is already complete - prevent double processing
+    const currentBattle = this.battleUI.getCurrentBattle();
+    if (currentBattle && currentBattle.isComplete) {
+      console.log(`[BloomBeastsGame] Battle already complete, ignoring action: ${action}`);
+      return;
+    }
+
     // Beast and opponent clicks are now just for viewing details (no selection)
     if (action.startsWith('view-field-card-player-') || action.startsWith('view-field-card-opponent-')) {
       // Just return - card details will be shown by the UI layer if needed
@@ -1243,6 +1250,10 @@ export class BloomBeastsGame {
   private async handleBattleComplete(battleState: any): Promise<void> {
     if (!this.playerData) return;
 
+    console.log('[BloomBeastsGame] handleBattleComplete called');
+    console.log('[BloomBeastsGame] Has rewards:', !!battleState.rewards);
+    console.log('[BloomBeastsGame] Rewards object:', battleState.rewards);
+
     // Capture playerData in local const for TypeScript null safety in callbacks
     const playerData = this.playerData;
 
@@ -1262,6 +1273,7 @@ export class BloomBeastsGame {
 
     if (battleState.rewards) {
       // Victory!
+      console.log('[BloomBeastsGame] VICTORY! Showing rewards popup');
 
       // Apply boost multipliers to rewards
       const coinBoostLevel = playerData.boosts?.[COIN_BOOST.id] || 0;
@@ -1390,6 +1402,7 @@ export class BloomBeastsGame {
       this.triggerRender();
     } else {
       // Defeat
+      console.log('[BloomBeastsGame] DEFEAT! Showing failed popup');
 
       // Reset battle start time
       this.battleStartTime = null;
@@ -1542,27 +1555,7 @@ export class BloomBeastsGame {
           this.UI.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
             return props !== null;
           }),
-          (() => {
-            const props = this.UI.bindingManager.getSnapshot(BindingType.CardDetailPopup);
-            return createCardDetailPopup(this.UI, props || {
-              cardDetail: {
-                card: {
-                  id: null, // No ID so CardRenderer returns null for images
-                  name: '',
-                  type: 'Bloom',
-                  level: 1,
-                  experience: 0,
-                  count: 0,
-                  description: ''
-                },
-                buttons: [],
-                isInDeck: false
-              },
-              onButtonClick: () => {},
-              playSfx: this.playSfx.bind(this),
-              hideBackdrop: false,
-            });
-          })()
+          createReactiveCardDetailPopupFromBinding(this.UI)
         )
       );
     }

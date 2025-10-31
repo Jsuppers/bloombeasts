@@ -33,12 +33,12 @@ export const mission04: Mission = {
     const cards = [];
 
     // Add 3 Leaf Sprites
-    for (let i = 1; i <= 3; i++) {
+    for (let i = 1; i <= 6; i++) {
       cards.push({ ...leafSpriteCard, instanceId: `leaf-sprite-${i}` });
     }
 
     // Add 2 Mushroomancers
-    for (let i = 1; i <= 2; i++) {
+    for (let i = 1; i <= 6; i++) {
       cards.push({ ...mushroomancerCard, instanceId: `mushroomancer-${i}` });
     }
 
@@ -46,7 +46,7 @@ export const mission04: Mission = {
     cards.push({ ...ancientForestCard, instanceId: 'ancient-forest-1' });
 
     // Add 5 Nectar Blocks
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 6; i++) {
       cards.push({ ...nectarBlockCard, instanceId: `nectar-block-${i}` });
     }
 

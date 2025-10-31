@@ -10,7 +10,7 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-31T23:27:33.340Z
+ * Generated: 2025-10-31T23:45:12.234Z
  * Files: 104
  *
  * @version 1.0.0
@@ -6610,6 +6610,224 @@ namespace BloomBeasts {
   }
 
   /**
+   * Create a reactive card detail popup that derives content from CardDetailPopup binding
+   */
+  export function createReactiveCardDetailPopupFromBinding(ui: UIMethodMappings): UINodeType {
+    // Get snapshot for non-reactive parts (buttons, callbacks)
+    const propsSnapshot = ui.bindingManager.getSnapshot(BindingType.CardDetailPopup);
+
+    // Derive title from binding
+    const titleBinding = ui.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+      return props?.cardDetail?.card?.name || 'Card Details';
+    });
+
+    // Build card structure with reactive bindings (can't use createCardComponent with null data)
+    const cardWidth = 210;
+    const cardHeight = 280;
+    const beastImageWidth = 185;
+    const beastImageHeight = 185;
+
+    const positions = {
+      beastImage: { x: 12, y: 13 },
+      cost: { x: 21, y: 7 },
+      affinity: { x: 171, y: 7 },
+      name: { x: 105, y: 13 },
+      ability: { x: 21, y: 212 },
+      attack: { x: 21, y: 171 },
+      health: { x: 188, y: 171 },
+    };
+
+    const cardContent = [
+      ui.View({
+        style: {
+          width: '100%',
+          justifyContent: 'center',
+          alignItems: 'center',
+          marginTop: 20,
+        },
+        children: ui.View({
+          style: {
+            width: cardWidth,
+            height: cardHeight,
+            position: 'relative',
+          },
+          children: [
+            // Layer 1: Card/Beast artwork
+            ui.Image({
+              source: ui.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+                const card = props?.cardDetail?.card;
+                if (!card || !card.id) return null;
+                const baseId = card.id?.replace(/-\d+-\d+$/, '') || card.name?.toLowerCase().replace(/\s+/g, '-');
+                return ui.assetIdToImageSource?.(baseId) || null;
+              }),
+              style: {
+                width: beastImageWidth,
+                height: beastImageHeight,
+                position: 'absolute',
+                top: positions.beastImage.y,
+                left: positions.beastImage.x,
+              },
+            }),
+
+            // Layer 2: Card frame
+            ui.Image({
+              source: ui.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+                const card = props?.cardDetail?.card;
+                if (!card) return null;
+
+                let templateKey = '';
+                if (card.type === 'Bloom') {
+                  templateKey = 'base-card';
+                } else if (card.type === 'Habitat' && card.affinity) {
+                  templateKey = `${card.affinity.toLowerCase()}-habitat`;
+                } else {
+                  templateKey = `${card.type.toLowerCase()}-card`;
+                }
+                return ui.assetIdToImageSource?.(templateKey) || null;
+              }),
+              style: {
+                width: cardWidth,
+                height: cardHeight,
+                position: 'absolute',
+                top: 0,
+                left: 0,
+              },
+            }),
+
+            // Layer 3: Affinity icon (for Bloom cards)
+            ui.Image({
+              source: ui.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+                const card = props?.cardDetail?.card;
+                if (!card || card.type !== 'Bloom' || !card.affinity) return null;
+                return ui.assetIdToImageSource?.(`${card.affinity.toLowerCase()}-icon`) || null;
+              }),
+              style: {
+                width: 30,
+                height: 30,
+                position: 'absolute',
+                top: positions.affinity.y,
+                left: positions.affinity.x,
+              },
+            }),
+
+            // Layer 4: Card name
+            ui.Text({
+              text: ui.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+                return props?.cardDetail?.card?.name || '';
+              }),
+              style: {
+                position: 'absolute',
+                top: positions.name.y,
+                left: 0,
+                width: cardWidth,
+                fontSize: 14,
+                color: '#fff',
+                textAlign: 'center',
+              },
+            }),
+
+            // Layer 5: Cost
+            ui.Text({
+              text: ui.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+                const card = props?.cardDetail?.card;
+                return card && card.cost !== undefined ? String(card.cost) : '';
+              }),
+              style: {
+                position: 'absolute',
+                top: positions.cost.y,
+                left: positions.cost.x - 10,
+                width: 20,
+                fontSize: 24,
+                color: '#fff',
+                textAlign: 'center',
+              },
+            }),
+
+            // Layer 6: Attack (for Bloom cards)
+            ui.Text({
+              text: ui.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+                const card = props?.cardDetail?.card;
+                if (!card || card.type !== 'Bloom') return '';
+                return String((card as any).currentAttack ?? (card as any).baseAttack ?? 0);
+              }),
+              style: {
+                position: 'absolute',
+                top: positions.attack.y,
+                left: positions.attack.x - 10,
+                width: 20,
+                fontSize: 24,
+                color: '#fff',
+                textAlign: 'center',
+              },
+            }),
+
+            // Layer 7: Health (for Bloom cards)
+            ui.Text({
+              text: ui.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+                const card = props?.cardDetail?.card;
+                if (!card || card.type !== 'Bloom') return '';
+                return String((card as any).currentHealth ?? (card as any).baseHealth ?? 0);
+              }),
+              style: {
+                position: 'absolute',
+                top: positions.health.y,
+                left: positions.health.x - 10,
+                width: 20,
+                fontSize: 24,
+                color: '#fff',
+                textAlign: 'center',
+              },
+            }),
+
+            // Layer 8: Ability text
+            ui.Text({
+              text: ui.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+                const card = props?.cardDetail?.card;
+                if (!card) return '';
+                return getCardDescription(card);
+              }),
+              numberOfLines: 3,
+              style: {
+                position: 'absolute',
+                top: positions.ability.y,
+                left: positions.ability.x,
+                width: 168,
+                fontSize: 16,
+                color: '#000000',
+                textAlign: 'left',
+              },
+            }),
+          ],
+        }),
+      }),
+    ];
+
+    // Get buttons from binding
+    const popupButtons: PopupButton[] = (propsSnapshot?.cardDetail?.buttons || [])
+      .filter((b: any) => b)
+      .map((buttonText: string) => ({
+        label: buttonText,
+        onClick: () => {
+          const buttonId = `btn-card-${buttonText.toLowerCase().replace(/ /g, '-')}`;
+          propsSnapshot?.onButtonClick?.(buttonId);
+        },
+        color: (buttonText === 'Add' ? 'green' : buttonText === 'Remove' ? 'red' : 'default') as ButtonColor,
+      }));
+
+    return createPopup({
+      ui,
+      title: titleBinding,
+      content: cardContent,
+      buttons: popupButtons,
+      playSfx: propsSnapshot?.playSfx,
+      width: 400,
+      height: 500,
+      onBackdropClick: () => propsSnapshot?.onButtonClick?.('btn-card-close'),
+      hideBackdrop: propsSnapshot?.hideBackdrop || false,
+    });
+  }
+
+  /**
    * Create a card detail popup overlay using common Popup component
    */
   export function createCardDetailPopup(ui: UIMethodMappings, props: CardDetailPopupProps): UINodeType {
@@ -12882,49 +13100,19 @@ namespace BloomBeasts {
 
     // Use a function to build the deck on demand (after catalogs are loaded)
     opponentDeck: () => {
-      // Get the catalog manager to access cards
-      const game = (globalThis as any).bloomBeastsGame;
-      if (!game?.catalogManager) {
-        console.error('[mission01] Catalog manager not available');
-        return { name: 'Rootling Deck', affinity: 'Forest', cards: [], totalCards: 0 };
+      // Use the proper Forest starter deck builder for a balanced deck
+      const deck = buildForestDeck();
+
+      // Safety check - return empty deck if builder failed
+      if (!deck || deck.cards.length === 0) {
+        console.error('[mission01] Failed to build Forest deck');
+        return { name: 'Rootling Deck', affinity: 'Forest' as const, cards: [], totalCards: 0 };
       }
 
-      // Get Rootling card
-      const rootlingCard = game.catalogManager.getCard('rootling');
-      if (!rootlingCard) {
-        console.error('[mission01] Rootling card not found');
-        return { name: 'Rootling Deck', affinity: 'Forest', cards: [], totalCards: 0 };
-      }
-
-      // Create a very simple deck for tutorial (3 weak Rootlings + 2 basic Sproutlings)
-      const cards = [];
-
-      // Add 3 Rootlings (weakened to 2/2 for tutorial)
-      for (let i = 0; i < 3; i++) {
-        cards.push({
-          ...rootlingCard,
-          baseAttack: 2,
-          baseHealth: 2,
-          instanceId: `rootling-${i + 1}`,
-        });
-      }
-
-      // Add 2 Sproutlings if available (basic 1-cost cards)
-      const sproutlingCard = game.catalogManager.getCard('sproutling');
-      if (sproutlingCard) {
-        for (let i = 0; i < 2; i++) {
-          cards.push({
-            ...sproutlingCard,
-            instanceId: `sproutling-${i + 1}`,
-          });
-        }
-      }
-
+      // Override the name for tutorial context
       return {
-        name: 'Rootling (Tutorial)',
-        affinity: 'Forest' as const,
-        cards: cards,
-        totalCards: cards.length,
+        ...deck,
+        name: 'Rootling (Tutorial Deck)',
       };
     },
 
@@ -12984,7 +13172,7 @@ namespace BloomBeasts {
       }
 
       const cards = [];
-      for (let i = 1; i <= 3; i++) {
+      for (let i = 1; i <= 20; i++) {
         cards.push({
           ...mushroomancerCard,
           instanceId: `mushroomancer-${i}`,
@@ -13055,17 +13243,17 @@ namespace BloomBeasts {
       const cards = [];
 
       // Add 2 Mosslets
-      for (let i = 1; i <= 2; i++) {
+      for (let i = 1; i <= 5; i++) {
         cards.push({ ...mossletCard, instanceId: `mosslet-${i}` });
       }
 
       // Add 2 Rootlings
-      for (let i = 1; i <= 2; i++) {
+      for (let i = 1; i <= 5; i++) {
         cards.push({ ...rootlingCard, instanceId: `rootling-${i}` });
       }
 
       // Add 3 Nectar Blocks
-      for (let i = 1; i <= 3; i++) {
+      for (let i = 1; i <= 5; i++) {
         cards.push({ ...nectarBlockCard, instanceId: `nectar-block-${i}` });
       }
 
@@ -13135,12 +13323,12 @@ namespace BloomBeasts {
       const cards = [];
 
       // Add 3 Leaf Sprites
-      for (let i = 1; i <= 3; i++) {
+      for (let i = 1; i <= 6; i++) {
         cards.push({ ...leafSpriteCard, instanceId: `leaf-sprite-${i}` });
       }
 
       // Add 2 Mushroomancers
-      for (let i = 1; i <= 2; i++) {
+      for (let i = 1; i <= 6; i++) {
         cards.push({ ...mushroomancerCard, instanceId: `mushroomancer-${i}` });
       }
 
@@ -13148,7 +13336,7 @@ namespace BloomBeasts {
       cards.push({ ...ancientForestCard, instanceId: 'ancient-forest-1' });
 
       // Add 5 Nectar Blocks
-      for (let i = 1; i <= 5; i++) {
+      for (let i = 1; i <= 6; i++) {
         cards.push({ ...nectarBlockCard, instanceId: `nectar-block-${i}` });
       }
 
@@ -14709,11 +14897,13 @@ namespace BloomBeasts {
       const player1 = this.currentBattle.gameState.players[0];
       const player2 = this.currentBattle.gameState.players[1];
 
+      console.log(`[BattleController] Checking battle end: P1(${player1.id}) HP=${player1.health}, P2(${player2.id}) HP=${player2.health}`);
       Logger.debug(`[BattleController] Checking battle end: P1(${player1.id}) HP=${player1.health}, P2(${player2.id}) HP=${player2.health}`);
 
       // Check if either player is defeated
       if (player1.health <= 0 && player2.health <= 0) {
         // Both died (rare tie case)
+        console.log('[BattleController] Both players died - TIE!');
         Logger.debug('[BattleController] Both players died - tie!');
         return {
           winner: null,
@@ -14723,6 +14913,7 @@ namespace BloomBeasts {
         };
       } else if (player1.health <= 0) {
         // Player 1 lost
+        console.log('[BattleController] Player 1 (YOU) died - Player 2 (OPPONENT) WINS!');
         Logger.debug('[BattleController] Player 1 died - Player 2 wins!');
         return {
           winner: 'player2',
@@ -14732,6 +14923,7 @@ namespace BloomBeasts {
         };
       } else if (player2.health <= 0) {
         // Player 2 lost
+        console.log('[BattleController] Player 2 (OPPONENT) died - Player 1 (YOU) WINS!');
         Logger.debug('[BattleController] Player 2 died - Player 1 wins!');
         return {
           winner: 'player1',
@@ -16899,8 +17091,26 @@ namespace BloomBeasts {
     private updateMissionProgress(action: string, result: any): void {
       if (!this.currentBattle) return;
 
-      // Track objectives, etc.
-      // Implementation depends on mission objectives system
+      if (!this.currentBattle.gameState) return;
+      const player = this.currentBattle.gameState.players[0];
+      const opponent = this.currentBattle.gameState.players[1];
+
+      // Update health values in mission progress
+      this.missionManager.updateProgress('health-update', {
+        playerHealth: player.health,
+        opponentHealth: opponent.health
+      });
+
+      // Check if opponent is defeated
+      if (opponent.health <= 0) {
+        console.log('[MissionBattleUI] Opponent defeated! Updating mission progress.');
+        this.missionManager.updateProgress('opponent-defeated', {});
+      }
+
+      // Track other actions
+      if (action.startsWith('play-card-')) {
+        this.missionManager.updateProgress('beast-summoned', {});
+      }
     }
 
     /**
@@ -16914,11 +17124,24 @@ namespace BloomBeasts {
      * End the battle and calculate rewards
      */
     private endBattle(): void {
-      if (!this.currentBattle) return;
+      if (!this.currentBattle) {
+        console.log('[MissionBattleUI] endBattle called but no current battle');
+        return;
+      }
+
+      // Prevent multiple calls
+      if (this.currentBattle.isComplete) {
+        console.log('[MissionBattleUI] Battle already completed, ignoring duplicate endBattle call');
+        return;
+      }
 
       const battleResult = this.battleController.checkBattleEnd();
-      if (!battleResult) return;
+      if (!battleResult) {
+        console.log('[MissionBattleUI] endBattle called but battle not ended yet');
+        return;
+      }
 
+      console.log(`[MissionBattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
       Logger.info(`[MissionBattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
 
       this.shouldStopAI = true;
@@ -16927,21 +17150,25 @@ namespace BloomBeasts {
       // Calculate rewards based on winner
       if (battleResult.winner === 'player1') {
         // Player won!
+        console.log('[MissionBattleUI] Player 1 (YOU) won! Awarding rewards.');
         Logger.info('[MissionBattleUI] Player 1 won! Awarding rewards.');
         this.currentBattle.rewards = this.missionManager.completeMission();
         this.battleController.completeBattle('player1');
       } else if (battleResult.winner === 'player2') {
         // Player lost
+        console.log('[MissionBattleUI] Player 2 (OPPONENT) won! No rewards.');
         Logger.info('[MissionBattleUI] Player 2 won! No rewards.');
         this.currentBattle.rewards = null;
         this.battleController.completeBattle('player2');
       } else {
         // Tie (both died) - treat as loss for now
+        console.log('[MissionBattleUI] Tie (both died)! No rewards.');
         Logger.info('[MissionBattleUI] Tie! No rewards.');
         this.currentBattle.rewards = null;
         this.battleController.completeBattle(null);
       }
 
+      console.log(`[MissionBattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}, Rewards object:`, this.currentBattle.rewards);
       Logger.info(`[MissionBattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}`);
     }
 
@@ -18289,6 +18516,13 @@ namespace BloomBeasts {
         return;
       }
 
+      // CRITICAL: Check if battle is already complete - prevent double processing
+      const currentBattle = this.battleUI.getCurrentBattle();
+      if (currentBattle && currentBattle.isComplete) {
+        console.log(`[BloomBeastsGame] Battle already complete, ignoring action: ${action}`);
+        return;
+      }
+
       // Beast and opponent clicks are now just for viewing details (no selection)
       if (action.startsWith('view-field-card-player-') || action.startsWith('view-field-card-opponent-')) {
         // Just return - card details will be shown by the UI layer if needed
@@ -18380,6 +18614,10 @@ namespace BloomBeasts {
     private async handleBattleComplete(battleState: any): Promise<void> {
       if (!this.playerData) return;
 
+      console.log('[BloomBeastsGame] handleBattleComplete called');
+      console.log('[BloomBeastsGame] Has rewards:', !!battleState.rewards);
+      console.log('[BloomBeastsGame] Rewards object:', battleState.rewards);
+
       // Capture playerData in local const for TypeScript null safety in callbacks
       const playerData = this.playerData;
 
@@ -18399,6 +18637,7 @@ namespace BloomBeasts {
 
       if (battleState.rewards) {
         // Victory!
+        console.log('[BloomBeastsGame] VICTORY! Showing rewards popup');
 
         // Apply boost multipliers to rewards
         const coinBoostLevel = playerData.boosts?.[COIN_BOOST.id] || 0;
@@ -18527,6 +18766,7 @@ namespace BloomBeasts {
         this.triggerRender();
       } else {
         // Defeat
+        console.log('[BloomBeastsGame] DEFEAT! Showing failed popup');
 
         // Reset battle start time
         this.battleStartTime = null;
@@ -18679,27 +18919,7 @@ namespace BloomBeasts {
             this.UI.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
               return props !== null;
             }),
-            (() => {
-              const props = this.UI.bindingManager.getSnapshot(BindingType.CardDetailPopup);
-              return createCardDetailPopup(this.UI, props || {
-                cardDetail: {
-                  card: {
-                    id: null, // No ID so CardRenderer returns null for images
-                    name: '',
-                    type: 'Bloom',
-                    level: 1,
-                    experience: 0,
-                    count: 0,
-                    description: ''
-                  },
-                  buttons: [],
-                  isInDeck: false
-                },
-                onButtonClick: () => {},
-                playSfx: this.playSfx.bind(this),
-                hideBackdrop: false,
-              });
-            })()
+            createReactiveCardDetailPopupFromBinding(this.UI)
           )
         );
       }

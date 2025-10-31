@@ -123,11 +123,13 @@ export class BattleController {
     const player1 = this.currentBattle.gameState.players[0];
     const player2 = this.currentBattle.gameState.players[1];
 
+    console.log(`[BattleController] Checking battle end: P1(${player1.id}) HP=${player1.health}, P2(${player2.id}) HP=${player2.health}`);
     Logger.debug(`[BattleController] Checking battle end: P1(${player1.id}) HP=${player1.health}, P2(${player2.id}) HP=${player2.health}`);
 
     // Check if either player is defeated
     if (player1.health <= 0 && player2.health <= 0) {
       // Both died (rare tie case)
+      console.log('[BattleController] Both players died - TIE!');
       Logger.debug('[BattleController] Both players died - tie!');
       return {
         winner: null,
@@ -137,6 +139,7 @@ export class BattleController {
       };
     } else if (player1.health <= 0) {
       // Player 1 lost
+      console.log('[BattleController] Player 1 (YOU) died - Player 2 (OPPONENT) WINS!');
       Logger.debug('[BattleController] Player 1 died - Player 2 wins!');
       return {
         winner: 'player2',
@@ -146,6 +149,7 @@ export class BattleController {
       };
     } else if (player2.health <= 0) {
       // Player 2 lost
+      console.log('[BattleController] Player 2 (OPPONENT) died - Player 1 (YOU) WINS!');
       Logger.debug('[BattleController] Player 2 died - Player 1 wins!');
       return {
         winner: 'player1',

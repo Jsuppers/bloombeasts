@@ -373,8 +373,26 @@ export class MissionBattleUI {
   private updateMissionProgress(action: string, result: any): void {
     if (!this.currentBattle) return;
 
-    // Track objectives, etc.
-    // Implementation depends on mission objectives system
+    if (!this.currentBattle.gameState) return;
+    const player = this.currentBattle.gameState.players[0];
+    const opponent = this.currentBattle.gameState.players[1];
+
+    // Update health values in mission progress
+    this.missionManager.updateProgress('health-update', {
+      playerHealth: player.health,
+      opponentHealth: opponent.health
+    });
+
+    // Check if opponent is defeated
+    if (opponent.health <= 0) {
+      console.log('[MissionBattleUI] Opponent defeated! Updating mission progress.');
+      this.missionManager.updateProgress('opponent-defeated', {});
+    }
+
+    // Track other actions
+    if (action.startsWith('play-card-')) {
+      this.missionManager.updateProgress('beast-summoned', {});
+    }
   }
 
   /**
@@ -388,11 +406,24 @@ export class MissionBattleUI {
    * End the battle and calculate rewards
    */
   private endBattle(): void {
-    if (!this.currentBattle) return;
+    if (!this.currentBattle) {
+      console.log('[MissionBattleUI] endBattle called but no current battle');
+      return;
+    }
+
+    // Prevent multiple calls
+    if (this.currentBattle.isComplete) {
+      console.log('[MissionBattleUI] Battle already completed, ignoring duplicate endBattle call');
+      return;
+    }
 
     const battleResult = this.battleController.checkBattleEnd();
-    if (!battleResult) return;
+    if (!battleResult) {
+      console.log('[MissionBattleUI] endBattle called but battle not ended yet');
+      return;
+    }
 
+    console.log(`[MissionBattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
     Logger.info(`[MissionBattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
 
     this.shouldStopAI = true;
@@ -401,21 +432,25 @@ export class MissionBattleUI {
     // Calculate rewards based on winner
     if (battleResult.winner === 'player1') {
       // Player won!
+      console.log('[MissionBattleUI] Player 1 (YOU) won! Awarding rewards.');
       Logger.info('[MissionBattleUI] Player 1 won! Awarding rewards.');
       this.currentBattle.rewards = this.missionManager.completeMission();
       this.battleController.completeBattle('player1');
     } else if (battleResult.winner === 'player2') {
       // Player lost
+      console.log('[MissionBattleUI] Player 2 (OPPONENT) won! No rewards.');
       Logger.info('[MissionBattleUI] Player 2 won! No rewards.');
       this.currentBattle.rewards = null;
       this.battleController.completeBattle('player2');
     } else {
       // Tie (both died) - treat as loss for now
+      console.log('[MissionBattleUI] Tie (both died)! No rewards.');
       Logger.info('[MissionBattleUI] Tie! No rewards.');
       this.currentBattle.rewards = null;
       this.battleController.completeBattle(null);
     }
 
+    console.log(`[MissionBattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}, Rewards object:`, this.currentBattle.rewards);
     Logger.info(`[MissionBattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}`);
   }
 
