@@ -19,6 +19,7 @@ import { Logger } from '../../engine/utils/Logger';
 import type { AsyncMethods } from '../../ui/types/bindings';
 import { BattleController } from '../../battle/core/BattleController';
 import type { BattleConfig, BattleState, BattleCallbacks } from '../../battle/types';
+import { parseActionString, type BattleAction } from '../../battle/types/actions';
 
 export interface BattleUIState {
   mission: Mission;
@@ -145,9 +146,25 @@ export class MissionBattleUI {
   }
 
   /**
-   * Process a player action
+   * Process a player action (string-based, for backwards compatibility)
+   * @deprecated Use processTypedAction instead
    */
   async processPlayerAction(action: string, data: any): Promise<void> {
+    // Parse string action to typed action
+    const typedAction = parseActionString(action, 'player');
+    if (!typedAction) {
+      Logger.error(`[MissionBattleUI] Failed to parse action: ${action}`);
+      return;
+    }
+
+    // Process typed action
+    await this.processTypedAction(typedAction, data);
+  }
+
+  /**
+   * Process a typed player action
+   */
+  async processTypedAction(action: BattleAction, data?: any): Promise<void> {
     if (!this.currentBattle || !this.currentBattle.gameState) {
       Logger.error('No active battle');
       return;
@@ -158,67 +175,92 @@ export class MissionBattleUI {
     // Handle different action types using BattleController
     const player = this.currentBattle.gameState.players[0];
     const opponent = this.currentBattle.gameState.players[1];
-    const playerId = 'player'; // Player ID is 'player' as set in initializeBattle
+    const playerId = action.playerId || 'player';
 
-    if (action.startsWith('play-card-')) {
-      const parts = action.substring('play-card-'.length).split('-target-');
-      const cardIndex = parseInt(parts[0], 10);
-      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
+    // Process based on action type
+    switch (action.type) {
+      case 'play-card': {
+        // Get the card from player's hand
+        const card = player.hand[action.cardIndex];
+        if (card) {
+          // Use the card's id property
+          const cardId = action.cardId || (card as any).id || (card as any).name || action.cardIndex.toString();
 
-      // Get the card from player's hand
-      const card = player.hand[cardIndex];
-      if (card) {
-        // Use the card's id property
-        const cardId = (card as any).id || (card as any).name || cardIndex.toString();
-
-        // For Beast cards, find an empty position if not specified
-        let position = targetIndex;
-        if (card.type === CardType.Beast && position === undefined) {
-          // Find the first empty slot
-          for (let i = 0; i < 3; i++) {
-            if (!player.field[i]) {
-              position = i;
-              break;
+          // For Beast cards, find an empty position if not specified
+          let position = action.position || action.targetIndex;
+          if (card.type === CardType.Beast && position === undefined) {
+            // Find the first empty slot
+            for (let i = 0; i < 3; i++) {
+              if (!player.field[i]) {
+                position = i;
+                break;
+              }
             }
           }
+
+          result.success = this.battleController.playCard(cardId, playerId, position);
         }
-
-        result.success = this.battleController.playCard(cardId, playerId, position);
+        break;
       }
 
-    } else if (action.startsWith('use-ability-')) {
-      const beastIndex = parseInt(action.substring('use-ability-'.length), 10);
-      const beast = player.field[beastIndex];
-      if (beast) {
-        const beastId = (beast as any).id || (beast as any).instanceId || beastIndex.toString();
-        result.success = this.battleController.useAbility(beastId, null, playerId);
+      case 'use-ability': {
+        const beastIndex = action.beastIndex;
+        if (beastIndex !== undefined) {
+          const beast = player.field[beastIndex];
+          if (beast) {
+            const beastId = action.beastId || (beast as any).id || (beast as any).instanceId || beastIndex.toString();
+            result.success = this.battleController.useAbility(beastId, null, playerId);
+          }
+        }
+        break;
       }
 
-    } else if (action === 'auto-attack-all') {
-      result = await this.autoAttackAll(player, opponent, data?.onAttackAnimation);
-
-    } else if (action.startsWith('attack-beast-')) {
-      const parts = action.substring('attack-beast-'.length).split('-');
-      const attackerIndex = parseInt(parts[0], 10);
-      const targetIndex = parseInt(parts[1], 10);
-      const attacker = player.field[attackerIndex];
-      const target = opponent.field[targetIndex];
-      if (attacker && target) {
-        const attackerId = (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
-        const targetId = (target as any).id || (target as any).instanceId || targetIndex.toString();
-        result.success = this.battleController.attackBeast(attackerId, targetId, playerId);
+      case 'auto-attack-all': {
+        result = await this.autoAttackAll(player, opponent, data?.onAttackAnimation);
+        break;
       }
 
-    } else if (action.startsWith('attack-player-')) {
-      const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
-      const attacker = player.field[attackerIndex];
-      if (attacker) {
-        const attackerId = (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
-        result.success = this.battleController.attackPlayer(attackerId, playerId);
+      case 'attack-beast': {
+        const attackerIndex = action.attackerIndex;
+        const targetIndex = action.targetIndex;
+        if (attackerIndex !== undefined && targetIndex !== undefined) {
+          const attacker = player.field[attackerIndex];
+          const target = opponent.field[targetIndex];
+          if (attacker && target) {
+            const attackerId = action.attackerId || (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
+            const targetId = action.targetId || (target as any).id || (target as any).instanceId || targetIndex.toString();
+            result.success = this.battleController.attackBeast(attackerId, targetId, playerId);
+          }
+        }
+        break;
       }
 
-    } else if (action === 'end-turn') {
-      result = await this.endPlayerTurn();
+      case 'attack-player': {
+        const attackerIndex = action.attackerIndex;
+        if (attackerIndex !== undefined) {
+          const attacker = player.field[attackerIndex];
+          if (attacker) {
+            const attackerId = action.attackerId || (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
+            result.success = this.battleController.attackPlayer(attackerId, playerId);
+          }
+        }
+        break;
+      }
+
+      case 'end-turn': {
+        result = await this.endPlayerTurn();
+        break;
+      }
+
+      case 'forfeit': {
+        // TODO: Implement forfeit
+        Logger.warn('[MissionBattleUI] Forfeit action not yet implemented');
+        break;
+      }
+
+      default: {
+        Logger.warn(`[MissionBattleUI] Unknown action type: ${(action as any).type}`);
+      }
     }
 
     // Sync state from BattleController immediately after action
@@ -377,7 +419,7 @@ export class MissionBattleUI {
   /**
    * Update mission progress based on action
    */
-  private updateMissionProgress(action: string, result: any): void {
+  private updateMissionProgress(action: BattleAction, result: any): void {
     if (!this.currentBattle) return;
 
     if (!this.currentBattle.gameState) return;
@@ -397,7 +439,7 @@ export class MissionBattleUI {
     }
 
     // Track other actions
-    if (action.startsWith('play-card-')) {
+    if (action.type === 'play-card') {
       this.missionManager.updateProgress('beast-summoned', {});
     }
   }
