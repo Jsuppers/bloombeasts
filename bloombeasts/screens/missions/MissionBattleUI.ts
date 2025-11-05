@@ -13,13 +13,12 @@
 import { Mission, resolveDeck } from './types';
 import { MissionManager, MissionRunProgress, RewardResult } from './MissionManager';
 import { GameEngine } from '../../engine/systems/GameEngine';
-import { GameState, Player } from '../../engine/types/game';
 import { AnyCard, CardType } from '../../engine/types/core';
 import { Logger } from '../../engine/utils/Logger';
 import type { AsyncMethods } from '../../ui/types/bindings';
 import { BattleController } from '../../battle/core/BattleController';
 import type { BattleConfig, BattleState, BattleCallbacks } from '../../battle/types';
-import { parseActionString, type BattleAction } from '../../battle/types/actions';
+import type { BattleAction } from '../../battle/types/actions';
 
 export interface BattleUIState {
   mission: Mission;
@@ -168,22 +167,6 @@ export class MissionBattleUI {
    */
   private getOpponentField() {
     return this.currentBattle?.battleState?.turboState.gameData.field.player2;
-  }
-
-  /**
-   * Process a player action (string-based, for backwards compatibility)
-   * @deprecated Use processTypedAction instead
-   */
-  async processPlayerAction(action: string, data: any): Promise<void> {
-    // Parse string action to typed action
-    const typedAction = parseActionString(action, 'player');
-    if (!typedAction) {
-      Logger.error(`[MissionBattleUI] Failed to parse action: ${action}`);
-      return;
-    }
-
-    // Process typed action
-    await this.processTypedAction(typedAction, data);
   }
 
   /**

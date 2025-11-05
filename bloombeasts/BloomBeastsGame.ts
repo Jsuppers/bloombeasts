@@ -35,6 +35,7 @@ import type { AsyncMethods } from './ui/types/bindings';
 import { normalizeSoundId } from './AssetCatalog';
 import type { MenuStats, MissionDisplay, BattleDisplay, ObjectiveDisplay, CardDetailDisplay, SoundSettings } from './gameManager';
 import { gameDimensions } from './ui/screens/battle';
+import { parseActionString, type BattleAction } from './battle/types/actions';
 
 /**
  * XP thresholds for player leveling (cumulative)
@@ -1132,6 +1133,7 @@ export class BloomBeastsGame {
 
   /**
    * Handle battle actions
+   * Converts string actions from UI to typed actions
    */
   private async handleBattleAction(action: string): Promise<void> {
     // Handle forfeit button - show confirmation popup
@@ -1165,13 +1167,20 @@ export class BloomBeastsGame {
       return;
     }
 
+    // Parse string action to typed action
+    const typedAction = parseActionString(action, 'player');
+    if (!typedAction) {
+      Logger.warn(`[BloomBeastsGame] Failed to parse action: ${action}`);
+      return;
+    }
+
     // Play sound effects and show animations based on action type
-    if (action === 'auto-attack-all') {
+    if (typedAction.type === 'auto-attack-all') {
       // Handle auto-attack with animations
       this.playSfx('sfx-attack');
 
       // Process action with animation callback
-      await this.battleUI.processPlayerAction(action, {
+      await this.battleUI.processTypedAction(typedAction, {
         onAttackAnimation: async (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => {
           if (targetType === 'beast' && targetIndex !== undefined) {
             await this.showAttackAnimation('player', attackerIndex, 'opponent', targetIndex);
@@ -1199,24 +1208,39 @@ export class BloomBeastsGame {
         }
       }
       return;
-    } else if (action.startsWith('attack-beast-')) {
+    } else if (typedAction.type === 'attack-beast') {
       this.playSfx('sfx-attack');
       // Animation already shown above
-    } else if (action.startsWith('attack-player-')) {
+    } else if (typedAction.type === 'attack-player') {
       this.playSfx('sfx-attack');
       // Extract attacker index and show animation for direct health attack
-      const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
-      await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
-    } else if (action.startsWith('play-card-')) {
+      if (typedAction.attackerIndex !== undefined) {
+        await this.showAttackAnimation('player', typedAction.attackerIndex, 'health', undefined);
+      }
+    } else if (typedAction.type === 'play-card') {
       this.playSfx('sfx-play-card');
     } else if (action.startsWith('activate-trap-')) {
+      // TODO: Convert activate-trap to typed action
       this.playSfx('sfx-trap-card-activated');
-    } else if (action === 'end-turn') {
+    } else if (typedAction.type === 'end-turn') {
       this.playSfx('sfx-menu-button-select');
     }
 
     // Process action
-    await this.battleUI.processPlayerAction(action, {});
+    await this.battleUI.processTypedAction(typedAction, {});
+
+    // Immediately update display after action to show cards instantly
+    const immediateState = this.battleUI.getCurrentBattle();
+    if (immediateState && !immediateState.isComplete) {
+      const immediateDisplay = this.battleDisplayManager.createBattleDisplay(
+        immediateState,
+        null
+      );
+      if (immediateDisplay) {
+        this.UI.bindingManager.setBinding(BindingType.BattleDisplay, immediateDisplay);
+        this.triggerRender();
+      }
+    }
 
     // Get updated battle state
     const updatedState = this.battleUI.getCurrentBattle();
