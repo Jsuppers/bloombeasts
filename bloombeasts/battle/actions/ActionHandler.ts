@@ -51,7 +51,7 @@ export interface IActionHandler<TActionData extends ActionData = ActionData> {
     actionData: TActionData,
     state: IGameState<BloomBeastsState>,
     playerId: string
-  ): IActionResult<BloomBeastsState>;
+  ): IGameState<BloomBeastsState>;
 }
 
 /**
@@ -138,7 +138,7 @@ export abstract class BaseActionHandler<TActionData extends ActionData = ActionD
     actionData: TActionData,
     state: IGameState<BloomBeastsState>,
     playerId: string
-  ): IActionResult<BloomBeastsState>;
+  ): IGameState<BloomBeastsState>;
 
   /**
    * Helper: Get current player from state
@@ -175,26 +175,5 @@ export abstract class BaseActionHandler<TActionData extends ActionData = ActionD
    */
   protected cloneState(state: IGameState<BloomBeastsState>): IGameState<BloomBeastsState> {
     return structuredClone(state) as IGameState<BloomBeastsState>;
-  }
-
-  /**
-   * Helper: Create success result
-   */
-  protected success(newState: IGameState<BloomBeastsState>, message?: string): IActionResult<BloomBeastsState> {
-    return {
-      success: true,
-      state: newState,
-      message,
-    };
-  }
-
-  /**
-   * Helper: Create failure result
-   */
-  protected failure(reason: string): IActionResult<BloomBeastsState> {
-    return {
-      success: false,
-      message: reason,
-    };
   }
 }

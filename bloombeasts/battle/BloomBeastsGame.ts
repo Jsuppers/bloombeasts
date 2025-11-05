@@ -26,6 +26,13 @@ import {
 } from '../engine/types/core';
 import { Player as BloomPlayer } from '../engine/types/game';
 import { shuffle } from '../engine/utils/random';
+import {
+  ActionHandlerRegistry,
+  DrawCardActionHandler,
+  PlayCardActionHandler,
+  AttackActionHandler,
+  EndTurnActionHandler,
+} from './actions';
 
 /**
  * Trigger timing enum for effect processing
@@ -159,10 +166,21 @@ const DEFAULT_CONFIG: BloomBeastsConfig = {
 export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeastsActionData> {
   private config: BloomBeastsConfig;
   private effectSystem: EffectSystem<BloomBeastsState>;
+  private actionHandlers: ActionHandlerRegistry;
 
   constructor(config: Partial<BloomBeastsConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.effectSystem = new EffectSystem<BloomBeastsState>();
+    this.actionHandlers = new ActionHandlerRegistry();
+
+    // Register action handlers
+    this.actionHandlers.registerAll([
+      new DrawCardActionHandler(),
+      new PlayCardActionHandler(),
+      new AttackActionHandler(),
+      new EndTurnActionHandler(),
+    ]);
+
     this.registerEffectHandlers();
   }
 
@@ -287,6 +305,120 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
    * Execute an action and return the new state
    */
   executeAction(
+    action: IGameAction<BloomBeastsActionData>,
+    state: IGameState<BloomBeastsState>
+  ): IActionResult<BloomBeastsState> {
+    const events = [];
+
+    try {
+      // Get the appropriate handler
+      const handler = this.actionHandlers.get(action.data.type);
+      if (!handler) {
+        return {
+          success: false,
+          error: new Error(`No handler found for action type: ${action.data.type}`),
+        };
+      }
+
+      // Validate the action
+      const validation = handler.validate(action.data, state, action.playerId);
+      if (!validation.valid) {
+        const reason = 'reason' in validation ? validation.reason : 'Validation failed';
+        return {
+          success: false,
+          error: new Error(reason),
+        };
+      }
+
+      // Execute the action to get new state
+      const newState = handler.execute(action.data, state, action.playerId);
+
+      const currentPlayerIndex = this.getCurrentPlayerIndex(newState);
+      const currentPlayer = newState.gameData.players[currentPlayerIndex];
+
+      // Post-process based on action type (events, triggers, etc.)
+      switch (action.data.type) {
+        case BloomBeastsActionType.DRAW_CARD:
+          events.push({
+            type: 'card_drawn',
+            playerId: currentPlayer.id,
+            data: {},
+            timestamp: Date.now(),
+          });
+          break;
+
+        case BloomBeastsActionType.PLAY_CARD:
+          const card = state.gameData!.players[currentPlayerIndex].hand.find(c => c.id === action.data.cardId);
+          if (card) {
+            events.push({
+              type: 'card_played',
+              playerId: currentPlayer.id,
+              data: { cardId: card.id, cardType: card.type },
+              timestamp: Date.now(),
+            });
+
+            // Process Magic card effects
+            if (card.type === 'Magic') {
+              this.processMagicCard(card as MagicCard, newState);
+            }
+
+            // Process OnSummon triggers for Beast cards
+            if (card.type === CardType.Beast) {
+              this.processTriggers(TriggerTiming.ON_ACTION, newState, { action: 'summon', card });
+            }
+          }
+          break;
+
+        case BloomBeastsActionType.ATTACK:
+          events.push({
+            type: 'attack',
+            playerId: currentPlayer.id,
+            data: {},
+            timestamp: Date.now(),
+          });
+
+          // Process OnAttack triggers
+          this.processTriggers(TriggerTiming.ON_ACTION, newState, { action: 'attack' });
+          break;
+
+        case BloomBeastsActionType.END_TURN:
+          // Process end of turn effects
+          this.processTriggers(TriggerTiming.END_OF_TURN, newState);
+
+          // Clear temporary effects
+          this.clearTemporaryEffects(newState);
+
+          events.push({
+            type: 'turn_ended',
+            playerId: currentPlayer.id,
+            data: {},
+            timestamp: Date.now(),
+          });
+          break;
+      }
+
+      return {
+        success: true,
+        newState,
+        sideEffects: events.map(e => ({
+          type: e.type,
+          description: `${e.type} for player ${e.playerId}`,
+          data: e
+        })),
+      };
+    } catch (error) {
+      console.error('[BloomBeastsGame] Action execution failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error : new Error(String(error)),
+      };
+    }
+  }
+
+  /**
+   * @deprecated Use executeAction instead - kept for backwards compatibility during migration
+   */
+  private executeActionLegacy(
     action: IGameAction<BloomBeastsActionData>,
     state: IGameState<BloomBeastsState>
   ): IActionResult<BloomBeastsState> {
