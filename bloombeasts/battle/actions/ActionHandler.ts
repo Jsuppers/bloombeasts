@@ -171,22 +171,10 @@ export abstract class BaseActionHandler<TActionData extends ActionData = ActionD
 
   /**
    * Helper: Clone state (deep copy)
-   * TODO: Replace with better cloning strategy (structuredClone or Immer)
+   * Uses structuredClone for proper handling of Sets, Maps, Dates, etc.
    */
   protected cloneState(state: IGameState<BloomBeastsState>): IGameState<BloomBeastsState> {
-    // This is a temporary solution - the JSON serialization approach has issues
-    // with Set objects and other non-JSON types
-    const cloned = JSON.parse(JSON.stringify(state)) as IGameState<BloomBeastsState>;
-
-    // Restore Set objects if they exist
-    if (cloned.gameData?.currentTurnActions?.hasAttacked) {
-      const hasAttackedArray = Array.isArray(cloned.gameData.currentTurnActions.hasAttacked)
-        ? cloned.gameData.currentTurnActions.hasAttacked
-        : Array.from(cloned.gameData.currentTurnActions.hasAttacked as any);
-      cloned.gameData.currentTurnActions.hasAttacked = new Set(hasAttackedArray);
-    }
-
-    return cloned;
+    return structuredClone(state) as IGameState<BloomBeastsState>;
   }
 
   /**
