@@ -15,7 +15,12 @@ import {
 } from '../types';
 import { MAX_AI_ACTIONS_PER_TURN } from '../../engine/constants/battleConstants';
 
-import { createBloomBeastsGame, BloomBeastsActionType, BloomBeastsActionData } from '../BloomBeastsGame';
+import {
+  createBloomBeastsGame,
+  BloomBeastsActionType,
+  BloomBeastsActionData,
+  BloomBeastsPlayer,
+} from '../BloomBeastsGame';
 import { BloomBeastsGreedyAI } from '../BloomBeastsAI';
 import { GameController, AILevel } from '../../../turbo/src';
 import type { IGameState } from '../../../turbo/src';
@@ -50,7 +55,7 @@ export class BattleController {
       Logger.debug(`[BattleController] Turn started for player ${playerId}`);
       // Find player index from playerId
       const state = this.game.getState();
-      const playerIndex = state.gameData.players.findIndex((p: any) => p.id === playerId);
+      const playerIndex = state.gameData.players.findIndex((p: BloomBeastsPlayer) => p.id === playerId);
       if (this.callbacks.onTurnStart) {
         this.callbacks.onTurnStart(playerIndex);
       }
@@ -59,7 +64,7 @@ export class BattleController {
     this.game.on('turnEnded', ({ playerId }) => {
       Logger.debug(`[BattleController] Turn ended for player ${playerId}`);
       const state = this.game.getState();
-      const playerIndex = state.gameData.players.findIndex((p: any) => p.id === playerId);
+      const playerIndex = state.gameData.players.findIndex((p: BloomBeastsPlayer) => p.id === playerId);
       if (this.callbacks.onTurnEnd) {
         this.callbacks.onTurnEnd(playerIndex);
       }

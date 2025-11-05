@@ -9,6 +9,7 @@ import {
   IActionResult,
   IActionValidation,
   IGameConfig,
+  IPlayer,
   GameController,
   GamePhase,
 } from '../../turbo/src';
@@ -503,9 +504,9 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
     return state.gameData!.players.findIndex(p => p.id === currentPlayerId);
   }
 
-  private createPlayer(config: any): BloomBeastsPlayer {
-    // Support both old (data) and new (metadata) formats
-    const deck = config.data?.deck || config.metadata?.deck || [];
+  private createPlayer(config: IPlayer): BloomBeastsPlayer {
+    // Get deck from metadata
+    const deck = (config.metadata?.deck as Card[]) || [];
     return {
       id: config.id,
       name: config.name,
