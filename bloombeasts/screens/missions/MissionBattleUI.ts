@@ -22,7 +22,9 @@ import type { BattleConfig, BattleState, BattleCallbacks } from '../../battle/ty
 
 export interface BattleUIState {
   mission: Mission;
-  gameState: GameState | null;
+  /** @deprecated Use battleState instead */
+  gameState?: GameState | null;
+  battleState: BattleState | null;
   progress: MissionRunProgress | null;
   isComplete: boolean;
   rewards: RewardResult | null;
@@ -125,7 +127,8 @@ export class MissionBattleUI {
     // Create mission-specific state
     this.currentBattle = {
       mission,
-      gameState: battle.gameState,
+      battleState: battle,
+      gameState: battle.gameState, // Deprecated, for backwards compatibility
       progress: this.missionManager.getProgress(),
       isComplete: false,
       rewards: null,

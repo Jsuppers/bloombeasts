@@ -7,6 +7,8 @@
 
 import { GameState, Player } from '../engine/types/game';
 import { AnyCard } from '../engine/types/core';
+import type { IGameState } from '../../turbo/src';
+import type { BloomBeastsState } from './BloomBeastsGame';
 
 /**
  * Result of a battle action
@@ -41,12 +43,13 @@ export interface PlayerConfig {
 
 /**
  * Current state of an active battle
+ * Now uses TURBO's IGameState directly (no conversion layer)
  */
 export interface BattleState {
-  gameState: GameState;
-  isComplete: boolean;
-  winner: 'player1' | 'player2' | null;
-  turn: number;
+  /** TURBO game state (contains gameData with players and field) */
+  turboState: IGameState<BloomBeastsState>;
+  /** @deprecated Use turboState.gameData instead */
+  gameState?: GameState;
 }
 
 /**

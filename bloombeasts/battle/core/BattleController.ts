@@ -6,6 +6,7 @@
 
 import { Logger } from '../../engine/utils/Logger';
 import type { AsyncMethods } from '../../ui/types/bindings';
+import type { GameState } from '../../engine/types/game';
 import {
   BattleConfig,
   BattleState,
@@ -136,7 +137,7 @@ export class BattleController {
 
     Logger.info('[BattleController] Battle initialized successfully');
 
-    return this.convertToBattleState();
+    return this.getTurboState();
   }
 
   /**
@@ -144,7 +145,7 @@ export class BattleController {
    */
   getCurrentBattle(): BattleState | null {
     if (!this.battleConfig) return null;
-    return this.convertToBattleState();
+    return this.getTurboState();
   }
 
   /**
@@ -404,19 +405,31 @@ export class BattleController {
    * Private helper methods
    */
 
-  private convertToBattleState(): BattleState {
-    const gameState = this.game.getState();
-    // New structure: gameData contains players and field
-    const state = gameState.gameData;
-    const { players, field } = state;
-    // Get current player index from turnInfo
-    const currentPlayerId = gameState.turnInfo.currentPlayerId;
-    const currentPlayerIndex = players.findIndex(p => p.id === currentPlayerId);
-    const turnNumber = gameState.turnInfo.turnNumber || 1;
-    const phase = gameState.phase || 'main';
+  /**
+   * Get current battle state in TURBO format (no conversion)
+   */
+  private getTurboState(): BattleState {
+    const turboState = this.game.getState();
+    return {
+      turboState,
+      // Deprecated legacy field - kept temporarily for backwards compatibility
+      gameState: this.convertToLegacyGameState(turboState),
+    };
+  }
 
-    // Create a GameState object that matches the old format
-    const legacyGameState = {
+  /**
+   * @deprecated For backwards compatibility only. Use turboState directly.
+   * Convert TURBO state to legacy GameState format
+   */
+  private convertToLegacyGameState(turboState: any): GameState {
+    const state = turboState.gameData;
+    const { players, field } = state;
+    const currentPlayerId = turboState.turnInfo.currentPlayerId;
+    const currentPlayerIndex = players.findIndex((p: any) => p.id === currentPlayerId);
+    const turnNumber = turboState.turnInfo.turnNumber || 1;
+    const phase = turboState.phase || 'main';
+
+    return {
       players: [
         this.convertPlayer(players[0], field?.player1),
         this.convertPlayer(players[1], field?.player2)
@@ -428,17 +441,11 @@ export class BattleController {
       battleState: phase as any,
       turnHistory: [],
     };
-
-    return {
-      gameState: legacyGameState,
-      isComplete: gameState.isComplete || false,
-      winner: gameState.winnerId ?
-        (gameState.winnerId === players[0].id ? 'player1' : 'player2') :
-        null,
-      turn: turnNumber,
-    };
   }
 
+  /**
+   * @deprecated For backwards compatibility only
+   */
   private convertPlayer(player: any, fieldData?: any) {
     return {
       id: player.id,
