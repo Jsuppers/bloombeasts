@@ -23,8 +23,6 @@ import { parseActionString, type BattleAction } from '../../battle/types/actions
 
 export interface BattleUIState {
   mission: Mission;
-  /** @deprecated Use battleState instead */
-  gameState?: GameState | null;
   battleState: BattleState | null;
   progress: MissionRunProgress | null;
   isComplete: boolean;
@@ -129,7 +127,6 @@ export class MissionBattleUI {
     this.currentBattle = {
       mission,
       battleState: battle,
-      gameState: battle.gameState, // Deprecated, for backwards compatibility
       progress: this.missionManager.getProgress(),
       isComplete: false,
       rewards: null,
@@ -143,6 +140,34 @@ export class MissionBattleUI {
    */
   getCurrentBattle(): BattleUIState | null {
     return this.currentBattle;
+  }
+
+  /**
+   * Helper: Get player from TURBO state (player is always index 0)
+   */
+  private getPlayer() {
+    return this.currentBattle?.battleState?.turboState.gameData.players[0];
+  }
+
+  /**
+   * Helper: Get opponent from TURBO state (opponent is always index 1)
+   */
+  private getOpponent() {
+    return this.currentBattle?.battleState?.turboState.gameData.players[1];
+  }
+
+  /**
+   * Helper: Get player field from TURBO state
+   */
+  private getPlayerField() {
+    return this.currentBattle?.battleState?.turboState.gameData.field.player1;
+  }
+
+  /**
+   * Helper: Get opponent field from TURBO state
+   */
+  private getOpponentField() {
+    return this.currentBattle?.battleState?.turboState.gameData.field.player2;
   }
 
   /**
@@ -165,16 +190,20 @@ export class MissionBattleUI {
    * Process a typed player action
    */
   async processTypedAction(action: BattleAction, data?: any): Promise<void> {
-    if (!this.currentBattle || !this.currentBattle.gameState) {
+    if (!this.currentBattle?.battleState) {
       Logger.error('No active battle');
       return;
     }
 
-    let result: any = { success: false, damage: data?.damage || 0 };
+    const player = this.getPlayer();
+    const opponent = this.getOpponent();
 
-    // Handle different action types using BattleController
-    const player = this.currentBattle.gameState.players[0];
-    const opponent = this.currentBattle.gameState.players[1];
+    if (!player || !opponent) {
+      Logger.error('Invalid battle state: missing players');
+      return;
+    }
+
+    let result: any = { success: false, damage: data?.damage || 0 };
     const playerId = action.playerId || 'player';
 
     // Process based on action type
@@ -266,7 +295,7 @@ export class MissionBattleUI {
     // Sync state from BattleController immediately after action
     const updatedBattle = this.battleController.getCurrentBattle();
     if (updatedBattle && this.currentBattle) {
-      this.currentBattle.gameState = updatedBattle.gameState;
+      this.currentBattle.battleState = updatedBattle;
     }
 
     // Update mission progress
@@ -328,7 +357,7 @@ export class MissionBattleUI {
    */
   private async endPlayerTurn(): Promise<any> {
     Logger.info('[MissionBattleUI] endPlayerTurn called');
-    if (!this.currentBattle || !this.currentBattle.gameState) {
+    if (!this.currentBattle?.battleState) {
       Logger.warn('[MissionBattleUI] No current battle for endPlayerTurn');
       return { success: false };
     }
@@ -353,7 +382,7 @@ export class MissionBattleUI {
     // Update the local game state immediately after turn change
     const stateAfterTurnEnd = this.battleController.getCurrentBattle();
     if (stateAfterTurnEnd) {
-      this.currentBattle.gameState = stateAfterTurnEnd.gameState;
+      this.currentBattle.battleState = stateAfterTurnEnd;
       Logger.info('[MissionBattleUI] Updated local battle state after turn end');
       // Trigger render to update UI with new turn
       if (this.renderCallback) this.renderCallback();
@@ -366,7 +395,7 @@ export class MissionBattleUI {
     // Update the local game state again after AI turn
     const battleState = this.battleController.getCurrentBattle();
     if (battleState) {
-      this.currentBattle.gameState = battleState.gameState;
+      this.currentBattle.battleState = battleState;
       Logger.info('[MissionBattleUI] Updated local battle state after AI turn');
       // Trigger render to update UI to show player's turn
       if (this.renderCallback) this.renderCallback();
@@ -380,7 +409,7 @@ export class MissionBattleUI {
    */
   private async processOpponentTurn(): Promise<void> {
     Logger.info('[MissionBattleUI] Processing opponent turn');
-    if (!this.currentBattle || !this.currentBattle.gameState) {
+    if (!this.currentBattle?.battleState) {
       Logger.warn('[MissionBattleUI] No current battle state for opponent turn');
       return;
     }
@@ -408,7 +437,7 @@ export class MissionBattleUI {
       // Update local state and render after AI completes
       const updatedState = this.battleController.getCurrentBattle();
       if (updatedState) {
-        this.currentBattle.gameState = updatedState.gameState;
+        this.currentBattle.battleState = updatedState;
         if (this.renderCallback) this.renderCallback();
       }
     } catch (error) {
@@ -422,9 +451,9 @@ export class MissionBattleUI {
   private updateMissionProgress(action: BattleAction, result: any): void {
     if (!this.currentBattle) return;
 
-    if (!this.currentBattle.gameState) return;
-    const player = this.currentBattle.gameState.players[0];
-    const opponent = this.currentBattle.gameState.players[1];
+    const player = this.getPlayer();
+    const opponent = this.getOpponent();
+    if (!player || !opponent) return;
 
     // Update health values in mission progress
     this.missionManager.updateProgress('health-update', {

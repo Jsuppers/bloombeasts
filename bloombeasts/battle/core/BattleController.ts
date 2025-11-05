@@ -328,32 +328,24 @@ export class BattleController {
   }
 
   /**
-   * Get the current player
+   * Get the current player (TURBO format)
    */
   getCurrentPlayer() {
     const state = this.game.getState();
-    // New structure: gameData contains players and field
-    const gameState = state.gameData;
-    // Get current player from turnInfo
     const currentPlayerId = state.turnInfo.currentPlayerId;
-    const currentIndex = gameState.players.findIndex(p => p.id === currentPlayerId);
-    const fieldData = currentIndex === 0 ? gameState.field?.player1 : gameState.field?.player2;
-    return this.convertPlayer(gameState.players[currentIndex], fieldData);
+    const currentIndex = state.gameData.players.findIndex(p => p.id === currentPlayerId);
+    return state.gameData.players[currentIndex];
   }
 
   /**
-   * Get the opponent player
+   * Get the opponent player (TURBO format)
    */
   getOpponentPlayer() {
     const state = this.game.getState();
-    // New structure: gameData contains players and field
-    const gameState = state.gameData;
-    // Get current player from turnInfo
     const currentPlayerId = state.turnInfo.currentPlayerId;
-    const currentIndex = gameState.players.findIndex(p => p.id === currentPlayerId);
+    const currentIndex = state.gameData.players.findIndex(p => p.id === currentPlayerId);
     const opponentIndex = 1 - currentIndex;
-    const fieldData = opponentIndex === 0 ? gameState.field?.player1 : gameState.field?.player2;
-    return this.convertPlayer(gameState.players[opponentIndex], fieldData);
+    return state.gameData.players[opponentIndex];
   }
 
   /**
@@ -406,60 +398,11 @@ export class BattleController {
    */
 
   /**
-   * Get current battle state in TURBO format (no conversion)
+   * Get current battle state in TURBO format
    */
   private getTurboState(): BattleState {
-    const turboState = this.game.getState();
     return {
-      turboState,
-      // Deprecated legacy field - kept temporarily for backwards compatibility
-      gameState: this.convertToLegacyGameState(turboState),
-    };
-  }
-
-  /**
-   * @deprecated For backwards compatibility only. Use turboState directly.
-   * Convert TURBO state to legacy GameState format
-   */
-  private convertToLegacyGameState(turboState: any): GameState {
-    const state = turboState.gameData;
-    const { players, field } = state;
-    const currentPlayerId = turboState.turnInfo.currentPlayerId;
-    const currentPlayerIndex = players.findIndex((p: any) => p.id === currentPlayerId);
-    const turnNumber = turboState.turnInfo.turnNumber || 1;
-    const phase = turboState.phase || 'main';
-
-    return {
-      players: [
-        this.convertPlayer(players[0], field?.player1),
-        this.convertPlayer(players[1], field?.player2)
-      ] as [any, any],
-      activePlayer: currentPlayerIndex as 0 | 1,
-      habitatZone: field?.player1?.habitat || field?.player2?.habitat || null,
-      turn: turnNumber,
-      phase: phase as any,
-      battleState: phase as any,
-      turnHistory: [],
-    };
-  }
-
-  /**
-   * @deprecated For backwards compatibility only
-   */
-  private convertPlayer(player: any, fieldData?: any) {
-    return {
-      id: player.id,
-      name: player.name,
-      health: player.health,
-      maxHealth: player.maxHealth || 30,
-      deck: [...(player.deck || [])],
-      hand: [...(player.hand || [])],
-      field: fieldData?.beasts || [],
-      graveyard: [...(player.graveyard || [])],
-      trapZone: fieldData?.traps || [],
-      buffZone: fieldData?.buffs || [],
-      currentEnergy: player.energy || 0,
-      summonsThisTurn: 0,
+      turboState: this.game.getState(),
     };
   }
 }
