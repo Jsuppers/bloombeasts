@@ -14,12 +14,10 @@ import { Mission, resolveDeck } from './types';
 import { MissionManager, MissionRunProgress, RewardResult } from './MissionManager';
 import { GameEngine } from '../../engine/systems/GameEngine';
 import { GameState, Player } from '../../engine/types/game';
-import { AnyCard } from '../../engine/types/core';
+import { AnyCard, CardType } from '../../engine/types/core';
 import { Logger } from '../../engine/utils/Logger';
 import type { AsyncMethods } from '../../ui/types/bindings';
 import { BattleController } from '../../battle/core/BattleController';
-import { BattleStateManager } from '../../battle/core/BattleRules';
-import { OpponentAI } from '../../battle/ai/OpponentAI';
 import type { BattleConfig, BattleState, BattleCallbacks } from '../../battle/types';
 
 export interface BattleUIState {
@@ -37,8 +35,6 @@ export class MissionBattleUI {
 
   // Battle system components
   private battleController: BattleController;
-  private battleStateManager: BattleStateManager;
-  private opponentAI: OpponentAI;
 
   // Current state
   private currentBattle: BattleUIState | null = null;
@@ -53,18 +49,6 @@ export class MissionBattleUI {
     this.missionManager = missionManager;
     this.gameEngine = gameEngine;
     this.async = async;
-
-    // Initialize battle components
-    this.battleStateManager = new BattleStateManager();
-    this.opponentAI = new OpponentAI({
-      async,
-      onAction: (action: string) => {
-        if (this.opponentActionCallback) this.opponentActionCallback(action);
-      },
-      onRender: () => {
-        if (this.renderCallback) this.renderCallback();
-      },
-    });
 
     // Initialize battle controller with callbacks
     const battleCallbacks: BattleCallbacks = {
@@ -168,19 +152,44 @@ export class MissionBattleUI {
 
     let result: any = { success: false, damage: data?.damage || 0 };
 
-    // Handle different action types using BattleStateManager
+    // Handle different action types using BattleController
     const player = this.currentBattle.gameState.players[0];
     const opponent = this.currentBattle.gameState.players[1];
+    const playerId = 'player'; // Player ID is 'player' as set in initializeBattle
 
     if (action.startsWith('play-card-')) {
       const parts = action.substring('play-card-'.length).split('-target-');
       const cardIndex = parseInt(parts[0], 10);
       const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
-      result = this.battleStateManager.playCard(cardIndex, player, opponent, this.currentBattle.gameState, targetIndex);
+
+      // Get the card from player's hand
+      const card = player.hand[cardIndex];
+      if (card) {
+        // Use the card's id property
+        const cardId = (card as any).id || (card as any).name || cardIndex.toString();
+
+        // For Beast cards, find an empty position if not specified
+        let position = targetIndex;
+        if (card.type === CardType.Beast && position === undefined) {
+          // Find the first empty slot
+          for (let i = 0; i < 3; i++) {
+            if (!player.field[i]) {
+              position = i;
+              break;
+            }
+          }
+        }
+
+        result.success = this.battleController.playCard(cardId, playerId, position);
+      }
 
     } else if (action.startsWith('use-ability-')) {
       const beastIndex = parseInt(action.substring('use-ability-'.length), 10);
-      result = this.battleStateManager.useAbility(beastIndex, player, opponent, this.currentBattle.gameState);
+      const beast = player.field[beastIndex];
+      if (beast) {
+        const beastId = (beast as any).id || (beast as any).instanceId || beastIndex.toString();
+        result.success = this.battleController.useAbility(beastId, null, playerId);
+      }
 
     } else if (action === 'auto-attack-all') {
       result = await this.autoAttackAll(player, opponent, data?.onAttackAnimation);
@@ -189,24 +198,36 @@ export class MissionBattleUI {
       const parts = action.substring('attack-beast-'.length).split('-');
       const attackerIndex = parseInt(parts[0], 10);
       const targetIndex = parseInt(parts[1], 10);
-      result = this.battleStateManager.attackBeast(attackerIndex, targetIndex, player, opponent, (trapName: string) => {
-        if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
-      });
+      const attacker = player.field[attackerIndex];
+      const target = opponent.field[targetIndex];
+      if (attacker && target) {
+        const attackerId = (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
+        const targetId = (target as any).id || (target as any).instanceId || targetIndex.toString();
+        result.success = this.battleController.attackBeast(attackerId, targetId, playerId);
+      }
 
     } else if (action.startsWith('attack-player-')) {
       const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
-      result = this.battleStateManager.attackPlayer(attackerIndex, player, opponent, (trapName: string) => {
-        if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
-      });
+      const attacker = player.field[attackerIndex];
+      if (attacker) {
+        const attackerId = (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
+        result.success = this.battleController.attackPlayer(attackerId, playerId);
+      }
 
     } else if (action === 'end-turn') {
       result = await this.endPlayerTurn();
     }
 
+    // Sync state from BattleController immediately after action
+    const updatedBattle = this.battleController.getCurrentBattle();
+    if (updatedBattle && this.currentBattle) {
+      this.currentBattle.gameState = updatedBattle.gameState;
+    }
+
     // Update mission progress
     this.updateMissionProgress(action, result);
 
-    // Check for battle end
+    // Check for battle end with the freshly synced state
     const battleResult = this.battleController.checkBattleEnd();
     if (battleResult) {
       this.endBattle();
@@ -223,28 +244,28 @@ export class MissionBattleUI {
   ): Promise<any> {
     let anyAttackSucceeded = false;
     const results: any[] = [];
+    const playerId = 'player';
 
     for (let i = 0; i < 3; i++) {
       const attackerBeast = player.field[i];
       if (!attackerBeast || attackerBeast.summoningSickness) continue;
 
       const opposingBeast = opponent.field[i];
+      let success = false;
 
       if (opposingBeast) {
         if (onAttackAnimation) await onAttackAnimation(i, 'beast', i);
-        const result = this.battleStateManager.attackBeast(i, i, player, opponent, (trapName: string) => {
-          if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
-        });
-        results.push(result);
-        if (result.success) anyAttackSucceeded = true;
+        const attackerId = (attackerBeast as any).id || (attackerBeast as any).instanceId || i.toString();
+        const targetId = (opposingBeast as any).id || (opposingBeast as any).instanceId || i.toString();
+        success = this.battleController.attackBeast(attackerId, targetId, playerId);
       } else {
         if (onAttackAnimation) await onAttackAnimation(i, 'health');
-        const result = this.battleStateManager.attackPlayer(i, player, opponent, (trapName: string) => {
-          if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
-        });
-        results.push(result);
-        if (result.success) anyAttackSucceeded = true;
+        const attackerId = (attackerBeast as any).id || (attackerBeast as any).instanceId || i.toString();
+        success = this.battleController.attackPlayer(attackerId, playerId);
       }
+
+      results.push({ success });
+      if (success) anyAttackSucceeded = true;
 
       const battleResult = this.battleController.checkBattleEnd();
       if (battleResult) break;
@@ -261,50 +282,50 @@ export class MissionBattleUI {
    * End player's turn and start opponent's turn
    */
   private async endPlayerTurn(): Promise<any> {
+    Logger.info('[MissionBattleUI] endPlayerTurn called');
     if (!this.currentBattle || !this.currentBattle.gameState) {
+      Logger.warn('[MissionBattleUI] No current battle for endPlayerTurn');
       return { success: false };
     }
 
     // Check if battle is already complete (e.g., player just won)
     if (this.currentBattle.isComplete) {
+      Logger.info('[MissionBattleUI] Battle is already complete');
       return { success: false };
     }
-
-    const player = this.currentBattle.gameState.players[0];
-    const opponent = this.currentBattle.gameState.players[1];
 
     // Check if battle has ended before processing end-of-turn
     const battleResultBeforeTurn = this.battleController.checkBattleEnd();
     if (battleResultBeforeTurn) {
+      Logger.info('[MissionBattleUI] Battle ended before turn could end');
       return { success: false };
     }
 
-    // Process end-of-turn effects
-    player.field.forEach((beast: any) => {
-      if (beast) {
-        beast.summoningSickness = false;
-        beast.usedAbilityThisTurn = false;
-      }
-    });
-    this.battleStateManager.processEndOfTurnTriggers(player, opponent);
+    // End player turn using BattleController
+    Logger.info('[MissionBattleUI] Ending player turn via BattleController');
+    this.battleController.endTurn('player');
 
-    // Switch to opponent turn
-    this.currentBattle.gameState.activePlayer = 1;
+    // Update the local game state immediately after turn change
+    const stateAfterTurnEnd = this.battleController.getCurrentBattle();
+    if (stateAfterTurnEnd) {
+      this.currentBattle.gameState = stateAfterTurnEnd.gameState;
+      Logger.info('[MissionBattleUI] Updated local battle state after turn end');
+      // Trigger render to update UI with new turn
+      if (this.renderCallback) this.renderCallback();
+    }
 
     // Process opponent AI turn
+    Logger.info('[MissionBattleUI] Now processing opponent turn');
     await this.processOpponentTurn();
 
-    // Switch back to player and increment turn
-    this.currentBattle.gameState.activePlayer = 0;
-    this.currentBattle.gameState.turn++;
-
-    // Start player's new turn
-    this.battleController.startTurn(0);
-
-    // Process start-of-turn buff effects
-    this.battleStateManager.applyBuffStartOfTurnEffects(player, opponent);
-    this.battleStateManager.processStartOfTurnTriggers(player, opponent);
-    this.battleStateManager.applyStatBuffEffects(player);
+    // Update the local game state again after AI turn
+    const battleState = this.battleController.getCurrentBattle();
+    if (battleState) {
+      this.currentBattle.gameState = battleState.gameState;
+      Logger.info('[MissionBattleUI] Updated local battle state after AI turn');
+      // Trigger render to update UI to show player's turn
+      if (this.renderCallback) this.renderCallback();
+    }
 
     return { success: true };
   }
@@ -313,58 +334,41 @@ export class MissionBattleUI {
    * Process opponent's AI turn
    */
   private async processOpponentTurn(): Promise<void> {
-    if (!this.currentBattle || !this.currentBattle.gameState) return;
-
-    const player = this.currentBattle.gameState.players[0];
-    const opponent = this.currentBattle.gameState.players[1];
+    Logger.info('[MissionBattleUI] Processing opponent turn');
+    if (!this.currentBattle || !this.currentBattle.gameState) {
+      Logger.warn('[MissionBattleUI] No current battle state for opponent turn');
+      return;
+    }
 
     // Helper function for delays
     const delay = (ms: number) => new Promise(resolve => this.async.setTimeout(resolve, ms));
 
-    // Draw a card for opponent
-    if (opponent.deck.length > 0) {
-      const card = opponent.deck.shift();
-      if (card) opponent.hand.push(card);
-    }
-    if (this.renderCallback) this.renderCallback();
-    await delay(800);
-    if (this.shouldStopAI) return;
-
-    // Increase opponent nectar
-    opponent.currentNectar = Math.min(10, this.currentBattle.gameState.turn);
-    if (this.renderCallback) this.renderCallback();
-    await delay(500);
-    if (this.shouldStopAI) return;
-
-    // Apply start-of-turn buff effects
-    this.battleStateManager.applyBuffStartOfTurnEffects(opponent, player);
-    this.battleStateManager.processStartOfTurnTriggers(opponent, player);
-    this.battleStateManager.applyStatBuffEffects(opponent);
-
-    // Remove summoning sickness
-    opponent.field.forEach((beast: any) => {
-      if (beast) {
-        beast.summoningSickness = false;
-        beast.usedAbilityThisTurn = false;
+    try {
+      // Check if it's actually an AI player's turn
+      if (!this.battleController.isAIPlayerTurn()) {
+        Logger.info('[MissionBattleUI] Current player is not AI, skipping AI turn');
+        return;
       }
-    });
 
-    // Use AI to execute opponent turn with proper effect processors
-    await this.opponentAI.executeTurn(
-      opponent,
-      player,
-      this.currentBattle.gameState,
-      {
-        processOnSummonTrigger: this.battleStateManager.processOnSummonTrigger.bind(this.battleStateManager),
-        processOnAttackTrigger: this.battleStateManager.processOnAttackTrigger.bind(this.battleStateManager),
-        processOnDamageTrigger: this.battleStateManager.processOnDamageTrigger.bind(this.battleStateManager),
-        processOnDestroyTrigger: this.battleStateManager.processOnDestroyTrigger.bind(this.battleStateManager),
-        processMagicEffect: this.battleStateManager.processMagicEffect.bind(this.battleStateManager),
-        processHabitatEffect: this.battleStateManager.processHabitatEffect.bind(this.battleStateManager),
-        applyStatBuffEffects: this.battleStateManager.applyStatBuffEffects.bind(this.battleStateManager),
-      },
-      () => this.shouldStopAI
-    );
+      // Small delay before AI starts for better UX
+      await delay(500);
+      if (this.shouldStopAI) return;
+
+      // Execute AI turn using BattleController
+      // The TURBO system will handle all the turn mechanics
+      Logger.info('[MissionBattleUI] Executing AI turn');
+      await this.battleController.executeAITurn();
+      Logger.info('[MissionBattleUI] AI turn completed');
+
+      // Update local state and render after AI completes
+      const updatedState = this.battleController.getCurrentBattle();
+      if (updatedState) {
+        this.currentBattle.gameState = updatedState.gameState;
+        if (this.renderCallback) this.renderCallback();
+      }
+    } catch (error) {
+      Logger.error('[MissionBattleUI] Failed to process opponent turn:', error);
+    }
   }
 
   /**

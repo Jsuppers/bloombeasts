@@ -23,7 +23,10 @@
       "Bash(bloombeasts/catalogs/forestAssets.ts.tmp)",
       "Bash(do)",
       "Bash(echo:*)",
-      "Bash(\"$file.tmp\")"
+      "Bash(\"$file.tmp\")",
+      "Bash(timeout 5 npm run dev:*)",
+      "Bash(npx jest:*)",
+      "Bash(timeout 15 npm run dev:*)"
     ],
     "deny": [],
     "ask": []

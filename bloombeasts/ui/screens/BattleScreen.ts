@@ -14,6 +14,10 @@ import { createPopup, type PopupButton } from '../common/Popup';
 import { canAttack } from '../../engine/utils/combatHelpers';
 import { BindingType, UIState } from '../types/BindingManager';
 import type { ButtonColor } from '../common/Button';
+import {
+  TURN_TIMER_SECONDS,
+  AUTO_ATTACK_TOTAL_DELAY_MS
+} from '../../engine/constants/battleConstants';
 
 // Import modular battle components
 import {
@@ -55,8 +59,8 @@ export class BattleScreen {
   private timerInterval: number | null = null;
 
   // Track binding values separately (as per Horizon docs - no .get() method)
-  private playerTimerValue = 300; // 5 minutes = 300 seconds
-  private opponentTimerValue = 300; // 5 minutes = 300 seconds
+  private playerTimerValue = TURN_TIMER_SECONDS;
+  private opponentTimerValue = TURN_TIMER_SECONDS;
   private isPlayerTurnValue = false;
   private battleDisplayValue: any | null = null;
   private hasAttackableBeasts = false;
@@ -107,8 +111,8 @@ export class BattleScreen {
     // Initialize local value trackers
     this.showHandValue = true;
     this.handScrollOffsetValue = 0;
-    this.playerTimerValue = 300;
-    this.opponentTimerValue = 300;
+    this.playerTimerValue = TURN_TIMER_SECONDS;
+    this.opponentTimerValue = TURN_TIMER_SECONDS;
     this.selectedCardDetailValue = null;
 
     // Wrap onAction to add logging
@@ -140,14 +144,12 @@ export class BattleScreen {
         }
       }
 
-      // Start/stop timer based on turn changes
+      // Start/restart timer based on turn changes
       if (this.isPlayerTurnValue !== newIsPlayerTurn) {
         this.isPlayerTurnValue = newIsPlayerTurn;
-        if (newIsPlayerTurn) {
-          this.startTurnTimer();
-        } else {
-          this.stopTurnTimer();
-        }
+        // Restart timer to ensure it's tracking the correct player
+        this.stopTurnTimer();
+        this.startTurnTimer();
       }
 
       return newIsPlayerTurn;
@@ -221,7 +223,7 @@ export class BattleScreen {
           // Wait for attack animations to complete (auto-attack-all can have multiple animations)
           // Each attack takes about 1 second, and there can be up to 3 attacks
           await new Promise<void>((resolve) => {
-            this.async.setTimeout(() => resolve(), 3500);
+            this.async.setTimeout(() => resolve(), AUTO_ATTACK_TOTAL_DELAY_MS);
           });
         }
       },
@@ -588,8 +590,8 @@ export class BattleScreen {
   public cleanup(): void {
     this.stopTurnTimer();
     // Reset all UI state
-    this.playerTimerValue = 300;
-    this.opponentTimerValue = 300;
+    this.playerTimerValue = TURN_TIMER_SECONDS;
+    this.opponentTimerValue = TURN_TIMER_SECONDS;
     this.showHandValue = true;
     this.handScrollOffsetValue = 0;
     this.selectedCardDetailValue = null;

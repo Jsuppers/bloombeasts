@@ -1,5 +1,5 @@
 /**
- * Comprehensive ability system types for Bloom Beasts
+ * Comprehensive ability system types for BloomBeasts
  */
 
 import { Affinity } from './core';
@@ -11,8 +11,8 @@ export enum AbilityTarget {
   Self = 'self',
   Target = 'target',                           // The target of an attack or ability
   Attacker = 'attacker',                       // The unit attacking this unit
-  AllAllies = 'all-allies',                    // All allied Bloom Beasts
-  AllEnemies = 'all-enemies',                  // All enemy Bloom Beasts
+  AllAllies = 'all-allies',                    // All allied Beasts
+  AllEnemies = 'all-enemies',                  // All enemy Beasts
   AdjacentAllies = 'adjacent-allies',          // Adjacent allied units
   AdjacentEnemies = 'adjacent-enemies',        // Adjacent enemy units
   Opponent = 'opponent',                       // The opponent player
@@ -120,16 +120,16 @@ export enum AbilityTrigger {
  * Resource types
  */
 export enum ResourceType {
-  Nectar = 'nectar',
+  Energy = 'energy',
   ExtraSummon = 'extra-summon',
-  ExtraNectarPlay = 'extra-nectar-play'
+  ExtraEnergyPlay = 'extra-energy-play'
 }
 
 /**
  * Cost types for abilities
  */
 export enum CostType {
-  Nectar = 'nectar',
+  Energy = 'energy',
   Discard = 'discard',
   Sacrifice = 'sacrifice'
 }

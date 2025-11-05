@@ -5,23 +5,25 @@
  */
 
 import type { AssetCatalog } from '../AssetCatalogManager';
+import { AssetReferenceType, AssetEntryType, UICategory, CatalogCategory, AffinityLowercase } from '../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType } from '../engine/types/abilities';
+import { CardType, Affinity } from '../engine/types/core';
 
 export const bossAssets: AssetCatalog = {
   version: "1.0.0",
-  category: "boss",
+  category: CatalogCategory.Boss,
   description: "Boss cards and assets",
   data: [
     {
       id: "cluck-norris",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "boss",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Boss,
       data: {
         id: "cluck-norris",
         name: "Cluck Norris",
-        type: "Bloom",
-        affinity: "Boss",
+        type: CardType.Beast,
+        affinity: Affinity.Boss,
         cost: 0,
         baseAttack: 99,
         baseHealth: 99,
@@ -50,7 +52,7 @@ export const bossAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1358389912362012",
           path: "assets/images/cards_boss_cluck-norris.png"
         }
@@ -58,12 +60,12 @@ export const bossAssets: AssetCatalog = {
     },
     {
       id: "boss-icon",
-      type: "ui",
-      category: "icon",
+      type: AssetEntryType.UI,
+      category: UICategory.Icon,
       name: "Boss Icon",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "808398125136052",
           path: "assets/images/affinity_boss-icon.png"
         }
@@ -71,13 +73,13 @@ export const bossAssets: AssetCatalog = {
     },
     {
       id: "boss-mission",
-      type: "mission",
-      affinity: "boss",
+      type: AssetEntryType.Mission,
+      affinity: AffinityLowercase.Boss,
       name: "Cluck Norris",
       description: "Boss mission",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1358389912362012",
           path: "assets/images/cards_boss-mission.png"
         }

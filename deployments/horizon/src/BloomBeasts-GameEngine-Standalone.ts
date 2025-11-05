@@ -10,7 +10,7 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-31T23:45:12.234Z
+ * Generated: 2025-10-31T23:57:16.767Z
  * Files: 104
  *
  * @version 1.0.0
@@ -14877,7 +14877,12 @@ namespace BloomBeasts {
         this.drawCard(player2);
       }
 
+      console.log(`[BattleController] Battle initialized - Turn ${gameState.turn}, Player 1 nectar: ${player1.currentNectar}, Player 2 nectar: ${player2.currentNectar}`);
       Logger.info('[BattleController] Battle initialized');
+
+      // Start the first turn for player 1
+      this.startTurn(0);
+
       return this.currentBattle;
     }
 
@@ -14986,8 +14991,9 @@ namespace BloomBeasts {
       // Draw a card at start of turn
       this.drawCard(player);
 
-      // Increase nectar (max 10)
-      player.currentNectar = Math.min(10, this.currentBattle.turn);
+      // Increase nectar (max 10) - use gameState.turn which is the actual turn counter
+      player.currentNectar = Math.min(10, gameState.turn);
+      console.log(`[BattleController] Turn ${gameState.turn}: ${player.name} gains ${player.currentNectar} nectar`);
 
       // Reset summoning sickness and ability usage for player's beasts
       player.field.forEach((beast: any) => {
@@ -16084,28 +16090,31 @@ namespace BloomBeasts {
      * Process OnSummon triggers for a beast that was just summoned
      */
     processOnSummonTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.ability) return;
+      if (!beast.abilities || !Array.isArray(beast.abilities)) return;
 
-      const ability = beast.ability as any;
+      // Process all abilities that have OnSummon trigger
+      for (const ability of beast.abilities) {
+        // Check if ability has OnSummon trigger
+        if (ability.trigger === 'OnSummon') {
+          console.log(`[BattleRules] OnSummon trigger activated for ${beast.name}!`);
+          Logger.debug(`OnSummon trigger activated for ${beast.name}!`);
 
-      // Check if ability has OnSummon trigger
-      if (ability.trigger === 'OnSummon') {
-        Logger.debug(`OnSummon trigger activated for ${beast.name}!`);
-
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            this.processAbilityEffect(effect, beast, owner, opponent);
+          if (ability.effects && Array.isArray(ability.effects)) {
+            for (const effect of ability.effects) {
+              this.processAbilityEffect(effect, beast, owner, opponent);
+            }
           }
         }
-      }
 
-      // Also check for Passive abilities that apply on summon
-      if (ability.trigger === 'Passive') {
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            if (effect.type === 'remove-summoning-sickness') {
-              beast.summoningSickness = false;
-              Logger.debug(`${beast.name} can attack immediately (Passive: RemoveSummoningSickness)!`);
+        // Also check for Passive abilities that apply on summon
+        if (ability.trigger === 'Passive') {
+          if (ability.effects && Array.isArray(ability.effects)) {
+            for (const effect of ability.effects) {
+              if (effect.type === 'remove-summoning-sickness') {
+                beast.summoningSickness = false;
+                console.log(`[BattleRules] ${beast.name} can attack immediately (Passive)!`);
+                Logger.debug(`${beast.name} can attack immediately (Passive: RemoveSummoningSickness)!`);
+              }
             }
           }
         }
@@ -16116,16 +16125,18 @@ namespace BloomBeasts {
      * Process OnAttack triggers for a beast that is attacking
      */
     processOnAttackTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.ability) return;
+      if (!beast.abilities || !Array.isArray(beast.abilities)) return;
 
-      const ability = beast.ability as any;
+      // Process all abilities that have OnAttack trigger
+      for (const ability of beast.abilities) {
+        if (ability.trigger === 'OnAttack') {
+          console.log(`[BattleRules] OnAttack trigger activated for ${beast.name}!`);
+          Logger.debug(`OnAttack trigger activated for ${beast.name}!`);
 
-      if (ability.trigger === 'OnAttack') {
-        Logger.debug(`OnAttack trigger activated for ${beast.name}!`);
-
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            this.processAbilityEffect(effect, beast, owner, opponent);
+          if (ability.effects && Array.isArray(ability.effects)) {
+            for (const effect of ability.effects) {
+              this.processAbilityEffect(effect, beast, owner, opponent);
+            }
           }
         }
       }
@@ -16135,16 +16146,18 @@ namespace BloomBeasts {
      * Process OnDamage triggers for a beast that took damage
      */
     processOnDamageTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.ability) return;
+      if (!beast.abilities || !Array.isArray(beast.abilities)) return;
 
-      const ability = beast.ability as any;
+      // Process all abilities that have OnDamage trigger
+      for (const ability of beast.abilities) {
+        if (ability.trigger === 'OnDamage') {
+          console.log(`[BattleRules] OnDamage trigger activated for ${beast.name}!`);
+          Logger.debug(`OnDamage trigger activated for ${beast.name}!`);
 
-      if (ability.trigger === 'OnDamage') {
-        Logger.debug(`OnDamage trigger activated for ${beast.name}!`);
-
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            this.processAbilityEffect(effect, beast, owner, opponent);
+          if (ability.effects && Array.isArray(ability.effects)) {
+            for (const effect of ability.effects) {
+              this.processAbilityEffect(effect, beast, owner, opponent);
+            }
           }
         }
       }
@@ -16154,16 +16167,18 @@ namespace BloomBeasts {
      * Process OnDestroy triggers for a beast that is about to be destroyed
      */
     processOnDestroyTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.ability) return;
+      if (!beast.abilities || !Array.isArray(beast.abilities)) return;
 
-      const ability = beast.ability as any;
+      // Process all abilities that have OnDestroy trigger
+      for (const ability of beast.abilities) {
+        if (ability.trigger === 'OnDestroy') {
+          console.log(`[BattleRules] OnDestroy trigger activated for ${beast.name}!`);
+          Logger.debug(`OnDestroy trigger activated for ${beast.name}!`);
 
-      if (ability.trigger === 'OnDestroy') {
-        Logger.debug(`OnDestroy trigger activated for ${beast.name}!`);
-
-        if (ability.effects && Array.isArray(ability.effects)) {
-          for (const effect of ability.effects) {
-            this.processAbilityEffect(effect, beast, owner, opponent);
+          if (ability.effects && Array.isArray(ability.effects)) {
+            for (const effect of ability.effects) {
+              this.processAbilityEffect(effect, beast, owner, opponent);
+            }
           }
         }
       }
@@ -17015,6 +17030,8 @@ namespace BloomBeasts {
       // Switch back to player and increment turn
       this.currentBattle.gameState.activePlayer = 0;
       this.currentBattle.gameState.turn++;
+
+      console.log(`[MissionBattleUI] Starting player turn ${this.currentBattle.gameState.turn}`);
 
       // Start player's new turn
       this.battleController.startTurn(0);

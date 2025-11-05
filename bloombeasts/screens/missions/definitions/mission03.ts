@@ -23,10 +23,10 @@ export const mission03: Mission = {
       return { name: 'Mosslet Deck', affinity: 'Forest', cards: [], totalCards: 0 };
     }
 
-    // Beginner deck: 2 Mosslets + 2 Rootlings + 3 Nectar Blocks
+    // Beginner deck: 2 Mosslets + 2 Rootlings + 3 Energy Blocks
     const mossletCard = game.catalogManager.getCard('mosslet');
     const rootlingCard = game.catalogManager.getCard('rootling');
-    const nectarBlockCard = game.catalogManager.getCard('nectar-block');
+    const energyBlockCard = game.catalogManager.getCard('energy-block');
 
     const cards = [];
 
@@ -40,9 +40,9 @@ export const mission03: Mission = {
       cards.push({ ...rootlingCard, instanceId: `rootling-${i}` });
     }
 
-    // Add 3 Nectar Blocks
+    // Add 3 Energy Blocks
     for (let i = 1; i <= 5; i++) {
-      cards.push({ ...nectarBlockCard, instanceId: `nectar-block-${i}` });
+      cards.push({ ...energyBlockCard, instanceId: `energy-block-${i}` });
     }
 
     return {

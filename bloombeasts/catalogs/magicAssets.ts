@@ -3,21 +3,23 @@
  */
 
 import type { AssetCatalog } from '../AssetCatalogManager';
+import { AssetReferenceType, AssetEntryType, UICategory, CatalogCategory, AffinityLowercase } from '../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType } from '../engine/types/abilities';
+import { CardType } from '../engine/types/core';
 
 export const magicAssets: AssetCatalog = {
   version: "1.0.0",
-  category: "magic",
+  category: CatalogCategory.Magic,
   description: "Magic cards and assets",
   data: [
     {
       id: "aether-swap",
-      type: "magic",
+      type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
         id: "aether-swap",
         name: "Aether Swap",
-        type: "Magic",
+        type: CardType.Magic,
         cost: 1,
         targetRequired: true,
         abilities: [
@@ -35,7 +37,7 @@ export const magicAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1846483789630405",
           path: "assets/images/cards_magic_aether-swap.png"
         }
@@ -43,12 +45,12 @@ export const magicAssets: AssetCatalog = {
     },
     {
       id: "cleansing-downpour",
-      type: "magic",
+      type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
         id: "cleansing-downpour",
         name: "Cleansing Downpour",
-        type: "Magic",
+        type: CardType.Magic,
         cost: 2,
         targetRequired: false,
         abilities: [
@@ -67,7 +69,7 @@ export const magicAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "710755475386192",
           path: "assets/images/cards_magic_cleansing-downpour.png"
         }
@@ -75,12 +77,12 @@ export const magicAssets: AssetCatalog = {
     },
     {
       id: "elemental-burst",
-      type: "magic",
+      type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
         id: "elemental-burst",
         name: "Elemental Burst",
-        type: "Magic",
+        type: CardType.Magic,
         cost: 3,
         targetRequired: false,
         abilities: [
@@ -99,7 +101,7 @@ export const magicAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1585232092889726",
           path: "assets/images/cards_magic_elemental-burst.png"
         }
@@ -107,12 +109,12 @@ export const magicAssets: AssetCatalog = {
     },
     {
       id: "lightning-strike",
-      type: "magic",
+      type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
         id: "lightning-strike",
         name: "Lightning Strike",
-        type: "Magic",
+        type: CardType.Magic,
         cost: 2,
         targetRequired: true,
         abilities: [
@@ -132,31 +134,31 @@ export const magicAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1155953239812167",
           path: "assets/images/cards_magic_lightning-strike.png"
         }
       ]
     },
     {
-      id: "nectar-block",
-      type: "magic",
+      id: "energy-block",
+      type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
-        id: "nectar-block",
-        name: "Nectar Block",
-        type: "Magic",
+        id: "energy-block",
+        name: "Energy Block",
+        type: CardType.Magic,
         cost: 0,
         targetRequired: false,
         abilities: [
           {
-            name: "Nectar Block",
+            name: "Energy Block",
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
                 type: "GainResource",
                 target: "Player",
-                resource: "Nectar",
+                resource: "Energy",
                 value: 2,
                 duration: "ThisTurn"
               }
@@ -166,31 +168,31 @@ export const magicAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1092559439363693",
-          path: "assets/images/cards_magic_nectar-block.png"
+          path: "assets/images/cards_magic_energy-block.png"
         }
       ]
     },
     {
-      id: "nectar-drain",
-      type: "magic",
+      id: "energy-drain",
+      type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
-        id: "nectar-drain",
-        name: "Nectar Drain",
-        type: "Magic",
+        id: "energy-drain",
+        name: "Energy Drain",
+        type: CardType.Magic,
         cost: 1,
         targetRequired: false,
         abilities: [
           {
-            name: "Nectar Drain",
+            name: "Energy Drain",
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
                 type: "GainResource",
                 target: "Player",
-                resource: "Nectar",
+                resource: "Energy",
                 value: 2,
                 duration: "ThisTurn"
               },
@@ -205,31 +207,31 @@ export const magicAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1754732031852523",
-          path: "assets/images/cards_magic_nectar-drain.png"
+          path: "assets/images/cards_magic_energy-drain.png"
         }
       ]
     },
     {
-      id: "nectar-surge",
-      type: "magic",
+      id: "energy-surge",
+      type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
-        id: "nectar-surge",
-        name: "Nectar Surge",
-        type: "Magic",
+        id: "energy-surge",
+        name: "Energy Surge",
+        type: CardType.Magic,
         cost: 1,
         targetRequired: false,
         abilities: [
           {
-            name: "Nectar Surge",
+            name: "Energy Surge",
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
                 type: "GainResource",
                 target: "Player",
-                resource: "Nectar",
+                resource: "Energy",
                 value: 3,
                 duration: "ThisTurn"
               },
@@ -244,20 +246,20 @@ export const magicAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1379310950488534",
-          path: "assets/images/cards_magic_nectar-surge.png"
+          path: "assets/images/cards_magic_energy-surge.png"
         }
       ]
     },
     {
       id: "overgrowth",
-      type: "magic",
+      type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
         id: "overgrowth",
         name: "Overgrowth",
-        type: "Magic",
+        type: CardType.Magic,
         cost: 3,
         targetRequired: false,
         abilities: [
@@ -278,7 +280,7 @@ export const magicAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1489977038895297",
           path: "assets/images/cards_magic_overgrowth.png"
         }
@@ -286,12 +288,12 @@ export const magicAssets: AssetCatalog = {
     },
     {
       id: "power-up",
-      type: "magic",
+      type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
         id: "power-up",
         name: "Power Up",
-        type: "Magic",
+        type: CardType.Magic,
         cost: 2,
         targetRequired: true,
         abilities: [
@@ -312,7 +314,7 @@ export const magicAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1140750044697552",
           path: "assets/images/cards_magic_power-up.png"
         }
@@ -320,12 +322,12 @@ export const magicAssets: AssetCatalog = {
     },
     {
       id: "purify",
-      type: "magic",
+      type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
         id: "purify",
         name: "Purify",
-        type: "Magic",
+        type: CardType.Magic,
         cost: 1,
         targetRequired: true,
         abilities: [
@@ -344,7 +346,7 @@ export const magicAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "681285418362907",
           path: "assets/images/cards_magic_purify.png"
         }

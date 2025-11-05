@@ -71,4 +71,4 @@ export const STAT_PROGRESSION: Record<Level, StatGain> = {
 
 export const MAX_LEVEL: Level = 9;
 
-export const NECTAR_XP_COST = 1;
+export const ENERGY_XP_COST = 1;

@@ -4,7 +4,7 @@ import resolve from '@rollup/plugin-node-resolve';
 const sharedPlugins = [
   typescript({
     tsconfig: './tsconfig.json',
-    include: ['src/**/*.ts', '../../bloombeasts/**/*.ts', '../../shared/**/*.ts'],
+    include: ['src/**/*.ts', '../../bloombeasts/**/*.ts', '../../shared/**/*.ts', '../../turbo/src/**/*.ts'],
     exclude: ['**/*.test.ts', '**/*.integration.test.ts', '**/__tests__/**'],
     compilerOptions: {
       target: 'ES2017',

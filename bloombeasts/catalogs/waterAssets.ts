@@ -3,23 +3,25 @@
  */
 
 import type { AssetCatalog } from '../AssetCatalogManager';
+import { AssetReferenceType, AssetEntryType, UICategory, CatalogCategory, AffinityLowercase } from '../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType, ResourceType, ConditionType } from '../engine/types/abilities';
+import { CardType, Affinity } from '../engine/types/core';
 
 export const waterAssets: AssetCatalog = {
   version: "1.0.0",
-  category: "water",
+  category: CatalogCategory.Water,
   description: "Water affinity cards and assets",
   data: [
     {
       id: "aqua-pebble",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "water",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Water,
       data: {
         id: "aqua-pebble",
         name: "Aqua Pebble",
-        type: "Bloom",
-        affinity: "Water",
+        type: CardType.Beast,
+        affinity: Affinity.Water,
         cost: 1,
         baseAttack: 1,
         baseHealth: 4,
@@ -45,7 +47,7 @@ export const waterAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "2542562209453452",
           path: "assets/images/cards_water_aqua-pebble.png"
         }
@@ -53,14 +55,14 @@ export const waterAssets: AssetCatalog = {
     },
     {
       id: "bubblefin",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "water",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Water,
       data: {
         id: "bubblefin",
         name: "Bubblefin",
-        type: "Bloom",
-        affinity: "Water",
+        type: CardType.Beast,
+        affinity: Affinity.Water,
         cost: 2,
         baseAttack: 2,
         baseHealth: 5,
@@ -82,7 +84,7 @@ export const waterAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "2957682524429594",
           path: "assets/images/cards_water_bubblefin.png"
         }
@@ -90,14 +92,14 @@ export const waterAssets: AssetCatalog = {
     },
     {
       id: "dewdrop-drake",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "water",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Water,
       data: {
         id: "dewdrop-drake",
         name: "Dewdrop Drake",
-        type: "Bloom",
-        affinity: "Water",
+        type: CardType.Beast,
+        affinity: Affinity.Water,
         cost: 3,
         baseAttack: 3,
         baseHealth: 6,
@@ -122,7 +124,7 @@ export const waterAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1232407695362881",
           path: "assets/images/cards_water_dewdrop-drake.png"
         }
@@ -130,14 +132,14 @@ export const waterAssets: AssetCatalog = {
     },
     {
       id: "kelp-cub",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "water",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Water,
       data: {
         id: "kelp-cub",
         name: "Kelp Cub",
-        type: "Bloom",
-        affinity: "Water",
+        type: CardType.Beast,
+        affinity: Affinity.Water,
         cost: 2,
         baseAttack: 3,
         baseHealth: 3,
@@ -157,7 +159,7 @@ export const waterAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "2278603722605464",
           path: "assets/images/cards_water_kelp-cub.png"
         }
@@ -165,13 +167,13 @@ export const waterAssets: AssetCatalog = {
     },
     {
       id: "deep-sea-grotto",
-      type: "habitat",
-      affinity: "water",
+      type: AssetEntryType.Habitat,
+      affinity: AffinityLowercase.Water,
       data: {
         id: "deep-sea-grotto",
         name: "Deep Sea Grotto",
-        type: "Habitat",
-        affinity: "Water",
+        type: CardType.Habitat,
+        affinity: Affinity.Water,
         cost: 1,
         abilities: [
           {
@@ -195,17 +197,17 @@ export const waterAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "594002380404766",
           path: "assets/images/cards_water_deep-sea-grotto.png"
         },
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1356075539231203",
           path: "assets/images/cards_water_habitat-card.png"
         },
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "805465575687502",
           path: "assets/images/cards_water_habitat-card-playboard.png"
         }
@@ -213,13 +215,13 @@ export const waterAssets: AssetCatalog = {
     },
     {
       id: "water-mission",
-      type: "mission",
-      affinity: "water",
+      type: AssetEntryType.Mission,
+      affinity: AffinityLowercase.Water,
       name: "Water Mission",
       description: "Water affinity mission",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1204438218330106",
           path: "assets/images/cards_water_water-mission.png"
         }
@@ -227,12 +229,12 @@ export const waterAssets: AssetCatalog = {
     },
     {
       id: "water-chest-closed",
-      type: "ui",
-      category: "chest",
+      type: AssetEntryType.UI,
+      category: UICategory.Chest,
       name: "Water Chest Closed",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1502977104283894",
           path: "assets/images/chest_water-chest-closed.png"
         }
@@ -240,12 +242,12 @@ export const waterAssets: AssetCatalog = {
     },
     {
       id: "water-chest-opened",
-      type: "ui",
-      category: "chest",
+      type: AssetEntryType.UI,
+      category: UICategory.Chest,
       name: "Water Chest Opened",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "817919940747617",
           path: "assets/images/chest_water-chest-opened.png"
         }
@@ -253,12 +255,12 @@ export const waterAssets: AssetCatalog = {
     },
     {
       id: "water-icon",
-      type: "ui",
-      category: "icon",
+      type: AssetEntryType.UI,
+      category: UICategory.Icon,
       name: "Water Icon",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "803389222302576",
           path: "assets/images/affinity_water-icon.png"
         }
@@ -266,13 +268,13 @@ export const waterAssets: AssetCatalog = {
     },
     {
       id: "water-habitat",
-      type: "ui",
-      category: "card-template",
+      type: AssetEntryType.UI,
+      category: UICategory.CardTemplate,
       name: "Water Habitat Card Template",
       description: "Template overlay for water habitat cards",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1356075539231203",
           path: "assets/images/cards_water_habitat-card.png"
         }

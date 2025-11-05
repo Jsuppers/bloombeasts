@@ -48,7 +48,7 @@ export const battleBoardAssetPositions = {
     buffOne: { x: 20, y: 50 },
     buffTwo: { x: 20, y: 193 },
     health: { x: 30, y: 10 },
-    nectar: { x: 930, y: 10 },
+    energy: { x: 930, y: 10 },
     deckCount: { x: 1150, y: 10 },
   },
   playerTwo: {
@@ -61,7 +61,7 @@ export const battleBoardAssetPositions = {
     buffOne: { x: 1160, y: 477 },
     buffTwo: { x: 1160, y: 587 },
     health: { x: 30, y: 680 },
-    nectar: { x: 930, y: 680 },
+    energy: { x: 930, y: 680 },
     deckCount: { x: 1150, y: 680 },
   },
   habitatZone: { x: 330, y: 293 },

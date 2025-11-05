@@ -3,7 +3,7 @@
  */
 
 import { AnyCard, HabitatCard } from './core';
-import { BloomBeastInstance } from './leveling';
+import { BloomBeastInstance, XPSource } from './leveling';
 import { SimpleMap } from '../../utils/polyfills';
 
 // Re-export for convenience
@@ -22,17 +22,23 @@ export enum BattlePhase {
 }
 
 // Phase type for game flow (kept for backward compatibility)
-export type Phase = 'Setup' | 'Draw' | 'Main' | 'Combat' | 'End';
+export enum Phase {
+  Setup = 'Setup',
+  Draw = 'Draw',
+  Main = 'Main',
+  Combat = 'Combat',
+  End = 'End'
+}
 
 export interface Player {
   id?: string;
   name: string;
   health: number;
   maxHealth?: number;
-  nectar?: number;
-  permanentNectar?: number;
-  temporaryNectar?: number;
-  currentNectar: number;  // Available nectar this turn
+  energy?: number;
+  permanentEnergy?: number;
+  temporaryEnergy?: number;
+  currentEnergy: number;  // Available energy this turn
   summonsThisTurn: number; // Track summons for extra summon effects
   deck: AnyCard[];
   hand: AnyCard[];
@@ -97,7 +103,7 @@ export interface GainXPAction extends GameAction {
   type: 'GAIN_XP';
   instanceId: string;
   amount: number;
-  source: 'Combat' | 'NectarSacrifice';
+  source: XPSource;
 }
 
 export interface HabitatShiftAction extends GameAction {

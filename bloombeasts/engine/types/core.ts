@@ -1,12 +1,25 @@
 /**
- * Core type definitions for Bloom Beasts card game
+ * Core type definitions for BloomBeasts card game
  */
 
 import type { StructuredAbility, AbilityEffect } from './abilities';
 
-export type Affinity = 'Forest' | 'Fire' | 'Water' | 'Sky' | 'Generic' | 'Boss';
+export enum Affinity {
+  Forest = 'Forest',
+  Fire = 'Fire',
+  Water = 'Water',
+  Sky = 'Sky',
+  Generic = 'Generic',
+  Boss = 'Boss'
+}
 
-export type CardType = 'Magic' | 'Trap' | 'Bloom' | 'Habitat' | 'Buff';
+export enum CardType {
+  Magic = 'Magic',
+  Trap = 'Trap',
+  Beast = 'Beast',
+  Habitat = 'Habitat',
+  Buff = 'Buff'
+}
 
 // Counter types removed to reduce game complexity
 
@@ -27,7 +40,7 @@ export interface Card {
  * Trigger conditions for trap cards
  */
 export enum TrapTrigger {
-  OnBloomPlay = 'OnBloomPlay',          // When opponent plays a Bloom Beast
+  OnBeastPlay = 'OnBeastPlay',          // When opponent plays a Beast
   OnHabitatPlay = 'OnHabitatPlay',      // When opponent plays a Habitat
   OnMagicPlay = 'OnMagicPlay',          // When opponent plays a Magic card
   OnAttack = 'OnAttack',                // When opponent attacks
@@ -63,8 +76,8 @@ export interface TrapActivation {
  * Magic card
  */
 export interface MagicCard extends Card {
-  type: 'Magic';
-  abilities: Ability[];  // Standardized to use abilities like BloomBeast cards
+  type: CardType.Magic;
+  abilities: Ability[];  // Standardized to use abilities like Beast cards
   targetRequired?: boolean;  // Whether the card needs a target
 }
 
@@ -72,32 +85,32 @@ export interface MagicCard extends Card {
  * Trap card
  */
 export interface TrapCard extends Card {
-  type: 'Trap';
+  type: CardType.Trap;
   activation: TrapActivation;  // Structured activation instead of string
-  abilities: Ability[];         // Standardized to use abilities like BloomBeast cards
+  abilities: Ability[];         // Standardized to use abilities like Beast cards
 }
 
 /**
  * Habitat card
  */
 export interface HabitatCard extends Card {
-  type: 'Habitat';
+  type: CardType.Habitat;
   affinity: Affinity;
-  abilities: Ability[];  // Standardized to use abilities like BloomBeast cards
+  abilities: Ability[];  // Standardized to use abilities like Beast cards
 }
 
 /**
  * Buff card - stays on board and provides ongoing effects
  */
 export interface BuffCard extends Card {
-  type: 'Buff';
+  type: CardType.Buff;
   affinity?: Affinity;  // Optional affinity for buff cards
-  abilities: Ability[];  // Standardized to use abilities like BloomBeast cards
+  abilities: Ability[];  // Standardized to use abilities like Beast cards
   duration?: number;  // Optional turn duration (undefined = permanent)
 }
 
 /**
- * Bloom Beast card
+ * Beast card
  *
  * All cards use standard leveling progression:
  * - Standard XP requirements (10, 20, 40, 80, 160, 320, 640, 1280)
@@ -105,12 +118,12 @@ export interface BuffCard extends Card {
  * - Abilities remain constant across all levels
  */
 export interface BloomBeastCard extends Card {
-  type: 'Bloom';
+  type: CardType.Beast;
   affinity: Affinity;
   baseAttack: number;
   baseHealth: number;
   abilities: Ability[];  // Array of passive abilities (constant across all levels)
-  // Note: Card definitions are blueprints. All cards (Bloom, Magic, Trap, Habitat, Buff)
+  // Note: Card definitions are blueprints. All cards (Beast, Magic, Trap, Habitat, Buff)
   // start at level 1 with 0 XP when added to player's collection as CardInstance objects.
   // Level and XP tracking is handled by the CardInstance interface, not the card definitions.
 }

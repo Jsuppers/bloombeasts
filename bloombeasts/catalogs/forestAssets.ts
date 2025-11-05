@@ -3,24 +3,26 @@
  */
 
 import type { AssetCatalog } from '../AssetCatalogManager';
+import { AssetReferenceType, AssetEntryType, UICategory, CatalogCategory, AffinityLowercase } from '../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType, ResourceType, ConditionType } from '../engine/types/abilities';
+import { CardType, Affinity } from '../engine/types/core';
 
 export const forestAssets: AssetCatalog = {
   version: "1.0.0",
-  category: "forest",
+  category: CatalogCategory.Forest,
   description: "Forest affinity cards and assets",
   data: [
     {
       id: "rootling",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "forest",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Forest,
       data: {
         id: "rootling",
         name: "Rootling",
         displayName: "Rootling",
-        type: "Bloom",
-        affinity: "Forest",
+        type: CardType.Beast,
+        affinity: Affinity.Forest,
         cost: 1,
         baseAttack: 1,
         baseHealth: 3,
@@ -42,7 +44,7 @@ export const forestAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1170317305016635",
           path: "assets/images/cards_forest_rootling.png",
           description: "Rootling card artwork"
@@ -51,15 +53,15 @@ export const forestAssets: AssetCatalog = {
     },
     {
       id: "leaf-sprite",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "forest",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Forest,
       data: {
         id: "leaf-sprite",
         name: "Leaf Sprite",
         displayName: "Leaf Sprite",
-        type: "Bloom",
-        affinity: "Forest",
+        type: CardType.Beast,
+        affinity: Affinity.Forest,
         cost: 1,
         baseAttack: 1,
         baseHealth: 2,
@@ -79,7 +81,7 @@ export const forestAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1733091247346351",
           path: "assets/images/cards_forest_leaf-sprite.png",
           description: "Leaf Sprite card artwork"
@@ -88,15 +90,15 @@ export const forestAssets: AssetCatalog = {
     },
     {
       id: "mosslet",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "forest",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Forest,
       data: {
         id: "mosslet",
         name: "Mosslet",
         displayName: "Mosslet",
-        type: "Bloom",
-        affinity: "Forest",
+        type: CardType.Beast,
+        affinity: Affinity.Forest,
         cost: 2,
         baseAttack: 2,
         baseHealth: 2,
@@ -118,7 +120,7 @@ export const forestAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1344114090714721",
           path: "assets/images/cards_forest_mosslet.png",
           description: "Mosslet card artwork"
@@ -127,15 +129,15 @@ export const forestAssets: AssetCatalog = {
     },
     {
       id: "mushroomancer",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "forest",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Forest,
       data: {
         id: "mushroomancer",
         name: "Mushroomancer",
         displayName: "Mushroomancer",
-        type: "Bloom",
-        affinity: "Forest",
+        type: CardType.Beast,
+        affinity: Affinity.Forest,
         cost: 3,
         baseAttack: 3,
         baseHealth: 4,
@@ -155,7 +157,7 @@ export const forestAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1393693032328550",
           path: "assets/images/cards_forest_mushroomancer.png",
           description: "Mushroomancer card artwork"
@@ -164,14 +166,14 @@ export const forestAssets: AssetCatalog = {
     },
     {
       id: "ancient-forest",
-      type: "habitat",
-      affinity: "forest",
+      type: AssetEntryType.Habitat,
+      affinity: AffinityLowercase.Forest,
       data: {
         id: "ancient-forest",
         name: "Ancient Forest",
         displayName: "Ancient Forest",
-        type: "Habitat",
-        affinity: "Forest",
+        type: CardType.Habitat,
+        affinity: Affinity.Forest,
         cost: 0,
         abilities: [
           {
@@ -191,19 +193,19 @@ export const forestAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1625867191715184",
           path: "assets/images/cards_forest_ancient-forest.png",
           description: "Ancient Forest habitat card artwork"
         },
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "715084184317947",
           path: "assets/images/cards_forest_habitat-card.png",
           description: "Forest habitat card template"
         },
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "805969505504149",
           path: "assets/images/cards_forest_habitat-card-playboard.png",
           description: "Forest habitat card playboard"
@@ -212,13 +214,13 @@ export const forestAssets: AssetCatalog = {
     },
     {
       id: "forest-mission",
-      type: "mission",
-      affinity: "forest",
+      type: AssetEntryType.Mission,
+      affinity: AffinityLowercase.Forest,
       name: "Forest Mission",
       description: "Forest affinity mission",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1351984712974001",
           path: "assets/images/cards_forest_forest-mission.png",
           description: "Forest mission card"
@@ -227,13 +229,13 @@ export const forestAssets: AssetCatalog = {
     },
     {
       id: "forest-chest-closed",
-      type: "ui",
-      category: "chest",
+      type: AssetEntryType.UI,
+      category: UICategory.Chest,
       name: "Forest Chest Closed",
       description: "Forest chest in closed state",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "678586941962889",
           path: "assets/images/chest_forest-chest-closed.png"
         }
@@ -241,13 +243,13 @@ export const forestAssets: AssetCatalog = {
     },
     {
       id: "forest-chest-opened",
-      type: "ui",
-      category: "chest",
+      type: AssetEntryType.UI,
+      category: UICategory.Chest,
       name: "Forest Chest Opened",
       description: "Forest chest in opened state",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1859963367965524",
           path: "assets/images/chest_forest-chest-opened.png"
         }
@@ -255,13 +257,13 @@ export const forestAssets: AssetCatalog = {
     },
     {
       id: "forest-icon",
-      type: "ui",
-      category: "icon",
+      type: AssetEntryType.UI,
+      category: UICategory.Icon,
       name: "Forest Icon",
       description: "Forest affinity icon",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1869425844004279",
           path: "assets/images/affinity_forest-icon.png"
         }
@@ -269,13 +271,13 @@ export const forestAssets: AssetCatalog = {
     },
     {
       id: "forest-habitat",
-      type: "ui",
-      category: "card-template",
+      type: AssetEntryType.UI,
+      category: UICategory.CardTemplate,
       name: "Forest Habitat Card Template",
       description: "Template overlay for forest habitat cards",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "715084184317947",
           path: "assets/images/cards_forest_habitat-card.png"
         }

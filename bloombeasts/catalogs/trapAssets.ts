@@ -3,22 +3,23 @@
  */
 
 import type { AssetCatalog } from '../AssetCatalogManager';
+import { AssetReferenceType, AssetEntryType, UICategory, CatalogCategory, AffinityLowercase } from '../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration } from '../engine/types/abilities';
-import { TrapTrigger } from '../engine/types/core';
+import { TrapTrigger, CardType } from '../engine/types/core';
 
 export const trapAssets: AssetCatalog = {
   version: "1.0.0",
-  category: "trap",
+  category: CatalogCategory.Trap,
   description: "Trap cards and assets",
   data: [
     {
       id: "bear-trap",
-      type: "trap",
+      type: AssetEntryType.Trap,
       cardType: "Trap",
       data: {
         id: "bear-trap",
         name: "Bear Trap",
-        type: "Trap",
+        type: CardType.Trap,
         cost: 1,
         activation: {
           trigger: TrapTrigger.OnAttack
@@ -39,7 +40,7 @@ export const trapAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1518992622460625",
           path: "assets/images/cards_trap_bear-trap.png"
         }
@@ -47,12 +48,12 @@ export const trapAssets: AssetCatalog = {
     },
     {
       id: "emergency-bloom",
-      type: "trap",
+      type: AssetEntryType.Trap,
       cardType: "Trap",
       data: {
         id: "emergency-bloom",
         name: "Emergency Bloom",
-        type: "Trap",
+        type: CardType.Trap,
         cost: 1,
         activation: {
           trigger: TrapTrigger.OnDestroy
@@ -73,7 +74,7 @@ export const trapAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "2247657455738264",
           path: "assets/images/cards_trap_emergency-bloom.png"
         }
@@ -81,12 +82,12 @@ export const trapAssets: AssetCatalog = {
     },
     {
       id: "habitat-lock",
-      type: "trap",
+      type: AssetEntryType.Trap,
       cardType: "Trap",
       data: {
         id: "habitat-lock",
         name: "Habitat Lock",
-        type: "Trap",
+        type: CardType.Trap,
         cost: 1,
         activation: {
           trigger: TrapTrigger.OnHabitatPlay
@@ -106,7 +107,7 @@ export const trapAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "609610328807674",
           path: "assets/images/cards_trap_habitat-lock.png"
         }
@@ -114,12 +115,12 @@ export const trapAssets: AssetCatalog = {
     },
     {
       id: "habitat-shield",
-      type: "trap",
+      type: AssetEntryType.Trap,
       cardType: "Trap",
       data: {
         id: "habitat-shield",
         name: "Habitat Shield",
-        type: "Trap",
+        type: CardType.Trap,
         cost: 2,
         activation: {
           trigger: TrapTrigger.OnHabitatPlay
@@ -144,7 +145,7 @@ export const trapAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1362245262078336",
           path: "assets/images/cards_trap_habitat-shield.png"
         }
@@ -152,12 +153,12 @@ export const trapAssets: AssetCatalog = {
     },
     {
       id: "magic-shield",
-      type: "trap",
+      type: AssetEntryType.Trap,
       cardType: "Trap",
       data: {
         id: "magic-shield",
         name: "Magic Shield",
-        type: "Trap",
+        type: CardType.Trap,
         cost: 1,
         activation: {
           trigger: TrapTrigger.OnMagicPlay
@@ -177,7 +178,7 @@ export const trapAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1239098601311749",
           path: "assets/images/cards_trap_magic-sheild.png"
         }
@@ -185,12 +186,12 @@ export const trapAssets: AssetCatalog = {
     },
     {
       id: "thorn-snare",
-      type: "trap",
+      type: AssetEntryType.Trap,
       cardType: "Trap",
       data: {
         id: "thorn-snare",
         name: "Thorn Snare",
-        type: "Trap",
+        type: CardType.Trap,
         cost: 2,
         activation: {
           trigger: TrapTrigger.OnAttack
@@ -216,7 +217,7 @@ export const trapAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "4210265565909373",
           path: "assets/images/cards_trap_thorn-snare.png"
         }
@@ -224,15 +225,15 @@ export const trapAssets: AssetCatalog = {
     },
     {
       id: "vaporize",
-      type: "trap",
+      type: AssetEntryType.Trap,
       cardType: "Trap",
       data: {
         id: "vaporize",
         name: "Vaporize",
-        type: "Trap",
+        type: CardType.Trap,
         cost: 2,
         activation: {
-          trigger: TrapTrigger.OnBloomPlay,
+          trigger: TrapTrigger.OnBeastPlay,
           condition: {
             type: "CostBelow",
             value: 4
@@ -253,7 +254,7 @@ export const trapAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1903759173890506",
           path: "assets/images/cards_trap_vaporize.png"
         }
@@ -261,12 +262,12 @@ export const trapAssets: AssetCatalog = {
     },
     {
       id: "xp-harvest",
-      type: "trap",
+      type: AssetEntryType.Trap,
       cardType: "Trap",
       data: {
         id: "xp-harvest",
         name: "XP Harvest",
-        type: "Trap",
+        type: CardType.Trap,
         cost: 1,
         activation: {
           trigger: TrapTrigger.OnDestroy
@@ -287,7 +288,7 @@ export const trapAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "807213335392971",
           path: "assets/images/cards_trap_xpharvest.png"
         }

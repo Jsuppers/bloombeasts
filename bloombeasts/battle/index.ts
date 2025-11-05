@@ -37,5 +37,9 @@ export type {
 // Game rules (used internally, but exported for extensibility)
 export { BattleStateManager as BattleRules } from './core/BattleRules';
 
-// AI exports
-export { OpponentAI } from './ai/OpponentAI';
+// TURBO-based exports
+export { createBloomBeastsGame, BloomBeastsRules } from './BloomBeastsGame';
+export { BloomBeastsGreedyAI, BloomBeastsRandomAI } from './BloomBeastsAI';
+
+// Re-export turbo library for direct use
+export * as Turbo from '../../turbo/src';

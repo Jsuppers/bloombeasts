@@ -81,7 +81,7 @@ export interface AIProfile {
 
   // AI behavior weights (0-1)
   aggressiveness: number;       // Likelihood to attack
-  resourceManagement: number;   // How well it manages nectar
+  resourceManagement: number;   // How well it manages energy
   targetPriority: 'strongest' | 'weakest' | 'random' | 'strategic';
   abilityUsage: number;        // Likelihood to use abilities
 
@@ -90,7 +90,7 @@ export interface AIProfile {
 }
 
 export interface AIBehavior {
-  trigger: 'low-health' | 'high-nectar' | 'empty-field' | 'turn-count';
+  trigger: 'low-health' | 'high-energy' | 'empty-field' | 'turn-count';
   condition?: number;
   action: 'play-defensive' | 'all-out-attack' | 'summon-rush' | 'ability-spam';
 }
@@ -107,7 +107,7 @@ export interface MissionResult {
   // Rewards earned
   xpEarned: number;
   cardsEarned: AnyCard[];
-  nectarEarned: number;
+  energyEarned: number;
 }
 
 export interface MissionProgress {

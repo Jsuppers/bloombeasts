@@ -17,7 +17,10 @@ export interface StatGain {
 /**
  * XP source tracking
  */
-export type XPSource = 'Combat' | 'NectarSacrifice';
+export enum XPSource {
+  Combat = 'Combat',
+  EnergySacrifice = 'EnergySacrifice'
+}
 
 /**
  * Temporary effect on a unit

@@ -8,6 +8,7 @@
  */
 
 import type { AnyCard, BloomBeastCard } from './engine/types/core';
+import { CardType } from './engine/types/core';
 
 /**
  * Get all card IDs that need image assets
@@ -47,8 +48,8 @@ export function getCardRenderingAssetIds(catalogManager: any): string[] {
 
   // Add individual card artwork for each card
   for (const card of cards) {
-    if (card.type === 'Bloom') {
-      // Bloom cards use beast artwork
+    if (card.type === CardType.Beast) {
+      // Beast cards use beast artwork
       assetIds.push(`beast-${card.name}`);
     } else {
       // Other cards use card artwork

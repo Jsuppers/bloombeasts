@@ -26,7 +26,7 @@ export const mission04: Mission = {
     // More advanced beginner deck with habitat
     const leafSpriteCard = game.catalogManager.getCard('leaf-sprite');
     const mushroomancerCard = game.catalogManager.getCard('mushroomancer');
-    const nectarBlockCard = game.catalogManager.getCard('nectar-block');
+    const energyBlockCard = game.catalogManager.getCard('energy-block');
     const ancientForestCard = game.catalogManager.getCard('ancient-forest');
     const powerUpCard = game.catalogManager.getCard('power-up');
 
@@ -45,9 +45,9 @@ export const mission04: Mission = {
     // Add 1 Ancient Forest habitat
     cards.push({ ...ancientForestCard, instanceId: 'ancient-forest-1' });
 
-    // Add 5 Nectar Blocks
+    // Add 5 Energy Blocks
     for (let i = 1; i <= 6; i++) {
-      cards.push({ ...nectarBlockCard, instanceId: `nectar-block-${i}` });
+      cards.push({ ...energyBlockCard, instanceId: `energy-block-${i}` });
     }
 
     // Add 1 Power Up

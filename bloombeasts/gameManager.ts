@@ -58,14 +58,14 @@ export interface BattleDisplay {
   playerHealth: number;
   playerMaxHealth: number;
   playerDeckCount: number;
-  playerNectar: number;
+  playerEnergy: number;
   playerHand: any[];
   playerTrapZone: any[]; // Player's trap cards (face-down)
   playerBuffZone: any[]; // Player's active buff cards
   opponentHealth: number;
   opponentMaxHealth: number;
   opponentDeckCount: number;
-  opponentNectar: number;
+  opponentEnergy: number;
   opponentField: any[];
   opponentTrapZone: any[]; // Opponent's trap cards (face-down)
   opponentBuffZone: any[]; // Opponent's active buff cards

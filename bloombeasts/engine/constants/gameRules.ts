@@ -34,8 +34,8 @@ export const MAX_CARD_COST = 10;
 export const MIN_CARD_COST = 0;
 
 // Resource Limits
-export const MAX_NECTAR = 10;
-export const MIN_NECTAR = 0;
+export const MAX_ENERGY = 10;
+export const MIN_ENERGY = 0;
 
 // Level Configuration
 export const MIN_LEVEL = 1;

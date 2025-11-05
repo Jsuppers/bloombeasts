@@ -4,7 +4,7 @@
 
 import { BloomBeastInstance, Level, XPSource } from '../types/leveling';
 import { BloomBeastCard } from '../types/core';
-import { XP_REQUIREMENTS, STAT_PROGRESSION, MAX_LEVEL, NECTAR_XP_COST } from '../constants/leveling';
+import { XP_REQUIREMENTS, STAT_PROGRESSION, MAX_LEVEL, ENERGY_XP_COST } from '../constants/leveling';
 import { ILevelingSystem } from './interfaces';
 
 export class LevelingSystem implements ILevelingSystem {
@@ -31,15 +31,15 @@ export class LevelingSystem implements ILevelingSystem {
    * Add XP from combat victory
    */
 addCombatXP(beast: BloomBeastInstance): BloomBeastInstance {
-    return this.addXP(beast, 1, 'Combat');
+    return this.addXP(beast, 1, XPSource.Combat);
   }
 
   /**
-   * Add XP from nectar sacrifice
+   * Add XP from energy sacrifice
    */
-addNectarXP(beast: BloomBeastInstance, nectarSpent: number): BloomBeastInstance {
-    const xpGained = nectarSpent / NECTAR_XP_COST;
-    return this.addXP(beast, xpGained, 'NectarSacrifice');
+addEnergyXP(beast: BloomBeastInstance, energySpent: number): BloomBeastInstance {
+    const xpGained = energySpent / ENERGY_XP_COST;
+    return this.addXP(beast, xpGained, XPSource.EnergySacrifice);
   }
 
   /**

@@ -3,23 +3,25 @@
  */
 
 import type { AssetCatalog } from '../AssetCatalogManager';
+import { AssetReferenceType, AssetEntryType, UICategory, CatalogCategory, AffinityLowercase } from '../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType, ResourceType, ConditionType } from '../engine/types/abilities';
+import { CardType, Affinity } from '../engine/types/core';
 
 export const fireAssets: AssetCatalog = {
   version: "1.0.0",
-  category: "fire",
+  category: CatalogCategory.Fire,
   description: "Fire affinity cards and assets",
   data: [
     {
       id: "blazefinch",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "fire",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Fire,
       data: {
         id: "blazefinch",
         name: "Blazefinch",
-        type: "Bloom",
-        affinity: "Fire",
+        type: CardType.Beast,
+        affinity: Affinity.Fire,
         cost: 1,
         baseAttack: 1,
         baseHealth: 2,
@@ -38,7 +40,7 @@ export const fireAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "3218250765004566",
           path: "assets/images/cards_fire_blazefinch.png"
         }
@@ -46,14 +48,14 @@ export const fireAssets: AssetCatalog = {
     },
     {
       id: "cinder-pup",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "fire",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Fire,
       data: {
         id: "cinder-pup",
         name: "Cinder Pup",
-        type: "Bloom",
-        affinity: "Fire",
+        type: CardType.Beast,
+        affinity: Affinity.Fire,
         cost: 2,
         baseAttack: 2,
         baseHealth: 3,
@@ -73,7 +75,7 @@ export const fireAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "913214814369510",
           path: "assets/images/cards_fire_cinder-pup.png"
         }
@@ -81,14 +83,14 @@ export const fireAssets: AssetCatalog = {
     },
     {
       id: "charcoil",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "fire",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Fire,
       data: {
         id: "charcoil",
         name: "Charcoil",
-        type: "Bloom",
-        affinity: "Fire",
+        type: CardType.Beast,
+        affinity: Affinity.Fire,
         cost: 2,
         baseAttack: 3,
         baseHealth: 4,
@@ -108,7 +110,7 @@ export const fireAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "785856391096811",
           path: "assets/images/cards_fire_charcoil.png"
         }
@@ -116,14 +118,14 @@ export const fireAssets: AssetCatalog = {
     },
     {
       id: "magmite",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "fire",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Fire,
       data: {
         id: "magmite",
         name: "Magmite",
-        type: "Bloom",
-        affinity: "Fire",
+        type: CardType.Beast,
+        affinity: Affinity.Fire,
         cost: 3,
         baseAttack: 4,
         baseHealth: 6,
@@ -144,7 +146,7 @@ export const fireAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "25339017082348952",
           path: "assets/images/cards_fire_magmite.png"
         }
@@ -152,13 +154,13 @@ export const fireAssets: AssetCatalog = {
     },
     {
       id: "volcanic-scar",
-      type: "habitat",
-      affinity: "fire",
+      type: AssetEntryType.Habitat,
+      affinity: AffinityLowercase.Fire,
       data: {
         id: "volcanic-scar",
         name: "Volcanic Scar",
-        type: "Habitat",
-        affinity: "Fire",
+        type: CardType.Habitat,
+        affinity: Affinity.Fire,
         cost: 1,
         abilities: [
           {
@@ -180,17 +182,17 @@ export const fireAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1878791053043603",
           path: "assets/images/cards_fire_volcanic-scar.png"
         },
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1574158663591082",
           path: "assets/images/cards_fire_habitat-card.png"
         },
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1863280224222620",
           path: "assets/images/cards_fire_habitat-card-playboard.png"
         }
@@ -198,13 +200,13 @@ export const fireAssets: AssetCatalog = {
     },
     {
       id: "fire-mission",
-      type: "mission",
-      affinity: "fire",
+      type: AssetEntryType.Mission,
+      affinity: AffinityLowercase.Fire,
       name: "Fire Mission",
       description: "Fire affinity mission",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "795064546836933",
           path: "assets/images/cards_fire_fire-mission.png"
         }
@@ -212,12 +214,12 @@ export const fireAssets: AssetCatalog = {
     },
     {
       id: "fire-chest-closed",
-      type: "ui",
-      category: "chest",
+      type: AssetEntryType.UI,
+      category: UICategory.Chest,
       name: "Fire Chest Closed",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1168387145201364",
           path: "assets/images/chest_fire-chest-closed.png"
         }
@@ -225,12 +227,12 @@ export const fireAssets: AssetCatalog = {
     },
     {
       id: "fire-chest-opened",
-      type: "ui",
-      category: "chest",
+      type: AssetEntryType.UI,
+      category: UICategory.Chest,
       name: "Fire Chest Opened",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "3716217982005558",
           path: "assets/images/chest_fire-chest-opened.png"
         }
@@ -238,12 +240,12 @@ export const fireAssets: AssetCatalog = {
     },
     {
       id: "fire-icon",
-      type: "ui",
-      category: "icon",
+      type: AssetEntryType.UI,
+      category: UICategory.Icon,
       name: "Fire Icon",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "2011015256402906",
           path: "assets/images/affinity_fire-icon.png"
         }
@@ -251,13 +253,13 @@ export const fireAssets: AssetCatalog = {
     },
     {
       id: "fire-habitat",
-      type: "ui",
-      category: "card-template",
+      type: AssetEntryType.UI,
+      category: UICategory.CardTemplate,
       name: "Fire Habitat Card Template",
       description: "Template overlay for fire habitat cards",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1574158663591082",
           path: "assets/images/cards_fire_habitat-card.png"
         }

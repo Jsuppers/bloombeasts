@@ -1,281 +1,458 @@
 /**
- * BattleController - Core battle orchestrator
+ * BattleController - Battle orchestrator using TURBO library
  *
- * Generic battle controller that works with any two players.
- * Handles:
- * - Battle initialization
- * - Turn management
- * - Victory conditions
- * - Action processing coordination
- *
- * This class is platform-agnostic and player-agnostic - it doesn't care
- * if players are human, AI, or networked.
+ * This controller manages battles using the generic TURBO turn-based game engine.
  */
 
-import { GameState, Player, BattlePhase } from '../../engine/types/game';
-import { AnyCard } from '../../engine/types/core';
 import { Logger } from '../../engine/utils/Logger';
-import { SimpleMap } from '../../utils/polyfills';
-import { shuffle } from '../../engine/utils/random';
 import type { AsyncMethods } from '../../ui/types/bindings';
 import {
   BattleConfig,
   BattleState,
   BattleCallbacks,
-  BattleResult,
-  BattleActionResult,
+  BattleResult
 } from '../types';
+import { MAX_AI_ACTIONS_PER_TURN } from '../../engine/constants/battleConstants';
+
+import { createBloomBeastsGame, BloomBeastsActionType, BloomBeastsActionData } from '../BloomBeastsGame';
+import { BloomBeastsGreedyAI } from '../BloomBeastsAI';
+import { GameController, AILevel } from '../../../turbo/src';
+import type { IGameState } from '../../../turbo/src';
+import type { BloomBeastsState } from '../BloomBeastsGame';
 
 export class BattleController {
   private async: AsyncMethods;
-  private currentBattle: BattleState | null = null;
+  private game: GameController<BloomBeastsState, BloomBeastsActionData>;
   private callbacks: BattleCallbacks;
+  private battleConfig: BattleConfig | null = null;
 
   constructor(async: AsyncMethods, callbacks: BattleCallbacks = {}) {
     this.async = async;
     this.callbacks = callbacks;
+    this.game = createBloomBeastsGame();
   }
 
   /**
    * Initialize a new battle between two players
    */
   initializeBattle(config: BattleConfig): BattleState {
-    Logger.info('[BattleController] Initializing battle');
+    Logger.info('[BattleController] Initializing battle with TURBO engine');
 
-    // Create player 1
-    const player1: Player = {
-      id: config.player1.id,
-      name: config.player1.name,
-      health: config.player1.health ?? 30,
-      maxHealth: config.player1.maxHealth ?? 30,
-      deck: [...config.player1.deck], // Copy deck to avoid mutation
-      hand: [],
-      field: [],
-      graveyard: [],
-      trapZone: [],
-      buffZone: [],
-      currentNectar: 1,
-      summonsThisTurn: 0,
-    };
+    this.battleConfig = config;
 
-    // Create player 2
-    const player2: Player = {
-      id: config.player2.id,
-      name: config.player2.name,
-      health: config.player2.health ?? 30,
-      maxHealth: config.player2.maxHealth ?? 30,
-      deck: [...config.player2.deck], // Copy deck to avoid mutation
-      hand: [],
-      field: [],
-      graveyard: [],
-      trapZone: [],
-      buffZone: [],
-      currentNectar: 1,
-      summonsThisTurn: 0,
-    };
+    // Subscribe to game events
+    this.game.on('gameStarted', ({ state }) => {
+      Logger.info('[BattleController] Game started');
+    });
 
-    // Create game state
-    const gameState: GameState = {
-      players: [player1, player2],
-      activePlayer: 0,
-      habitatZone: null,
-      turn: 1,
-      phase: 'Setup',
-      battleState: BattlePhase.Player1StartOfTurn,
-      turnHistory: [],
-    };
+    this.game.on('turnStarted', ({ playerId, turnNumber }) => {
+      Logger.debug(`[BattleController] Turn started for player ${playerId}`);
+      // Find player index from playerId
+      const state = this.game.getState();
+      const playerIndex = state.gameData.players.findIndex((p: any) => p.id === playerId);
+      if (this.callbacks.onTurnStart) {
+        this.callbacks.onTurnStart(playerIndex);
+      }
+    });
 
-    // Create battle state
-    this.currentBattle = {
-      gameState,
-      isComplete: false,
-      winner: null,
-      turn: 1,
-    };
+    this.game.on('turnEnded', ({ playerId }) => {
+      Logger.debug(`[BattleController] Turn ended for player ${playerId}`);
+      const state = this.game.getState();
+      const playerIndex = state.gameData.players.findIndex((p: any) => p.id === playerId);
+      if (this.callbacks.onTurnEnd) {
+        this.callbacks.onTurnEnd(playerIndex);
+      }
+    });
 
-    // Shuffle decks
-    this.shuffleDeck(player1.deck);
-    this.shuffleDeck(player2.deck);
+    this.game.on('actionPerformed', ({ action }) => {
+      Logger.debug(`[BattleController] Action performed: ${action.data.type}`);
+      if (this.callbacks.onAction) {
+        // Convert the action to a string representation for the callback
+        const actionStr = `${action.data.type}${action.data.cardId ? `-${action.data.cardId}` : ''}`;
+        this.callbacks.onAction(actionStr, action.playerId);
+      }
+    });
 
-    // Draw initial hands (3 cards each)
-    for (let i = 0; i < 3; i++) {
-      this.drawCard(player1);
-      this.drawCard(player2);
+    this.game.on('gameEnded', ({ winnerId }) => {
+      Logger.info(`[BattleController] Game ended. Winner: ${winnerId || 'tie'}`);
+      if (this.callbacks.onBattleEnd) {
+        const state = this.game.getState();
+        const battleWinner = winnerId === state.gameData.players[0].id ? 'player1' :
+                             winnerId === state.gameData.players[1].id ? 'player2' : null;
+        this.callbacks.onBattleEnd(battleWinner);
+      }
+    });
+
+    this.game.on('stateChanged', ({ state }) => {
+      if (this.callbacks.onRender) {
+        this.callbacks.onRender();
+      }
+    });
+
+    // Initialize the TURBO game
+    this.game.initialize({
+      players: [
+        {
+          id: config.player1.id,
+          name: config.player1.name,
+          type: 'human' as any,
+          metadata: {
+            deck: [...config.player1.deck],
+            health: config.player1.health ?? 30,
+            maxHealth: config.player1.maxHealth ?? 30,
+          }
+        },
+        {
+          id: config.player2.id,
+          name: config.player2.name,
+          type: 'human' as any,
+          metadata: {
+            deck: [...config.player2.deck],
+            health: config.player2.health ?? 30,
+            maxHealth: config.player2.maxHealth ?? 30,
+          }
+        }
+      ]
+    });
+
+    // Register AI players if needed
+    if (config.player1.isAI) {
+      const ai = new BloomBeastsGreedyAI({
+        playerId: config.player1.id,
+        difficulty: AILevel.MEDIUM
+      });
+      this.game.registerAI(config.player1.id, ai);
+      Logger.info(`[BattleController] Registered AI for player1: ${config.player1.id}`);
     }
 
-    Logger.info('[BattleController] Battle initialized');
-    return this.currentBattle;
+    if (config.player2.isAI) {
+      const ai = new BloomBeastsGreedyAI({
+        playerId: config.player2.id,
+        difficulty: AILevel.MEDIUM
+      });
+      this.game.registerAI(config.player2.id, ai);
+      Logger.info(`[BattleController] Registered AI for player2: ${config.player2.id}`);
+    }
+
+    Logger.info('[BattleController] Battle initialized successfully');
+
+    return this.convertToBattleState();
   }
 
   /**
    * Get the current battle state
    */
   getCurrentBattle(): BattleState | null {
-    return this.currentBattle;
+    if (!this.battleConfig) return null;
+    return this.convertToBattleState();
   }
 
   /**
    * Check if battle has ended and determine winner
    */
   checkBattleEnd(): BattleResult | null {
-    if (!this.currentBattle) return null;
-
-    const player1 = this.currentBattle.gameState.players[0];
-    const player2 = this.currentBattle.gameState.players[1];
-
-    console.log(`[BattleController] Checking battle end: P1(${player1.id}) HP=${player1.health}, P2(${player2.id}) HP=${player2.health}`);
-    Logger.debug(`[BattleController] Checking battle end: P1(${player1.id}) HP=${player1.health}, P2(${player2.id}) HP=${player2.health}`);
-
-    // Check if either player is defeated
-    if (player1.health <= 0 && player2.health <= 0) {
-      // Both died (rare tie case)
-      console.log('[BattleController] Both players died - TIE!');
-      Logger.debug('[BattleController] Both players died - tie!');
-      return {
-        winner: null,
-        turns: this.currentBattle.turn,
-        player1Health: player1.health,
-        player2Health: player2.health,
-      };
-    } else if (player1.health <= 0) {
-      // Player 1 lost
-      console.log('[BattleController] Player 1 (YOU) died - Player 2 (OPPONENT) WINS!');
-      Logger.debug('[BattleController] Player 1 died - Player 2 wins!');
-      return {
-        winner: 'player2',
-        turns: this.currentBattle.turn,
-        player1Health: player1.health,
-        player2Health: player2.health,
-      };
-    } else if (player2.health <= 0) {
-      // Player 2 lost
-      console.log('[BattleController] Player 2 (OPPONENT) died - Player 1 (YOU) WINS!');
-      Logger.debug('[BattleController] Player 2 died - Player 1 wins!');
-      return {
-        winner: 'player1',
-        turns: this.currentBattle.turn,
-        player1Health: player1.health,
-        player2Health: player2.health,
-      };
+    if (!this.game.isComplete()) {
+      return null;
     }
 
-    // Check deck-out condition (no cards left to draw)
-    // Only consider it a deck-out if field has beasts but all are null, or field is empty AND they have no resources left
-    if (player1.deck.length === 0 && player1.hand.length === 0 && player1.field.length > 0 && player1.field.every(b => !b)) {
-      return {
-        winner: 'player2',
-        turns: this.currentBattle.turn,
-        player1Health: player1.health,
-        player2Health: player2.health,
-      };
-    }
-    if (player2.deck.length === 0 && player2.hand.length === 0 && player2.field.length > 0 && player2.field.every(b => !b)) {
-      return {
-        winner: 'player1',
-        turns: this.currentBattle.turn,
-        player1Health: player1.health,
-        player2Health: player2.health,
-      };
-    }
+    const winner = this.game.getWinner();
+    const state = this.game.getState();
 
-    return null;
+    return {
+      winner: winner === state.gameData.players[0].id ? 'player1' :
+              winner === state.gameData.players[1].id ? 'player2' : null,
+      turns: state.turnInfo.turnNumber,
+      player1Health: state.gameData.players[0].health,
+      player2Health: state.gameData.players[1].health,
+    };
   }
 
   /**
    * Mark battle as complete
    */
   completeBattle(winner: 'player1' | 'player2' | null): void {
-    if (!this.currentBattle) return;
-
-    this.currentBattle.isComplete = true;
-    this.currentBattle.winner = winner;
-
+    // Game completion is handled automatically by TURBO
     if (this.callbacks.onBattleEnd) {
       this.callbacks.onBattleEnd(winner);
     }
-
     Logger.info(`[BattleController] Battle complete. Winner: ${winner || 'tie'}`);
   }
 
   /**
-   * Start a player's turn
+   * Play a card
    */
-  startTurn(playerIndex: number): void {
-    if (!this.currentBattle) return;
-
-    const gameState = this.currentBattle.gameState;
-    gameState.activePlayer = playerIndex as 0 | 1;
-
-    const player = gameState.players[playerIndex];
-    const opponent = gameState.players[1 - playerIndex];
-
-    // Draw a card at start of turn
-    this.drawCard(player);
-
-    // Increase nectar (max 10)
-    player.currentNectar = Math.min(10, this.currentBattle.turn);
-
-    // Reset summoning sickness and ability usage for player's beasts
-    player.field.forEach((beast: any) => {
-      if (beast) {
-        beast.summoningSickness = false;
-        beast.usedAbilityThisTurn = false;
+  playCard(cardId: string, playerId: string, position?: number): boolean {
+    const result = this.game.performAction({
+      type: 'game_action',
+      playerId,
+      data: {
+        type: BloomBeastsActionType.PLAY_CARD,
+        cardId,
+        position,
       }
     });
 
-    if (this.callbacks.onTurnStart) {
-      this.callbacks.onTurnStart(playerIndex);
+    if (!result.success) {
+      Logger.warn(`[BattleController] Failed to play card: ${result.error}`);
     }
 
-    if (this.callbacks.onRender) {
-      this.callbacks.onRender();
+    return result.success;
+  }
+
+  /**
+   * Attack with a creature
+   */
+  attackBeast(attackerId: string, targetId: string, playerId: string): boolean {
+    const result = this.game.performAction({
+      type: 'game_action',
+      playerId,
+      data: {
+        type: BloomBeastsActionType.ATTACK,
+        cardId: attackerId,
+        targetId,
+      }
+    });
+
+    if (!result.success) {
+      Logger.warn(`[BattleController] Failed to attack: ${result.error}`);
+    }
+
+    return result.success;
+  }
+
+  /**
+   * Attack player directly
+   */
+  attackPlayer(attackerId: string, playerId: string): boolean {
+    const state = this.game.getState();
+    const currentPlayerId = state.turnInfo.currentPlayerId;
+    const currentIndex = state.gameData.players.findIndex(p => p.id === currentPlayerId);
+    const targetPlayer = state.gameData.players[1 - currentIndex];
+
+    return this.attackBeast(attackerId, targetPlayer.id, playerId);
+  }
+
+  /**
+   * Use creature ability
+   */
+  useAbility(creatureId: string, targetId: string | null, playerId: string): boolean {
+    const result = this.game.performAction({
+      type: 'game_action',
+      playerId,
+      data: {
+        type: BloomBeastsActionType.USE_ABILITY,
+        cardId: creatureId,
+        targetId: targetId || undefined,
+        abilityId: 'default', // Could be extended to support multiple abilities
+      }
+    });
+
+    if (!result.success) {
+      Logger.warn(`[BattleController] Failed to use ability: ${result.error}`);
+    }
+
+    return result.success;
+  }
+
+  /**
+   * End turn
+   */
+  endTurn(playerId: string): void {
+    Logger.info(`[BattleController] endTurn called for ${playerId}`);
+    const result = this.game.performAction({
+      type: 'game_action',
+      playerId,
+      data: {
+        type: BloomBeastsActionType.END_TURN,
+      }
+    });
+
+    if (result.success) {
+      const newState = this.game.getState();
+      const currentPlayerId = newState.turnInfo.currentPlayerId;
+      const currentIndex = newState.gameData.players.findIndex(p => p.id === currentPlayerId);
+      Logger.info(`[BattleController] Turn ended successfully. New current player: ${currentPlayerId} (index: ${currentIndex})`);
+    } else {
+      Logger.error(`[BattleController] Failed to end turn: ${result.error}`);
     }
   }
 
   /**
-   * End a player's turn
+   * Execute AI turn - loops until AI ends turn
    */
-  endTurn(playerIndex: number): void {
-    if (!this.currentBattle) return;
+  async executeAITurn(): Promise<void> {
+    Logger.info('[BattleController] executeAITurn called');
+    const state = this.game.getState();
+    const currentPlayerId = state.turnInfo.currentPlayerId;
+    const currentIndex = state.gameData.players.findIndex(p => p.id === currentPlayerId);
+    const currentPlayer = state.gameData.players[currentIndex];
+    Logger.info(`[BattleController] Current player: ${currentPlayer.id} (index: ${currentIndex})`);
 
-    if (this.callbacks.onTurnEnd) {
-      this.callbacks.onTurnEnd(playerIndex);
-    }
+    try {
+      // Keep executing AI actions until turn ends (switches to another player)
+      let actionCount = 0;
+      const maxActions = MAX_AI_ACTIONS_PER_TURN;
 
-    // Increment turn counter when player 2 ends their turn
-    if (playerIndex === 1) {
-      this.currentBattle.turn++;
+      while (actionCount < maxActions) {
+        const currentState = this.game.getState();
+
+        // Check if it's still the AI's turn
+        if (currentState.turnInfo.currentPlayerId !== currentPlayerId) {
+          Logger.info(`[BattleController] AI turn ended, turn switched to: ${currentState.turnInfo.currentPlayerId}`);
+          break;
+        }
+
+        // Check if game is complete
+        if (currentState.isComplete) {
+          Logger.info('[BattleController] Game completed during AI turn');
+          break;
+        }
+
+        // Execute one AI action
+        await this.game.executeAITurn();
+        actionCount++;
+
+        Logger.info(`[BattleController] AI executed action ${actionCount}`);
+      }
+
+      if (actionCount >= maxActions) {
+        Logger.warn('[BattleController] AI reached maximum action limit, forcing turn end');
+      }
+
+      Logger.info('[BattleController] AI turn execution completed');
+    } catch (error) {
+      Logger.error('[BattleController] AI turn execution failed:', error);
+      throw error;
     }
   }
 
   /**
-   * Draw a card from player's deck
+   * Get the current player
    */
-  private drawCard(player: Player): void {
-    if (player.deck.length === 0) {
-      Logger.debug(`[BattleController] No cards left in deck for ${player.name}`);
-      return;
-    }
-
-    const card = player.deck.shift();
-    if (card) {
-      player.hand.push(card);
-      Logger.debug(`[BattleController] ${player.name} drew a card: ${card.name}`);
-    }
+  getCurrentPlayer() {
+    const state = this.game.getState();
+    // New structure: gameData contains players and field
+    const gameState = state.gameData;
+    // Get current player from turnInfo
+    const currentPlayerId = state.turnInfo.currentPlayerId;
+    const currentIndex = gameState.players.findIndex(p => p.id === currentPlayerId);
+    const fieldData = currentIndex === 0 ? gameState.field?.player1 : gameState.field?.player2;
+    return this.convertPlayer(gameState.players[currentIndex], fieldData);
   }
 
   /**
-   * Shuffle a deck
+   * Get the opponent player
    */
-  private shuffleDeck(deck: AnyCard[]): void {
-    shuffle(deck);
+  getOpponentPlayer() {
+    const state = this.game.getState();
+    // New structure: gameData contains players and field
+    const gameState = state.gameData;
+    // Get current player from turnInfo
+    const currentPlayerId = state.turnInfo.currentPlayerId;
+    const currentIndex = gameState.players.findIndex(p => p.id === currentPlayerId);
+    const opponentIndex = 1 - currentIndex;
+    const fieldData = opponentIndex === 0 ? gameState.field?.player1 : gameState.field?.player2;
+    return this.convertPlayer(gameState.players[opponentIndex], fieldData);
+  }
+
+  /**
+   * Check if it's an AI player's turn
+   */
+  isAIPlayerTurn(): boolean {
+    if (!this.battleConfig) return false;
+    const state = this.game.getState();
+    const currentPlayerId = state.turnInfo.currentPlayerId;
+    const currentIndex = state.gameData.players.findIndex(p => p.id === currentPlayerId);
+
+    return currentIndex === 0 ?
+      !!this.battleConfig.player1.isAI :
+      !!this.battleConfig.player2.isAI;
+  }
+
+  /**
+   * Get available actions for current player
+   */
+  getAvailableActions() {
+    return this.game.getAvailableActions();
+  }
+
+  /**
+   * Draw a card (if allowed)
+   */
+  drawCard(playerId: string): boolean {
+    const result = this.game.performAction({
+      type: 'game_action',
+      playerId,
+      data: {
+        type: BloomBeastsActionType.DRAW_CARD,
+      }
+    });
+
+    return result.success;
   }
 
   /**
    * Clean up battle resources
    */
   dispose(): void {
-    this.currentBattle = null;
+    this.game.reset();
+    this.battleConfig = null;
     Logger.info('[BattleController] Battle controller disposed');
+  }
+
+  /**
+   * Private helper methods
+   */
+
+  private convertToBattleState(): BattleState {
+    const gameState = this.game.getState();
+    // New structure: gameData contains players and field
+    const state = gameState.gameData;
+    const { players, field } = state;
+    // Get current player index from turnInfo
+    const currentPlayerId = gameState.turnInfo.currentPlayerId;
+    const currentPlayerIndex = players.findIndex(p => p.id === currentPlayerId);
+    const turnNumber = gameState.turnInfo.turnNumber || 1;
+    const phase = gameState.phase || 'main';
+
+    // Create a GameState object that matches the old format
+    const legacyGameState = {
+      players: [
+        this.convertPlayer(players[0], field?.player1),
+        this.convertPlayer(players[1], field?.player2)
+      ] as [any, any],
+      activePlayer: currentPlayerIndex as 0 | 1,
+      habitatZone: field?.player1?.habitat || field?.player2?.habitat || null,
+      turn: turnNumber,
+      phase: phase as any,
+      battleState: phase as any,
+      turnHistory: [],
+    };
+
+    return {
+      gameState: legacyGameState,
+      isComplete: gameState.isComplete || false,
+      winner: gameState.winnerId ?
+        (gameState.winnerId === players[0].id ? 'player1' : 'player2') :
+        null,
+      turn: turnNumber,
+    };
+  }
+
+  private convertPlayer(player: any, fieldData?: any) {
+    return {
+      id: player.id,
+      name: player.name,
+      health: player.health,
+      maxHealth: player.maxHealth || 30,
+      deck: [...(player.deck || [])],
+      hand: [...(player.hand || [])],
+      field: fieldData?.beasts || [],
+      graveyard: [...(player.graveyard || [])],
+      trapZone: fieldData?.traps || [],
+      buffZone: fieldData?.buffs || [],
+      currentEnergy: player.energy || 0,
+      summonsThisTurn: 0,
+    };
   }
 }

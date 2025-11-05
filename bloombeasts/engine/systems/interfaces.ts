@@ -72,7 +72,7 @@ export interface ICombatSystem {
  */
 export interface ILevelingSystem {
   /**
-   * Add XP to a Bloom Beast
+   * Add XP to a Beast
    */
   addXP(
     beast: BloomBeastInstance,
@@ -87,11 +87,11 @@ export interface ILevelingSystem {
   addCombatXP(beast: BloomBeastInstance, card?: BloomBeastCard): BloomBeastInstance;
 
   /**
-   * Add XP from nectar sacrifice
+   * Add XP from energy sacrifice
    */
-  addNectarXP(
+  addEnergyXP(
     beast: BloomBeastInstance,
-    nectarSpent: number,
+    energySpent: number,
     card?: BloomBeastCard
   ): BloomBeastInstance;
 

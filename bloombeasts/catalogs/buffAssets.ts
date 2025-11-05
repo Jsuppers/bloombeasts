@@ -5,21 +5,23 @@
  */
 
 import type { AssetCatalog } from '../AssetCatalogManager';
+import { AssetReferenceType, AssetEntryType, UICategory, CatalogCategory, AffinityLowercase } from '../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType, ResourceType } from '../engine/types/abilities';
+import { CardType, Affinity } from '../engine/types/core';
 
 export const buffAssets: AssetCatalog = {
   version: "1.0.0",
-  category: "buff",
+  category: CatalogCategory.Buff,
   description: "Buff cards and assets",
   data: [
     {
       id: "battle-fury",
-      type: "buff",
+      type: AssetEntryType.Buff,
       cardType: "Buff",
       data: {
         id: "battle-fury",
         name: "Battle Fury",
-        type: "Buff",
+        type: CardType.Buff,
         cost: 3,
         abilities: [
           {
@@ -39,7 +41,7 @@ export const buffAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1514404306279605",
           path: "assets/images/cards_buff_battle-fury.png"
         }
@@ -47,12 +49,12 @@ export const buffAssets: AssetCatalog = {
     },
     {
       id: "mystic-shield",
-      type: "buff",
+      type: AssetEntryType.Buff,
       cardType: "Buff",
       data: {
         id: "mystic-shield",
         name: "Mystic Shield",
-        type: "Buff",
+        type: CardType.Buff,
         cost: 3,
         abilities: [
           {
@@ -72,7 +74,7 @@ export const buffAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "787965707330770",
           path: "assets/images/cards_buff_mystic-shield.png"
         }
@@ -80,14 +82,14 @@ export const buffAssets: AssetCatalog = {
     },
     {
       id: "natures-blessing",
-      type: "buff",
+      type: AssetEntryType.Buff,
       cardType: "Buff",
-      affinity: "forest",
+      affinity: AffinityLowercase.Forest,
       data: {
         id: "natures-blessing",
         name: "Nature's Blessing",
-        type: "Buff",
-        affinity: "Forest",
+        type: CardType.Buff,
+        affinity: Affinity.Forest,
         cost: 4,
         abilities: [
           {
@@ -105,7 +107,7 @@ export const buffAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "4100038783597004",
           path: "assets/images/cards_buff_natures-blessing.png"
         }
@@ -113,14 +115,14 @@ export const buffAssets: AssetCatalog = {
     },
     {
       id: "swift-wind",
-      type: "buff",
+      type: AssetEntryType.Buff,
       cardType: "Buff",
-      affinity: "sky",
+      affinity: AffinityLowercase.Sky,
       data: {
         id: "swift-wind",
         name: "Swift Wind",
-        type: "Buff",
-        affinity: "Sky",
+        type: CardType.Buff,
+        affinity: Affinity.Sky,
         cost: 2,
         abilities: [
           {
@@ -130,7 +132,7 @@ export const buffAssets: AssetCatalog = {
               {
                 type: EffectType.GainResource,
                 target: AbilityTarget.Player,
-                resource: ResourceType.Nectar,
+                resource: ResourceType.Energy,
                 value: 1
               }
             ]
@@ -139,7 +141,7 @@ export const buffAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "657351040536713",
           path: "assets/images/cards_buff_swift-wind.png"
         }

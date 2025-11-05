@@ -3,23 +3,25 @@
  */
 
 import type { AssetCatalog } from '../AssetCatalogManager';
+import { AssetReferenceType, AssetEntryType, UICategory, CatalogCategory, AffinityLowercase } from '../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType, ResourceType, ConditionType } from '../engine/types/abilities';
+import { CardType, Affinity } from '../engine/types/core';
 
 export const skyAssets: AssetCatalog = {
   version: "1.0.0",
-  category: "sky",
+  category: CatalogCategory.Sky,
   description: "Sky affinity cards and assets",
   data: [
     {
       id: "aero-moth",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "sky",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Sky,
       data: {
         id: "aero-moth",
         name: "Aero Moth",
-        type: "Bloom",
-        affinity: "Sky",
+        type: CardType.Beast,
+        affinity: Affinity.Sky,
         cost: 2,
         baseAttack: 3,
         baseHealth: 3,
@@ -39,7 +41,7 @@ export const skyAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1857788838498496",
           path: "assets/images/cards_sky_aero-moth.png"
         }
@@ -47,14 +49,14 @@ export const skyAssets: AssetCatalog = {
     },
     {
       id: "cirrus-floof",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "sky",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Sky,
       data: {
         id: "cirrus-floof",
         name: "Cirrus Floof",
-        type: "Bloom",
-        affinity: "Sky",
+        type: CardType.Beast,
+        affinity: Affinity.Sky,
         cost: 2,
         baseAttack: 1,
         baseHealth: 6,
@@ -77,7 +79,7 @@ export const skyAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "849446287592530",
           path: "assets/images/cards_sky_cirrus-floof.png"
         }
@@ -85,14 +87,14 @@ export const skyAssets: AssetCatalog = {
     },
     {
       id: "gale-glider",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "sky",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Sky,
       data: {
         id: "gale-glider",
         name: "Gale Glider",
-        type: "Bloom",
-        affinity: "Sky",
+        type: CardType.Beast,
+        affinity: Affinity.Sky,
         cost: 1,
         baseAttack: 2,
         baseHealth: 2,
@@ -112,7 +114,7 @@ export const skyAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1854780382097596",
           path: "assets/images/cards_sky_gale-glider.png"
         }
@@ -120,14 +122,14 @@ export const skyAssets: AssetCatalog = {
     },
     {
       id: "star-bloom",
-      type: "beast",
-      cardType: "Bloom",
-      affinity: "sky",
+      type: AssetEntryType.Beast,
+      cardType: "Beast",
+      affinity: AffinityLowercase.Sky,
       data: {
         id: "star-bloom",
         name: "Star Bloom",
-        type: "Bloom",
-        affinity: "Sky",
+        type: CardType.Beast,
+        affinity: Affinity.Sky,
         cost: 3,
         baseAttack: 4,
         baseHealth: 5,
@@ -149,7 +151,7 @@ export const skyAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "737222956003560",
           path: "assets/images/cards_sky_star-bloom.png"
         }
@@ -157,13 +159,13 @@ export const skyAssets: AssetCatalog = {
     },
     {
       id: "clear-zenith",
-      type: "habitat",
-      affinity: "sky",
+      type: AssetEntryType.Habitat,
+      affinity: AffinityLowercase.Sky,
       data: {
         id: "clear-zenith",
         name: "Clear Zenith",
-        type: "Habitat",
-        affinity: "Sky",
+        type: CardType.Habitat,
+        affinity: Affinity.Sky,
         cost: 1,
         titleColor: "#000000",
         abilities: [
@@ -182,17 +184,17 @@ export const skyAssets: AssetCatalog = {
       },
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1941325056416004",
           path: "assets/images/cards_sky_clear-zenith.png"
         },
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "724533667339482",
           path: "assets/images/cards_sky_habitat-card.png"
         },
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "674037762415336",
           path: "assets/images/cards_sky_habitat-card-playboard.png"
         }
@@ -200,13 +202,13 @@ export const skyAssets: AssetCatalog = {
     },
     {
       id: "sky-mission",
-      type: "mission",
-      affinity: "sky",
+      type: AssetEntryType.Mission,
+      affinity: AffinityLowercase.Sky,
       name: "Sky Mission",
       description: "Sky affinity mission",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1076415204381099",
           path: "assets/images/cards_sky_sky-mission.png"
         }
@@ -214,12 +216,12 @@ export const skyAssets: AssetCatalog = {
     },
     {
       id: "sky-chest-closed",
-      type: "ui",
-      category: "chest",
+      type: AssetEntryType.UI,
+      category: UICategory.Chest,
       name: "Sky Chest Closed",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "1988442925266143",
           path: "assets/images/chest_sky-chest-closed.png"
         }
@@ -227,12 +229,12 @@ export const skyAssets: AssetCatalog = {
     },
     {
       id: "sky-chest-opened",
-      type: "ui",
-      category: "chest",
+      type: AssetEntryType.UI,
+      category: UICategory.Chest,
       name: "Sky Chest Opened",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "766596743048030",
           path: "assets/images/chest_sky-chest-opened.png"
         }
@@ -240,12 +242,12 @@ export const skyAssets: AssetCatalog = {
     },
     {
       id: "sky-icon",
-      type: "ui",
-      category: "icon",
+      type: AssetEntryType.UI,
+      category: UICategory.Icon,
       name: "Sky Icon",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "2078365889573892",
           path: "assets/images/affinity_sky-icon.png"
         }
@@ -253,13 +255,13 @@ export const skyAssets: AssetCatalog = {
     },
     {
       id: "sky-habitat",
-      type: "ui",
-      category: "card-template",
+      type: AssetEntryType.UI,
+      category: UICategory.CardTemplate,
       name: "Sky Habitat Card Template",
       description: "Template overlay for sky habitat cards",
       assets: [
         {
-          type: "image",
+          type: AssetReferenceType.Image,
           horizonAssetId: "724533667339482",
           path: "assets/images/cards_sky_habitat-card.png"
         }

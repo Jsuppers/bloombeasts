@@ -827,28 +827,31 @@ export class BattleStateManager {
    * Process OnSummon triggers for a beast that was just summoned
    */
   processOnSummonTrigger(beast: any, owner: any, opponent: any): void {
-    if (!beast.ability) return;
+    if (!beast.abilities || !Array.isArray(beast.abilities)) return;
 
-    const ability = beast.ability as any;
+    // Process all abilities that have OnSummon trigger
+    for (const ability of beast.abilities) {
+      // Check if ability has OnSummon trigger
+      if (ability.trigger === 'OnSummon') {
+        console.log(`[BattleRules] OnSummon trigger activated for ${beast.name}!`);
+        Logger.debug(`OnSummon trigger activated for ${beast.name}!`);
 
-    // Check if ability has OnSummon trigger
-    if (ability.trigger === 'OnSummon') {
-      Logger.debug(`OnSummon trigger activated for ${beast.name}!`);
-
-      if (ability.effects && Array.isArray(ability.effects)) {
-        for (const effect of ability.effects) {
-          this.processAbilityEffect(effect, beast, owner, opponent);
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            this.processAbilityEffect(effect, beast, owner, opponent);
+          }
         }
       }
-    }
 
-    // Also check for Passive abilities that apply on summon
-    if (ability.trigger === 'Passive') {
-      if (ability.effects && Array.isArray(ability.effects)) {
-        for (const effect of ability.effects) {
-          if (effect.type === 'remove-summoning-sickness') {
-            beast.summoningSickness = false;
-            Logger.debug(`${beast.name} can attack immediately (Passive: RemoveSummoningSickness)!`);
+      // Also check for Passive abilities that apply on summon
+      if (ability.trigger === 'Passive') {
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            if (effect.type === 'remove-summoning-sickness') {
+              beast.summoningSickness = false;
+              console.log(`[BattleRules] ${beast.name} can attack immediately (Passive)!`);
+              Logger.debug(`${beast.name} can attack immediately (Passive: RemoveSummoningSickness)!`);
+            }
           }
         }
       }
@@ -859,16 +862,18 @@ export class BattleStateManager {
    * Process OnAttack triggers for a beast that is attacking
    */
   processOnAttackTrigger(beast: any, owner: any, opponent: any): void {
-    if (!beast.ability) return;
+    if (!beast.abilities || !Array.isArray(beast.abilities)) return;
 
-    const ability = beast.ability as any;
+    // Process all abilities that have OnAttack trigger
+    for (const ability of beast.abilities) {
+      if (ability.trigger === 'OnAttack') {
+        console.log(`[BattleRules] OnAttack trigger activated for ${beast.name}!`);
+        Logger.debug(`OnAttack trigger activated for ${beast.name}!`);
 
-    if (ability.trigger === 'OnAttack') {
-      Logger.debug(`OnAttack trigger activated for ${beast.name}!`);
-
-      if (ability.effects && Array.isArray(ability.effects)) {
-        for (const effect of ability.effects) {
-          this.processAbilityEffect(effect, beast, owner, opponent);
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            this.processAbilityEffect(effect, beast, owner, opponent);
+          }
         }
       }
     }
@@ -878,16 +883,18 @@ export class BattleStateManager {
    * Process OnDamage triggers for a beast that took damage
    */
   processOnDamageTrigger(beast: any, owner: any, opponent: any): void {
-    if (!beast.ability) return;
+    if (!beast.abilities || !Array.isArray(beast.abilities)) return;
 
-    const ability = beast.ability as any;
+    // Process all abilities that have OnDamage trigger
+    for (const ability of beast.abilities) {
+      if (ability.trigger === 'OnDamage') {
+        console.log(`[BattleRules] OnDamage trigger activated for ${beast.name}!`);
+        Logger.debug(`OnDamage trigger activated for ${beast.name}!`);
 
-    if (ability.trigger === 'OnDamage') {
-      Logger.debug(`OnDamage trigger activated for ${beast.name}!`);
-
-      if (ability.effects && Array.isArray(ability.effects)) {
-        for (const effect of ability.effects) {
-          this.processAbilityEffect(effect, beast, owner, opponent);
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            this.processAbilityEffect(effect, beast, owner, opponent);
+          }
         }
       }
     }
@@ -897,16 +904,18 @@ export class BattleStateManager {
    * Process OnDestroy triggers for a beast that is about to be destroyed
    */
   processOnDestroyTrigger(beast: any, owner: any, opponent: any): void {
-    if (!beast.ability) return;
+    if (!beast.abilities || !Array.isArray(beast.abilities)) return;
 
-    const ability = beast.ability as any;
+    // Process all abilities that have OnDestroy trigger
+    for (const ability of beast.abilities) {
+      if (ability.trigger === 'OnDestroy') {
+        console.log(`[BattleRules] OnDestroy trigger activated for ${beast.name}!`);
+        Logger.debug(`OnDestroy trigger activated for ${beast.name}!`);
 
-    if (ability.trigger === 'OnDestroy') {
-      Logger.debug(`OnDestroy trigger activated for ${beast.name}!`);
-
-      if (ability.effects && Array.isArray(ability.effects)) {
-        for (const effect of ability.effects) {
-          this.processAbilityEffect(effect, beast, owner, opponent);
+        if (ability.effects && Array.isArray(ability.effects)) {
+          for (const effect of ability.effects) {
+            this.processAbilityEffect(effect, beast, owner, opponent);
+          }
         }
       }
     }

@@ -10,8 +10,72 @@
  * - Horizon: See deployments/horizon/src/AssetCatalogLoader.ts for fetchAsData()-based loading
  */
 
+/**
+ * Type of asset reference (image, audio, animation)
+ */
+export enum AssetReferenceType {
+  Image = 'image',
+  Audio = 'audio',
+  Animation = 'animation'
+}
+
+/**
+ * Type of asset entry (beast, buff, trap, magic, habitat, mission, ui)
+ */
+export enum AssetEntryType {
+  Beast = 'beast',
+  Buff = 'buff',
+  Trap = 'trap',
+  Magic = 'magic',
+  Habitat = 'habitat',
+  Mission = 'mission',
+  UI = 'ui'
+}
+
+/**
+ * UI asset category types
+ */
+export enum UICategory {
+  Frame = 'frame',
+  Button = 'button',
+  Background = 'background',
+  Icon = 'icon',
+  Chest = 'chest',
+  Container = 'container',
+  CardTemplate = 'card-template',
+  Upgrade = 'upgrade',
+  Other = 'other'
+}
+
+/**
+ * Catalog category types (for organizing asset catalogs)
+ */
+export enum CatalogCategory {
+  Fire = 'fire',
+  Forest = 'forest',
+  Sky = 'sky',
+  Water = 'water',
+  Buff = 'buff',
+  Trap = 'trap',
+  Magic = 'magic',
+  Common = 'common',
+  Boss = 'boss'
+}
+
+/**
+ * Affinity types (lowercase for JSON compatibility)
+ * Maps to engine/types/core.ts Affinity enum
+ */
+export enum AffinityLowercase {
+  Fire = 'fire',
+  Forest = 'forest',
+  Sky = 'sky',
+  Water = 'water',
+  Boss = 'boss'
+}
+
 export interface AssetReference {
-  type: 'image' | 'audio' | 'animation';
+  type: AssetReferenceType;
   horizonAssetId?: string; // Optional - only for Horizon deployment
   path: string; // Relative path from project root
   description?: string; // Optional description for documentation
@@ -19,9 +83,9 @@ export interface AssetReference {
 
 export interface CardAssetEntry {
   id: string;
-  type: 'beast' | 'buff' | 'trap' | 'magic' | 'habitat';
-  cardType?: 'Bloom' | 'Magic' | 'Trap' | 'Buff'; // Game engine card type
-  affinity?: 'fire' | 'forest' | 'sky' | 'water' | 'boss'; // For beasts and habitats
+  type: AssetEntryType.Beast | AssetEntryType.Buff | AssetEntryType.Trap | AssetEntryType.Magic | AssetEntryType.Habitat;
+  cardType?: 'Beast' | 'Magic' | 'Trap' | 'Buff'; // Game engine card type
+  affinity?: AffinityLowercase; // For beasts and habitats
   data: {
     id: string;
     name: string;
@@ -39,8 +103,8 @@ export interface CardAssetEntry {
 
 export interface MissionAssetEntry {
   id: string;
-  type: 'mission';
-  affinity?: 'fire' | 'forest' | 'sky' | 'water' | 'boss';
+  type: AssetEntryType.Mission;
+  affinity?: AffinityLowercase;
   name: string;
   description: string;
   assets: AssetReference[];
@@ -48,8 +112,8 @@ export interface MissionAssetEntry {
 
 export interface UIAssetEntry {
   id: string;
-  type: 'ui';
-  category: 'frame' | 'button' | 'background' | 'icon' | 'chest' | 'container' | 'card-template' | 'upgrade' | 'other';
+  type: AssetEntryType.UI;
+  category: UICategory;
   name: string;
   description?: string;
   assets: AssetReference[];
@@ -57,10 +121,14 @@ export interface UIAssetEntry {
 
 export interface AssetCatalog {
   version: string;
-  category: 'fire' | 'forest' | 'sky' | 'water' | 'buff' | 'trap' | 'magic' | 'common' | 'boss';
+  category: CatalogCategory;
   description: string;
   data: (CardAssetEntry | MissionAssetEntry | UIAssetEntry)[];
 }
+
+// Note: AssetCatalogManager now uses enums for type safety while maintaining
+// compatibility with JSON catalog files through string enum values.
+// The catalogs use lowercase enums that map to the JSON structure.
 
 /**
  * AssetCatalogManager - Manages loading and querying of asset catalogs
@@ -121,13 +189,13 @@ export class AssetCatalogManager {
    * Get all assets of a specific type
    */
   getAssetsByType<T extends CardAssetEntry | MissionAssetEntry | UIAssetEntry>(
-    type: 'beast' | 'buff' | 'trap' | 'magic' | 'habitat' | 'mission' | 'ui'
+    type: AssetEntryType
   ): T[] {
     const results: T[] = [];
     this.assetIndex.forEach(entry => {
-      if (entry.type === type || (entry.type === 'ui' && type === 'ui')) {
+      if (entry.type === type || (entry.type === AssetEntryType.UI && type === AssetEntryType.UI)) {
         results.push(entry as T);
-      } else if (type !== 'mission' && type !== 'ui' && (entry as CardAssetEntry).type === type) {
+      } else if (type !== AssetEntryType.Mission && type !== AssetEntryType.UI && (entry as CardAssetEntry).type === type) {
         results.push(entry as T);
       }
     });
@@ -137,10 +205,10 @@ export class AssetCatalogManager {
   /**
    * Get all cards by affinity
    */
-  getCardsByAffinity(affinity: 'fire' | 'forest' | 'sky' | 'water'): CardAssetEntry[] {
+  getCardsByAffinity(affinity: AffinityLowercase): CardAssetEntry[] {
     const results: CardAssetEntry[] = [];
     this.assetIndex.forEach(entry => {
-      if (entry.type === 'beast' || entry.type === 'habitat') {
+      if (entry.type === AssetEntryType.Beast || entry.type === AssetEntryType.Habitat) {
         const card = entry as CardAssetEntry;
         if (card.affinity === affinity) {
           results.push(card);
@@ -153,7 +221,7 @@ export class AssetCatalogManager {
   /**
    * Get Horizon asset ID for a given asset
    */
-  getHorizonAssetId(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
+  getHorizonAssetId(assetId: string, assetType: AssetReferenceType = AssetReferenceType.Image): string | undefined {
     const asset = this.getAsset(assetId);
     if (!asset) return undefined;
 
@@ -164,7 +232,7 @@ export class AssetCatalogManager {
   /**
    * Get local path for a given asset
    */
-  getAssetPath(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
+  getAssetPath(assetId: string, assetType: AssetReferenceType = AssetReferenceType.Image): string | undefined {
     const asset = this.getAsset(assetId);
     if (!asset) return undefined;
 
@@ -192,9 +260,9 @@ export class AssetCatalogManager {
     this.assetIndex.forEach((entry, id) => {
       entry.assets.forEach(asset => {
         // Only use the first asset of each type for the entry
-        if (asset.type === 'image' && !images[id]) {
+        if (asset.type === AssetReferenceType.Image && !images[id]) {
           images[id] = asset.path;
-        } else if (asset.type === 'audio' && !sounds[id]) {
+        } else if (asset.type === AssetReferenceType.Audio && !sounds[id]) {
           sounds[id] = asset.path;
         }
       });
@@ -217,9 +285,9 @@ export class AssetCatalogManager {
       entry.assets.forEach(asset => {
         if (asset.horizonAssetId) {
           // Only use the first asset of each type for the entry
-          if (asset.type === 'image' && !images[id]) {
+          if (asset.type === AssetReferenceType.Image && !images[id]) {
             images[id] = asset.horizonAssetId;
-          } else if (asset.type === 'audio' && !sounds[id]) {
+          } else if (asset.type === AssetReferenceType.Audio && !sounds[id]) {
             sounds[id] = asset.horizonAssetId;
           }
         }
@@ -252,14 +320,16 @@ export class AssetCatalogManager {
 
     this.assetIndex.forEach(entry => {
       // Only include card entries (beast, magic, trap, buff, habitat)
-      if (entry.type === 'beast' || entry.type === 'magic' ||
-          entry.type === 'trap' || entry.type === 'buff' || entry.type === 'habitat') {
+      const isCardEntry = entry.type === AssetEntryType.Beast || entry.type === AssetEntryType.Magic ||
+          entry.type === AssetEntryType.Trap || entry.type === AssetEntryType.Buff || entry.type === AssetEntryType.Habitat;
+
+      if (isCardEntry) {
         const cardEntry = entry as CardAssetEntry;
         // Add rarity for reward system (same logic as old getAllCards)
         const cardData: any = { ...cardEntry.data };
 
-        if (cardEntry.type === 'beast') {
-          // Assign rarity based on nectar cost
+        if (cardEntry.type === AssetEntryType.Beast) {
+          // Assign rarity based on energy cost
           const cost = cardData.cost || 0;
           if (cost >= 5) {
             cardData.rarity = 'rare';
@@ -292,7 +362,7 @@ export class AssetCatalogManager {
    * Get all buff cards from the catalog
    */
   getAllBuffCards(): any[] {
-    const buffEntries = this.getAssetsByType('buff');
+    const buffEntries = this.getAssetsByType(AssetEntryType.Buff);
     return buffEntries.map((entry: any) => entry.data);
   }
 
