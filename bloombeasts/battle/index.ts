@@ -18,11 +18,6 @@
 
 // Core exports
 export { BattleController } from './core/BattleController';
-export { TurnManager } from './core/TurnManager';
-
-// Player exports
-export { HumanPlayer, AIBattlePlayer } from './player/BattlePlayer';
-export type { IBattlePlayer, BattlePlayerCallbacks } from './player/BattlePlayer';
 
 // Type exports
 export type {
@@ -33,9 +28,6 @@ export type {
   BattleActionResult,
   PlayerConfig,
 } from './types';
-
-// Game rules (used internally, but exported for extensibility)
-export { BattleStateManager as BattleRules } from './core/BattleRules';
 
 // TURBO-based exports
 export { createBloomBeastsGame, BloomBeastsRules } from './BloomBeastsGame';
