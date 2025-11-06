@@ -66,7 +66,7 @@ export const fireAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.DealDamage,
-                target: AbilityTarget.Target,
+                target: AbilityTarget.AttackedEnemy,
                 value: 1
               }
             ]

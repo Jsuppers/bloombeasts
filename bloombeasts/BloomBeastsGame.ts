@@ -14,28 +14,25 @@ import { UpgradeScreen } from './ui/screens/UpgradeScreen';
 import { MissionScreen } from './ui/screens/MissionScreen';
 import { BattleScreen } from './ui/screens/BattleScreen';
 import { SettingsScreen } from './ui/screens/SettingsScreen';
-import { LeaderboardScreen, type LeaderboardData } from './ui/screens/LeaderboardScreen';
+import { LeaderboardScreen } from './ui/screens/LeaderboardScreen';
 import { UPGRADE_COSTS, COIN_BOOST, EXP_BOOST, LUCK_BOOST, ROOSTER } from './constants/upgrades';
 import { createMissionCompletePopup } from './ui/screens/common/MissionCompletePopup';
 import { createButtonPopup } from './ui/screens/common/ButtonPopup';
-import { createCardDetailPopup, createReactiveCardDetailPopupFromBinding } from './ui/screens/common/CardDetailPopup';
-import { GameEngine } from './engine/systems/GameEngine';
-import { CardCollectionManager } from './systems/CardCollectionManager';
-import { BattleDisplayManager } from './systems/BattleDisplayManager';
-import { BindingManager, BindingType, UIState } from './ui/types/BindingManager';
+import { createReactiveCardDetailPopupFromBinding } from './ui/screens/common/CardDetailPopup';
+import { BattleDisplayManager } from './screens/battle/BattleDisplayManager';
+import { BindingManager, BindingType } from './ui/types/BindingManager';
 import { MissionManager } from './screens/missions/MissionManager';
 import { MissionSelectionUI } from './screens/missions/MissionSelectionUI';
-import { MissionBattleUI } from './screens/missions/MissionBattleUI';
-import { CardInstance } from './screens/cards/types';
-import { setCatalogManagerForUtils } from './utils/cardUtils';
-import { setCatalogManagerForDeckBuilder } from './engine/utils/deckBuilder';
+import { BattleUI } from './screens/battle/BattleUI';
+import { CardInstance } from './screens/common/types';
+import { setCatalogManagerForUtils, getPlayerDeckCards, awardDeckExperience, addCardReward } from './utils/cardUtils';
+import { setCatalogManagerForDeckBuilder, getStarterDeck } from './engine/utils/deckBuilder';
 import { DECK_SIZE } from './engine/constants/gameRules';
 import { Logger } from './engine/utils/Logger';
 import type { AsyncMethods } from './ui/types/bindings';
-import { normalizeSoundId } from './AssetCatalog';
-import type { MenuStats, MissionDisplay, BattleDisplay, ObjectiveDisplay, CardDetailDisplay, SoundSettings } from './gameManager';
+import type { MissionDisplay, SoundSettings } from './gameManager';
 import { gameDimensions } from './ui/screens/battle';
-import { parseActionString, type BattleAction } from './battle/types/actions';
+import { parseActionString, BattleActions } from './battle/types/actions';
 
 /**
  * XP thresholds for player leveling (cumulative)
@@ -373,11 +370,9 @@ export class BloomBeastsGame {
   private platformGetImageAsset: (assetId: string) => any;
 
   // Core game systems
-  private gameEngine: GameEngine;
   private missionManager: MissionManager;
   private missionUI: MissionSelectionUI;
-  private battleUI: MissionBattleUI;
-  private cardCollectionManager: CardCollectionManager;
+  private battleUI: BattleUI;
 
   // Sound and display state
   private currentMusic: string | null = null;
@@ -420,11 +415,9 @@ export class BloomBeastsGame {
     setCatalogManagerForDeckBuilder(config.catalogManager);
 
     // Initialize core systems
-    this.gameEngine = new GameEngine(config.catalogManager);
     this.missionManager = new MissionManager(config.catalogManager);
     this.missionUI = new MissionSelectionUI(this.missionManager);
-    this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine, this.asyncMethods);
-    this.cardCollectionManager = new CardCollectionManager(config.catalogManager);
+    this.battleUI = new BattleUI(this.missionManager, this.asyncMethods);
     this.battleDisplayManager = new BattleDisplayManager(config.catalogManager);
 
     // Get platform-specific UI methods and add bindingManager to them
@@ -730,10 +723,30 @@ export class BloomBeastsGame {
    */
   private async initializeStartingCollection(): Promise<void> {
     if (!this.playerData) return;
-    this.playerData.cards.deck = await this.cardCollectionManager.initializeStartingCollection(
-      this.playerData.cards.collected,
-      this.playerData.cards.deck
-    );
+
+    // Get starter deck cards from deck builder
+    const starterDeckList = getStarterDeck('Forest');
+    const starterCards = starterDeckList.cards;
+
+    Logger.info(`[BloomBeastsGame] Initializing starter deck: ${starterDeckList.name} with ${starterCards.length} cards`);
+
+    // Create card instances and add to collection and deck
+    starterCards.forEach((card: any, index: number) => {
+      const instanceId = `${card.id}-${Date.now()}-${index}`;
+
+      // Create minimal card instance
+      const cardInstance: CardInstance = {
+        id: instanceId,
+        cardId: card.id,
+        currentXP: 0, // Start at 0 XP (level 1)
+      };
+
+      this.playerData!.cards.collected.push(cardInstance);
+      this.playerData!.cards.deck.push(cardInstance.id);
+    });
+
+    Logger.info(`[BloomBeastsGame] Starter deck initialized with ${this.playerData.cards.deck.length} cards in deck and ${this.playerData.cards.collected.length} cards collected`);
+
     await this.saveGameData();
   }
 
@@ -893,7 +906,7 @@ export class BloomBeastsGame {
   /**
    * Handle forfeit - player gives up
    */
-  private handleForfeit(): void {
+  private async handleForfeit(): Promise<void> {
     // Close popup
     this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, null);
     this.triggerRender();
@@ -901,16 +914,9 @@ export class BloomBeastsGame {
     // Play lose sound
     this.playSfx('sfx-lose');
 
-    // End battle as a loss
-    const currentBattle = this.battleUI.getCurrentBattle();
-    if (currentBattle) {
-      const defeatState = {
-        ...currentBattle,
-        isComplete: true,
-        rewards: null, // No rewards for forfeit
-        mission: currentBattle.mission,
-      };
-      this.handleBattleComplete(defeatState);
+    // Process FORFEIT action through TURBO instead of manual state manipulation
+    if (this.battleUI) {
+      await this.battleUI.processTypedAction(BattleActions.forfeit('player'));
     }
   }
 
@@ -988,7 +994,7 @@ export class BloomBeastsGame {
     }
 
     // Get player's deck cards
-    const playerDeckCards = this.cardCollectionManager.getPlayerDeckCards(
+    const playerDeckCards = getPlayerDeckCards(
       this.playerData.cards.deck,
       this.playerData.cards.collected
     );
@@ -1008,6 +1014,21 @@ export class BloomBeastsGame {
       if (battleState) {
         this.currentBattleId = missionId;
         this.battleStartTime = Date.now();  // Track start time for leaderboard
+
+        // Set up render callback for battle UI to update display during AI turns
+        this.battleUI.setRenderCallback(() => {
+          const currentBattle = this.battleUI.getCurrentBattle();
+          if (currentBattle && !currentBattle.isComplete) {
+            const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
+              currentBattle,
+              null
+            );
+            if (updatedDisplay) {
+              this.UI.bindingManager.setBinding(BindingType.BattleDisplay, updatedDisplay);
+              this.triggerRender();
+            }
+          }
+        });
 
         // Create battle display from battle state
         const battleDisplay = this.battleDisplayManager.createBattleDisplay(
@@ -1136,6 +1157,30 @@ export class BloomBeastsGame {
    * Converts string actions from UI to typed actions
    */
   private async handleBattleAction(action: string): Promise<void> {
+    // Handle timeout losses - convert to TIMEOUT action
+    if (action === 'timeout-player' || action === 'timeout-opponent') {
+      // Determine which player timed out
+      const timedOutPlayerId = action === 'timeout-player' ? 'player' : 'opponent';
+
+      if (this.battleUI) {
+        // Get current turn player - timeout action must be executed by current player
+        const currentBattle = this.battleUI.getCurrentBattle();
+        if (currentBattle && currentBattle.battleState) {
+          const currentPlayerId = currentBattle.battleState.turboState.turnInfo.currentPlayerId;
+
+          // Process TIMEOUT action through TURBO
+          // Execute as current player, but mark who actually timed out
+          await this.battleUI.processTypedAction({
+            type: 'timeout',
+            playerId: currentPlayerId,
+            timedOutPlayerId,
+            timestamp: Date.now()
+          });
+        }
+      }
+      return;
+    }
+
     // Handle forfeit button - show confirmation popup
     if (action === 'btn-forfeit' || action === 'forfeit') {
       this.showForfeitConfirmation();
@@ -1350,17 +1395,17 @@ export class BloomBeastsGame {
       // Award XP
       this.addXP(battleState.rewards.xpGained);
 
-      // Award card XP
+      // Award card XP directly to deck cards
       const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
-      this.cardCollectionManager.awardDeckExperience(
+      awardDeckExperience(
         cardXP,
         playerData.cards.deck,
         playerData.cards.collected
       );
 
-      // Add cards to collection
+      // Add cards directly to collection
       battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
-        this.cardCollectionManager.addCardReward(card, playerData.cards.collected, index);
+        addCardReward(card, playerData.cards.collected, index);
       });
 
       // Add coins

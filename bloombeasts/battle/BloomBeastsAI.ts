@@ -2,22 +2,16 @@
  * BloomBeasts AI implementation using the TURBO library
  */
 
-import {
-  GreedyAI,
-  IGameState,
-  IGameAction,
-  IAIConfig,
-  AILevel,
-} from '../../turbo/src';
+import { Turbo } from '../lib/Turbo-Standalone';
+
 import {
   BloomBeastsState,
   BloomBeastsActionData,
   BloomBeastsActionType,
   BloomBeastsPlayer,
-  BeastFieldCard,
-} from './BloomBeastsGame';
+} from './types';
+import { RuntimeBeast, RuntimeBuff, RuntimeHabitat, RuntimeTrap } from '../engine/types/runtime';
 import {
-  AnyCard as Card,
   BloomBeastCard,
   BuffCard,
   HabitatCard,
@@ -28,43 +22,31 @@ import {
  * Player field structure
  */
 type PlayerField = {
-  beasts: (BeastFieldCard | null)[];
-  buffs: (BuffCard | null)[];
-  habitat: HabitatCard | null;
-  traps: TrapCard[];
+  beasts: (RuntimeBeast | null)[];
+  buffs: (RuntimeBuff | null)[];
+  habitat: RuntimeHabitat | null;
+  traps: RuntimeTrap[];
 };
 
 /**
  * BloomBeasts Greedy AI implementation
  */
-export class BloomBeastsGreedyAI extends GreedyAI<BloomBeastsState, BloomBeastsActionData> {
-  private currentState: IGameState<BloomBeastsState> | null;
+export class BloomBeastsGreedyAI extends Turbo.GreedyAI<BloomBeastsState, BloomBeastsActionData> {
+  private currentState: Turbo.IGameState<BloomBeastsState> | null;
 
-  constructor(configOrPlayerId: IAIConfig | string, difficulty?: AILevel | string) {
-    // Support both old and new constructor signatures
-    if (typeof configOrPlayerId === 'string') {
-      // Old signature: (playerId, difficulty)
-      super({
-        playerId: configOrPlayerId,
-        difficulty: (difficulty as AILevel) || AILevel.MEDIUM,
-        // Set longer thinking times for better UX
-        thinkingTime: { min: 800, max: 2500 }
-      });
-    } else {
-      // New signature: (config)
-      super({
-        ...configOrPlayerId,
-        // Set longer thinking times for better UX
-        thinkingTime: configOrPlayerId.thinkingTime || { min: 800, max: 2500 }
-      });
-    }
+  constructor(config: Turbo.IAIConfig) {
+    super({
+      ...config,
+      // Set longer thinking times for better UX
+      thinkingTime: config.thinkingTime || { min: 800, max: 2500 }
+    });
     this.currentState = null;
   }
 
   /**
    * Evaluate the current state (higher is better for this player)
    */
-  evaluateState(state: IGameState<BloomBeastsState>): number {
+  evaluateState(state: Turbo.IGameState<BloomBeastsState>): number {
     let score = 0;
     const playerIndex = state.gameData.players.findIndex(p => p.id === this.playerId);
     const player = state.gameData.players[playerIndex];
@@ -92,7 +74,7 @@ export class BloomBeastsGreedyAI extends GreedyAI<BloomBeastsState, BloomBeastsA
 
     playerField.beasts.forEach(beast => {
       if (beast) {
-        playerStats += beast.attack + beast.health;
+        playerStats += beast.currentAttack + beast.currentHealth;
         // Bonus for special abilities
         if (beast.abilities && beast.abilities.length > 0) {
           playerStats += beast.abilities.length * 2;
@@ -102,7 +84,7 @@ export class BloomBeastsGreedyAI extends GreedyAI<BloomBeastsState, BloomBeastsA
 
     opponentField.beasts.forEach(beast => {
       if (beast) {
-        opponentStats += beast.attack + beast.health;
+        opponentStats += beast.currentAttack + beast.currentHealth;
         if (beast.abilities && beast.abilities.length > 0) {
           opponentStats += beast.abilities.length * 2;
         }
@@ -125,8 +107,8 @@ export class BloomBeastsGreedyAI extends GreedyAI<BloomBeastsState, BloomBeastsA
    * Evaluate an action's immediate value
    */
   evaluateAction(
-    action: IGameAction<BloomBeastsActionData>,
-    state: IGameState<BloomBeastsState>
+    action: Turbo.IGameAction<BloomBeastsActionData>,
+    state: Turbo.IGameState<BloomBeastsState>
   ): number {
     const playerIndex = state.gameData.players.findIndex(p => p.id === this.playerId);
     const player = state.gameData.players[playerIndex];
@@ -210,10 +192,10 @@ export class BloomBeastsGreedyAI extends GreedyAI<BloomBeastsState, BloomBeastsA
 
         if (!targetId || targetId === opponent.id) {
           // Direct attack on opponent
-          attackValue = attacker.attack * 3;
+          attackValue = attacker.currentAttack * 3;
 
           // Lethal bonus
-          if (attacker.attack >= opponent.health) {
+          if (attacker.currentAttack >= opponent.health) {
             attackValue += 1000; // Win the game!
           }
         } else {
@@ -222,23 +204,23 @@ export class BloomBeastsGreedyAI extends GreedyAI<BloomBeastsState, BloomBeastsA
           if (!target) return 0;
 
           // Value of removing opponent creature
-          attackValue = target.attack * 2 + target.health * 1.5;
+          attackValue = target.currentAttack * 2 + target.currentHealth * 1.5;
 
           // Favorable trade bonus
-          if (attacker.attack >= target.health && target.attack < attacker.health) {
+          if (attacker.currentAttack >= target.currentHealth && target.currentAttack < attacker.currentHealth) {
             attackValue += 15; // We survive, they don't
           }
 
           // Penalty for unfavorable trade
-          if (target.attack >= attacker.health && attacker.attack < target.health) {
+          if (target.currentAttack >= attacker.currentHealth && attacker.currentAttack < target.currentHealth) {
             attackValue -= 10; // We die, they don't
           }
 
           // Equal trade evaluation
-          if (attacker.attack >= target.health && target.attack >= attacker.health) {
+          if (attacker.currentAttack >= target.currentHealth && target.currentAttack >= attacker.currentHealth) {
             // Compare creature values
-            const attackerValue = attacker.attack * 2 + attacker.health * 1.5;
-            const targetValue = target.attack * 2 + target.health * 1.5;
+            const attackerValue = attacker.currentAttack * 2 + attacker.currentHealth * 1.5;
+            const targetValue = target.currentAttack * 2 + target.currentHealth * 1.5;
             attackValue = targetValue - attackerValue + 5; // Slight bonus for proactive play
           }
         }
@@ -258,9 +240,9 @@ export class BloomBeastsGreedyAI extends GreedyAI<BloomBeastsState, BloomBeastsA
    * Override chooseAction to implement turn logic
    */
   async chooseAction(
-    state: IGameState<BloomBeastsState>,
-    availableActions: IGameAction<BloomBeastsActionData>[]
-  ): Promise<IGameAction<BloomBeastsActionData> | null> {
+    state: Turbo.IGameState<BloomBeastsState>,
+    availableActions: Turbo.IGameAction<BloomBeastsActionData>[]
+  ): Promise<Turbo.IGameAction<BloomBeastsActionData> | null> {
     // Store state for getter methods
     this.currentState = state;
 
@@ -272,7 +254,7 @@ export class BloomBeastsGreedyAI extends GreedyAI<BloomBeastsState, BloomBeastsA
     }
 
     // Group actions by type
-    const actionsByType = new Map<BloomBeastsActionType, IGameAction<BloomBeastsActionData>[]>();
+    const actionsByType = new Map<BloomBeastsActionType, Turbo.IGameAction<BloomBeastsActionData>[]>();
     availableActions.forEach(action => {
       const type = action.data.type;
       if (!actionsByType.has(type)) {
@@ -339,7 +321,7 @@ export class BloomBeastsGreedyAI extends GreedyAI<BloomBeastsState, BloomBeastsA
    * Helper methods
    */
 
-  private findBeast(id: string, field: PlayerField): BeastFieldCard | null {
+  private findBeast(id: string, field: PlayerField): RuntimeBeast | null {
     for (const beast of field.beasts) {
       if (beast?.id === id) {
         return beast;
@@ -370,8 +352,8 @@ export class BloomBeastsGreedyAI extends GreedyAI<BloomBeastsState, BloomBeastsA
  */
 export class BloomBeastsRandomAI extends BloomBeastsGreedyAI {
   evaluateAction(
-    action: IGameAction<BloomBeastsActionData>,
-    state: IGameState<BloomBeastsState>
+    action: Turbo.IGameAction<BloomBeastsActionData>,
+    state: Turbo.IGameState<BloomBeastsState>
   ): number {
     // Random evaluation with slight preference for non-END_TURN actions
     if (action.data.type === BloomBeastsActionType.END_TURN) {

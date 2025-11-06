@@ -32,8 +32,6 @@ export interface Card {
   type: CardType;
   cost: number;
   titleColor?: string;  // Optional custom color for card title (hex color, e.g., '#000000')
-  instanceId?: string;  // Optional instance ID for tracking unique card instances in battle
-  level?: number;  // Optional runtime level for card instances (not present in card definitions)
 }
 
 /**

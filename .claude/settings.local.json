@@ -1,32 +1,12 @@
 {
   "permissions": {
     "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(npm test)",
       "Bash(find:*)",
       "Bash(npm test:*)",
-      "Bash(cat:*)",
-      "Read(//c/Users/joris/AppData/LocalLow/Meta/Horizon Worlds/861948146997513/scripts/**)",
-      "Bash(awk:*)",
-      "Bash(npm run build:standalone:*)",
-      "Bash(npm run dev:*)",
       "Bash(npm run build:*)",
-      "Bash(npx tsc:*)",
-      "Bash(npm run build:web:*)",
-      "Bash(npm run:*)",
-      "Bash(while read file)",
-      "Bash(do sed -i \"s/text: new ui\\.Binding(\\(''''[^'''']*''''\\))/text: \\1/g\" \"$file\" sed -i \"s/text: new this\\.ui\\.Binding(\\(''''[^'''']*''''\\))/text: \\1/g\" \"$file\" echo \"Fixed: $file\" done)",
-      "Bash(for:*)",
-      "Bash(do echo '=== $file ===')",
-      "Bash(done)",
-      "Bash(do echo \"=== $pattern ===\")",
-      "Bash(node remove-leveling-config.js:*)",
-      "Bash(node:*)",
-      "Bash(bloombeasts/catalogs/forestAssets.ts.tmp)",
-      "Bash(do)",
-      "Bash(echo:*)",
-      "Bash(\"$file.tmp\")",
-      "Bash(timeout 5 npm run dev:*)",
-      "Bash(npx jest:*)",
-      "Bash(timeout 15 npm run dev:*)"
+      "Bash(npm run build:standalone:*)"
     ],
     "deny": [],
     "ask": []

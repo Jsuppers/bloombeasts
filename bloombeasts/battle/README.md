@@ -1,194 +1,301 @@
-# Battle System
+# BloomBeasts Battle System
 
-Generic, reusable battle system for Bloom Beasts. Supports any two-player combination: human vs AI, human vs human, or AI vs AI.
+Clean, modular battle system built on the TURBO turn-based game engine framework.
 
 ## Architecture
 
 ```
 battle/
-├── core/
-│   ├── BattleController.ts     # Main battle orchestrator
-│   ├── BattleRules.ts           # Game rules (card playing, combat, abilities)
-│   └── TurnManager.ts           # Turn flow management
-├── player/
-│   └── BattlePlayer.ts          # Player interfaces (Human, AI, future: Networked)
-├── ai/
-│   └── OpponentAI.ts            # AI decision making
+├── core/                        # Core subsystems
+│   ├── BattleController.ts      # Thin facade (137 lines)
+│   ├── BattleOrchestrator.ts    # Lifecycle & events (150 lines)
+│   ├── AIManager.ts             # AI turn execution (119 lines)
+│   ├── ActionProcessor.ts       # Player actions (145 lines)
+│   └── WinConditionChecker.ts   # Game end logic (87 lines)
+├── actions/                     # Action handlers (registry pattern)
+│   ├── ActionHandler.ts         # Base handler & registry
+│   ├── DrawCardActionHandler.ts
+│   ├── PlayCardActionHandler.ts
+│   ├── AttackActionHandler.ts
+│   ├── EndTurnActionHandler.ts
+│   └── __tests__/               # Unit tests
+├── BloomBeastsGame.ts          # TURBO game rules (516 lines)
+├── BloomBeastsAI.ts            # AI implementations
 ├── types.ts                     # Type definitions
 └── index.ts                     # Public API
 ```
 
 ## Design Principles
 
-1. **Separation of Concerns**
-   - BattleController: Battle flow, victory conditions, turn management
-   - BattleRules: Game rules (card effects, combat calculations)
-   - OpponentAI: AI decision logic
-   - Mission system: Mission-specific features (special rules, rewards)
+### 1. **Single Responsibility**
+Every class has one job:
+- `BattleController`: Facade for backward compatibility
+- `BattleOrchestrator`: Battle lifecycle coordination
+- `AIManager`: AI player management
+- `ActionProcessor`: Execute player actions
+- `WinConditionChecker`: Determine battle outcomes
+- `ActionHandlers`: Handle specific action types
 
-2. **Player-Agnostic**
-   - Battle system doesn't care if a player is human, AI, or networked
-   - Uses IBattlePlayer interface for abstraction
-   - Easily extensible for multiplayer
+### 2. **Registry Pattern**
+Action handlers are registered and dispatched via `ActionHandlerRegistry`:
+- Easy to add new action types
+- Each handler owns validation, execution, events, and triggers
+- No large switch statements
 
-3. **Reusable**
-   - No mission-specific code in core battle system
-   - Special rules injected via configuration
-   - Used by missions but can be used for any battle mode
+### 3. **TURBO Integration**
+Built directly on TURBO framework:
+- Uses TURBO's event system (no custom callbacks)
+- Uses TURBO's state management
+- Access to TURBO's advanced features (replay, undo/redo, serialization)
+
+### 4. **Type Safety**
+- Zero `any` types in battle system
+- `TriggerContext` for type-safe trigger processing
+- Proper TypeScript interfaces throughout
 
 ## Usage
 
 ### Basic Battle Setup
 
 ```typescript
-import { BattleController, BattleConfig } from './battle';
+import { BattleController } from './battle/core/BattleController';
 
-const controller = new BattleController(asyncMethods, {
-  onBattleEnd: (winner) => console.log(`Winner: ${winner}`),
-  onRender: () => updateUI(),
-});
+// Create battle controller
+const controller = new BattleController(asyncMethods);
 
+// Subscribe to TURBO events
+const game = controller.getGameController();
+game.on('stateChanged', () => console.log('State changed'));
+game.on('turnStarted', ({ playerId }) => console.log(`Turn: ${playerId}`));
+game.on('gameEnded', ({ winnerId }) => console.log(`Winner: ${winnerId}`));
+
+// Initialize battle
 const battle = controller.initializeBattle({
   player1: {
     id: 'player',
     name: 'Player',
     deck: playerDeck,
+    health: 30,
   },
   player2: {
     id: 'opponent',
     name: 'Opponent',
     deck: opponentDeck,
+    health: 30,
     isAI: true,
+    aiStrategy: 'aggressive', // 'default' | 'aggressive' | 'defensive'
   },
 });
 ```
 
-### With Special Rules
+### Performing Actions
 
 ```typescript
-const battle = controller.initializeBattle({
-  player1: { ... },
-  player2: { ... },
-  specialRules: [{
-    id: 'high-health',
-    name: 'High Health Mode',
-    description: 'Both players start with 50 health',
-    apply: (gameState) => {
-      gameState.players[0].health = 50;
-      gameState.players[0].maxHealth = 50;
-      gameState.players[1].health = 50;
-      gameState.players[1].maxHealth = 50;
-    },
-  }],
-});
+// Draw a card
+controller.drawCard('player');
+
+// Play a card
+controller.playCard('card-123', 'player', position);
+
+// Attack
+controller.attackBeast('attacker-id', 'target-id', 'player');
+
+// End turn
+controller.endTurn('player');
+
+// Execute AI turn
+await controller.executeAITurn();
 ```
 
-### Mission Wrapper
+### Advanced Features (via TURBO)
 
 ```typescript
-import { MissionBattleUI } from '../screens/missions/MissionBattleUI';
+const game = controller.getGameController();
 
-// MissionBattleUI adds:
-// - Mission configuration
-// - Rewards calculation
-// - Progress tracking
-// - Mission objectives
-const missionBattle = new MissionBattleUI(missionManager, gameEngine, async);
-const battle = missionBattle.initializeBattle(playerDeck);
+// Action history for replay
+const history = game.getActionHistory();
+
+// Undo/Redo
+game.undo();
+game.redo();
+
+// Pause/Resume
+game.pause();
+game.resume();
+
+// State serialization for save/load
+const state = game.getState();
+const serialized = JSON.stringify(state);
 ```
 
-## Future Extensions
+## Architecture Deep Dive
 
-### Multiplayer (Networked Players)
+### Action Handler Pattern
+
+Each action type has a dedicated handler:
 
 ```typescript
-export class NetworkedPlayer implements IBattlePlayer {
-  private connection: WebSocket;
+export class DrawCardActionHandler extends BaseActionHandler {
+  readonly actionType = BloomBeastsActionType.DRAW_CARD;
 
-  async executeTurn(): Promise<void> {
-    // Wait for network action
-    return new Promise((resolve) => {
-      this.connection.on('action', (action) => {
-        // Process action
-        resolve();
-      });
-    });
+  validate(actionData, state, playerId): ActionValidationResult {
+    // Validation logic
+  }
+
+  execute(actionData, state, playerId, context): IActionResult {
+    // Execution logic
+    // Event generation
+    // Trigger processing
+    return { success: true, newState, sideEffects: [event] };
   }
 }
 ```
 
-### Custom AI Strategies
+**Benefits:**
+- Each handler owns ALL logic for its action
+- Easy to test in isolation
+- No large switch statements
+- Clean separation of concerns
+
+### Subsystem Responsibilities
+
+**BattleOrchestrator**
+- Initializes TURBO game
+- Coordinates subsystems
+- Exposes game controller
+
+**AIManager**
+- Registers AI players
+- Executes AI turns with loop protection
+- Maps AI strategies to difficulty levels
+
+**ActionProcessor**
+- Validates and executes player actions
+- Returns success/failure results
+
+**WinConditionChecker**
+- Determines if battle should end
+- Calculates battle results
+- Handles tie scenarios
+
+## Event System
+
+All events use TURBO's event bus:
 
 ```typescript
-export class AggressiveAI extends OpponentAI {
+game.on('gameStarted', ({ state }) => { /* ... */ });
+game.on('turnStarted', ({ playerId, turnNumber }) => { /* ... */ });
+game.on('turnEnded', ({ playerId }) => { /* ... */ });
+game.on('actionPerformed', ({ action }) => { /* ... */ });
+game.on('stateChanged', ({ state }) => { /* ... */ });
+game.on('gameEnded', ({ winnerId }) => { /* ... */ });
+```
+
+**No more callbacks!** Direct TURBO event subscription.
+
+## State Management
+
+### Immutability
+Uses `structuredClone()` for proper deep cloning:
+- Handles Sets, Maps, Dates
+- No serialization hacks
+- Full immutability guarantee
+
+### State Access
+Helper methods in `BaseActionHandler`:
+```typescript
+protected getCurrentPlayer(state, playerId)
+protected getOpponentPlayer(state, playerId)
+protected getCurrentPlayerIndex(state, playerId)
+protected cloneState(state)
+protected createEvent(type, playerId, data?)
+```
+
+## Testing
+
+### Unit Tests
+```bash
+npm test -- DrawCardActionHandler.test.ts
+npm test -- WinConditionChecker.test.ts
+```
+
+### Integration Tests
+```bash
+npm test -- battle/tests/
+```
+
+## Performance
+
+- **State cloning**: O(n) via structuredClone
+- **Action validation**: O(1) via registry lookup
+- **AI turn execution**: Bounded by MAX_AI_ACTIONS_PER_TURN (50)
+
+## Migration Notes
+
+### From Phase 2 (Pre-refactoring)
+- ❌ `BattleCallbacks` → ✅ TURBO events
+- ❌ Manual event propagation → ✅ TURBO event bus
+- ❌ Large switch statements → ✅ Action handler registry
+- ❌ God object (413 lines) → ✅ Focused subsystems (87-150 lines each)
+
+### Metrics
+
+| Metric | Before | After | Change |
+|--------|--------|-------|--------|
+| BattleController | 413 lines | 137 lines | **-67%** |
+| BloomBeastsGame.executeAction() | 110 lines | 45 lines | **-59%** |
+| BloomBeastsGame.validateAction() | 60 lines | 30 lines | **-50%** |
+| Code Smells | Multiple | **0** | ✅ |
+| `any` Types | Multiple | **0** | ✅ |
+
+## Adding New Features
+
+### New Action Type
+
+1. Create handler in `battle/actions/`:
+```typescript
+export class NewActionHandler extends BaseActionHandler<NewActionData> {
+  readonly actionType = BloomBeastsActionType.NEW_ACTION;
+
+  validate(actionData, state, playerId) { /* ... */ }
+  execute(actionData, state, playerId, context) { /* ... */ }
+}
+```
+
+2. Register in `BloomBeastsGame.ts`:
+```typescript
+this.actionHandlers.register(new NewActionHandler());
+```
+
+3. Add to `BloomBeastsActionType` enum
+4. Export from `actions/index.ts`
+
+### New AI Strategy
+
+Implement in `BloomBeastsAI.ts`:
+```typescript
+export class CustomAI extends BloomBeastsGreedyAI {
   // Override decision making
-  chooseAction(options): AIDecision {
-    // Prefer attacking over other actions
-    return mostAggressiveOption(options);
-  }
 }
 ```
 
-### Tournament Mode
-
+Register in `AIManager.ts`:
 ```typescript
-const tournament = new TournamentController([
-  { player: player1, deck: deck1 },
-  { player: player2, deck: deck2 },
-  { player: player3, deck: deck3 },
-]);
-
-tournament.runBracket().then(winner => {
-  console.log(`Tournament winner: ${winner.name}`);
-});
+const ai = new CustomAI({ playerId, difficulty });
+this.game.registerAI(playerId, ai);
 ```
 
-## Components
+## Future Enhancements
 
-### BattleController
+- [ ] Multiplayer support via networked players
+- [ ] Tournament mode
+- [ ] Spectator mode
+- [ ] Replay system using TURBO action history
+- [ ] Time-travel debugging with undo/redo
 
-Main orchestrator. Handles:
-- Battle initialization (deck shuffling, initial draw)
-- Turn management (start/end turn, player switching)
-- Victory condition checking
-- Game state management
+## Resources
 
-### BattleRules (formerly BattleStateManager)
-
-Game rules engine. Handles:
-- Card playing validation and effects
-- Combat resolution (damage calculation, beast destruction)
-- Ability processing
-- Trap activation
-- Buff/debuff application
-- Trigger management (OnSummon, OnAttack, OnDestroy, etc.)
-
-### OpponentAI
-
-AI decision making. Handles:
-- Card play decisions
-- Attack target selection
-- Resource management (nectar spending)
-- Turn timing and delays
-
-### TurnManager
-
-Turn flow logic. Handles:
-- Turn initialization (drawing cards, applying start-of-turn effects)
-- Turn cleanup (removing summoning sickness, end-of-turn effects)
-- Turn transitions
-
-## Migration from Old System
-
-The old MissionBattleUI was 800+ lines and tightly coupled mission-specific and generic battle logic. The new system:
-
-1. **Core battle logic** → `BattleController` (generic, reusable)
-2. **Game rules** → `BattleRules` (was BattleStateManager, moved to battle/core/)
-3. **AI logic** → `OpponentAI` (moved to battle/ai/)
-4. **Mission features** → `MissionBattleUI` (thin wrapper, ~400 lines)
-
-Benefits:
-- **Cleaner**: Each component has a single responsibility
-- **Reusable**: Core battle system works for any game mode
-- **Testable**: Components can be tested independently
-- **Extensible**: Easy to add new game modes (multiplayer, tournament, practice)
+- [TURBO Framework](../../turbo/)
+- [Action Handler Tests](./actions/__tests__/)
+- [Subsystem Tests](./core/__tests__/)
+- [Refactoring Roadmap](../../REFACTORING-ROADMAP.md)

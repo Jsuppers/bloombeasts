@@ -5,7 +5,8 @@
  * It tracks different sources of modifications and calculates final stats.
  */
 
-import { BloomBeastInstance, StatModifier, StatModifierSource } from '../types/leveling';
+import { RuntimeBeast } from '../types/runtime';
+import { StatModifier, StatModifierSource } from '../types/leveling';
 import { Logger } from './Logger';
 
 export class StatModifierManager {
@@ -13,7 +14,7 @@ export class StatModifierManager {
    * Add a stat modifier to a beast
    */
   static addModifier(
-    beast: BloomBeastInstance,
+    beast: RuntimeBeast,
     source: StatModifierSource,
     sourceId: string,
     stat: 'attack' | 'health' | 'maxHealth',
@@ -45,7 +46,7 @@ export class StatModifierManager {
    * Remove all modifiers from a specific source
    */
   static removeModifiersBySource(
-    beast: BloomBeastInstance,
+    beast: RuntimeBeast,
     source: StatModifierSource,
     sourceId?: string
   ): void {
@@ -71,7 +72,7 @@ export class StatModifierManager {
   /**
    * Update modifiers for end of turn (decrement turns remaining, remove expired)
    */
-  static updateEndOfTurn(beast: BloomBeastInstance): void {
+  static updateEndOfTurn(beast: RuntimeBeast): void {
     if (!beast.statModifiers) return;
 
     const before = beast.statModifiers.length;
@@ -104,7 +105,7 @@ export class StatModifierManager {
   /**
    * Recalculate all current stats from base + modifiers
    */
-  static recalculateStats(beast: BloomBeastInstance): void {
+  static recalculateStats(beast: RuntimeBeast): void {
     // Store current health percentage to maintain damage
     const healthPercent = beast.maxHealth > 0 ? beast.currentHealth / beast.maxHealth : 1;
 
@@ -147,7 +148,7 @@ export class StatModifierManager {
   /**
    * Get total modifier value for a specific stat from all sources
    */
-  static getTotalModifier(beast: BloomBeastInstance, stat: 'attack' | 'health' | 'maxHealth'): number {
+  static getTotalModifier(beast: RuntimeBeast, stat: 'attack' | 'health' | 'maxHealth'): number {
     if (!beast.statModifiers) return 0;
 
     return beast.statModifiers
@@ -159,7 +160,7 @@ export class StatModifierManager {
    * Get modifiers from a specific source
    */
   static getModifiersBySource(
-    beast: BloomBeastInstance,
+    beast: RuntimeBeast,
     source: StatModifierSource,
     sourceId?: string
   ): StatModifier[] {
@@ -176,7 +177,7 @@ export class StatModifierManager {
   /**
    * Clear all modifiers (useful when beast is destroyed or returned to hand)
    */
-  static clearAllModifiers(beast: BloomBeastInstance): void {
+  static clearAllModifiers(beast: RuntimeBeast): void {
     beast.statModifiers = [];
     this.recalculateStats(beast);
   }
@@ -184,7 +185,7 @@ export class StatModifierManager {
   /**
    * Initialize a beast's stat system (call when beast is created/summoned)
    */
-  static initializeStatSystem(beast: BloomBeastInstance): void {
+  static initializeStatSystem(beast: RuntimeBeast): void {
     if (!beast.statModifiers) {
       beast.statModifiers = [];
     }

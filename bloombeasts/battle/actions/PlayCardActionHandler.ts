@@ -4,18 +4,20 @@
  * Handles the PLAY_CARD action, allowing a player to play a card from their hand
  */
 
-import type { IGameState } from '../../../turbo/src';
-import type { BloomBeastsState, BloomBeastsActionData, BloomBeastsPlayer, BeastFieldCard } from '../BloomBeastsGame';
-import { BloomBeastsActionType } from '../BloomBeastsGame';
-import { BaseActionHandler, ActionValidationResult } from './ActionHandler';
+import { Turbo } from '../../lib/Turbo-Standalone';
+
+import type { BloomBeastsState, BloomBeastsActionData, BloomBeastsPlayer } from '../types';
+import { BloomBeastsActionType } from '../types';
+import { CardType } from '../../engine/types/core';
+import { BaseActionHandler, ActionValidationResult, ActionHandlerContext } from './ActionHandler';
 import type {
-  AnyCard as Card,
   BloomBeastCard,
   MagicCard,
   TrapCard,
   BuffCard,
   HabitatCard,
 } from '../../engine/types/core';
+import type { RuntimeBeast, RuntimeTrap, RuntimeBuff, RuntimeHabitat } from '../types';
 
 export interface PlayCardActionData extends BloomBeastsActionData {
   type: BloomBeastsActionType.PLAY_CARD;
@@ -28,7 +30,7 @@ export class PlayCardActionHandler extends BaseActionHandler<PlayCardActionData>
 
   validate(
     actionData: PlayCardActionData,
-    state: IGameState<BloomBeastsState>,
+    state: Turbo.IGameState<BloomBeastsState>,
     playerId: string
   ): ActionValidationResult {
     const playerIndex = state.gameData.players.findIndex(p => p.id === playerId);
@@ -74,8 +76,8 @@ export class PlayCardActionHandler extends BaseActionHandler<PlayCardActionData>
         break;
 
       case 'Trap':
-        // Check max traps (using a reasonable default if not configured)
-        const maxTraps = 3; // TODO: Get from config
+        // Check max traps (matches DEFAULT_CONFIG.maxFieldTraps = 3)
+        const maxTraps = 3;
         if (field.traps.length >= maxTraps) {
           return { valid: false, reason: 'Too many traps' };
         }
@@ -95,9 +97,10 @@ export class PlayCardActionHandler extends BaseActionHandler<PlayCardActionData>
 
   execute(
     actionData: PlayCardActionData,
-    state: IGameState<BloomBeastsState>,
-    playerId: string
-  ): IGameState<BloomBeastsState> {
+    state: Turbo.IGameState<BloomBeastsState>,
+    playerId: string,
+    context?: ActionHandlerContext
+  ): Turbo.IActionResult<BloomBeastsState> {
     const newState = this.cloneState(state);
     const playerIndex = newState.gameData.players.findIndex(p => p.id === playerId);
     const player = newState.gameData.players[playerIndex];
@@ -117,14 +120,17 @@ export class PlayCardActionHandler extends BaseActionHandler<PlayCardActionData>
 
     switch (card.type) {
       case 'Beast':
-        const beastCard = card as BloomBeastCard;
-        const fieldCard: BeastFieldCard = {
-          ...beastCard,
-          attack: beastCard.baseAttack,
-          health: beastCard.baseHealth,
+        // Card from hand should already be a RuntimeBeast with instanceId, level, and scaled stats
+        const runtimeBeast = card as RuntimeBeast;
+
+        // Create field beast preserving all RuntimeBeast properties
+        const fieldCard: RuntimeBeast = {
+          ...runtimeBeast,
+          // Set initial field state
           summoningSickness: true,
           usedAbilityThisTurn: false
         };
+
         if (actionData.position !== undefined) {
           field.beasts[actionData.position] = fieldCard;
         }
@@ -132,28 +138,59 @@ export class PlayCardActionHandler extends BaseActionHandler<PlayCardActionData>
 
       case 'Magic':
         // Magic cards go to graveyard immediately
-        // Note: Magic card effects would be processed separately
         player.graveyard.push(card);
+
+        // Process Magic card effects
+        if (context?.processMagicCard) {
+          context.processMagicCard(card as MagicCard, newState);
+        }
         break;
 
       case 'Trap':
-        field.traps.push(card as TrapCard);
+        field.traps.push(card as RuntimeTrap);
         break;
 
       case 'Buff':
         if (actionData.position !== undefined) {
-          field.buffs[actionData.position] = card as BuffCard;
+          field.buffs[actionData.position] = card as RuntimeBuff;
         }
         break;
 
       case 'Habitat':
-        field.habitat = card as HabitatCard;
+        field.habitat = card as RuntimeHabitat;
         break;
     }
 
     // Update turn tracking
     newState.gameData.currentTurnActions.cardsPlayed++;
 
-    return newState;
+    // Process OnSummon triggers for Beast cards
+    if (card.type === CardType.Beast && context?.processTriggers) {
+      context.processTriggers('on_action', newState, { action: 'summon', card });
+    }
+
+    // Process WhileOnField effects for cards that have them
+    if ((card.type === CardType.Beast || card.type === 'Habitat') && card.abilities && context?.processTriggers) {
+      // Check if this card has WhileOnField abilities
+      const hasWhileOnField = card.abilities.some(ability =>
+        'trigger' in ability && ability.trigger === 'WhileOnField'
+      );
+      if (hasWhileOnField) {
+        // Apply WhileOnField effects immediately when card enters field
+        context.processTriggers('on_action', newState, { action: 'enter_field', card });
+      }
+    }
+
+    // Create event
+    const event = this.createEvent('card_played', playerId, {
+      cardId: card.id,
+      cardType: card.type
+    });
+
+    return {
+      success: true,
+      newState,
+      sideEffects: [event],
+    };
   }
 }

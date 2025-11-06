@@ -4,10 +4,11 @@
  * Handles the DRAW_CARD action, allowing a player to draw a card from their deck
  */
 
-import type { IGameState } from '../../../turbo/src';
-import type { BloomBeastsState, BloomBeastsActionData } from '../BloomBeastsGame';
-import { BloomBeastsActionType } from '../BloomBeastsGame';
-import { BaseActionHandler, ActionValidationResult } from './ActionHandler';
+import { Turbo } from '../../lib/Turbo-Standalone';
+
+import type { BloomBeastsState, BloomBeastsActionData } from '../types';
+import { BloomBeastsActionType } from '../types';
+import { BaseActionHandler, ActionValidationResult, ActionHandlerContext } from './ActionHandler';
 
 export interface DrawCardActionData extends BloomBeastsActionData {
   type: BloomBeastsActionType.DRAW_CARD;
@@ -18,7 +19,7 @@ export class DrawCardActionHandler extends BaseActionHandler<DrawCardActionData>
 
   validate(
     actionData: DrawCardActionData,
-    state: IGameState<BloomBeastsState>,
+    state: Turbo.IGameState<BloomBeastsState>,
     playerId: string
   ): ActionValidationResult {
     const playerIndex = state.gameData.players.findIndex(p => p.id === playerId);
@@ -44,9 +45,10 @@ export class DrawCardActionHandler extends BaseActionHandler<DrawCardActionData>
 
   execute(
     actionData: DrawCardActionData,
-    state: IGameState<BloomBeastsState>,
-    playerId: string
-  ): IGameState<BloomBeastsState> {
+    state: Turbo.IGameState<BloomBeastsState>,
+    playerId: string,
+    context?: ActionHandlerContext
+  ): Turbo.IActionResult<BloomBeastsState> {
     const newState = this.cloneState(state);
     const playerIndex = newState.gameData.players.findIndex(p => p.id === playerId);
     const player = newState.gameData.players[playerIndex];
@@ -60,6 +62,13 @@ export class DrawCardActionHandler extends BaseActionHandler<DrawCardActionData>
     // Update turn tracking
     newState.gameData.currentTurnActions.hasDrawnCard = true;
 
-    return newState;
+    // Create event
+    const event = this.createEvent('card_drawn', playerId);
+
+    return {
+      success: true,
+      newState,
+      sideEffects: [event],
+    };
   }
 }

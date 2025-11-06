@@ -6,6 +6,7 @@
 import { Mission } from '../types';
 import { DeckList } from '../../../engine/utils/deckBuilder';
 import { BloomBeastCard } from '../../../engine/types/core';
+import type { RuntimeBeast } from '../../../engine/types/runtime';
 
 // Get Cluck Norris deck - 3 level 9 Cluck Norris beasts
 const getCluckNorrisDeck = (): DeckList => {
@@ -35,13 +36,21 @@ const getCluckNorrisDeck = (): DeckList => {
     };
   }
 
-  // Create 3 instances of Cluck Norris at level 9
-  const cluckNorrisCards: BloomBeastCard[] = [];
+  // Create 3 instances of Cluck Norris at level 9 as RuntimeBeast cards
+  const cluckNorrisCards: RuntimeBeast[] = [];
   for (let i = 1; i <= 3; i++) {
     cluckNorrisCards.push({
       ...cluckNorrisCard,
       instanceId: `cluck-norris-${i}`,
-      // Keep base stats at 99/99 as defined in the catalog
+      cardId: cluckNorrisCard.id,
+      currentXP: 25500, // Level 9 XP
+      level: 9,
+      currentLevel: 9 as any,
+      statusEffects: [],
+      // Keep base stats at 99/99 as defined in the catalog (already scaled for level 9)
+      currentAttack: cluckNorrisCard.baseAttack || 99,
+      currentHealth: cluckNorrisCard.baseHealth || 99,
+      maxHealth: cluckNorrisCard.baseHealth || 99,
     });
   }
 

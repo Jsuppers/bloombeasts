@@ -1,12 +1,19 @@
 /**
- * Player and opponent info displays (health, nectar, deck count, timer)
+ * Player and opponent info displays (health, energy, deck count, timer)
  */
 
 import type { InfoDisplaysProps } from './types';
-import { nectarEmoji, deckEmoji } from '../../constants/emojis';
+import { energyEmoji, deckEmoji } from '../../constants/emojis';
 import { UINodeType } from '../ScreenUtils';
 import { BattleDisplay } from '../../../gameManager';
 import { BindingType, UIState } from '../../types/BindingManager';
+
+// Helper to format timer display
+function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${minutes}:${secs.toString().padStart(2, '0')}`;
+}
 
 export class InfoDisplays {
   private ui: InfoDisplaysProps['ui'];
@@ -65,7 +72,7 @@ export class InfoDisplays {
             // Timer
             this.ui.Text({
               text: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
-                state.battle?.opponentTimer ? `⏱️ ${state.battle.opponentTimer}` : '⏱️ 0:00'
+                state.battle?.opponentTimer ? `⏱️ ${formatTime(state.battle.opponentTimer)}` : '⏱️ 0:00'
               ),
               style: {
                 fontSize: 15,
@@ -88,7 +95,7 @@ export class InfoDisplays {
             }),
             this.ui.Text({
               text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
-                state ? `${nectarEmoji} ${state.opponentNectar}/10` : `${nectarEmoji} 0/10`
+                state ? `${energyEmoji} ${state.opponentEnergy}/10` : `${energyEmoji} 0/10`
               ),
               style: {
                 fontSize: 15,
@@ -130,7 +137,7 @@ export class InfoDisplays {
             // Timer
             this.ui.Text({
               text: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
-                state.battle?.playerTimer ? `⏱️ ${state.battle.playerTimer}` : '⏱️ 0:00'
+                state.battle?.playerTimer ? `⏱️ ${formatTime(state.battle.playerTimer)}` : '⏱️ 0:00'
               ),
               style: {
                 fontSize: 15,
@@ -153,7 +160,7 @@ export class InfoDisplays {
             }),
             this.ui.Text({
               text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
-                state ? `${nectarEmoji} ${state.playerNectar}/10` : `${nectarEmoji} 0/10`
+                state ? `${energyEmoji} ${state.playerEnergy}/10` : `${energyEmoji} 0/10`
               ),
               style: {
                 fontSize: 15,

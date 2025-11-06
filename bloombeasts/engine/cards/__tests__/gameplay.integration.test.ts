@@ -5,14 +5,14 @@
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { GameEngine } from '../../systems/GameEngine';
-import { loadCardFromJSON } from './testUtils.js';
+import { loadCardFromJSON } from './testUtils';
 import {
   createTestGame,
   createDeck,
   createTestBeast,
   placeBeast,
   waitForEffects,
-} from './gameTestUtils.js';
+} from './gameTestUtils';
 
 // Load test cards
 const MOSSLET = loadCardFromJSON('mosslet', 'forest');

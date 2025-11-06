@@ -27,9 +27,13 @@ import type {
 
 import type {
   Level,
-  StatGain,
-  BloomBeastInstance
+  StatGain
 } from './engine/types/leveling';
+
+import type {
+  RuntimeBeast,
+  RuntimeCard
+} from './engine/types/runtime';
 
 import type {
   GameState,
@@ -41,7 +45,6 @@ import type {
 // Import systems
 import { AbilityProcessor } from './engine/systems/AbilityProcessor';
 import { CombatSystem } from './engine/systems/CombatSystem';
-import { GameEngine } from './engine/systems/GameEngine';
 import { LevelingSystem } from './engine/systems/LevelingSystem';
 
 // Import utils
@@ -67,7 +70,7 @@ import { StartMenuUI } from './screens/startmenu/StartMenuUI';
 import { MenuController } from './screens/startmenu/MenuController';
 import { MissionManager } from './screens/missions/MissionManager';
 import { MissionSelectionUI } from './screens/missions/MissionSelectionUI';
-import { MissionBattleUI } from './screens/missions/MissionBattleUI';
+import { BattleUI } from './screens/battle/BattleUI';
 
 // Import mission definitions
 import { missions, getMissionById, getAvailableMissions } from './screens/missions/definitions';
@@ -88,7 +91,6 @@ export namespace Bloombeasts {
   export const Systems = {
     AbilityProcessor,
     CombatSystem,
-    GameEngine,
     LevelingSystem
   };
 
@@ -98,7 +100,7 @@ export namespace Bloombeasts {
     MenuController,
     MissionManager,
     MissionSelectionUI,
-    MissionBattleUI
+    BattleUI
   };
 
   // Export utility functions

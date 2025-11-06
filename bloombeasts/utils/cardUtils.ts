@@ -2,10 +2,12 @@
  * Card utility functions for level/XP calculations and stat computation
  */
 
-import type { BloomBeastCard, AnyCard } from '../engine/types/core';
+import type { BloomBeastCard, AnyCard, CardType } from '../engine/types/core';
 import type { Level } from '../engine/types/leveling';
-import type { CardInstance } from '../screens/cards/types';
+import type { CardInstance } from '../screens/common/types';
+import type { RuntimeCard, RuntimeBeast } from '../engine/types/runtime';
 import { getCardDescription } from '../engine/utils/cardDescriptionGenerator';
+import { CardType as CardTypeEnum } from '../engine/types/core';
 
 // Module-level catalog manager reference for card utils
 // Set via setCatalogManagerForUtils() which is called by BloomBeastsGame
@@ -49,7 +51,7 @@ const CARD_XP_THRESHOLDS = [
 
 /**
  * Calculate card level from current XP
- * Works for all card types (Bloom, Magic, Trap, Habitat, Buff)
+ * Works for all card types (Beast, Magic, Trap, Habitat, Buff)
  * Uses standard XP thresholds for all cards
  */
 export function getCardLevel(currentXP: number): number {
@@ -75,6 +77,10 @@ export function getXPRequired(currentLevel: number, currentXP: number): number {
   return nextLevelXP - currentXP;
 }
 
+export function getXPThreshold(level: number): number {
+  return CARD_XP_THRESHOLDS[level - 1];
+}
+
 /**
  * Get card definition by ID
  */
@@ -89,102 +95,144 @@ export function getCardDefinition(cardId: string): AnyCard | undefined {
 
 /**
  * Extract base card ID (remove instance suffix)
- * e.g., "forest-bloom-1-1" → "forest-bloom"
+ * e.g., "forest-beast-1-1" → "forest-beast"
  */
 export function extractBaseCardId(instanceId: string): string {
+  if (!instanceId) return '';
   return instanceId.replace(/-\d+-\d+$/, '');
 }
 
+// CardDisplay and computeCardDisplay have been removed.
+// Use RuntimeCard directly (from engine/types/runtime).
+// To convert CardInstance to RuntimeCard, use createBattleCard().
+
 /**
- * Compute display data for a card (for UI rendering)
- * This is NOT a stored type - computed on-demand
+ * Compute level-scaled stat value
+ * Each level increases stats by 10% (Level 1 = 100%, Level 9 = 180%)
+ *
+ * @param baseStat - Base stat value at level 1
+ * @param level - Current level (1-9)
+ * @returns Scaled stat value
  */
-export interface CardDisplayData {
-  // Identity
-  id: string;
-  cardId: string;
-  name: string;
-  type: string;
-  affinity?: string;
-  cost: number;
+export function computeLeveledStat(baseStat: number, level: number): number {
+  if (level < 1) level = 1;
+  if (level > 9) level = 9;
 
-  // Computed from XP
-  level: number;
-  experience: number;
-  experienceRequired: number;
-
-  // Stats (for Bloom beasts)
-  baseAttack?: number;
-  baseHealth?: number;
-
-  // Abilities and effects
-  abilities?: any[];
-  description?: string;
-
-  // Visual
-  titleColor?: string;
+  const multiplier = 1.0 + ((level - 1) * 0.1); // 1.0 at level 1, 1.8 at level 9
+  return Math.round(baseStat * multiplier);
 }
 
 /**
- * Compute display data from a CardInstance
- * Merges instance data + card definition + computed level/stats
+ * Create a RuntimeCard from a CardInstance
+ * Transforms collection instance into battle-ready card with computed level and stats
+ *
+ * @param instance - CardInstance from player's collection
+ * @param cardDef - Card definition from catalog
+ * @returns RuntimeCard ready for battle (deck, hand, or field)
  */
-export function computeCardDisplay(instance: CardInstance): CardDisplayData {
-  const baseCardId = extractBaseCardId(instance.cardId);
-  const cardDef = getCardDefinition(baseCardId);
-
-  if (!cardDef) {
-    // Fallback for missing definition
-    return {
-      id: instance.id,
-      cardId: instance.cardId,
-      name: baseCardId,
-      type: 'unknown',
-      level: 1,
-      experience: instance.currentXP,
-      experienceRequired: 100,
-      cost: 0,
-    };
-  }
-
+export function createBattleCard(instance: CardInstance, cardDef: AnyCard): RuntimeCard {
   const level = getCardLevel(instance.currentXP);
-  const xpRequired = getXPRequired(level, instance.currentXP);
 
-  const displayData: CardDisplayData = {
-    id: instance.id,
-    cardId: instance.cardId,
-    name: cardDef.name,
-    type: cardDef.type,
-    affinity: 'affinity' in cardDef ? cardDef.affinity : undefined,
-    cost: cardDef.cost || 0,
-    level,
-    experience: instance.currentXP,
-    experienceRequired: xpRequired,
-  };
+  // For Beast cards, compute level-scaled stats
+  if (cardDef.type === CardTypeEnum.Beast && 'baseAttack' in cardDef && 'baseHealth' in cardDef) {
+    const beastCard = cardDef as BloomBeastCard;
+    const scaledAttack = computeLeveledStat(beastCard.baseAttack, level);
+    const scaledHealth = computeLeveledStat(beastCard.baseHealth, level);
 
-  // Add type-specific data (base stats only - level bonuses applied in battle)
-  if (cardDef.type === 'Bloom' && 'baseAttack' in cardDef) {
-    const bloomCard = cardDef as BloomBeastCard;
-    displayData.baseAttack = bloomCard.baseAttack;
-    displayData.baseHealth = bloomCard.baseHealth;
+    const runtimeBeast: RuntimeBeast = {
+      ...beastCard,
+      instanceId: instance.id,
+      cardId: beastCard.id,      // Base card ID (required by RuntimeBeast)
+      currentXP: instance.currentXP,
+      level,
+      currentLevel: level as Level,  // Strongly-typed level (required by RuntimeBeast)
+      currentAttack: scaledAttack,
+      currentHealth: scaledHealth,
+      maxHealth: scaledHealth,
+      statusEffects: [],         // Initialize empty status effects (required by RuntimeBeast)
+    };
+
+    return runtimeBeast;
   }
 
-  // Add abilities (abilities remain constant across all levels)
-  if ('abilities' in cardDef) {
-    displayData.abilities = cardDef.abilities as any[];
-  }
-
-  // Generate description from abilities using getCardDescription
-  const cardWithAbilities = {
+  // For non-Beast cards, just add instance metadata
+  const runtimeCard = {
     ...cardDef,
-    abilities: displayData.abilities
-  };
-  displayData.description = getCardDescription(cardWithAbilities);
+    instanceId: instance.id,
+    currentXP: instance.currentXP,
+    level,
+  } as RuntimeCard;
 
-  // Add visual properties
-  if ('titleColor' in cardDef) {
-    displayData.titleColor = cardDef.titleColor;
+  return runtimeCard;
+}
+
+/**
+ * Get player's deck cards for battle
+ * Converts minimal CardInstance to full battle cards using definitions
+ */
+export function getPlayerDeckCards(playerDeck: string[], cardInstances: CardInstance[]): RuntimeCard[] {
+  if (!_cardUtilsCatalogManager) {
+    console.warn('[cardUtils] catalogManager not initialized');
+    return [];
   }
 
-  return displayData;
+  const deckCards: RuntimeCard[] = [];
+  const allCardDefs = _cardUtilsCatalogManager.getAllCardData();
+
+  // Convert all cards from player's deck to RuntimeCards
+  for (const cardId of playerDeck) {
+    const cardInstance = cardInstances.find(c => c.id === cardId);
+
+    if (cardInstance) {
+      // Get the card definition
+      const baseCardId = extractBaseCardId(cardInstance.cardId);
+      const cardDef = allCardDefs.find((card: any) => card && card.id === baseCardId);
+
+      if (!cardDef) {
+        console.warn(`[cardUtils] Card definition not found for ${cardInstance.cardId}`);
+        continue;
+      }
+
+      // Use createBattleCard to get level-scaled stats
+      const battleCard = createBattleCard(cardInstance, cardDef as AnyCard);
+      deckCards.push(battleCard);
+    }
+  }
+
+  return deckCards;
+}
+
+/**
+ * Award experience to all cards in the player's deck
+ * Level is computed from XP on-demand, so we just add XP here
+ */
+export function awardDeckExperience(totalCardXP: number, playerDeck: string[], cardInstances: CardInstance[]): void {
+  if (playerDeck.length === 0) return;
+
+  // Distribute XP evenly across all cards in deck
+  const xpPerCard = Math.floor(totalCardXP / playerDeck.length);
+
+  // Award XP to each card in the deck
+  for (const cardId of playerDeck) {
+    const cardInstance = cardInstances.find(c => c.id === cardId);
+    if (cardInstance) {
+      cardInstance.currentXP += xpPerCard;
+    }
+  }
+}
+
+/**
+ * Add card reward to collection (minimal format)
+ */
+export function addCardReward(card: any, cardInstances: CardInstance[], index: number): void {
+  const instanceId = `${card.id}-reward-${Date.now()}-${index}`;
+
+  // Create minimal card instance (all types use same format)
+  const cardInstance: CardInstance = {
+    id: instanceId,
+    cardId: card.id,
+    currentXP: 0, // New cards start at 0 XP (level 1)
+  };
+
+  cardInstances.push(cardInstance);
 }

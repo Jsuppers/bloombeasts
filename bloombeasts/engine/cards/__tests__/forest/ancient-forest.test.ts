@@ -8,8 +8,8 @@ import {
   validateHabitatCard,
   validateStructuredAbility,
   loadCardFromJSON,
-} from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+} from '../testUtils';
+import { StructuredAbility } from '../../../types/abilities';
 
 const ANCIENT_FOREST = loadCardFromJSON('ancient-forest', 'forest');
 

@@ -29,8 +29,6 @@ import {
   PlayerHand,
   InfoDisplays,
   BattleSideMenu,
-  gameDimensions,
-  standardCardDimensions,
 } from './battle';
 
 export interface BattleScreenProps {
@@ -64,9 +62,6 @@ export class BattleScreen {
   private isPlayerTurnValue = false;
   private battleDisplayValue: any | null = null;
   private hasAttackableBeasts = false;
-  private showHandValue = true;
-  private handScrollOffsetValue = 0;
-  private selectedCardDetailValue: any = null;
 
   // Track current UIState value for updates
   private currentUIState: any = {
@@ -78,10 +73,6 @@ export class BattleScreen {
       selectedCardDetail: null,
     },
   };
-
-  // Configuration
-  private cardsPerRow = 5;
-  private rowsPerPage = 1;
 
   // Render guard to prevent infinite loops
   private isRendering = false;
@@ -109,11 +100,8 @@ export class BattleScreen {
     this.async = props.async;
 
     // Initialize local value trackers
-    this.showHandValue = true;
-    this.handScrollOffsetValue = 0;
     this.playerTimerValue = TURN_TIMER_SECONDS;
     this.opponentTimerValue = TURN_TIMER_SECONDS;
-    this.selectedCardDetailValue = null;
 
     // Wrap onAction to add logging
     this.onAction = props.onAction ? (action: string) => {
@@ -144,11 +132,14 @@ export class BattleScreen {
         }
       }
 
-      // Start/restart timer based on turn changes
+      // Start/restart timer based on turn changes or if timer not running
       if (this.isPlayerTurnValue !== newIsPlayerTurn) {
         this.isPlayerTurnValue = newIsPlayerTurn;
         // Restart timer to ensure it's tracking the correct player
         this.stopTurnTimer();
+        this.startTurnTimer();
+      } else if (state && this.timerInterval === null) {
+        // Start timer if it's not running but we have a valid battle state
         this.startTurnTimer();
       }
 
@@ -169,7 +160,6 @@ export class BattleScreen {
     this.trapZoneComponent = new TrapZone({
       ui: this.ui,
       onCardDetailSelected: (card) => {
-        this.selectedCardDetailValue = card;
         this.updateUIState({ selectedCardDetail: card });
       },
     });
@@ -177,7 +167,6 @@ export class BattleScreen {
     this.buffZoneComponent = new BuffZone({
       ui: this.ui,
       onCardDetailSelected: (card) => {
-        this.selectedCardDetailValue = card;
         this.updateUIState({ selectedCardDetail: card });
       },
     });
@@ -186,7 +175,6 @@ export class BattleScreen {
       ui: this.ui,
       onCardDetailSelected: (card) => {
         const habitatWithType = { ...card, type: 'Habitat' };
-        this.selectedCardDetailValue = habitatWithType;
         this.updateUIState({ selectedCardDetail: habitatWithType });
       },
     });
@@ -196,11 +184,9 @@ export class BattleScreen {
       getBattleDisplayValue: () => this.battleDisplayValue,
       onAction: this.onAction,
       onShowHandChange: (newValue) => {
-        this.showHandValue = newValue;
         this.updateUIState({ showHand: newValue });
       },
       onScrollOffsetChange: (newValue) => {
-        this.handScrollOffsetValue = newValue;
         this.updateUIState({ handScrollOffset: newValue });
       },
       onRenderNeeded: this.onRenderNeeded,
@@ -244,18 +230,6 @@ export class BattleScreen {
       },
     };
     this.ui.bindingManager.setBinding(BindingType.UIState, this.currentUIState);
-    this.onRenderNeeded?.();
-  }
-
-  /**
-   * Safe render wrapper to prevent infinite loops
-   */
-  private safeRender(): void {
-    if (this.isRendering) {
-      // Already rendering, schedule for after current render completes
-      this.needsRerender = true;
-      return;
-    }
     this.onRenderNeeded?.();
   }
 
@@ -386,7 +360,6 @@ export class BattleScreen {
             // Black backdrop
             this.ui.Pressable({
               onClick: () => {
-                this.selectedCardDetailValue = null;
                 this.updateUIState({ selectedCardDetail: null });
               },
               style: {
@@ -497,8 +470,8 @@ export class BattleScreen {
         const current = this.playerTimerValue;
         if (current <= 0) {
           this.stopTurnTimer();
-          // Trigger loss - forfeit the battle
-          this.onAction?.('forfeit');
+          // Player ran out of time - they lose immediately
+          this.onAction?.('timeout-player');
         } else {
           this.playerTimerValue = current - 1;
           this.updateUIState({ playerTimer: this.playerTimerValue });
@@ -507,9 +480,8 @@ export class BattleScreen {
         const current = this.opponentTimerValue;
         if (current <= 0) {
           this.stopTurnTimer();
-          // Opponent loses - this should trigger victory
-          // For now, just end their turn
-          this.onAction?.('end-turn');
+          // Opponent ran out of time - they lose immediately
+          this.onAction?.('timeout-opponent');
         } else {
           this.opponentTimerValue = current - 1;
           this.updateUIState({ opponentTimer: this.opponentTimerValue });
@@ -592,9 +564,6 @@ export class BattleScreen {
     // Reset all UI state
     this.playerTimerValue = TURN_TIMER_SECONDS;
     this.opponentTimerValue = TURN_TIMER_SECONDS;
-    this.showHandValue = true;
-    this.handScrollOffsetValue = 0;
-    this.selectedCardDetailValue = null;
 
     // Update UIState with reset values
     this.updateUIState({

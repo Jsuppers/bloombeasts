@@ -101,8 +101,8 @@ const AFFINITY_DECK_CONFIG_IDS: Record<AffinityType, AffinityDeckConfigIds> = {
  */
 const SHARED_CORE_CARD_IDS: DeckCardIdEntry[] = [
   // Basic resource generation
-  { cardId: 'energy-block', quantity: 10 },
-  { cardId: 'energy-surge', quantity: 2 },
+  { cardId: 'nectar-block', quantity: 10 },
+  { cardId: 'nectar-surge', quantity: 2 },
 ];
 
 /**

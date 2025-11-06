@@ -9,7 +9,6 @@ import { Affinity } from './core';
  */
 export enum AbilityTarget {
   Self = 'self',
-  Target = 'target',                           // The target of an attack or ability
   Attacker = 'attacker',                       // The unit attacking this unit
   AllAllies = 'all-allies',                    // All allied Beasts
   AllEnemies = 'all-enemies',                  // All enemy Beasts
@@ -18,6 +17,7 @@ export enum AbilityTarget {
   Opponent = 'opponent',                       // The opponent player
   Player = 'player',                           // The controlling player
   RandomEnemy = 'random-enemy',                // Random enemy unit
+  RandomAlly = 'random-ally',                  // Random allied unit
   AllUnits = 'all-units',                      // All units on board
   DamagedEnemies = 'damaged-enemies',          // All damaged enemy units
   WiltingEnemies = 'wilting-enemies',          // Enemy units at 1 HP
@@ -26,7 +26,8 @@ export enum AbilityTarget {
   SummonedUnit = 'summoned-unit',              // Unit being summoned (for global effects)
   DestroyedUnit = 'destroyed-unit',            // Unit that was just destroyed
   OtherAlly = 'other-ally',                    // Another allied unit (not self)
-  AttackedEnemy = 'attacked-enemy'             // The enemy unit that was attacked
+  AttackedEnemy = 'attacked-enemy',            // The enemy unit that was attacked
+  PlayedCard = 'played-card'                   // The card that was just played (triggers traps)
 }
 
 /**

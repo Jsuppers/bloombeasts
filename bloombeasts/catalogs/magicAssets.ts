@@ -4,7 +4,7 @@
 
 import type { AssetCatalog } from '../AssetCatalogManager';
 import { AssetReferenceType, AssetEntryType, UICategory, CatalogCategory, AffinityLowercase } from '../AssetCatalogManager';
-import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType } from '../engine/types/abilities';
+import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType, ResourceType } from '../engine/types/abilities';
 import { CardType } from '../engine/types/core';
 
 export const magicAssets: AssetCatalog = {
@@ -21,15 +21,16 @@ export const magicAssets: AssetCatalog = {
         name: "Aether Swap",
         type: CardType.Magic,
         cost: 1,
-        targetRequired: true,
+        targetRequired: false,
         abilities: [
           {
             name: "Aether Swap",
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
-                type: EffectType.SwapPositions,
-                target: AbilityTarget.Target
+                type: EffectType.ReturnToHand,
+                target: AbilityTarget.AllAllies,
+                value: 1
               }
             ]
           }
@@ -116,7 +117,7 @@ export const magicAssets: AssetCatalog = {
         name: "Lightning Strike",
         type: CardType.Magic,
         cost: 2,
-        targetRequired: true,
+        targetRequired: false,
         abilities: [
           {
             name: "Lightning Strike",
@@ -124,7 +125,7 @@ export const magicAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.DealDamage,
-                target: AbilityTarget.Target,
+                target: AbilityTarget.LowestHealthEnemy,
                 value: 5,
                 piercing: true
               }
@@ -141,11 +142,11 @@ export const magicAssets: AssetCatalog = {
       ]
     },
     {
-      id: "energy-block",
+      id: "nectar-block",
       type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
-        id: "energy-block",
+        id: "nectar-block",
         name: "Energy Block",
         type: CardType.Magic,
         cost: 0,
@@ -156,11 +157,11 @@ export const magicAssets: AssetCatalog = {
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
-                type: "GainResource",
+                type: EffectType.GainResource,
                 target: "Player",
-                resource: "Energy",
+                resource: ResourceType.Energy,
                 value: 2,
-                duration: "ThisTurn"
+                duration: EffectDuration.ThisTurn
               }
             ]
           }
@@ -175,11 +176,11 @@ export const magicAssets: AssetCatalog = {
       ]
     },
     {
-      id: "energy-drain",
+      id: "nectar-drain",
       type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
-        id: "energy-drain",
+        id: "nectar-drain",
         name: "Energy Drain",
         type: CardType.Magic,
         cost: 1,
@@ -190,11 +191,11 @@ export const magicAssets: AssetCatalog = {
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
-                type: "GainResource",
+                type: EffectType.GainResource,
                 target: "Player",
-                resource: "Energy",
+                resource: ResourceType.Energy,
                 value: 2,
-                duration: "ThisTurn"
+                duration: EffectDuration.ThisTurn
               },
               {
                 type: EffectType.DrawCards,
@@ -214,11 +215,11 @@ export const magicAssets: AssetCatalog = {
       ]
     },
     {
-      id: "energy-surge",
+      id: "nectar-surge",
       type: AssetEntryType.Magic,
       cardType: "Magic",
       data: {
-        id: "energy-surge",
+        id: "nectar-surge",
         name: "Energy Surge",
         type: CardType.Magic,
         cost: 1,
@@ -229,11 +230,11 @@ export const magicAssets: AssetCatalog = {
             trigger: AbilityTrigger.OnSummon,
             effects: [
               {
-                type: "GainResource",
+                type: EffectType.GainResource,
                 target: "Player",
-                resource: "Energy",
+                resource: ResourceType.Energy,
                 value: 3,
-                duration: "ThisTurn"
+                duration: EffectDuration.ThisTurn
               },
               {
                 type: EffectType.DrawCards,
@@ -295,7 +296,7 @@ export const magicAssets: AssetCatalog = {
         name: "Power Up",
         type: CardType.Magic,
         cost: 2,
-        targetRequired: true,
+        targetRequired: false,
         abilities: [
           {
             name: "Power Up",
@@ -303,7 +304,7 @@ export const magicAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.ModifyStats,
-                target: AbilityTarget.Target,
+                target: AbilityTarget.RandomAlly,
                 stat: StatType.Both,
                 value: 3,
                 duration: EffectDuration.Permanent
@@ -329,7 +330,7 @@ export const magicAssets: AssetCatalog = {
         name: "Purify",
         type: CardType.Magic,
         cost: 1,
-        targetRequired: true,
+        targetRequired: false,
         abilities: [
           {
             name: "Purify",
@@ -337,7 +338,7 @@ export const magicAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.Heal,
-                target: AbilityTarget.Target,
+                target: AbilityTarget.RandomAlly,
                 value: 3
               }
             ]

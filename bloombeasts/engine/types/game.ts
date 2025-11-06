@@ -3,11 +3,12 @@
  */
 
 import { AnyCard, HabitatCard } from './core';
-import { BloomBeastInstance, XPSource } from './leveling';
+import { RuntimeBeast } from './runtime';
+import { XPSource } from './leveling';
 import { SimpleMap } from '../../utils/polyfills';
 
 // Re-export for convenience
-export { BloomBeastInstance } from './leveling';
+export { RuntimeBeast } from './runtime';
 
 // Battle state enum for state-based battle flow
 export enum BattlePhase {
@@ -44,7 +45,7 @@ export interface Player {
   hand: AnyCard[];
   discardPile?: AnyCard[];
   graveyard: AnyCard[];  // Cards that have been destroyed
-  field: (BloomBeastInstance | null)[]; // Nullable for empty slots
+  field: (RuntimeBeast | null)[]; // Nullable for empty slots
   trapZone: (AnyCard | null)[]; // Face-down trap cards (max 3)
   buffZone: (AnyCard | null)[]; // Active buff cards (max 2)
 }
@@ -62,7 +63,7 @@ export interface GameState {
   drawCardsQueued?: number;
   drawForPlayerIndex?: 0 | 1;
   pendingMove?: {
-    unit: BloomBeastInstance;
+    unit: RuntimeBeast;
     destination: string;
   };
   pendingSearch?: {

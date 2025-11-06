@@ -77,6 +77,14 @@ export interface ForfeitAction extends BaseBattleAction {
 }
 
 /**
+ * Timeout - player ran out of time
+ */
+export interface TimeoutAction extends BaseBattleAction {
+  type: 'timeout';
+  timedOutPlayerId?: string; // Which player actually timed out
+}
+
+/**
  * Auto-attack with all available beasts
  */
 export interface AutoAttackAllAction extends BaseBattleAction {
@@ -93,6 +101,7 @@ export type BattleAction =
   | UseAbilityAction
   | EndTurnAction
   | ForfeitAction
+  | TimeoutAction
   | AutoAttackAllAction;
 
 /**
@@ -154,6 +163,12 @@ export const BattleActions = {
 
   forfeit: (playerId?: string): ForfeitAction => ({
     type: 'forfeit',
+    playerId,
+    timestamp: Date.now(),
+  }),
+
+  timeout: (playerId?: string): TimeoutAction => ({
+    type: 'timeout',
     playerId,
     timestamp: Date.now(),
   }),
@@ -280,6 +295,9 @@ export function actionToString(action: BattleAction): string {
 
     case 'forfeit':
       return 'forfeit';
+
+    case 'timeout':
+      return 'timeout';
 
     case 'auto-attack-all':
       return 'auto-attack-all';

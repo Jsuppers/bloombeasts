@@ -3,7 +3,7 @@
  * Provides type-safe ways to work with dynamic UI components
  */
 
-import type { CardDisplayData } from '../../utils/cardUtils';
+import type { RuntimeCard } from '../../engine/types/runtime';
 
 /**
  * Type annotation for UINode - since UINode is dynamically loaded, we use 'any' type
@@ -11,10 +11,12 @@ import type { CardDisplayData } from '../../utils/cardUtils';
 export type UINodeType<T = any> = any;
 
 /**
- * Extend CardDisplayData with additional UI properties
+ * UI wrapper for RuntimeCard with additional UI properties
  * These are properties used in the UI but not in the core game model
  */
-export interface UICardDisplay extends CardDisplayData {
+export interface UICardDisplay {
+  // The runtime card data
+  card: RuntimeCard;
   // Add emoji based on affinity
   emoji?: string;
   // Use level as rarity indicator
@@ -26,14 +28,14 @@ export interface UICardDisplay extends CardDisplayData {
 }
 
 /**
- * Convert CardDisplayData to UICardDisplay with additional UI properties
+ * Convert RuntimeCard to UICardDisplay with additional UI properties
  */
-export function toUICard(card: CardDisplayData): UICardDisplay {
+export function toUICard(card: RuntimeCard): UICardDisplay {
   const uiCard: UICardDisplay = {
-    ...card,
-    attack: card.baseAttack || 0,
-    defense: 0, // Not in CardDisplayData - using 0 as default
-    health: card.baseHealth || 0,
+    card: card,
+    attack: 'baseAttack' in card ? card.baseAttack : undefined,
+    defense: 0, // Not in RuntimeCard - using 0 as default
+    health: 'baseHealth' in card ? card.baseHealth : undefined,
     emoji: getCardEmoji(card),
     rarityLevel: getCardRarity(card)
   };
@@ -43,8 +45,10 @@ export function toUICard(card: CardDisplayData): UICardDisplay {
 /**
  * Get emoji based on card affinity
  */
-function getCardEmoji(card: CardDisplayData): string {
-  switch (card.affinity?.toLowerCase()) {
+function getCardEmoji(card: RuntimeCard): string {
+  // Check if card has affinity property (Beast, Buff, Habitat cards)
+  const affinity = 'affinity' in card ? (card as any).affinity : undefined;
+  switch (affinity?.toLowerCase()) {
     case 'fire':
       return '🔥';
     case 'water':
@@ -61,7 +65,7 @@ function getCardEmoji(card: CardDisplayData): string {
 /**
  * Determine rarity based on card level
  */
-function getCardRarity(card: CardDisplayData): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
+function getCardRarity(card: RuntimeCard): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
   const level = card.level || 1;
   if (level >= 10) return 'legendary';
   if (level >= 7) return 'epic';

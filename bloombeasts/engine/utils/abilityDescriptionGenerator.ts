@@ -95,8 +95,8 @@ function getTriggerText(trigger?: AbilityTrigger): string {
  * Get cost text
  */
 function getCostText(cost: any): string {
-  if (cost.type === 'nectar') {
-    return `Pay ${cost.value} Nectar:`;
+  if (cost.type === 'energy') {
+    return `Pay ${cost.value} Energy:`;
   }
   if (cost.type === 'discard') {
     return `Discard ${cost.value} card${cost.value > 1 ? 's' : ''}:`;
@@ -115,8 +115,6 @@ function getTargetText(target: AbilityTarget): string {
   switch (target) {
     case AbilityTarget.Self:
       return 'this';
-    case AbilityTarget.Target:
-      return 'target';
     case AbilityTarget.Attacker:
       return 'attacker';
     case AbilityTarget.AllAllies:
@@ -133,10 +131,20 @@ function getTargetText(target: AbilityTarget): string {
       return 'you';
     case AbilityTarget.RandomEnemy:
       return 'random enemy';
+    case AbilityTarget.RandomAlly:
+      return 'random ally';
     case AbilityTarget.AllUnits:
       return 'all Beasts';
     case AbilityTarget.OtherAlly:
       return 'another ally';
+    case AbilityTarget.AttackedEnemy:
+      return 'attacked enemy';
+    case AbilityTarget.PlayedCard:
+      return 'played card';
+    case AbilityTarget.LowestHealthEnemy:
+      return 'lowest health enemy';
+    case AbilityTarget.HighestAttackEnemy:
+      return 'highest attack enemy';
     default:
       return target;
   }
@@ -256,11 +264,11 @@ function getEffectText(effect: AbilityEffect): string {
     }
 
     case EffectType.GainResource: {
-      if (effect.resource === ResourceType.Nectar) {
-        return `gain ${effect.value} Nectar${duration ? ` ${duration}` : ''}`;
+      if (effect.resource === ResourceType.Energy) {
+        return `gain ${effect.value} Energy${duration ? ` ${duration}` : ''}`;
       }
-      if (effect.resource === ResourceType.ExtraNectarPlay) {
-        return `play ${effect.value} additional Nectar Card${effect.value > 1 ? 's' : ''}${duration ? ` ${duration}` : ''}`;
+      if (effect.resource === ResourceType.ExtraEnergyPlay) {
+        return `play ${effect.value} additional Energy Card${effect.value > 1 ? 's' : ''}${duration ? ` ${duration}` : ''}`;
       }
       return `gain ${effect.value} ${effect.resource}`;
     }

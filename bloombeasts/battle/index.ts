@@ -8,13 +8,20 @@
  * ```typescript
  * import { BattleController, BattleConfig } from './battle';
  *
- * const battleController = new BattleController(asyncMethods, callbacks);
+ * const battleController = new BattleController(asyncMethods);
  * const battle = battleController.initializeBattle({
  *   player1: { id: 'p1', name: 'Player', deck: playerDeck },
  *   player2: { id: 'p2', name: 'Opponent', deck: opponentDeck, isAI: true }
  * });
+ *
+ * // Subscribe to TURBO events
+ * const game = battleController.getGameController();
+ * game.on('stateChanged', () => console.log('State changed'));
+ * game.on('turnStarted', ({ playerId }) => console.log(`Turn started: ${playerId}`));
  * ```
  */
+
+import { Turbo } from '../lib/Turbo-Standalone';
 
 // Core exports
 export { BattleController } from './core/BattleController';
@@ -23,7 +30,6 @@ export { BattleController } from './core/BattleController';
 export type {
   BattleConfig,
   BattleState,
-  BattleCallbacks,
   BattleResult,
   BattleActionResult,
   PlayerConfig,
@@ -33,5 +39,4 @@ export type {
 export { createBloomBeastsGame, BloomBeastsRules } from './BloomBeastsGame';
 export { BloomBeastsGreedyAI, BloomBeastsRandomAI } from './BloomBeastsAI';
 
-// Re-export turbo library for direct use
-export * as Turbo from '../../turbo/src';
+// TURBO namespace is available globally via the standalone file reference

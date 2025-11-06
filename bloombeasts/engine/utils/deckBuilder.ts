@@ -143,12 +143,12 @@ export function quickWinDeck(type: DeckType): DeckList {
     }
   }
 
-  // Add 27 Nectar Blocks for fast summoning
-  const nectarBlock = _deckBuilderCatalogManager.getCard('nectar-block');
-  if (nectarBlock) {
+  // Add 27 Energy Blocks for fast summoning
+  const energyBlock = _deckBuilderCatalogManager.getCard('nectar-block');
+  if (energyBlock) {
     for (let i = 1; i <= 27; i++) {
       allCards.push({
-        ...nectarBlock,
+        ...energyBlock,
         instanceId: `nectar-block-${i}`,
       } as unknown as AnyCard);
     }

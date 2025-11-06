@@ -99,7 +99,7 @@ export const trapAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.NullifyEffect,
-                target: AbilityTarget.Target
+                target: AbilityTarget.PlayedCard
               }
             ]
           }
@@ -132,7 +132,7 @@ export const trapAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.NullifyEffect,
-                target: AbilityTarget.Target
+                target: AbilityTarget.PlayedCard
               },
               {
                 type: EffectType.DrawCards,
@@ -170,7 +170,7 @@ export const trapAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.NullifyEffect,
-                target: AbilityTarget.Target
+                target: AbilityTarget.PlayedCard
               }
             ]
           }
@@ -246,7 +246,7 @@ export const trapAssets: AssetCatalog = {
             effects: [
               {
                 type: EffectType.Destroy,
-                target: AbilityTarget.Target
+                target: AbilityTarget.PlayedCard
               }
             ]
           }

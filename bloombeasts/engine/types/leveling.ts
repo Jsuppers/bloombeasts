@@ -72,46 +72,4 @@ export interface StatModifier {
   turnsRemaining?: number;    // For temporary effects
 }
 
-/**
- * Beast instance with leveling state
- */
-export interface BloomBeastInstance {
-  cardId: string;
-  instanceId: string;
-
-  // Card properties (from blueprint)
-  name: string;
-  affinity: Affinity;
-
-  // Base stats (card stats + level bonuses, never includes buffs/modifiers)
-  baseAttack: number;
-  baseHealth: number;
-
-  // Current stats (calculated from base + all modifiers)
-  currentLevel: Level;
-  currentXP: number;
-  currentAttack: number;
-  currentHealth: number;
-  maxHealth: number;
-
-  // Stat modification tracking
-  statModifiers?: StatModifier[];
-
-  // Status effects (counters removed to reduce complexity)
-  statusEffects: any[];  // Status effects like burn, freeze, etc.
-
-  // Positioning
-  slotIndex: number;
-
-  // Combat state
-  summoningSickness: boolean;
-
-  // New properties for ability system
-  temporaryHP?: number;
-  temporaryEffects?: TemporaryEffect[];
-  immunities?: Array<string>;
-  cannotBeTargetedBy?: Array<string>;
-  targetingRestrictions?: TargetingRestrictions;
-  attackModifications?: Array<string>;
-  preventions?: PreventionEffect[];
-}
+// BloomBeastInstance has been removed. Use RuntimeBeast from engine/types/runtime.ts instead.

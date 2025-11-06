@@ -2,7 +2,7 @@
  * Combat Helper Utilities
  */
 
-import { BloomBeastInstance, Player, GameState } from '../types/game';
+import { RuntimeBeast, Player, GameState } from '../types/game';
 import { AbilityEffect } from '../types/abilities';
 import { Logger } from './Logger';
 import { FIELD_SIZE } from '../constants/gameRules';
@@ -13,8 +13,8 @@ import { getAllBeasts, getAliveBeasts } from './fieldUtils';
  */
 export function calculateDamage(
   baseDamage: number,
-  attacker: BloomBeastInstance,
-  defender: BloomBeastInstance
+  attacker: RuntimeBeast,
+  defender: RuntimeBeast
 ): number {
   let damage = baseDamage;
 
@@ -36,7 +36,7 @@ export function calculateDamage(
 /**
  * Check if a beast can attack
  */
-export function canAttack(beast: BloomBeastInstance): boolean {
+export function canAttack(beast: RuntimeBeast): boolean {
   // Check summoning sickness
   if (beast.summoningSickness) {
     return false;
@@ -57,14 +57,14 @@ export function canAttack(beast: BloomBeastInstance): boolean {
  * Get valid attack targets for a beast
  */
 export function getValidTargets(
-  attacker: BloomBeastInstance,
+  attacker: RuntimeBeast,
   gameState: GameState,
   attackerPlayer: number
-): BloomBeastInstance[] {
+): RuntimeBeast[] {
   const opponentPlayer = attackerPlayer === 0 ? 1 : 0;
   const opponent = gameState.players[opponentPlayer];
 
-  const targets: BloomBeastInstance[] = [];
+  const targets: RuntimeBeast[] = [];
 
   // Check for taunt effects
   const allOpponentBeasts = getAllBeasts(opponent.field);
@@ -84,7 +84,7 @@ export function getValidTargets(
  * Check if a beast has a specific ability effect
  */
 export function hasAbilityEffect(
-  beast: BloomBeastInstance,
+  beast: RuntimeBeast,
   effectType: string
 ): boolean {
   return beast.statusEffects?.some(e => e.type === effectType) || false;
@@ -94,7 +94,7 @@ export function hasAbilityEffect(
  * Apply a status effect to a beast
  */
 export function applyStatusEffect(
-  beast: BloomBeastInstance,
+  beast: RuntimeBeast,
   effect: AbilityEffect
 ): void {
   if (!beast.statusEffects) {
@@ -138,7 +138,7 @@ function getEffectDuration(duration: string): number {
 /**
  * Remove expired status effects
  */
-export function cleanupStatusEffects(beast: BloomBeastInstance): void {
+export function cleanupStatusEffects(beast: RuntimeBeast): void {
   if (!beast.statusEffects) return;
 
   beast.statusEffects = beast.statusEffects.filter(effect => {
@@ -150,7 +150,7 @@ export function cleanupStatusEffects(beast: BloomBeastInstance): void {
 /**
  * Decrease status effect durations
  */
-export function tickStatusEffects(beast: BloomBeastInstance): void {
+export function tickStatusEffects(beast: RuntimeBeast): void {
   if (!beast.statusEffects) return;
 
   beast.statusEffects.forEach(effect => {

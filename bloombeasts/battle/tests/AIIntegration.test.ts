@@ -3,11 +3,14 @@
  * Tests the complete flow from player ending turn to AI execution
  */
 
+import { Turbo } from '../../lib/Turbo-Standalone';
+
 import { BattleController } from '../core/BattleController';
 import { BloomBeastsGreedyAI } from '../BloomBeastsAI';
 import { BloomBeastsRules, BloomBeastsActionType } from '../BloomBeastsGame';
-import { GameController, IGameConfig, PlayerType, AILevel } from '../../../turbo/src';
 import { Logger } from '../../engine/utils/Logger';
+import { RuntimeBeast } from '../types';
+import { CardType, Affinity } from '../../engine/types/core';
 
 // Mock AsyncMethods for testing
 const mockAsync = {
@@ -22,13 +25,23 @@ describe('AI Integration Tests', () => {
   });
 
   // Helper to create test cards
-  const createTestCard = (id: string, cost: number = 1) => ({
+  const createTestCard = (id: string, cost: number = 1): RuntimeBeast => ({
     id,
+    cardId: id,
+    instanceId: `${id}-instance`,
     name: `Test Card ${id}`,
-    type: 'Bloom',
+    type: CardType.Beast,
+    affinity: Affinity.Forest,
     cost,
     baseAttack: 2,
     baseHealth: 2,
+    currentAttack: 2,
+    currentHealth: 2,
+    maxHealth: 2,
+    currentXP: 0,
+    level: 1,
+    currentLevel: 1 as any,
+    statusEffects: [],
     abilities: []
   });
 
@@ -205,25 +218,25 @@ describe('AI Integration Tests', () => {
 
     // Check energy progression
     const player = battleController.getCurrentPlayer();
-    expect(player.currentEnergy).toBe(2); // Turn 2 = 2 energy
+    expect(player.energy).toBe(2); // Turn 2 = 2 energy
   });
 
   test('should properly handle AI with no available actions', async () => {
     // Create a rules instance to test directly
     const rules = new BloomBeastsRules();
-    const game = new GameController(rules);
+    const game = new Turbo.GameController(rules);
 
-    const config: IGameConfig = {
+    const config: Turbo.IGameConfig = {
       players: [
-        { id: 'player1', name: 'Human', type: PlayerType.HUMAN, metadata: { deck: [] } },
-        { id: 'ai', name: 'AI', type: PlayerType.HUMAN, metadata: { deck: [] } }
+        { id: 'player1', name: 'Human', type: Turbo.PlayerType.HUMAN, metadata: { deck: [] } },
+        { id: 'ai', name: 'AI', type: Turbo.PlayerType.HUMAN, metadata: { deck: [] } }
       ]
     };
 
     game.initialize(config);
 
     // Register AI
-    const ai = new BloomBeastsGreedyAI('ai', 'medium');
+    const ai = new BloomBeastsGreedyAI({ playerId: 'ai', difficulty: Turbo.AILevel.MEDIUM });
     game.registerAI('ai', ai);
 
     // End player 1's turn

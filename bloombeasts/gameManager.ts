@@ -5,7 +5,7 @@
  * The actual game logic is in BloomBeastsGame.ts.
  */
 
-import type { CardDisplayData } from './utils/cardUtils';
+import type { RuntimeCard } from './engine/types/runtime';
 
 /**
  * Player statistics displayed in UI
@@ -46,7 +46,7 @@ export interface MissionDisplay {
  * Card detail popup information
  */
 export interface CardDetailDisplay {
-  card: CardDisplayData;
+  card: RuntimeCard;
   buttons: string[];
   isInDeck: boolean;
 }

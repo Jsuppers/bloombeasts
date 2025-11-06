@@ -10,8 +10,8 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-31T23:57:16.767Z
- * Files: 104
+ * Generated: 2025-11-06T01:45:19.881Z
+ * Files: 112
  *
  * @version 1.0.0
  * @license MIT
@@ -33,7 +33,7 @@ namespace BloomBeasts {
   // ==================== bloombeasts\engine\types\abilities.ts ====================
 
   /**
-   * Comprehensive ability system types for Bloom Beasts
+   * Comprehensive ability system types for BloomBeasts
    */
 
 
@@ -42,15 +42,15 @@ namespace BloomBeasts {
    */
   export enum AbilityTarget {
     Self = 'self',
-    Target = 'target',                           // The target of an attack or ability
     Attacker = 'attacker',                       // The unit attacking this unit
-    AllAllies = 'all-allies',                    // All allied Bloom Beasts
-    AllEnemies = 'all-enemies',                  // All enemy Bloom Beasts
+    AllAllies = 'all-allies',                    // All allied Beasts
+    AllEnemies = 'all-enemies',                  // All enemy Beasts
     AdjacentAllies = 'adjacent-allies',          // Adjacent allied units
     AdjacentEnemies = 'adjacent-enemies',        // Adjacent enemy units
     Opponent = 'opponent',                       // The opponent player
     Player = 'player',                           // The controlling player
     RandomEnemy = 'random-enemy',                // Random enemy unit
+    RandomAlly = 'random-ally',                  // Random allied unit
     AllUnits = 'all-units',                      // All units on board
     DamagedEnemies = 'damaged-enemies',          // All damaged enemy units
     WiltingEnemies = 'wilting-enemies',          // Enemy units at 1 HP
@@ -59,7 +59,8 @@ namespace BloomBeasts {
     SummonedUnit = 'summoned-unit',              // Unit being summoned (for global effects)
     DestroyedUnit = 'destroyed-unit',            // Unit that was just destroyed
     OtherAlly = 'other-ally',                    // Another allied unit (not self)
-    AttackedEnemy = 'attacked-enemy'             // The enemy unit that was attacked
+    AttackedEnemy = 'attacked-enemy',            // The enemy unit that was attacked
+    PlayedCard = 'played-card'                   // The card that was just played (triggers traps)
   }
 
   /**
@@ -153,16 +154,16 @@ namespace BloomBeasts {
    * Resource types
    */
   export enum ResourceType {
-    Nectar = 'nectar',
+    Energy = 'energy',
     ExtraSummon = 'extra-summon',
-    ExtraNectarPlay = 'extra-nectar-play'
+    ExtraEnergyPlay = 'extra-energy-play'
   }
 
   /**
    * Cost types for abilities
    */
   export enum CostType {
-    Nectar = 'nectar',
+    Energy = 'energy',
     Discard = 'discard',
     Sacrifice = 'sacrifice'
   }
@@ -451,13 +452,26 @@ namespace BloomBeasts {
   // ==================== bloombeasts\engine\types\core.ts ====================
 
   /**
-   * Core type definitions for Bloom Beasts card game
+   * Core type definitions for BloomBeasts card game
    */
 
 
-  export type Affinity = 'Forest' | 'Fire' | 'Water' | 'Sky' | 'Generic' | 'Boss';
+  export enum Affinity {
+    Forest = 'Forest',
+    Fire = 'Fire',
+    Water = 'Water',
+    Sky = 'Sky',
+    Generic = 'Generic',
+    Boss = 'Boss'
+  }
 
-  export type CardType = 'Magic' | 'Trap' | 'Bloom' | 'Habitat' | 'Buff';
+  export enum CardType {
+    Magic = 'Magic',
+    Trap = 'Trap',
+    Beast = 'Beast',
+    Habitat = 'Habitat',
+    Buff = 'Buff'
+  }
 
   // Counter types removed to reduce game complexity
 
@@ -470,15 +484,13 @@ namespace BloomBeasts {
     type: CardType;
     cost: number;
     titleColor?: string;  // Optional custom color for card title (hex color, e.g., '#000000')
-    instanceId?: string;  // Optional instance ID for tracking unique card instances in battle
-    level?: number;  // Optional runtime level for card instances (not present in card definitions)
   }
 
   /**
    * Trigger conditions for trap cards
    */
   export enum TrapTrigger {
-    OnBloomPlay = 'OnBloomPlay',          // When opponent plays a Bloom Beast
+    OnBeastPlay = 'OnBeastPlay',          // When opponent plays a Beast
     OnHabitatPlay = 'OnHabitatPlay',      // When opponent plays a Habitat
     OnMagicPlay = 'OnMagicPlay',          // When opponent plays a Magic card
     OnAttack = 'OnAttack',                // When opponent attacks
@@ -514,8 +526,8 @@ namespace BloomBeasts {
    * Magic card
    */
   export interface MagicCard extends Card {
-    type: 'Magic';
-    abilities: Ability[];  // Standardized to use abilities like BloomBeast cards
+    type: CardType.Magic;
+    abilities: Ability[];  // Standardized to use abilities like Beast cards
     targetRequired?: boolean;  // Whether the card needs a target
   }
 
@@ -523,32 +535,32 @@ namespace BloomBeasts {
    * Trap card
    */
   export interface TrapCard extends Card {
-    type: 'Trap';
+    type: CardType.Trap;
     activation: TrapActivation;  // Structured activation instead of string
-    abilities: Ability[];         // Standardized to use abilities like BloomBeast cards
+    abilities: Ability[];         // Standardized to use abilities like Beast cards
   }
 
   /**
    * Habitat card
    */
   export interface HabitatCard extends Card {
-    type: 'Habitat';
+    type: CardType.Habitat;
     affinity: Affinity;
-    abilities: Ability[];  // Standardized to use abilities like BloomBeast cards
+    abilities: Ability[];  // Standardized to use abilities like Beast cards
   }
 
   /**
    * Buff card - stays on board and provides ongoing effects
    */
   export interface BuffCard extends Card {
-    type: 'Buff';
+    type: CardType.Buff;
     affinity?: Affinity;  // Optional affinity for buff cards
-    abilities: Ability[];  // Standardized to use abilities like BloomBeast cards
+    abilities: Ability[];  // Standardized to use abilities like Beast cards
     duration?: number;  // Optional turn duration (undefined = permanent)
   }
 
   /**
-   * Bloom Beast card
+   * Beast card
    *
    * All cards use standard leveling progression:
    * - Standard XP requirements (10, 20, 40, 80, 160, 320, 640, 1280)
@@ -556,12 +568,12 @@ namespace BloomBeasts {
    * - Abilities remain constant across all levels
    */
   export interface BloomBeastCard extends Card {
-    type: 'Bloom';
+    type: CardType.Beast;
     affinity: Affinity;
     baseAttack: number;
     baseHealth: number;
     abilities: Ability[];  // Array of passive abilities (constant across all levels)
-    // Note: Card definitions are blueprints. All cards (Bloom, Magic, Trap, Habitat, Buff)
+    // Note: Card definitions are blueprints. All cards (Beast, Magic, Trap, Habitat, Buff)
     // start at level 1 with 0 XP when added to player's collection as CardInstance objects.
     // Level and XP tracking is handled by the CardInstance interface, not the card definitions.
   }
@@ -605,7 +617,10 @@ namespace BloomBeasts {
   /**
    * XP source tracking
    */
-  export type XPSource = 'Combat' | 'NectarSacrifice';
+  export enum XPSource {
+    Combat = 'Combat',
+    EnergySacrifice = 'EnergySacrifice'
+  }
 
   /**
    * Temporary effect on a unit
@@ -657,48 +672,183 @@ namespace BloomBeasts {
     turnsRemaining?: number;    // For temporary effects
   }
 
+  // BloomBeastInstance has been removed. Use RuntimeBeast from engine/types/runtime.ts instead.
+
+  // ==================== bloombeasts\engine\types\runtime.ts ====================
+
   /**
-   * Beast instance with leveling state
+   * Runtime Card Types
+   *
+   * Unified type system for cards during gameplay (battle, field, UI rendering).
+   * These types extend card definitions with instance metadata and runtime state.
+   *
+   * REPLACES:
+   * - BattleBeast, BattleMagic, BattleTrap, BattleBuff, BattleHabitat (from battle/types.ts)
+   * - BloomBeastInstance (from engine/types/leveling.ts)
+   * - CardDisplay (from utils/cardUtils.ts)
+   *
+   * ARCHITECTURE:
+   * - CardInstance (screens/cards/types.ts): Minimal storage (id, cardId, currentXP)
+   * - *Card types (engine/types/core.ts): Readonly catalog definitions
+   * - Runtime* types (this file): Full gameplay state (extends card definitions)
    */
-  export interface BloomBeastInstance {
-    cardId: string;
-    instanceId: string;
 
-    // Card properties (from blueprint)
-    name: string;
-    affinity: Affinity;
 
-    // Base stats (card stats + level bonuses, never includes buffs/modifiers)
-    baseAttack: number;
-    baseHealth: number;
+  /**
+   * Base runtime card interface
+   * Extends card definitions with instance metadata
+   */
+  export interface RuntimeCardBase {
+    // Instance identity (from CardInstance)
+    instanceId: string;    // Unique instance ID (e.g., "forest-beast-1-1")
+    currentXP: number;     // Current XP for leveling
+    level: number;         // Current level (1-9), computed from currentXP
 
-    // Current stats (calculated from base + all modifiers)
-    currentLevel: Level;
-    currentXP: number;
-    currentAttack: number;
-    currentHealth: number;
-    maxHealth: number;
+    // All card definition properties inherited via extension
+  }
 
-    // Stat modification tracking
-    statModifiers?: StatModifier[];
+  /**
+   * Runtime Beast Card
+   *
+   * Unified type for beasts in any context:
+   * - In deck/hand: Basic state (summoningSickness not set)
+   * - On field: Full state with slotIndex, modifiers, effects
+   * - In UI: All display properties available
+   *
+   * REPLACES: BattleBeast, BloomBeastInstance, CardDisplay (for beasts)
+   */
+  export interface RuntimeBeast extends BloomBeastCard, RuntimeCardBase {
+    // Card definition properties from BloomBeastCard:
+    // - id: string (base card ID, e.g., "forest-beast")
+    // - name: string
+    // - type: CardType.Beast
+    // - cost: number
+    // - affinity: Affinity
+    // - baseAttack: number (base stats without level bonuses or modifiers)
+    // - baseHealth: number
+    // - abilities: Ability[]
+    // - titleColor?: string
 
-    // Status effects (counters removed to reduce complexity)
-    statusEffects: any[];  // Status effects like burn, freeze, etc.
+    // Additional tracking (from BloomBeastInstance)
+    cardId: string;          // Base card ID (same as id, kept for compatibility)
 
-    // Positioning
-    slotIndex: number;
+    // Runtime combat stats (includes level scaling and modifiers)
+    currentAttack: number;   // Current attack (base + level + modifiers)
+    currentHealth: number;   // Current health (decreases with damage)
+    maxHealth: number;       // Maximum health for this level (base + level bonuses)
 
-    // Combat state
-    summoningSickness: boolean;
+    // Game engine tracking (required for game engine)
+    currentLevel: Level;             // Strongly-typed level (1-9)
+    statusEffects: any[];            // Status effects like burn, freeze, etc.
+    statModifiers?: StatModifier[];  // Active stat modifications
 
-    // New properties for ability system
-    temporaryHP?: number;
-    temporaryEffects?: TemporaryEffect[];
-    immunities?: Array<string>;
-    cannotBeTargetedBy?: Array<string>;
+    // Battle state (optional - only set when card is in play)
+    summoningSickness?: boolean;     // True when first played, prevents actions
+    usedAbilityThisTurn?: boolean;   // True if ability was used this turn
+    slotIndex?: number;              // Position on field (0-2)
+    temporaryHP?: number;            // Temporary HP from abilities
+    temporaryEffects?: TemporaryEffect[];  // Temporary stat/effect modifications
+    immunities?: Array<string>;      // Immunity to specific effects
+    cannotBeTargetedBy?: Array<string>;  // Targeting restrictions
     targetingRestrictions?: TargetingRestrictions;
-    attackModifications?: Array<string>;
-    preventions?: PreventionEffect[];
+    attackModifications?: Array<string>;  // Attack modifications
+    preventions?: PreventionEffect[];     // Prevention effects (can't attack, etc.)
+  }
+
+  /**
+   * Runtime Magic Card
+   *
+   * Used for magic cards in deck, hand, or being played.
+   * Magic cards are one-time use and don't persist on field.
+   *
+   * REPLACES: BattleMagic
+   */
+  export interface RuntimeMagic extends MagicCard, RuntimeCardBase {
+    // Card definition properties from MagicCard:
+    // - id, name, type: CardType.Magic, cost, abilities, targetRequired, titleColor
+
+    // Magic cards have no additional runtime state
+  }
+
+  /**
+   * Runtime Trap Card
+   *
+   * Used for traps in deck, hand, or trap zone.
+   * Traps activate when their trigger condition is met.
+   *
+   * REPLACES: BattleTrap
+   */
+  export interface RuntimeTrap extends TrapCard, RuntimeCardBase {
+    // Card definition properties from TrapCard:
+    // - id, name, type: CardType.Trap, cost, activation, abilities, titleColor
+
+    // Trap-specific runtime state
+    isActive?: boolean;         // True when trap is set and active
+    turnsActive?: number;       // How many turns the trap has been active
+  }
+
+  /**
+   * Runtime Buff Card
+   *
+   * Used for buff cards in deck, hand, or buff zone.
+   * Buffs provide ongoing effects while on field.
+   *
+   * REPLACES: BattleBuff
+   */
+  export interface RuntimeBuff extends BuffCard, RuntimeCardBase {
+    // Card definition properties from BuffCard:
+    // - id, name, type: CardType.Buff, cost, affinity, abilities, duration, titleColor
+
+    // Buff-specific runtime state
+    turnsRemaining?: number;    // Remaining turns (for temporary buffs)
+    isActive?: boolean;         // True when buff is on field and active
+  }
+
+  /**
+   * Runtime Habitat Card
+   *
+   * Used for habitat cards in deck, hand, or habitat zone.
+   * Habitats provide field-wide effects.
+   *
+   * REPLACES: BattleHabitat
+   */
+  export interface RuntimeHabitat extends HabitatCard, RuntimeCardBase {
+    // Card definition properties from HabitatCard:
+    // - id, name, type: CardType.Habitat, cost, affinity, abilities, titleColor
+
+    // Habitat-specific runtime state
+    isActive?: boolean;         // True when habitat is on field
+    turnsActive?: number;       // How many turns habitat has been active
+  }
+
+  /**
+   * Union type for all runtime cards
+   *
+   * REPLACES: BattleCard
+   */
+  export type RuntimeCard = RuntimeBeast | RuntimeMagic | RuntimeTrap | RuntimeBuff | RuntimeHabitat;
+
+  /**
+   * Type guards for runtime cards
+   */
+  export function isRuntimeBeast(card: RuntimeCard): card is RuntimeBeast {
+    return card.type === CardType.Beast;
+  }
+
+  export function isRuntimeMagic(card: RuntimeCard): card is RuntimeMagic {
+    return card.type === CardType.Magic;
+  }
+
+  export function isRuntimeTrap(card: RuntimeCard): card is RuntimeTrap {
+    return card.type === CardType.Trap;
+  }
+
+  export function isRuntimeBuff(card: RuntimeCard): card is RuntimeBuff {
+    return card.type === CardType.Buff;
+  }
+
+  export function isRuntimeHabitat(card: RuntimeCard): card is RuntimeHabitat {
+    return card.type === CardType.Habitat;
   }
 
   // ==================== bloombeasts\utils\polyfills.ts ====================
@@ -843,23 +993,29 @@ namespace BloomBeasts {
   }
 
   // Phase type for game flow (kept for backward compatibility)
-  export type Phase = 'Setup' | 'Draw' | 'Main' | 'Combat' | 'End';
+  export enum Phase {
+    Setup = 'Setup',
+    Draw = 'Draw',
+    Main = 'Main',
+    Combat = 'Combat',
+    End = 'End'
+  }
 
   export interface Player {
     id?: string;
     name: string;
     health: number;
     maxHealth?: number;
-    nectar?: number;
-    permanentNectar?: number;
-    temporaryNectar?: number;
-    currentNectar: number;  // Available nectar this turn
+    energy?: number;
+    permanentEnergy?: number;
+    temporaryEnergy?: number;
+    currentEnergy: number;  // Available energy this turn
     summonsThisTurn: number; // Track summons for extra summon effects
     deck: AnyCard[];
     hand: AnyCard[];
     discardPile?: AnyCard[];
     graveyard: AnyCard[];  // Cards that have been destroyed
-    field: (BloomBeastInstance | null)[]; // Nullable for empty slots
+    field: (RuntimeBeast | null)[]; // Nullable for empty slots
     trapZone: (AnyCard | null)[]; // Face-down trap cards (max 3)
     buffZone: (AnyCard | null)[]; // Active buff cards (max 2)
   }
@@ -877,7 +1033,7 @@ namespace BloomBeasts {
     drawCardsQueued?: number;
     drawForPlayerIndex?: 0 | 1;
     pendingMove?: {
-      unit: BloomBeastInstance;
+      unit: RuntimeBeast;
       destination: string;
     };
     pendingSearch?: {
@@ -918,1946 +1074,12 @@ namespace BloomBeasts {
     type: 'GAIN_XP';
     instanceId: string;
     amount: number;
-    source: 'Combat' | 'NectarSacrifice';
+    source: XPSource;
   }
 
   export interface HabitatShiftAction extends GameAction {
     type: 'HABITAT_SHIFT';
     habitatCardId: string;
-  }
-
-  // ==================== bloombeasts\engine\constants\leveling.ts ====================
-
-  /**
-   * Constants for the leveling and progression system
-   *
-   * Balanced leveling system with incremental difficulty:
-   * - Beast cards gain XP from battles (distributed evenly across deck)
-   * - Player gains XP from mission victories
-   * - Each level requires progressively more XP (exponential scaling)
-   */
-
-
-  /**
-   * XP required to reach each level from the previous level
-   * Formula: XP = 10 * (2.0 ^ (level - 1))
-   * This creates steeper exponential growth with significant difficulty increases
-   */
-  export const XP_REQUIREMENTS: Record<Level, number> = {
-    1: 0,      // Starting level
-    2: 10,     // 10 XP total
-    3: 20,     // 30 XP total
-    4: 40,     // 70 XP total
-    5: 80,     // 150 XP total
-    6: 160,    // 310 XP total
-    7: 320,    // 630 XP total
-    8: 640,    // 1270 XP total
-    9: 1280,   // 2550 XP total
-  };
-
-  /**
-   * Cumulative stat gains at each level
-   * Beasts gain +1 HP and +1 ATK every 2-3 levels on average
-   */
-  export const STAT_PROGRESSION: Record<Level, StatGain> = {
-    1: {
-      cumulativeHP: 0,
-      cumulativeATK: 0,
-    },
-    2: {
-      cumulativeHP: 1,
-      cumulativeATK: 0,
-    },
-    3: {
-      cumulativeHP: 1,
-      cumulativeATK: 1,
-    },
-    4: {
-      cumulativeHP: 2,
-      cumulativeATK: 1,
-    },
-    5: {
-      cumulativeHP: 3,
-      cumulativeATK: 2,
-    },
-    6: {
-      cumulativeHP: 4,
-      cumulativeATK: 3,
-    },
-    7: {
-      cumulativeHP: 5,
-      cumulativeATK: 4,
-    },
-    8: {
-      cumulativeHP: 6,
-      cumulativeATK: 5,
-    },
-    9: {
-      cumulativeHP: 8,
-      cumulativeATK: 6,
-    },
-  };
-
-  export const MAX_LEVEL: Level = 9;
-
-  export const NECTAR_XP_COST = 1;
-
-  // ==================== bloombeasts\engine\utils\fieldUtils.ts ====================
-
-  /**
-   * Field Utilities
-   *
-   * Helper functions for working with the battlefield and beast fields.
-   * Eliminates common iteration patterns throughout the codebase.
-   */
-
-
-  /**
-   * Iterate over all beasts in the field, including null slots
-   * @param field The field array
-   * @param callback Function to call for each slot
-   */
-  export function forEachBeast(
-    field: (BloomBeastInstance | null)[],
-    callback: (beast: BloomBeastInstance | null, index: number) => void
-  ): void {
-    field.forEach((beast, index) => callback(beast, index));
-  }
-
-  /**
-   * Iterate over only non-null beasts in the field
-   * @param field The field array
-   * @param callback Function to call for each beast
-   */
-  export function forEachActiveBeast(
-    field: (BloomBeastInstance | null)[],
-    callback: (beast: BloomBeastInstance, index: number) => void
-  ): void {
-    field.forEach((beast, index) => {
-      if (beast !== null) {
-        callback(beast, index);
-      }
-    });
-  }
-
-  /**
-   * Get all beasts from the field (including null slots)
-   * @param field The field array
-   * @returns Array of beasts and nulls
-   */
-  export function getAllSlots(field: (BloomBeastInstance | null)[]): (BloomBeastInstance | null)[] {
-    return [...field];
-  }
-
-  /**
-   * Get all non-null beasts from the field
-   * @param field The field array
-   * @returns Array of beasts (no nulls)
-   */
-  export function getAllBeasts(field: (BloomBeastInstance | null)[]): BloomBeastInstance[] {
-    return field.filter((beast): beast is BloomBeastInstance => beast !== null);
-  }
-
-  /**
-   * Get all alive (HP > 0) beasts from the field
-   * @param field The field array
-   * @returns Array of alive beasts
-   */
-  export function getAliveBeasts(field: (BloomBeastInstance | null)[]): BloomBeastInstance[] {
-    return field.filter(
-      (beast): beast is BloomBeastInstance => beast !== null && beast.currentHealth > 0
-    );
-  }
-
-  /**
-   * Get all dead (HP <= 0) beasts from the field
-   * @param field The field array
-   * @returns Array of dead beasts
-   */
-  export function getDeadBeasts(field: (BloomBeastInstance | null)[]): BloomBeastInstance[] {
-    return field.filter(
-      (beast): beast is BloomBeastInstance => beast !== null && beast.currentHealth <= 0
-    );
-  }
-
-  /**
-   * Count alive beasts in the field
-   * @param field The field array
-   * @returns Number of alive beasts
-   */
-  export function countAliveBeasts(field: (BloomBeastInstance | null)[]): number {
-    return getAliveBeasts(field).length;
-  }
-
-  /**
-   * Count total beasts in the field (excluding null slots)
-   * @param field The field array
-   * @returns Number of beasts
-   */
-  export function countBeasts(field: (BloomBeastInstance | null)[]): number {
-    return getAllBeasts(field).length;
-  }
-
-  /**
-   * Find first empty slot in the field
-   * @param field The field array
-   * @returns Index of first empty slot, or -1 if none
-   */
-  export function findEmptySlot(field: (BloomBeastInstance | null)[]): number {
-    return field.findIndex((beast) => beast === null);
-  }
-
-  /**
-   * Check if field has any empty slots
-   * @param field The field array
-   * @returns True if at least one empty slot exists
-   */
-  export function hasEmptySlot(field: (BloomBeastInstance | null)[]): boolean {
-    return findEmptySlot(field) !== -1;
-  }
-
-  /**
-   * Check if field is full (no empty slots)
-   * @param field The field array
-   * @returns True if no empty slots
-   */
-  export function isFieldFull(field: (BloomBeastInstance | null)[]): boolean {
-    return !hasEmptySlot(field);
-  }
-
-  /**
-   * Get beasts by affinity
-   * @param field The field array
-   * @param affinity The affinity to filter by
-   * @returns Array of beasts with matching affinity
-   */
-  export function getBeastsByAffinity(
-    field: (BloomBeastInstance | null)[],
-    affinity: string
-  ): BloomBeastInstance[] {
-    return getAllBeasts(field).filter((beast) => beast.affinity === affinity);
-  }
-
-  /**
-   * Get beast at specific index
-   * @param field The field array
-   * @param index The slot index
-   * @returns Beast at index or null
-   */
-  export function getBeastAtIndex(
-    field: (BloomBeastInstance | null)[],
-    index: number
-  ): BloomBeastInstance | null {
-    if (index < 0 || index >= field.length) {
-      return null;
-    }
-    return field[index];
-  }
-
-  /**
-   * Find beast by instance ID
-   * @param field The field array
-   * @param instanceId The instance ID to find
-   * @returns Object with beast and index, or null if not found
-   */
-  export function findBeastById(
-    field: (BloomBeastInstance | null)[],
-    instanceId: string
-  ): { beast: BloomBeastInstance; index: number } | null {
-    for (let i = 0; i < field.length; i++) {
-      const beast = field[i];
-      if (beast && beast.instanceId === instanceId) {
-        return { beast, index: i };
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Get adjacent beasts (left and right neighbors)
-   * @param field The field array
-   * @param index The slot index
-   * @returns Array of adjacent beasts (may be empty or contain 1-2 beasts)
-   */
-  export function getAdjacentBeasts(
-    field: (BloomBeastInstance | null)[],
-    index: number
-  ): BloomBeastInstance[] {
-    const adjacent: BloomBeastInstance[] = [];
-
-    // Left neighbor
-    if (index > 0 && field[index - 1]) {
-      adjacent.push(field[index - 1]!);
-    }
-
-    // Right neighbor
-    if (index < field.length - 1 && field[index + 1]) {
-      adjacent.push(field[index + 1]!);
-    }
-
-    return adjacent;
-  }
-
-  /**
-   * Clear all dead beasts from field and move to graveyard
-   * @param player The player whose field to clear
-   * @returns Array of removed beasts
-   */
-  export function clearDeadBeasts(player: Player): BloomBeastInstance[] {
-    const deadBeasts: BloomBeastInstance[] = [];
-
-    for (let i = 0; i < player.field.length; i++) {
-      const beast = player.field[i];
-      if (beast && beast.currentHealth <= 0) {
-        deadBeasts.push(beast);
-        player.field[i] = null;
-      }
-    }
-
-    return deadBeasts;
-  }
-
-  /**
-   * Get total attack power of all alive beasts
-   * @param field The field array
-   * @returns Sum of all attack values
-   */
-  export function getTotalAttackPower(field: (BloomBeastInstance | null)[]): number {
-    return getAliveBeasts(field).reduce((total, beast) => total + beast.currentAttack, 0);
-  }
-
-  /**
-   * Get total health of all alive beasts
-   * @param field The field array
-   * @returns Sum of all health values
-   */
-  export function getTotalHealth(field: (BloomBeastInstance | null)[]): number {
-    return getAliveBeasts(field).reduce((total, beast) => total + beast.currentHealth, 0);
-  }
-
-  // ==================== bloombeasts\engine\utils\random.ts ====================
-
-  /**
-   * Random Utilities
-   *
-   * Centralized random number generation and selection utilities.
-   * Makes randomization consistent and easier to test.
-   */
-
-  /**
-   * Pick a random element from an array
-   * @param array The array to pick from
-   * @returns Random element from array, or undefined if empty
-   */
-  export function pickRandom<T>(array: T[]): T | undefined {
-    if (array.length === 0) {
-      return undefined;
-    }
-    return array[Math.floor(Math.random() * array.length)];
-  }
-
-  /**
-   * Pick multiple random elements from an array (without replacement)
-   * @param array The array to pick from
-   * @param count Number of elements to pick
-   * @returns Array of random elements
-   */
-  export function pickRandomMultiple<T>(array: T[], count: number): T[] {
-    if (count <= 0 || array.length === 0) {
-      return [];
-    }
-
-    const result: T[] = [];
-    const available = [...array];
-
-    const actualCount = Math.min(count, available.length);
-
-    for (let i = 0; i < actualCount; i++) {
-      const index = Math.floor(Math.random() * available.length);
-      result.push(available[index]);
-      available.splice(index, 1);
-    }
-
-    return result;
-  }
-
-  /**
-   * Shuffle an array in place using Fisher-Yates algorithm
-   * @param array The array to shuffle
-   * @returns The same array, shuffled
-   */
-  export function shuffle<T>(array: T[]): T[] {
-    for (let i = array.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [array[i], array[j]] = [array[j], array[i]];
-    }
-    return array;
-  }
-
-  /**
-   * Get a random integer between min (inclusive) and max (inclusive)
-   * @param min Minimum value
-   * @param max Maximum value
-   * @returns Random integer
-   */
-  export function randomInt(min: number, max: number): number {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
-  /**
-   * Get a random number between min (inclusive) and max (exclusive)
-   * @param min Minimum value
-   * @param max Maximum value
-   * @returns Random number
-   */
-  export function randomFloat(min: number, max: number): number {
-    return Math.random() * (max - min) + min;
-  }
-
-  /**
-   * Roll a percentage chance (0-100)
-   * @param chance Percentage chance (0-100)
-   * @returns True if roll succeeded
-   */
-  export function rollChance(chance: number): boolean {
-    return Math.random() * 100 < chance;
-  }
-
-  /**
-   * Roll a probability (0-1)
-   * @param probability Probability (0-1)
-   * @returns True if roll succeeded
-   */
-  export function rollProbability(probability: number): boolean {
-    return Math.random() < probability;
-  }
-
-  /**
-   * Pick a weighted random element from an array
-   * @param items Array of items
-   * @param weights Array of weights (same length as items)
-   * @returns Random element based on weights, or undefined if empty
-   */
-  export function pickWeightedRandom<T>(items: T[], weights: number[]): T | undefined {
-    if (items.length === 0 || items.length !== weights.length) {
-      return undefined;
-    }
-
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    let random = Math.random() * totalWeight;
-
-    for (let i = 0; i < items.length; i++) {
-      random -= weights[i];
-      if (random <= 0) {
-        return items[i];
-      }
-    }
-
-    return items[items.length - 1];
-  }
-
-  /**
-   * Generate a random ID string
-   * @param prefix Optional prefix for the ID
-   * @param length Length of random part (default: 8)
-   * @returns Random ID string
-   */
-  export function generateId(prefix: string = '', length: number = 8): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let id = prefix;
-    for (let i = 0; i < length; i++) {
-      id += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return id;
-  }
-
-  /**
-   * Coin flip - returns true or false with 50/50 chance
-   * @returns Random boolean
-   */
-  export function coinFlip(): boolean {
-    return Math.random() < 0.5;
-  }
-
-  /**
-   * Roll a dice with specified number of sides
-   * @param sides Number of sides on the dice
-   * @returns Random number from 1 to sides (inclusive)
-   */
-  export function rollDice(sides: number): number {
-    return randomInt(1, sides);
-  }
-
-  // ==================== bloombeasts\engine\systems\AbilityProcessor.ts ====================
-
-  /**
-   * Ability Processor - Executes ability effects in the game
-   */
-
-
-  export interface AbilityContext {
-    source: BloomBeastInstance;        // The unit using the ability
-    sourceCard?: BloomBeastCard;       // The card definition of the source
-    trigger: string;                    // What triggered this ability
-    target?: BloomBeastInstance;        // Direct target if applicable
-    attacker?: BloomBeastInstance;      // Attacking unit if this is a defense trigger
-    gameState: GameState;
-    controllingPlayer: Player;
-    opposingPlayer: Player;
-  }
-
-  export interface EffectResult {
-    success: boolean;
-    message?: string;
-    modifiedState?: Partial<GameState>;
-    modifiedUnits?: BloomBeastInstance[];
-  }
-
-  export class AbilityProcessor implements IAbilityProcessor {
-    /**
-     * Deep clone a beast instance to avoid reference issues
-     */
-    private cloneBeast(beast: BloomBeastInstance): BloomBeastInstance {
-      return {
-        ...beast,
-        temporaryEffects: beast.temporaryEffects?.map(e => ({ ...e })) || [],
-        statusEffects: [...beast.statusEffects],
-        immunities: beast.immunities ? [...beast.immunities] : undefined,
-        cannotBeTargetedBy: beast.cannotBeTargetedBy ? [...beast.cannotBeTargetedBy] : undefined,
-        attackModifications: beast.attackModifications ? [...beast.attackModifications] : undefined,
-        preventions: beast.preventions?.map(p => ({ ...p })) || undefined,
-        targetingRestrictions: beast.targetingRestrictions ? { ...beast.targetingRestrictions } : undefined,
-      };
-    }
-
-    /**
-     * Process a structured ability
-     */
-    processAbility(
-      ability: StructuredAbility,
-      context: AbilityContext
-    ): EffectResult[] {
-      // Check if ability can be used
-      if (!this.canUseAbility(ability, context)) {
-        return [{ success: false, message: 'Cannot use ability' }];
-      }
-
-      // Process each effect
-      const results: EffectResult[] = [];
-      for (const effect of ability.effects) {
-        const result = this.processEffect(effect, context);
-        results.push(result);
-      }
-
-      return results;
-    }
-
-    /**
-     * Check if ability can be used
-     */
-    private canUseAbility(
-      ability: StructuredAbility,
-      context: AbilityContext
-    ): boolean {
-      // Check cost
-      if (ability.cost) {
-        switch (ability.cost.type) {
-          case 'nectar':
-            if (context.controllingPlayer.currentNectar < (ability.cost.value || 1)) {
-              return false;
-            }
-            break;
-          case 'discard':
-            if (context.controllingPlayer.hand.length < (ability.cost.value || 1)) {
-              return false;
-            }
-            break;
-          // Counter costs removed
-        }
-      }
-
-      return true;
-    }
-
-    /**
-     * Process a single effect
-     */
-    private processEffect(
-      effect: AbilityEffect,
-      context: AbilityContext
-    ): EffectResult {
-      // Check condition if present
-      if (effect.condition && !this.checkCondition(effect.condition, context)) {
-        return { success: false, message: 'Condition not met' };
-      }
-
-      // Get targets
-      const targets = this.resolveTargets(effect.target, context);
-      if (targets.length === 0 && effect.target !== AbilityTarget.Opponent && effect.target !== AbilityTarget.Player) {
-        return { success: false, message: 'No valid targets' };
-      }
-
-      // Process based on effect type
-      switch (effect.type) {
-        case EffectType.ModifyStats:
-          return this.processStatModification(effect as StatModificationEffect, targets, context);
-        case EffectType.DealDamage:
-          return this.processDamage(effect as DamageEffect, targets, context);
-        case EffectType.Heal:
-          return this.processHeal(effect as HealEffect, targets, context);
-        case EffectType.DrawCards:
-          return this.processDrawCards(effect as DrawCardEffect, context);
-        // Counter effects removed
-        case EffectType.Immunity:
-          return this.processImmunity(effect as ImmunityEffect, targets, context);
-        case EffectType.CannotBeTargeted:
-          return this.processCannotBeTargeted(effect as CannotBeTargetedEffect, targets, context);
-        case EffectType.AttackModification:
-          return this.processAttackModification(effect as AttackModificationEffect, context);
-        case EffectType.MoveUnit:
-          return this.processMoveUnit(effect as MoveEffect, targets, context);
-        case EffectType.GainResource:
-          return this.processResourceGain(effect as ResourceGainEffect, context);
-        case EffectType.PreventAttack:
-        case EffectType.PreventAbilities:
-          return this.processPrevent(effect as PreventEffect, targets, context);
-        case EffectType.Destroy:
-          return this.processDestroy(effect as DestroyEffect, targets, context);
-        case EffectType.TemporaryHP:
-          return this.processTemporaryHP(effect as TemporaryHPEffect, targets, context);
-        default:
-          return { success: false, message: 'Unknown effect type' };
-      }
-    }
-
-    /**
-     * Resolve targets based on target type
-     */
-    private resolveTargets(
-      targetType: AbilityTarget,
-      context: AbilityContext
-    ): BloomBeastInstance[] {
-      const targets: BloomBeastInstance[] = [];
-
-      switch (targetType) {
-        case AbilityTarget.Self:
-          targets.push(context.source);
-          break;
-        case AbilityTarget.Target:
-          if (context.target) targets.push(context.target);
-          break;
-        case AbilityTarget.Attacker:
-          if (context.attacker) targets.push(context.attacker);
-          break;
-        case AbilityTarget.AllAllies:
-          targets.push(...getAllBeasts(context.controllingPlayer.field));
-          break;
-        case AbilityTarget.OtherAlly:
-          // Get all allies except self
-          targets.push(...getAllBeasts(context.controllingPlayer.field)
-            .filter(beast => beast.instanceId !== context.source.instanceId));
-          break;
-        case AbilityTarget.AllEnemies:
-          targets.push(...getAllBeasts(context.opposingPlayer.field));
-          break;
-        case AbilityTarget.AdjacentAllies:
-          const adjacentAllies = getAdjacentBeasts(context.controllingPlayer.field, context.source.slotIndex);
-          targets.push(...adjacentAllies);
-          break;
-        case AbilityTarget.AdjacentEnemies:
-          const adjacentIndices = [context.source.slotIndex - 1, context.source.slotIndex, context.source.slotIndex + 1]
-            .filter(i => i >= 0 && i < 5);
-          for (const idx of adjacentIndices) {
-            if (context.opposingPlayer.field[idx]) {
-              targets.push(context.opposingPlayer.field[idx]!);
-            }
-          }
-          break;
-        case AbilityTarget.RandomEnemy:
-          const enemies = getAllBeasts(context.opposingPlayer.field);
-          const randomEnemy = pickRandom(enemies);
-          if (randomEnemy) {
-            targets.push(randomEnemy);
-          }
-          break;
-        case AbilityTarget.DamagedEnemies:
-          targets.push(...context.opposingPlayer.field
-            .filter(u => u !== null && u.currentHealth < u.maxHealth) as BloomBeastInstance[]);
-          break;
-        case AbilityTarget.WiltingEnemies:
-          targets.push(...context.opposingPlayer.field
-            .filter(u => u !== null && u.currentHealth === 1) as BloomBeastInstance[]);
-          break;
-        case AbilityTarget.HighestAttackEnemy:
-          const highestAtk = context.opposingPlayer.field
-            .filter(u => u !== null)
-            .reduce((highest, current) => {
-              if (!highest || (current as BloomBeastInstance).currentAttack > highest.currentAttack) {
-                return current as BloomBeastInstance;
-              }
-              return highest;
-            }, null as BloomBeastInstance | null);
-          if (highestAtk) targets.push(highestAtk);
-          break;
-        case AbilityTarget.LowestHealthEnemy:
-          const lowestHP = context.opposingPlayer.field
-            .filter(u => u !== null)
-            .reduce((lowest, current) => {
-              if (!lowest || (current as BloomBeastInstance).currentHealth < lowest.currentHealth) {
-                return current as BloomBeastInstance;
-              }
-              return lowest;
-            }, null as BloomBeastInstance | null);
-          if (lowestHP) targets.push(lowestHP);
-          break;
-      }
-
-      return targets;
-    }
-
-    /**
-     * Check if a condition is met
-     */
-    private checkCondition(
-      condition: AbilityCondition,
-      context: AbilityContext
-    ): boolean {
-      switch (condition.type) {
-        // Counter conditions removed
-        case ConditionType.HealthBelow:
-          return context.source.currentHealth < (condition.value as number);
-        case ConditionType.HealthAbove:
-          return context.source.currentHealth > (condition.value as number);
-        case ConditionType.IsDamaged:
-          return context.source.currentHealth < context.source.maxHealth;
-        case ConditionType.IsWilting:
-          return context.source.currentHealth === 1;
-        case ConditionType.AffinityMatches:
-          // For OnAllySummon trigger, check the target (summoned beast)'s affinity
-          // For other triggers, check the source beast's affinity
-          if (context.trigger === 'OnAllySummon' && context.target) {
-            return context.target.affinity === condition.value;
-          }
-          const cardDef = context.sourceCard;
-          return !!(cardDef && 'affinity' in cardDef && cardDef.affinity === condition.value);
-        default:
-          return true;
-      }
-    }
-
-    /**
-     * Process stat modification effect
-     */
-    private processStatModification(
-      effect: StatModificationEffect,
-      targets: BloomBeastInstance[],
-      context: AbilityContext
-    ): EffectResult {
-      const modifiedUnits: BloomBeastInstance[] = [];
-
-      for (const target of targets) {
-        const modified = this.cloneBeast(target);
-
-        if (effect.stat === StatType.Attack || effect.stat === StatType.Both) {
-          modified.currentAttack = Math.max(0, modified.currentAttack + effect.value);
-        }
-
-        if (effect.stat === StatType.Health || effect.stat === StatType.Both) {
-          modified.currentHealth = Math.min(
-            modified.maxHealth,
-            Math.max(0, modified.currentHealth + effect.value)
-          );
-          if (effect.duration === EffectDuration.Permanent && effect.value > 0) {
-            modified.maxHealth += effect.value;
-          }
-        }
-
-        // Store duration info if not permanent
-        if (effect.duration !== EffectDuration.Permanent) {
-          modified.temporaryEffects = modified.temporaryEffects || [];
-          modified.temporaryEffects.push({
-            type: 'stat-mod',
-            stat: effect.stat,
-            value: effect.value,
-            duration: effect.duration,
-            turnsRemaining: effect.duration === EffectDuration.EndOfTurn ? 0 : 1,
-          });
-        }
-
-        modifiedUnits.push(modified);
-      }
-
-      return {
-        success: true,
-        modifiedUnits,
-        message: `Applied stat modification to ${targets.length} unit(s)`,
-      };
-    }
-
-    /**
-     * Process damage effect
-     */
-    private processDamage(
-      effect: DamageEffect,
-      targets: BloomBeastInstance[],
-      context: AbilityContext
-    ): EffectResult {
-      const modifiedUnits: BloomBeastInstance[] = [];
-      let totalDamage = 0;
-
-      for (const target of targets) {
-        const damage = effect.value === 'attack-value'
-          ? context.source.currentAttack
-          : effect.value;
-
-        const modified = this.cloneBeast(target);
-        modified.currentHealth = Math.max(0, modified.currentHealth - damage);
-        totalDamage += damage;
-        modifiedUnits.push(modified);
-      }
-
-      // Handle damage to opponent
-      if (effect.target === AbilityTarget.Opponent) {
-        const damage = effect.value === 'attack-value'
-          ? context.source.currentAttack
-          : effect.value;
-        return {
-          success: true,
-          message: `Dealt ${damage} damage to opponent`,
-          modifiedState: {
-            players: [
-              context.gameState.players[0] === context.opposingPlayer
-                ? { ...context.gameState.players[0], health: context.gameState.players[0].health - damage }
-                : context.gameState.players[0],
-              context.gameState.players[1] === context.opposingPlayer
-                ? { ...context.gameState.players[1], health: context.gameState.players[1].health - damage }
-                : context.gameState.players[1],
-            ] as [Player, Player],
-          },
-        };
-      }
-
-      return {
-        success: true,
-        modifiedUnits,
-        message: `Dealt ${totalDamage} total damage`,
-      };
-    }
-
-    /**
-     * Process heal effect
-     */
-    private processHeal(
-      effect: HealEffect,
-      targets: BloomBeastInstance[],
-      context: AbilityContext
-    ): EffectResult {
-      const modifiedUnits: BloomBeastInstance[] = [];
-
-      for (const target of targets) {
-        const modified = this.cloneBeast(target);
-        if (effect.value === 'full') {
-          modified.currentHealth = modified.maxHealth;
-        } else {
-          modified.currentHealth = Math.min(
-            modified.maxHealth,
-            modified.currentHealth + effect.value
-          );
-        }
-        modifiedUnits.push(modified);
-      }
-
-      return {
-        success: true,
-        modifiedUnits,
-        message: `Healed ${targets.length} unit(s)`,
-      };
-    }
-
-    /**
-     * Process draw cards effect
-     */
-    private processDrawCards(
-      effect: DrawCardEffect,
-      context: AbilityContext
-    ): EffectResult {
-      // Determine which player should draw based on target
-      let drawForPlayerIndex: 0 | 1;
-      if (effect.target === AbilityTarget.Opponent) {
-        // Draw for opponent
-        drawForPlayerIndex = context.gameState.players[0] === context.opposingPlayer ? 0 : 1;
-      } else {
-        // Default: Player or other - draw for controlling player
-        drawForPlayerIndex = context.gameState.players[0] === context.controllingPlayer ? 0 : 1;
-      }
-
-      return {
-        success: true,
-        message: `Draw ${effect.value} card(s)`,
-        modifiedState: {
-          drawCardsQueued: effect.value,
-          drawForPlayerIndex,
-        },
-      };
-    }
-
-    // Counter processing removed to reduce game complexity
-
-    /**
-     * Process immunity effect
-     */
-    private processImmunity(
-      effect: ImmunityEffect,
-      targets: BloomBeastInstance[],
-      context: AbilityContext
-    ): EffectResult {
-      const modifiedUnits: BloomBeastInstance[] = [];
-
-      for (const target of targets) {
-        const modified = this.cloneBeast(target);
-        modified.immunities = modified.immunities || [];
-        modified.immunities.push(...effect.immuneTo);
-        modifiedUnits.push(modified);
-      }
-
-      return {
-        success: true,
-        modifiedUnits,
-        message: `Applied immunity to ${targets.length} unit(s)`,
-      };
-    }
-
-    /**
-     * Process cannot be targeted effect
-     */
-    private processCannotBeTargeted(
-      effect: CannotBeTargetedEffect,
-      targets: BloomBeastInstance[],
-      context: AbilityContext
-    ): EffectResult {
-      const modifiedUnits: BloomBeastInstance[] = [];
-
-      for (const target of targets) {
-        const modified = this.cloneBeast(target);
-        modified.cannotBeTargetedBy = modified.cannotBeTargetedBy || [];
-        modified.cannotBeTargetedBy.push(...effect.by);
-        if (effect.costThreshold !== undefined) {
-          modified.targetingRestrictions = modified.targetingRestrictions || {};
-          modified.targetingRestrictions.costThreshold = effect.costThreshold;
-        }
-        modifiedUnits.push(modified);
-      }
-
-      return {
-        success: true,
-        modifiedUnits,
-        message: `Applied targeting restrictions to ${targets.length} unit(s)`,
-      };
-    }
-
-    /**
-     * Process attack modification effect
-     */
-    private processAttackModification(
-      effect: AttackModificationEffect,
-      context: AbilityContext
-    ): EffectResult {
-      const modified = this.cloneBeast(context.source);
-      modified.attackModifications = modified.attackModifications || [];
-      modified.attackModifications.push(effect.modification);
-
-      return {
-        success: true,
-        modifiedUnits: [modified],
-        message: `Applied attack modification: ${effect.modification}`,
-      };
-    }
-
-    /**
-     * Process move unit effect
-     */
-    private processMoveUnit(
-      effect: MoveEffect,
-      targets: BloomBeastInstance[],
-      context: AbilityContext
-    ): EffectResult {
-      // This would be implemented by the game engine
-      return {
-        success: true,
-        message: `Move unit to ${effect.destination}`,
-        modifiedState: {
-          pendingMove: {
-            unit: targets[0],
-            destination: effect.destination,
-          },
-        },
-      };
-    }
-
-    /**
-     * Process resource gain effect
-     */
-    private processResourceGain(
-      effect: ResourceGainEffect,
-      context: AbilityContext
-    ): EffectResult {
-      switch (effect.resource) {
-        case ResourceType.Nectar:
-          return {
-            success: true,
-            message: `Gain ${effect.value} Nectar`,
-            modifiedState: {
-              players: [
-                context.gameState.players[0] === context.controllingPlayer
-                  ? { ...context.gameState.players[0], currentNectar: context.gameState.players[0].currentNectar + effect.value }
-                  : context.gameState.players[0],
-                context.gameState.players[1] === context.controllingPlayer
-                  ? { ...context.gameState.players[1], currentNectar: context.gameState.players[1].currentNectar + effect.value }
-                  : context.gameState.players[1],
-              ] as [Player, Player],
-            },
-          };
-        case ResourceType.ExtraSummon:
-          return {
-            success: true,
-            message: `Gain ${effect.value} extra summon(s)`,
-            modifiedState: {
-              players: [
-                context.gameState.players[0] === context.controllingPlayer
-                  ? { ...context.gameState.players[0], summonsThisTurn: Math.max(0, context.gameState.players[0].summonsThisTurn - effect.value) }
-                  : context.gameState.players[0],
-                context.gameState.players[1] === context.controllingPlayer
-                  ? { ...context.gameState.players[1], summonsThisTurn: Math.max(0, context.gameState.players[1].summonsThisTurn - effect.value) }
-                  : context.gameState.players[1],
-              ] as [Player, Player],
-            },
-          };
-        default:
-          return { success: false, message: 'Unknown resource type' };
-      }
-    }
-
-    /**
-     * Process prevent effect
-     */
-    private processPrevent(
-      effect: PreventEffect,
-      targets: BloomBeastInstance[],
-      context: AbilityContext
-    ): EffectResult {
-      const modifiedUnits: BloomBeastInstance[] = [];
-
-      for (const target of targets) {
-        const modified = this.cloneBeast(target);
-        modified.preventions = modified.preventions || [];
-        modified.preventions.push({
-          type: effect.type,
-          duration: effect.duration,
-        });
-        modifiedUnits.push(modified);
-      }
-
-      return {
-        success: true,
-        modifiedUnits,
-        message: `Applied ${effect.type} to ${targets.length} unit(s)`,
-      };
-    }
-
-    /**
-     * Process destroy effect
-     */
-    private processDestroy(
-      effect: DestroyEffect,
-      targets: BloomBeastInstance[],
-      context: AbilityContext
-    ): EffectResult {
-      const modifiedUnits: BloomBeastInstance[] = [];
-
-      for (const target of targets) {
-        const modified = this.cloneBeast(target);
-        modified.currentHealth = 0;
-        modifiedUnits.push(modified);
-      }
-
-      return {
-        success: true,
-        modifiedUnits,
-        message: `Destroyed ${targets.length} unit(s)`,
-      };
-    }
-
-    /**
-     * Process temporary HP effect
-     */
-    private processTemporaryHP(
-      effect: TemporaryHPEffect,
-      targets: BloomBeastInstance[],
-      context: AbilityContext
-    ): EffectResult {
-      const modifiedUnits: BloomBeastInstance[] = [];
-
-      for (const target of targets) {
-        const modified = this.cloneBeast(target);
-        modified.temporaryHP = (modified.temporaryHP || 0) + effect.value;
-        modifiedUnits.push(modified);
-      }
-
-      return {
-        success: true,
-        modifiedUnits,
-        message: `Added ${effect.value} temporary HP to ${targets.length} unit(s)`,
-      };
-    }
-  }
-
-  // ==================== bloombeasts\engine\utils\Logger.ts ====================
-
-  /**
-   * Logger
-   *
-   * Professional logging system with configurable log levels.
-   * Replaces console.log statements throughout the codebase.
-   */
-
-  export enum LogLevel {
-    DEBUG = 0,
-    INFO = 1,
-    WARN = 2,
-    ERROR = 3,
-    NONE = 4,
-  }
-
-  export interface LoggerConfig {
-    level: LogLevel;
-    prefix?: string;
-    timestamps?: boolean;
-    colors?: boolean;
-  }
-
-  class LoggerClass {
-    private config: LoggerConfig = {
-      level: LogLevel.INFO,
-      timestamps: true,
-      colors: true,
-    };
-
-    /**
-     * Configure the logger
-     * @param config Logger configuration
-     */
-    configure(config: Partial<LoggerConfig>): void {
-      this.config = { ...this.config, ...config };
-    }
-
-    /**
-     * Set log level
-     * @param level The minimum log level to display
-     */
-    setLevel(level: LogLevel): void {
-      this.config.level = level;
-    }
-
-    /**
-     * Get current log level
-     * @returns Current log level
-     */
-    getLevel(): LogLevel {
-      return this.config.level;
-    }
-
-    /**
-     * Format log message with timestamp and prefix
-     */
-    private format(level: string, message: string, prefix?: string): string {
-      const parts: string[] = [];
-
-      if (this.config.timestamps) {
-        const timestamp = new Date().toISOString();
-        parts.push(`[${timestamp}]`);
-      }
-
-      parts.push(`[${level}]`);
-
-      if (prefix || this.config.prefix) {
-        parts.push(`[${prefix || this.config.prefix}]`);
-      }
-
-      parts.push(message);
-
-      return parts.join(' ');
-    }
-
-    /**
-     * Log debug message
-     * @param message Message to log
-     * @param data Optional data to log
-     */
-    debug(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.DEBUG) {
-        const formatted = this.format('DEBUG', message);
-        console.log(formatted, ...data);
-      }
-    }
-
-    /**
-     * Log info message
-     * @param message Message to log
-     * @param data Optional data to log
-     */
-    info(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.INFO) {
-        const formatted = this.format('INFO', message);
-        console.log(formatted, ...data);
-      }
-    }
-
-    /**
-     * Log warning message
-     * @param message Message to log
-     * @param data Optional data to log
-     */
-    warn(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.WARN) {
-        const formatted = this.format('WARN', message);
-        console.warn(formatted, ...data);
-      }
-    }
-
-    /**
-     * Log error message
-     * @param message Message to log
-     * @param data Optional data to log
-     */
-    error(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.ERROR) {
-        const formatted = this.format('ERROR', message);
-        console.error(formatted, ...data);
-      }
-    }
-
-    /**
-     * Create a child logger with a specific prefix
-     * @param prefix Prefix for all logs from this logger
-     * @returns New logger instance with prefix
-     */
-    child(prefix: string): ChildLogger {
-      return new ChildLogger(this, prefix);
-    }
-
-    private timers: Map<string, number> = new Map();
-
-    /**
-     * Group related logs together (simplified for basic console support)
-     * @param label Group label
-     * @param collapsed Whether group should be collapsed by default (ignored)
-     */
-    group(label: string, collapsed: boolean = false): void {
-      if (this.config.level <= LogLevel.INFO) {
-        const formatted = this.format('GROUP', `>>> ${label}`);
-        console.log(formatted);
-      }
-    }
-
-    /**
-     * End a log group (simplified for basic console support)
-     */
-    groupEnd(): void {
-      if (this.config.level <= LogLevel.INFO) {
-        const formatted = this.format('GROUP', `<<<`);
-        console.log(formatted);
-      }
-    }
-
-    /**
-     * Log a table (simplified for basic console support)
-     * @param data Data to display as table
-     */
-    table(data: any): void {
-      if (this.config.level <= LogLevel.INFO) {
-        const formatted = this.format('TABLE', JSON.stringify(data, null, 2));
-        console.log(formatted);
-      }
-    }
-
-    /**
-     * Start a performance timer
-     * @param label Timer label
-     */
-    time(label: string): void {
-      if (this.config.level <= LogLevel.DEBUG) {
-        this.timers.set(label, Date.now());
-        const formatted = this.format('TIMER', `${label}: started`);
-        console.log(formatted);
-      }
-    }
-
-    /**
-     * End a performance timer and log the result
-     * @param label Timer label
-     */
-    timeEnd(label: string): void {
-      if (this.config.level <= LogLevel.DEBUG) {
-        const startTime = this.timers.get(label);
-        if (startTime) {
-          const duration = Date.now() - startTime;
-          this.timers.delete(label);
-          const formatted = this.format('TIMER', `${label}: ${duration}ms`);
-          console.log(formatted);
-        }
-      }
-    }
-
-    /**
-     * Assert a condition and log error if false
-     * @param condition Condition to check
-     * @param message Error message if condition is false
-     */
-    assert(condition: boolean, message: string): void {
-      if (this.config.level <= LogLevel.ERROR) {
-        if (!condition) {
-          const formatted = this.format('ASSERT', message);
-          console.error(formatted);
-        }
-      }
-    }
-  }
-
-  /**
-   * Child logger with a specific prefix
-   */
-  class ChildLogger {
-    constructor(
-      private parent: LoggerClass,
-      private prefix: string
-    ) {}
-
-    debug(message: string, ...data: any[]): void {
-      this.parent.debug(`[${this.prefix}] ${message}`, ...data);
-    }
-
-    info(message: string, ...data: any[]): void {
-      this.parent.info(`[${this.prefix}] ${message}`, ...data);
-    }
-
-    warn(message: string, ...data: any[]): void {
-      this.parent.warn(`[${this.prefix}] ${message}`, ...data);
-    }
-
-    error(message: string, ...data: any[]): void {
-      this.parent.error(`[${this.prefix}] ${message}`, ...data);
-    }
-
-    group(label: string, collapsed?: boolean): void {
-      this.parent.group(`[${this.prefix}] ${label}`, collapsed);
-    }
-
-    groupEnd(): void {
-      this.parent.groupEnd();
-    }
-
-    table(data: any): void {
-      this.parent.table(data);
-    }
-
-    time(label: string): void {
-      this.parent.time(`[${this.prefix}] ${label}`);
-    }
-
-    timeEnd(label: string): void {
-      this.parent.timeEnd(`[${this.prefix}] ${label}`);
-    }
-  }
-
-  // Export singleton instance
-  export const Logger = new LoggerClass();
-
-  // Configure based on environment
-  // if (typeof process !== 'undefined' && process.env) {
-  //   const env = 'development';
-
-  //   if (env === 'production') {
-  //     Logger.setLevel(LogLevel.WARN);
-  //   } else if (env === 'test') {
-  //     Logger.setLevel(LogLevel.ERROR);
-  //   } else {
-      Logger.setLevel(LogLevel.DEBUG);
-  //   }
-  // }
-
-  // ==================== bloombeasts\engine\constants\gameRules.ts ====================
-
-  /**
-   * Game Rules Constants
-   *
-   * Central location for all game rule constants to avoid magic numbers
-   * throughout the codebase.
-   */
-
-  // Field Configuration
-  export const FIELD_SIZE = 3;
-
-  // Deck Configuration
-  export const DECK_SIZE = 30;
-  export const MIN_DECK_SIZE = 30;
-  export const MAX_DECK_SIZE = 30;
-
-  // Health Configuration
-  export const STARTING_HEALTH = 30;
-  export const PLAYER_MAX_HEALTH = 30;
-
-  // Turn Configuration
-  export const TURN_TIME_LIMIT = 60; // seconds
-  export const MAX_TURNS = 100; // to prevent infinite games
-
-  // Hand Configuration
-  export const MAX_HAND_SIZE = 10;
-  export const STARTING_HAND_SIZE = 5;
-
-  // Zone Limits
-  export const MAX_TRAP_ZONE_SIZE = 3;
-  export const MAX_MAGIC_ZONE_SIZE = 3;
-
-  // Cost Limits
-  export const MAX_CARD_COST = 10;
-  export const MIN_CARD_COST = 0;
-
-  // Resource Limits
-  export const MAX_NECTAR = 10;
-  export const MIN_NECTAR = 0;
-
-  // Level Configuration
-  export const MIN_LEVEL = 1;
-  // MAX_LEVEL is defined in leveling.ts
-
-  // Stat Limits
-  export const MAX_ATTACK = 99;
-  export const MAX_HEALTH = 99;
-  export const MIN_ATTACK = 0;
-  export const MIN_HEALTH = 1;
-
-  // Counter limits removed
-
-  // Card Limits
-  export const MAX_COPIES_PER_CARD = 3;
-
-  // Battle Configuration
-  export const FIRST_PLAYER_DRAWS_ON_FIRST_TURN = false;
-
-  // ==================== bloombeasts\engine\systems\CombatSystem.ts ====================
-
-  /**
-   * Combat System - Handles battle mechanics and turn flow
-   */
-
-
-  export interface CombatResult {
-    winner: 'player1' | 'player2' | 'draw';
-    turnsPlayed: number;
-    damageDealt: {
-      player1: number;
-      player2: number;
-    };
-    xpGained: {
-      player1: SimpleMap<string, number>;
-      player2: SimpleMap<string, number>;
-    };
-  }
-
-  export class CombatSystem implements ICombatSystem {
-    private abilityProcessor: AbilityProcessor;
-    private levelingSystem: LevelingSystem;
-    private currentTurn: number = 0;
-    private maxTurns: number = MAX_TURNS;
-
-    constructor() {
-      this.abilityProcessor = new AbilityProcessor();
-      this.levelingSystem = new LevelingSystem();
-    }
-
-    /**
-     * Execute a combat phase between two players
-     */
-    public async executeCombat(
-      gameState: GameState,
-      attacker: Player,
-      defender: Player
-    ): Promise<void> {
-      Logger.debug(`Combat phase: ${attacker.name} attacks ${defender.name}`);
-
-      // Note: Full combat resolution is implemented in GameEngine.ts
-      // The GameEngine handles:
-      // 1. Pre-attack abilities (via triggerCombatAbilities with 'OnAttack')
-      // 2. Damage calculation (processAttack method)
-      // 3. Damage application (via applyDamage or direct health modification)
-      // 4. On-damage abilities (via triggerCombatAbilities with 'OnDamage')
-      // 5. Defeat detection and graveyard management
-      // 6. XP awards (via LevelingSystem.addCombatXP)
-    }
-
-    /**
-     * Process an attack between two beasts
-     */
-    public processAttack(
-      attacker: BloomBeastInstance,
-      defender: BloomBeastInstance,
-      gameState: GameState
-    ): number {
-      const baseDamage = attacker.currentAttack;
-
-      // Note: Damage modifiers are applied through:
-      // - Status effects on the beast (stored in statusEffects array)
-      // - Habitat zone ongoing effects (ModifyStats effects)
-      // - Buff zone ongoing effects (ModifyStats effects)
-      // - Counter effects (Burn, Freeze, etc.)
-      // The GameEngine applies these modifiers when calculating final stats
-
-      return baseDamage;
-    }
-
-    /**
-     * Apply damage to a beast
-     */
-    public applyDamage(
-      target: BloomBeastInstance,
-      damage: number,
-      source: BloomBeastInstance | null = null
-    ): void {
-      target.currentHealth = Math.max(0, target.currentHealth - damage);
-
-      if (target.currentHealth === 0) {
-        this.handleDefeat(target, source);
-      }
-    }
-
-    /**
-     * Handle a beast being defeated
-     */
-    private handleDefeat(
-      defeated: BloomBeastInstance,
-      victor: BloomBeastInstance | null
-    ): void {
-      Logger.debug(`${defeated.cardId} was defeated!`);
-
-      if (victor) {
-        // Award combat XP
-        this.levelingSystem.addCombatXP(victor);
-      }
-
-      // Note: On-destroy abilities and field removal are handled by GameEngine:
-      // - GameEngine.executeAttack triggers 'OnDestroy' abilities via triggerCombatAbilities
-      // - GameEngine.executeAttack removes defeated beasts from field and adds to graveyard
-      // - GameEngine.processCounterEffects also handles death from burn/poison effects
-    }
-
-    /**
-     * Check if combat should end
-     */
-    public checkWinCondition(gameState: GameState): CombatResult | null {
-      const player1Health = gameState.players[0].health;
-      const player2Health = gameState.players[1].health;
-
-      // Check for player health reaching 0
-      if (player1Health <= 0 && player2Health <= 0) {
-        return this.createCombatResult('draw', gameState);
-      } else if (player1Health <= 0) {
-        return this.createCombatResult('player2', gameState);
-      } else if (player2Health <= 0) {
-        return this.createCombatResult('player1', gameState);
-      }
-
-      // Check for beasts on field
-      const player1HasBeasts = getAliveBeasts(gameState.players[0].field).length > 0;
-      const player2HasBeasts = getAliveBeasts(gameState.players[1].field).length > 0;
-
-      if (!player1HasBeasts && !player2HasBeasts) {
-        return this.createCombatResult('draw', gameState);
-      } else if (!player1HasBeasts) {
-        return this.createCombatResult('player2', gameState);
-      } else if (!player2HasBeasts) {
-        return this.createCombatResult('player1', gameState);
-      }
-
-      // Check for max turns
-      if (this.currentTurn >= this.maxTurns) {
-        return this.createCombatResult('draw', gameState);
-      }
-
-      return null;
-    }
-
-    /**
-     * Create combat result summary
-     */
-    private createCombatResult(
-      winner: 'player1' | 'player2' | 'draw',
-      gameState: GameState
-    ): CombatResult {
-      return {
-        winner,
-        turnsPlayed: this.currentTurn,
-        damageDealt: {
-          player1: STARTING_HEALTH - gameState.players[1].health,
-          player2: STARTING_HEALTH - gameState.players[0].health,
-        },
-        xpGained: {
-          player1: new SimpleMap(),
-          player2: new SimpleMap(),
-        },
-      };
-    }
-
-    /**
-     * Reset combat system for new battle
-     */
-    public reset(): void {
-      this.currentTurn = 0;
-    }
-  }
-
-  // ==================== bloombeasts\engine\systems\interfaces.ts ====================
-
-  /**
-   * Interfaces for dependency injection and testability
-   *
-   * These interfaces define contracts for major system components,
-   * allowing for easier testing, mocking, and alternative implementations.
-   */
-
-
-  /**
-   * IAbilityProcessor - Processes ability effects in the game
-   */
-  export interface IAbilityProcessor {
-    /**
-     * Process a structured ability
-     */
-    processAbility(
-      ability: StructuredAbility,
-      context: AbilityContext
-    ): EffectResult[];
-  }
-
-  /**
-   * ICombatSystem - Handles battle mechanics and turn flow
-   */
-  export interface ICombatSystem {
-    /**
-     * Execute a combat phase between two players
-     */
-    executeCombat(
-      gameState: GameState,
-      attacker: Player,
-      defender: Player
-    ): Promise<void>;
-
-    /**
-     * Process an attack between two beasts
-     */
-    processAttack(
-      attacker: BloomBeastInstance,
-      defender: BloomBeastInstance,
-      gameState: GameState
-    ): number;
-
-    /**
-     * Apply damage to a beast
-     */
-    applyDamage(
-      target: BloomBeastInstance,
-      damage: number,
-      source: BloomBeastInstance | null
-    ): void;
-
-    /**
-     * Check if combat should end
-     */
-    checkWinCondition(gameState: GameState): CombatResult | null;
-
-    /**
-     * Reset combat system for new battle
-     */
-    reset(): void;
-  }
-
-  /**
-   * ILevelingSystem - Handles XP gain, level ups, and stat progression
-   */
-  export interface ILevelingSystem {
-    /**
-     * Add XP to a Bloom Beast
-     */
-    addXP(
-      beast: BloomBeastInstance,
-      amount: number,
-      source: XPSource,
-      card?: BloomBeastCard
-    ): BloomBeastInstance;
-
-    /**
-     * Add XP from combat victory
-     */
-    addCombatXP(beast: BloomBeastInstance, card?: BloomBeastCard): BloomBeastInstance;
-
-    /**
-     * Add XP from nectar sacrifice
-     */
-    addNectarXP(
-      beast: BloomBeastInstance,
-      nectarSpent: number,
-      card?: BloomBeastCard
-    ): BloomBeastInstance;
-
-    /**
-     * Check if a beast can level up
-     */
-    canLevelUp(beast: BloomBeastInstance, card?: BloomBeastCard): boolean;
-
-    /**
-     * Level up a beast
-     */
-    levelUp(beast: BloomBeastInstance, card?: BloomBeastCard): BloomBeastInstance;
-
-    /**
-     * Get stat gains for leveling from previous level to current level
-     */
-    getStatGain(
-      newLevel: Level,
-      card?: BloomBeastCard
-    ): { attackGain: number; healthGain: number };
-
-    /**
-     * Get total stat bonus at a given level
-     */
-    getTotalStatBonus(level: Level, card?: BloomBeastCard): { hp: number; atk: number };
-
-    /**
-     * Calculate current stats for a beast based on base stats and level
-     */
-    calculateCurrentStats(
-      baseCard: BloomBeastCard,
-      level: Level
-    ): { attack: number; health: number };
-
-    /**
-     * Create a new beast instance from a card
-     */
-    createBeastInstance(
-      card: BloomBeastCard,
-      instanceId: string,
-      slotIndex: number
-    ): BloomBeastInstance;
-
-    /**
-     * Get XP requirement for next level
-     */
-    getXPRequirement(currentLevel: Level, card?: BloomBeastCard): number | null;
-
-    /**
-     * Get current abilities for a beast based on its level
-     */
-    getCurrentAbilities(card: BloomBeastCard, level: Level): { abilities: Ability[] };
-
-    /**
-     * Check if a beast has an ability upgrade at the current level
-     */
-    hasAbilityUpgrade(card: BloomBeastCard, level: Level): boolean;
-  }
-
-  // ==================== bloombeasts\engine\systems\LevelingSystem.ts ====================
-
-  /**
-   * Leveling System - Handles XP gain, level ups, and stat progression
-   */
-
-
-  export class LevelingSystem implements ILevelingSystem {
-    /**
-     * Add XP to a Bloom Beast
-     */
-    addXP(
-      beast: BloomBeastInstance,
-      amount: number,
-      source: XPSource
-    ): BloomBeastInstance {
-      const updatedBeast = { ...beast };
-      updatedBeast.currentXP += amount;
-
-      // Check if level up is possible
-      if (this.canLevelUp(updatedBeast)) {
-        return this.levelUp(updatedBeast);
-      }
-
-      return updatedBeast;
-    }
-
-    /**
-     * Add XP from combat victory
-     */
-  addCombatXP(beast: BloomBeastInstance): BloomBeastInstance {
-      return this.addXP(beast, 1, 'Combat');
-    }
-
-    /**
-     * Add XP from nectar sacrifice
-     */
-  addNectarXP(beast: BloomBeastInstance, nectarSpent: number): BloomBeastInstance {
-      const xpGained = nectarSpent / NECTAR_XP_COST;
-      return this.addXP(beast, xpGained, 'NectarSacrifice');
-    }
-
-    /**
-     * Get XP requirement for a specific level (uses standard progression)
-     */
-    private getXPRequirementForLevel(level: Level): number {
-      return XP_REQUIREMENTS[level];
-    }
-
-    /**
-     * Check if a beast can level up
-     */
-  canLevelUp(beast: BloomBeastInstance): boolean {
-      if (beast.currentLevel >= MAX_LEVEL) {
-        return false;
-      }
-
-      const nextLevel = (beast.currentLevel + 1) as Level;
-      const xpRequired = this.getXPRequirementForLevel(nextLevel);
-
-      return beast.currentXP >= xpRequired;
-    }
-
-    /**
-     * Level up a beast
-     */
-  levelUp(beast: BloomBeastInstance): BloomBeastInstance {
-      if (!this.canLevelUp(beast)) {
-        return beast;
-      }
-
-      const updatedBeast = { ...beast };
-      const nextLevel = (updatedBeast.currentLevel + 1) as Level;
-      const xpRequired = this.getXPRequirementForLevel(nextLevel);
-
-      // Remove XP counters and increase level
-      updatedBeast.currentXP -= xpRequired;
-      updatedBeast.currentLevel = nextLevel;
-
-      // Apply stat gains
-      const statGain = this.getStatGain(updatedBeast.currentLevel);
-      updatedBeast.currentAttack += statGain.attackGain;
-      updatedBeast.currentHealth += statGain.healthGain;
-      updatedBeast.maxHealth += statGain.healthGain;
-
-      // Check for level up again (in case there's excess XP)
-      if (this.canLevelUp(updatedBeast)) {
-        return this.levelUp(updatedBeast);
-      }
-
-      return updatedBeast;
-    }
-
-    /**
-     * Get stat gains for leveling from previous level to current level (uses standard progression)
-     */
-  getStatGain(
-      newLevel: Level
-    ): { attackGain: number; healthGain: number } {
-      const previousLevel = (newLevel - 1) as Level;
-
-      // Use standard progression
-      const currentStats = STAT_PROGRESSION[newLevel];
-      const previousStats = STAT_PROGRESSION[previousLevel];
-
-      return {
-        attackGain: currentStats.cumulativeATK - previousStats.cumulativeATK,
-        healthGain: currentStats.cumulativeHP - previousStats.cumulativeHP,
-      };
-    }
-
-    /**
-     * Get total stat bonus at a given level (uses standard progression)
-     */
-  getTotalStatBonus(level: Level): { hp: number; atk: number } {
-      // Use standard progression
-      const stats = STAT_PROGRESSION[level];
-      return {
-        hp: stats.cumulativeHP,
-        atk: stats.cumulativeATK,
-      };
-    }
-
-    /**
-     * Calculate current stats for a beast based on base stats and level
-     */
-  calculateCurrentStats(
-      baseCard: BloomBeastCard,
-      level: Level
-    ): { attack: number; health: number } {
-      const bonus = this.getTotalStatBonus(level);
-      return {
-        attack: baseCard.baseAttack + bonus.atk,
-        health: baseCard.baseHealth + bonus.hp,
-      };
-    }
-
-    /**
-     * Create a new beast instance from a card
-     */
-  createBeastInstance(
-      card: BloomBeastCard,
-      instanceId: string,
-      slotIndex: number
-    ): BloomBeastInstance {
-      const stats = this.calculateCurrentStats(card, 1);
-
-      return {
-        cardId: card.id,
-        instanceId,
-        name: card.name,
-        affinity: card.affinity,
-        currentLevel: 1,
-        currentXP: 0,
-        baseAttack: card.baseAttack,
-        baseHealth: card.baseHealth,
-        currentAttack: stats.attack,
-        currentHealth: stats.health,
-        maxHealth: stats.health,
-        statusEffects: [],
-        slotIndex,
-        summoningSickness: true,
-      };
-    }
-
-    /**
-     * Get XP requirement for next level
-     */
-  getXPRequirement(currentLevel: Level): number | null {
-      if (currentLevel >= MAX_LEVEL) {
-        return null;
-      }
-
-      const nextLevel = (currentLevel + 1) as Level;
-      return this.getXPRequirementForLevel(nextLevel);
-    }
-
-    /**
-     * Get current abilities for a beast (always returns base abilities - no level-based changes)
-     */
-  getCurrentAbilities(card: BloomBeastCard, level: Level) {
-      // Cards keep their base abilities at all levels
-      return { abilities: [...card.abilities] };
-    }
-
-    /**
-     * Check if a beast has an ability upgrade at the current level (always false now)
-     */
-  hasAbilityUpgrade(card: BloomBeastCard, level: Level): boolean {
-      // No ability upgrades in simplified system
-      return false;
-    }
   }
 
   // ==================== bloombeasts\engine\cards\deckConfig.ts ====================
@@ -3023,6 +1245,82 @@ namespace BloomBeasts {
 
   // Re-export everything from config
 
+  // ==================== bloombeasts\engine\constants\leveling.ts ====================
+
+  /**
+   * Constants for the leveling and progression system
+   *
+   * Balanced leveling system with incremental difficulty:
+   * - Beast cards gain XP from battles (distributed evenly across deck)
+   * - Player gains XP from mission victories
+   * - Each level requires progressively more XP (exponential scaling)
+   */
+
+
+  /**
+   * XP required to reach each level from the previous level
+   * Formula: XP = 10 * (2.0 ^ (level - 1))
+   * This creates steeper exponential growth with significant difficulty increases
+   */
+  export const XP_REQUIREMENTS: Record<Level, number> = {
+    1: 0,      // Starting level
+    2: 10,     // 10 XP total
+    3: 20,     // 30 XP total
+    4: 40,     // 70 XP total
+    5: 80,     // 150 XP total
+    6: 160,    // 310 XP total
+    7: 320,    // 630 XP total
+    8: 640,    // 1270 XP total
+    9: 1280,   // 2550 XP total
+  };
+
+  /**
+   * Cumulative stat gains at each level
+   * Beasts gain +1 HP and +1 ATK every 2-3 levels on average
+   */
+  export const STAT_PROGRESSION: Record<Level, StatGain> = {
+    1: {
+      cumulativeHP: 0,
+      cumulativeATK: 0,
+    },
+    2: {
+      cumulativeHP: 1,
+      cumulativeATK: 0,
+    },
+    3: {
+      cumulativeHP: 1,
+      cumulativeATK: 1,
+    },
+    4: {
+      cumulativeHP: 2,
+      cumulativeATK: 1,
+    },
+    5: {
+      cumulativeHP: 3,
+      cumulativeATK: 2,
+    },
+    6: {
+      cumulativeHP: 4,
+      cumulativeATK: 3,
+    },
+    7: {
+      cumulativeHP: 5,
+      cumulativeATK: 4,
+    },
+    8: {
+      cumulativeHP: 6,
+      cumulativeATK: 5,
+    },
+    9: {
+      cumulativeHP: 8,
+      cumulativeATK: 6,
+    },
+  };
+
+  export const MAX_LEVEL: Level = 9;
+
+  export const ENERGY_XP_COST = 1;
+
   // ==================== bloombeasts\engine\utils\deckBuilder.ts ====================
 
   /**
@@ -3163,12 +1461,12 @@ namespace BloomBeasts {
       }
     }
 
-    // Add 27 Nectar Blocks for fast summoning
-    const nectarBlock = _deckBuilderCatalogManager.getCard('nectar-block');
-    if (nectarBlock) {
+    // Add 27 Energy Blocks for fast summoning
+    const energyBlock = _deckBuilderCatalogManager.getCard('nectar-block');
+    if (energyBlock) {
       for (let i = 1; i <= 27; i++) {
         allCards.push({
-          ...nectarBlock,
+          ...energyBlock,
           instanceId: `nectar-block-${i}`,
         } as unknown as AnyCard);
       }
@@ -3280,10 +1578,10 @@ namespace BloomBeasts {
 
 
   /**
-   * Check if a card is a Bloom Beast
+   * Check if a card is a Beast
    */
   export function isBloomBeast(card: AnyCard): card is BloomBeastCard {
-    return card.type === 'Bloom';
+    return card.type === CardType.Beast;
   }
 
   /**
@@ -3294,14 +1592,14 @@ namespace BloomBeasts {
   }
 
   /**
-   * Filter Bloom Beasts by affinity
+   * Filter Beasts by affinity
    */
   export function filterByAffinity(cards: AnyCard[], affinity: Affinity): BloomBeastCard[] {
     return cards.filter((card): card is BloomBeastCard => isBloomBeast(card) && card.affinity === affinity);
   }
 
   /**
-   * Get all Bloom Beasts from a card list
+   * Get all Beasts from a card list
    */
   export function getBloomBeasts(cards: AnyCard[]): BloomBeastCard[] {
     return cards.filter(isBloomBeast);
@@ -3390,624 +1688,6 @@ namespace BloomBeasts {
 
   // Utilities
 
-  // ==================== bloombeasts\screens\cards\types.ts ====================
-
-  /**
-   * Type definitions for the card collection system
-   */
-
-
-  /**
-   * Minimal card instance in player's collection
-   * All other data (level, stats, etc.) is computed on-demand from currentXP and card definition
-   */
-  export interface CardInstance {
-    id: string;                    // Unique instance ID (e.g., "forest-bloom-1-1")
-    cardId: string;                 // Base card ID (e.g., "forest-bloom")
-    currentXP: number;              // Only persistent data - everything else is derived
-  }
-
-  /**
-   * Statistics for the card collection
-   */
-  export interface CollectionStats {
-    totalCards: number;
-    uniqueCards: number;
-    cardsByAffinity: Record<Affinity, number>;
-    averageLevel: number;
-    totalXP: number;
-  }
-
-  /**
-   * Deck configuration in inventory
-   */
-  export interface DeckConfiguration {
-    id: string;
-    name: string;
-    cards: string[];                // Array of card instance IDs
-    affinity: Affinity;
-    isValid: boolean;
-    lastModified: Date;
-  }
-
-  /**
-   * Player inventory data
-   */
-  export interface PlayerInventory {
-    playerId: string;
-    cards: CardInstance[];
-    decks: DeckConfiguration[];
-    currency: {
-      nectar: number;
-      crystals?: number;
-    };
-    unlockedCards: string[];         // Base card IDs that have been unlocked
-    achievements?: string[];
-  }
-
-  // ==================== bloombeasts\engine\utils\abilityDescriptionGenerator.ts ====================
-
-  /**
-   * Generates human-readable descriptions from ability effects
-   */
-
-
-  /**
-   * Generate a complete description from a StructuredAbility
-   */
-  export function generateAbilityDescription(ability: StructuredAbility): string {
-    // Handle edge cases
-    if (!ability) {
-      return '';
-    }
-
-    const parts: string[] = [];
-
-    // Add trigger context
-    const triggerText = getTriggerText(ability.trigger);
-    if (triggerText) {
-      parts.push(triggerText);
-    }
-
-    // Add cost if present
-    if (ability.cost) {
-      const costText = getCostText(ability.cost);
-      if (costText) {
-        parts.push(costText);
-      }
-    }
-
-    // Generate effect descriptions
-    if (ability.effects && ability.effects.length > 0) {
-      const effectTexts = ability.effects.map(effect => getEffectText(effect));
-      const combinedEffects = combineEffects(effectTexts);
-      parts.push(combinedEffects);
-    }
-
-    // Add usage limitations
-    if (ability.maxUsesPerTurn) {
-      parts.push(`(${ability.maxUsesPerTurn}x per turn)`);
-    }
-    if (ability.maxUsesPerGame) {
-      parts.push(`(once per game)`);
-    }
-
-    // If no parts were generated, at least return the ability name
-    if (parts.length === 0) {
-      return ability.name || '';
-    }
-
-    return parts.join(' ').replace(/\s+/g, ' ').trim();
-  }
-
-  /**
-   * Get trigger prefix text
-   */
-  function getTriggerText(trigger?: AbilityTrigger): string {
-    switch (trigger) {
-      case AbilityTrigger.OnSummon:
-        return 'When summoned,';
-      case AbilityTrigger.OnAllySummon:
-        return 'When you summon another ally,';
-      case AbilityTrigger.OnAttack:
-        return 'When attacking,';
-      case AbilityTrigger.OnDamage:
-        return 'When attacked,';
-      case AbilityTrigger.OnDestroy:
-        return 'When destroyed,';
-      case AbilityTrigger.OnOwnStartOfTurn:
-        return 'At turn start,';
-      case AbilityTrigger.OnOwnEndOfTurn:
-        return 'At turn end,';
-      case AbilityTrigger.WhileOnField:
-        return '';
-      default:
-        return '';
-    }
-  }
-
-  /**
-   * Get cost text
-   */
-  function getCostText(cost: any): string {
-    if (cost.type === 'nectar') {
-      return `Pay ${cost.value} Nectar:`;
-    }
-    if (cost.type === 'discard') {
-      return `Discard ${cost.value} card${cost.value > 1 ? 's' : ''}:`;
-    }
-    if (cost.type === 'sacrifice') {
-      return `Sacrifice ${cost.value} unit${cost.value > 1 ? 's' : ''}:`;
-    }
-    // Counter costs removed
-    return '';
-  }
-
-  /**
-   * Get target text
-   */
-  function getTargetText(target: AbilityTarget): string {
-    switch (target) {
-      case AbilityTarget.Self:
-        return 'this';
-      case AbilityTarget.Target:
-        return 'target';
-      case AbilityTarget.Attacker:
-        return 'attacker';
-      case AbilityTarget.AllAllies:
-        return 'all allies';
-      case AbilityTarget.AllEnemies:
-        return 'all enemies';
-      case AbilityTarget.AdjacentAllies:
-        return 'adjacent allies';
-      case AbilityTarget.AdjacentEnemies:
-        return 'adjacent enemies';
-      case AbilityTarget.Opponent:
-        return 'opponent';
-      case AbilityTarget.Player:
-        return 'you';
-      case AbilityTarget.RandomEnemy:
-        return 'random enemy';
-      case AbilityTarget.AllUnits:
-        return 'all Beasts';
-      case AbilityTarget.OtherAlly:
-        return 'another ally';
-      default:
-        return target;
-    }
-  }
-
-  /**
-   * Get duration text
-   */
-  function getDurationText(duration?: EffectDuration): string {
-    switch (duration) {
-      case EffectDuration.Permanent:
-        return 'permanently';
-      case EffectDuration.EndOfTurn:
-        return 'until end of turn';
-      case EffectDuration.StartOfNextTurn:
-        return 'until your next turn';
-      case EffectDuration.WhileOnField:
-        return '';
-      case EffectDuration.ThisTurn:
-        return 'this turn';
-      case EffectDuration.NextAttack:
-        return 'for next attack';
-      default:
-        return '';
-    }
-  }
-
-  /**
-   * Get condition text
-   */
-  function getConditionText(condition?: any): string {
-    if (!condition) return '';
-
-    switch (condition.type) {
-      case ConditionType.IsDamaged:
-        return 'if damaged';
-      case ConditionType.IsWilting:
-        return 'if Wilting';
-      case ConditionType.AffinityMatches:
-        return `if ${condition.value}`;
-      case ConditionType.HealthBelow:
-        return `if HP < ${condition.value}`;
-      case ConditionType.CostAbove:
-        return `if Cost ${condition.value}+`;
-      default:
-        return '';
-    }
-  }
-
-  /**
-   * Get effect text for a single effect
-   */
-  function getEffectText(effect: AbilityEffect): string {
-    const target = getTargetText(effect.target);
-    const condition = getConditionText(effect.condition);
-    const duration = getDurationText(effect.duration);
-
-    switch (effect.type) {
-      case EffectType.ModifyStats: {
-        const stat = effect.stat === StatType.Attack ? 'ATK' :
-                     effect.stat === StatType.Health ? 'HP' : 'ATK/HP';
-        const sign = effect.value >= 0 ? '+' : '';
-        const durationPart = duration ? ` ${duration}` : '';
-        return `${target} get${target === 'this' ? 's' : ''} ${sign}${effect.value} ${stat}${durationPart}`;
-      }
-
-      case EffectType.DealDamage: {
-        return `deal ${effect.value} damage to ${target}`;
-      }
-
-      case EffectType.Heal: {
-        if (effect.value === HealValueType.Full) {
-          return `fully heal ${target}`;
-        }
-        return `heal ${target} by ${effect.value} HP`;
-      }
-
-      case EffectType.DrawCards: {
-        return `draw ${effect.value} card${effect.value > 1 ? 's' : ''}`;
-      }
-
-      // Counter effects removed
-
-      case EffectType.CannotBeTargeted: {
-        const byWhat = effect.by.join(', ').replace(/,([^,]*)$/, ' or$1');
-        return `cannot be targeted by ${byWhat}`;
-      }
-
-      case EffectType.Immunity: {
-        const immunities = effect.immuneTo.map(type => {
-          switch (type) {
-            case ImmunityType.Magic: return 'Magic';
-            case ImmunityType.Trap: return 'Trap';
-            case ImmunityType.Abilities: return 'abilities';
-            case ImmunityType.NegativeEffects: return 'negative effects';
-            case ImmunityType.Damage: return 'damage';
-            default: return type;
-          }
-        }).join(' and ');
-        return `immune to ${immunities}`;
-      }
-
-      case EffectType.AttackModification: {
-        const mod = effect.modification;
-        if (mod === 'double-damage') return 'deal double damage';
-        if (mod === 'triple-damage') return 'deal triple damage';
-        if (mod === 'instant-destroy') return 'instantly destroy target';
-        if (mod === 'attack-twice') return 'attack twice';
-        if (mod === 'attack-first') return 'strike first (defender cannot counter if killed)';
-        if (mod === 'cannot-counterattack') return 'cannot be counterattacked';
-        if (mod === 'piercing') return 'ignore defensive abilities';
-        return mod;
-      }
-
-      case EffectType.RemoveSummoningSickness: {
-        return 'can attack immediately';
-      }
-
-      case EffectType.GainResource: {
-        if (effect.resource === ResourceType.Nectar) {
-          return `gain ${effect.value} Nectar${duration ? ` ${duration}` : ''}`;
-        }
-        if (effect.resource === ResourceType.ExtraNectarPlay) {
-          return `play ${effect.value} additional Nectar Card${effect.value > 1 ? 's' : ''}${duration ? ` ${duration}` : ''}`;
-        }
-        return `gain ${effect.value} ${effect.resource}`;
-      }
-
-      case EffectType.MoveUnit: {
-        if (effect.destination === 'any-slot') {
-          return 'move to any empty slot';
-        }
-        if (effect.destination === 'adjacent-slot') {
-          return 'move to adjacent empty slot';
-        }
-        return 'move';
-      }
-
-      case EffectType.PreventAttack: {
-        return `${target} cannot attack${duration ? ` ${duration}` : ''}`;
-      }
-
-      case EffectType.PreventAbilities: {
-        return `${target} cannot use abilities${duration ? ` ${duration}` : ''}`;
-      }
-
-      case EffectType.DamageReduction: {
-        return `reduce damage by ${effect.value}${duration ? ` ${duration}` : ''}`;
-      }
-
-      case EffectType.Retaliation: {
-        if (effect.value === 'reflected') {
-          return 'reflect all damage to attacker';
-        }
-        return `deal ${effect.value} damage to attacker`;
-      }
-
-      case EffectType.TemporaryHP: {
-        return `${target} gain${target === 'this' ? 's' : ''} ${effect.value} temporary HP`;
-      }
-
-      case EffectType.SwapPositions: {
-        return `swap ${target} positions`;
-      }
-
-      case EffectType.ReturnToHand: {
-        return `return ${target} to hand`;
-      }
-
-      case EffectType.Destroy: {
-        const conditionText = condition ? ` ${condition}` : '';
-        return `destroy ${target}${conditionText}`;
-      }
-
-      default:
-        return effect.type;
-    }
-  }
-
-  /**
-   * Combine multiple effect texts intelligently
-   */
-  function combineEffects(effects: string[]): string {
-    if (effects.length === 0) return '';
-    if (effects.length === 1) return effects[0];
-    if (effects.length === 2) return `${effects[0]} and ${effects[1]}`;
-
-    // Multiple effects: use commas and "and" for last one
-    const allButLast = effects.slice(0, -1).join(', ');
-    const last = effects[effects.length - 1];
-    return `${allButLast}, and ${last}`;
-  }
-
-  // ==================== bloombeasts\engine\utils\getAbilityDescription.ts ====================
-
-  /**
-   * Helper function to get ability description
-   * Generates description from ability effects
-   */
-
-
-  /**
-   * Get the description for an ability
-   * @param ability The ability to get description for
-   * @returns The description string
-   */
-  export function getAbilityDescription(ability: StructuredAbility): string {
-    return generateAbilityDescription(ability);
-  }
-
-  // ==================== bloombeasts\engine\utils\cardDescriptionGenerator.ts ====================
-
-  /**
-   * Generates human-readable descriptions for all card types
-   * (Magic, Trap, Buff, Habitat, and Bloom cards)
-   */
-
-
-  /**
-   * Get description for any card type
-   * All cards now use the standardized abilities structure
-   */
-  export function getCardDescription(card: any): string {
-    if (!card) return '';
-
-    // All cards use abilities array
-    if (card.abilities && Array.isArray(card.abilities)) {
-      // Generate descriptions for all abilities and combine them
-      const abilityDescriptions = card.abilities
-        .map((ability: any) => getAbilityDescription(ability))
-        .filter((desc: string) => desc.length > 0);
-
-      // Combine ability descriptions with bullet points if multiple
-      if (abilityDescriptions.length === 0) {
-        return '';
-      } else if (abilityDescriptions.length === 1) {
-        return abilityDescriptions[0];
-      } else {
-        // Multiple abilities: join with bullet points
-        return abilityDescriptions.map((desc: string) => `• ${desc}`).join(' ');
-      }
-    }
-
-    // Fallback: return card description if it exists, otherwise empty
-    return card.description || '';
-  }
-
-  // ==================== bloombeasts\utils\cardUtils.ts ====================
-
-  /**
-   * Card utility functions for level/XP calculations and stat computation
-   */
-
-
-  // Module-level catalog manager reference for card utils
-  // Set via setCatalogManagerForUtils() which is called by BloomBeastsGame
-  let _cardUtilsCatalogManager: any = null;
-
-  /**
-   * Set the catalog manager instance for card utility functions
-   * Called by BloomBeastsGame during construction
-   */
-  export function setCatalogManagerForUtils(catalogManager: any): void {
-    _cardUtilsCatalogManager = catalogManager;
-  }
-
-  /**
-   * Battle-specific card stats (runtime only, not persisted)
-   * Created when a card enters battle, mutated during combat
-   */
-  export interface CardBattleStats {
-    baseAttack?: number;
-    currentAttack?: number;
-    baseHealth?: number;
-    currentHealth?: number;
-    abilities?: any[];
-  }
-
-  /**
-   * XP thresholds for card leveling (cumulative)
-   * Level 2: 100 XP, Level 3: 300 XP, etc.
-   */
-  const CARD_XP_THRESHOLDS = [
-    0,      // Level 1
-    100,    // Level 2
-    300,    // Level 3
-    700,    // Level 4
-    1500,   // Level 5
-    3100,   // Level 6
-    6300,   // Level 7
-    12700,  // Level 8
-    25500,  // Level 9
-  ];
-
-  /**
-   * Calculate card level from current XP
-   * Works for all card types (Bloom, Magic, Trap, Habitat, Buff)
-   * Uses standard XP thresholds for all cards
-   */
-  export function getCardLevel(currentXP: number): number {
-    // Standard XP thresholds
-    for (let level = 9; level >= 1; level--) {
-      if (currentXP >= CARD_XP_THRESHOLDS[level - 1]) {
-        return level;
-      }
-    }
-    return 1;
-  }
-
-  /**
-   * Calculate XP required for next level (uses standard progression)
-   */
-  export function getXPRequired(currentLevel: number, currentXP: number): number {
-    if (currentLevel >= 9) return 0; // Max level
-
-    const nextLevel = currentLevel + 1;
-
-    // Standard XP requirements
-    const nextLevelXP = CARD_XP_THRESHOLDS[nextLevel - 1];
-    return nextLevelXP - currentXP;
-  }
-
-  /**
-   * Get card definition by ID
-   */
-  export function getCardDefinition(cardId: string): AnyCard | undefined {
-    if (!_cardUtilsCatalogManager) {
-      console.warn('[cardUtils] catalogManager not initialized');
-      return undefined;
-    }
-    const allCards = _cardUtilsCatalogManager.getAllCardData();
-    return allCards.find((c: any) => c && c.id === cardId);
-  }
-
-  /**
-   * Extract base card ID (remove instance suffix)
-   * e.g., "forest-bloom-1-1" → "forest-bloom"
-   */
-  export function extractBaseCardId(instanceId: string): string {
-    return instanceId.replace(/-\d+-\d+$/, '');
-  }
-
-  /**
-   * Compute display data for a card (for UI rendering)
-   * This is NOT a stored type - computed on-demand
-   */
-  export interface CardDisplayData {
-    // Identity
-    id: string;
-    cardId: string;
-    name: string;
-    type: string;
-    affinity?: string;
-    cost: number;
-
-    // Computed from XP
-    level: number;
-    experience: number;
-    experienceRequired: number;
-
-    // Stats (for Bloom beasts)
-    baseAttack?: number;
-    baseHealth?: number;
-
-    // Abilities and effects
-    abilities?: any[];
-    description?: string;
-
-    // Visual
-    titleColor?: string;
-  }
-
-  /**
-   * Compute display data from a CardInstance
-   * Merges instance data + card definition + computed level/stats
-   */
-  export function computeCardDisplay(instance: CardInstance): CardDisplayData {
-    const baseCardId = extractBaseCardId(instance.cardId);
-    const cardDef = getCardDefinition(baseCardId);
-
-    if (!cardDef) {
-      // Fallback for missing definition
-      return {
-        id: instance.id,
-        cardId: instance.cardId,
-        name: baseCardId,
-        type: 'unknown',
-        level: 1,
-        experience: instance.currentXP,
-        experienceRequired: 100,
-        cost: 0,
-      };
-    }
-
-    const level = getCardLevel(instance.currentXP);
-    const xpRequired = getXPRequired(level, instance.currentXP);
-
-    const displayData: CardDisplayData = {
-      id: instance.id,
-      cardId: instance.cardId,
-      name: cardDef.name,
-      type: cardDef.type,
-      affinity: 'affinity' in cardDef ? cardDef.affinity : undefined,
-      cost: cardDef.cost || 0,
-      level,
-      experience: instance.currentXP,
-      experienceRequired: xpRequired,
-    };
-
-    // Add type-specific data (base stats only - level bonuses applied in battle)
-    if (cardDef.type === 'Bloom' && 'baseAttack' in cardDef) {
-      const bloomCard = cardDef as BloomBeastCard;
-      displayData.baseAttack = bloomCard.baseAttack;
-      displayData.baseHealth = bloomCard.baseHealth;
-    }
-
-    // Add abilities (abilities remain constant across all levels)
-    if ('abilities' in cardDef) {
-      displayData.abilities = cardDef.abilities as any[];
-    }
-
-    // Generate description from abilities using getCardDescription
-    const cardWithAbilities = {
-      ...cardDef,
-      abilities: displayData.abilities
-    };
-    displayData.description = getCardDescription(cardWithAbilities);
-
-    // Add visual properties
-    if ('titleColor' in cardDef) {
-      displayData.titleColor = cardDef.titleColor;
-    }
-
-    return displayData;
-  }
-
   // ==================== bloombeasts\gameManager.ts ====================
 
   /**
@@ -4057,7 +1737,7 @@ namespace BloomBeasts {
    * Card detail popup information
    */
   export interface CardDetailDisplay {
-    card: CardDisplayData;
+    card: RuntimeCard;
     buttons: string[];
     isInDeck: boolean;
   }
@@ -4069,14 +1749,14 @@ namespace BloomBeasts {
     playerHealth: number;
     playerMaxHealth: number;
     playerDeckCount: number;
-    playerNectar: number;
+    playerEnergy: number;
     playerHand: any[];
     playerTrapZone: any[]; // Player's trap cards (face-down)
     playerBuffZone: any[]; // Player's active buff cards
     opponentHealth: number;
     opponentMaxHealth: number;
     opponentDeckCount: number;
-    opponentNectar: number;
+    opponentEnergy: number;
     opponentField: any[];
     opponentTrapZone: any[]; // Opponent's trap cards (face-down)
     opponentBuffZone: any[]; // Opponent's active buff cards
@@ -4324,10 +2004,12 @@ namespace BloomBeasts {
   export type UINodeType<T = any> = any;
 
   /**
-   * Extend CardDisplayData with additional UI properties
+   * UI wrapper for RuntimeCard with additional UI properties
    * These are properties used in the UI but not in the core game model
    */
-  export interface UICardDisplay extends CardDisplayData {
+  export interface UICardDisplay {
+    // The runtime card data
+    card: RuntimeCard;
     // Add emoji based on affinity
     emoji?: string;
     // Use level as rarity indicator
@@ -4339,14 +2021,14 @@ namespace BloomBeasts {
   }
 
   /**
-   * Convert CardDisplayData to UICardDisplay with additional UI properties
+   * Convert RuntimeCard to UICardDisplay with additional UI properties
    */
-  export function toUICard(card: CardDisplayData): UICardDisplay {
+  export function toUICard(card: RuntimeCard): UICardDisplay {
     const uiCard: UICardDisplay = {
-      ...card,
-      attack: card.baseAttack || 0,
-      defense: 0, // Not in CardDisplayData - using 0 as default
-      health: card.baseHealth || 0,
+      card: card,
+      attack: 'baseAttack' in card ? card.baseAttack : undefined,
+      defense: 0, // Not in RuntimeCard - using 0 as default
+      health: 'baseHealth' in card ? card.baseHealth : undefined,
       emoji: getCardEmoji(card),
       rarityLevel: getCardRarity(card)
     };
@@ -4356,8 +2038,10 @@ namespace BloomBeasts {
   /**
    * Get emoji based on card affinity
    */
-  function getCardEmoji(card: CardDisplayData): string {
-    switch (card.affinity?.toLowerCase()) {
+  function getCardEmoji(card: RuntimeCard): string {
+    // Check if card has affinity property (Beast, Buff, Habitat cards)
+    const affinity = 'affinity' in card ? (card as any).affinity : undefined;
+    switch (affinity?.toLowerCase()) {
       case 'fire':
         return '🔥';
       case 'water':
@@ -4374,7 +2058,7 @@ namespace BloomBeasts {
   /**
    * Determine rarity based on card level
    */
-  function getCardRarity(card: CardDisplayData): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
+  function getCardRarity(card: RuntimeCard): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
     const level = card.level || 1;
     if (level >= 10) return 'legendary';
     if (level >= 7) return 'epic';
@@ -4422,7 +2106,7 @@ namespace BloomBeasts {
     trapTwo: SimplePosition;
     trapThree: SimplePosition;
     health: SimplePosition;
-    nectar: SimplePosition;
+    energy: SimplePosition;
     deckCount: SimplePosition;
   }
 
@@ -5627,11 +3311,640 @@ namespace BloomBeasts {
 
   // ==================== bloombeasts\ui\constants\emojis.ts ====================
 
-  export const nectarEmoji = '🏵️';
+  export const energyEmoji = '⚡';
   export const missionEmoji = '🎯';
   export const deckEmoji = '🎲';
   export const playerLevelEmoji = '💪';
   export const playerExperienceEmoji = '🧪';
+
+  // ==================== bloombeasts\screens\common\types.ts ====================
+
+  /**
+   * Minimal card instance in player's collection
+   * All other data (level, stats, etc.) is computed on-demand from currentXP and card definition
+   */
+  export interface CardInstance {
+    id: string;                    // Unique instance ID (e.g., "forest-beast-1-1")
+    cardId: string;                 // Base card ID (e.g., "forest-beast")
+    currentXP: number;              // Only persistent data - everything else is derived
+  }
+
+  // ==================== bloombeasts\engine\utils\abilityDescriptionGenerator.ts ====================
+
+  /**
+   * Generates human-readable descriptions from ability effects
+   */
+
+
+  /**
+   * Generate a complete description from a StructuredAbility
+   */
+  export function generateAbilityDescription(ability: StructuredAbility): string {
+    // Handle edge cases
+    if (!ability) {
+      return '';
+    }
+
+    const parts: string[] = [];
+
+    // Add trigger context
+    const triggerText = getTriggerText(ability.trigger);
+    if (triggerText) {
+      parts.push(triggerText);
+    }
+
+    // Add cost if present
+    if (ability.cost) {
+      const costText = getCostText(ability.cost);
+      if (costText) {
+        parts.push(costText);
+      }
+    }
+
+    // Generate effect descriptions
+    if (ability.effects && ability.effects.length > 0) {
+      const effectTexts = ability.effects.map(effect => getEffectText(effect));
+      const combinedEffects = combineEffects(effectTexts);
+      parts.push(combinedEffects);
+    }
+
+    // Add usage limitations
+    if (ability.maxUsesPerTurn) {
+      parts.push(`(${ability.maxUsesPerTurn}x per turn)`);
+    }
+    if (ability.maxUsesPerGame) {
+      parts.push(`(once per game)`);
+    }
+
+    // If no parts were generated, at least return the ability name
+    if (parts.length === 0) {
+      return ability.name || '';
+    }
+
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+  }
+
+  /**
+   * Get trigger prefix text
+   */
+  function getTriggerText(trigger?: AbilityTrigger): string {
+    switch (trigger) {
+      case AbilityTrigger.OnSummon:
+        return 'When summoned,';
+      case AbilityTrigger.OnAllySummon:
+        return 'When you summon another ally,';
+      case AbilityTrigger.OnAttack:
+        return 'When attacking,';
+      case AbilityTrigger.OnDamage:
+        return 'When attacked,';
+      case AbilityTrigger.OnDestroy:
+        return 'When destroyed,';
+      case AbilityTrigger.OnOwnStartOfTurn:
+        return 'At turn start,';
+      case AbilityTrigger.OnOwnEndOfTurn:
+        return 'At turn end,';
+      case AbilityTrigger.WhileOnField:
+        return '';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Get cost text
+   */
+  function getCostText(cost: any): string {
+    if (cost.type === 'energy') {
+      return `Pay ${cost.value} Energy:`;
+    }
+    if (cost.type === 'discard') {
+      return `Discard ${cost.value} card${cost.value > 1 ? 's' : ''}:`;
+    }
+    if (cost.type === 'sacrifice') {
+      return `Sacrifice ${cost.value} unit${cost.value > 1 ? 's' : ''}:`;
+    }
+    // Counter costs removed
+    return '';
+  }
+
+  /**
+   * Get target text
+   */
+  function getTargetText(target: AbilityTarget): string {
+    switch (target) {
+      case AbilityTarget.Self:
+        return 'this';
+      case AbilityTarget.Attacker:
+        return 'attacker';
+      case AbilityTarget.AllAllies:
+        return 'all allies';
+      case AbilityTarget.AllEnemies:
+        return 'all enemies';
+      case AbilityTarget.AdjacentAllies:
+        return 'adjacent allies';
+      case AbilityTarget.AdjacentEnemies:
+        return 'adjacent enemies';
+      case AbilityTarget.Opponent:
+        return 'opponent';
+      case AbilityTarget.Player:
+        return 'you';
+      case AbilityTarget.RandomEnemy:
+        return 'random enemy';
+      case AbilityTarget.RandomAlly:
+        return 'random ally';
+      case AbilityTarget.AllUnits:
+        return 'all Beasts';
+      case AbilityTarget.OtherAlly:
+        return 'another ally';
+      case AbilityTarget.AttackedEnemy:
+        return 'attacked enemy';
+      case AbilityTarget.PlayedCard:
+        return 'played card';
+      case AbilityTarget.LowestHealthEnemy:
+        return 'lowest health enemy';
+      case AbilityTarget.HighestAttackEnemy:
+        return 'highest attack enemy';
+      default:
+        return target;
+    }
+  }
+
+  /**
+   * Get duration text
+   */
+  function getDurationText(duration?: EffectDuration): string {
+    switch (duration) {
+      case EffectDuration.Permanent:
+        return 'permanently';
+      case EffectDuration.EndOfTurn:
+        return 'until end of turn';
+      case EffectDuration.StartOfNextTurn:
+        return 'until your next turn';
+      case EffectDuration.WhileOnField:
+        return '';
+      case EffectDuration.ThisTurn:
+        return 'this turn';
+      case EffectDuration.NextAttack:
+        return 'for next attack';
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Get condition text
+   */
+  function getConditionText(condition?: any): string {
+    if (!condition) return '';
+
+    switch (condition.type) {
+      case ConditionType.IsDamaged:
+        return 'if damaged';
+      case ConditionType.IsWilting:
+        return 'if Wilting';
+      case ConditionType.AffinityMatches:
+        return `if ${condition.value}`;
+      case ConditionType.HealthBelow:
+        return `if HP < ${condition.value}`;
+      case ConditionType.CostAbove:
+        return `if Cost ${condition.value}+`;
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Get effect text for a single effect
+   */
+  function getEffectText(effect: AbilityEffect): string {
+    const target = getTargetText(effect.target);
+    const condition = getConditionText(effect.condition);
+    const duration = getDurationText(effect.duration);
+
+    switch (effect.type) {
+      case EffectType.ModifyStats: {
+        const stat = effect.stat === StatType.Attack ? 'ATK' :
+                     effect.stat === StatType.Health ? 'HP' : 'ATK/HP';
+        const sign = effect.value >= 0 ? '+' : '';
+        const durationPart = duration ? ` ${duration}` : '';
+        return `${target} get${target === 'this' ? 's' : ''} ${sign}${effect.value} ${stat}${durationPart}`;
+      }
+
+      case EffectType.DealDamage: {
+        return `deal ${effect.value} damage to ${target}`;
+      }
+
+      case EffectType.Heal: {
+        if (effect.value === HealValueType.Full) {
+          return `fully heal ${target}`;
+        }
+        return `heal ${target} by ${effect.value} HP`;
+      }
+
+      case EffectType.DrawCards: {
+        return `draw ${effect.value} card${effect.value > 1 ? 's' : ''}`;
+      }
+
+      // Counter effects removed
+
+      case EffectType.CannotBeTargeted: {
+        const byWhat = effect.by.join(', ').replace(/,([^,]*)$/, ' or$1');
+        return `cannot be targeted by ${byWhat}`;
+      }
+
+      case EffectType.Immunity: {
+        const immunities = effect.immuneTo.map(type => {
+          switch (type) {
+            case ImmunityType.Magic: return 'Magic';
+            case ImmunityType.Trap: return 'Trap';
+            case ImmunityType.Abilities: return 'abilities';
+            case ImmunityType.NegativeEffects: return 'negative effects';
+            case ImmunityType.Damage: return 'damage';
+            default: return type;
+          }
+        }).join(' and ');
+        return `immune to ${immunities}`;
+      }
+
+      case EffectType.AttackModification: {
+        const mod = effect.modification;
+        if (mod === 'double-damage') return 'deal double damage';
+        if (mod === 'triple-damage') return 'deal triple damage';
+        if (mod === 'instant-destroy') return 'instantly destroy target';
+        if (mod === 'attack-twice') return 'attack twice';
+        if (mod === 'attack-first') return 'strike first (defender cannot counter if killed)';
+        if (mod === 'cannot-counterattack') return 'cannot be counterattacked';
+        if (mod === 'piercing') return 'ignore defensive abilities';
+        return mod;
+      }
+
+      case EffectType.RemoveSummoningSickness: {
+        return 'can attack immediately';
+      }
+
+      case EffectType.GainResource: {
+        if (effect.resource === ResourceType.Energy) {
+          return `gain ${effect.value} Energy${duration ? ` ${duration}` : ''}`;
+        }
+        if (effect.resource === ResourceType.ExtraEnergyPlay) {
+          return `play ${effect.value} additional Energy Card${effect.value > 1 ? 's' : ''}${duration ? ` ${duration}` : ''}`;
+        }
+        return `gain ${effect.value} ${effect.resource}`;
+      }
+
+      case EffectType.MoveUnit: {
+        if (effect.destination === 'any-slot') {
+          return 'move to any empty slot';
+        }
+        if (effect.destination === 'adjacent-slot') {
+          return 'move to adjacent empty slot';
+        }
+        return 'move';
+      }
+
+      case EffectType.PreventAttack: {
+        return `${target} cannot attack${duration ? ` ${duration}` : ''}`;
+      }
+
+      case EffectType.PreventAbilities: {
+        return `${target} cannot use abilities${duration ? ` ${duration}` : ''}`;
+      }
+
+      case EffectType.DamageReduction: {
+        return `reduce damage by ${effect.value}${duration ? ` ${duration}` : ''}`;
+      }
+
+      case EffectType.Retaliation: {
+        if (effect.value === 'reflected') {
+          return 'reflect all damage to attacker';
+        }
+        return `deal ${effect.value} damage to attacker`;
+      }
+
+      case EffectType.TemporaryHP: {
+        return `${target} gain${target === 'this' ? 's' : ''} ${effect.value} temporary HP`;
+      }
+
+      case EffectType.SwapPositions: {
+        return `swap ${target} positions`;
+      }
+
+      case EffectType.ReturnToHand: {
+        return `return ${target} to hand`;
+      }
+
+      case EffectType.Destroy: {
+        const conditionText = condition ? ` ${condition}` : '';
+        return `destroy ${target}${conditionText}`;
+      }
+
+      default:
+        return effect.type;
+    }
+  }
+
+  /**
+   * Combine multiple effect texts intelligently
+   */
+  function combineEffects(effects: string[]): string {
+    if (effects.length === 0) return '';
+    if (effects.length === 1) return effects[0];
+    if (effects.length === 2) return `${effects[0]} and ${effects[1]}`;
+
+    // Multiple effects: use commas and "and" for last one
+    const allButLast = effects.slice(0, -1).join(', ');
+    const last = effects[effects.length - 1];
+    return `${allButLast}, and ${last}`;
+  }
+
+  // ==================== bloombeasts\engine\utils\getAbilityDescription.ts ====================
+
+  /**
+   * Helper function to get ability description
+   * Generates description from ability effects
+   */
+
+
+  /**
+   * Get the description for an ability
+   * @param ability The ability to get description for
+   * @returns The description string
+   */
+  export function getAbilityDescription(ability: StructuredAbility): string {
+    return generateAbilityDescription(ability);
+  }
+
+  // ==================== bloombeasts\engine\utils\cardDescriptionGenerator.ts ====================
+
+  /**
+   * Generates human-readable descriptions for all card types
+   * (Magic, Trap, Buff, Habitat, and Bloom cards)
+   */
+
+
+  /**
+   * Get description for any card type
+   * All cards now use the standardized abilities structure
+   */
+  export function getCardDescription(card: any): string {
+    if (!card) return '';
+
+    // All cards use abilities array
+    if (card.abilities && Array.isArray(card.abilities)) {
+      // Generate descriptions for all abilities and combine them
+      const abilityDescriptions = card.abilities
+        .map((ability: any) => getAbilityDescription(ability))
+        .filter((desc: string) => desc.length > 0);
+
+      // Combine ability descriptions with bullet points if multiple
+      if (abilityDescriptions.length === 0) {
+        return '';
+      } else if (abilityDescriptions.length === 1) {
+        return abilityDescriptions[0];
+      } else {
+        // Multiple abilities: join with bullet points
+        return abilityDescriptions.map((desc: string) => `• ${desc}`).join(' ');
+      }
+    }
+
+    // Fallback: return card description if it exists, otherwise empty
+    return card.description || '';
+  }
+
+  // ==================== bloombeasts\utils\cardUtils.ts ====================
+
+  /**
+   * Card utility functions for level/XP calculations and stat computation
+   */
+
+
+  // Module-level catalog manager reference for card utils
+  // Set via setCatalogManagerForUtils() which is called by BloomBeastsGame
+  let _cardUtilsCatalogManager: any = null;
+
+  /**
+   * Set the catalog manager instance for card utility functions
+   * Called by BloomBeastsGame during construction
+   */
+  export function setCatalogManagerForUtils(catalogManager: any): void {
+    _cardUtilsCatalogManager = catalogManager;
+  }
+
+  /**
+   * Battle-specific card stats (runtime only, not persisted)
+   * Created when a card enters battle, mutated during combat
+   */
+  export interface CardBattleStats {
+    baseAttack?: number;
+    currentAttack?: number;
+    baseHealth?: number;
+    currentHealth?: number;
+    abilities?: any[];
+  }
+
+  /**
+   * XP thresholds for card leveling (cumulative)
+   * Level 2: 100 XP, Level 3: 300 XP, etc.
+   */
+  const CARD_XP_THRESHOLDS = [
+    0,      // Level 1
+    100,    // Level 2
+    300,    // Level 3
+    700,    // Level 4
+    1500,   // Level 5
+    3100,   // Level 6
+    6300,   // Level 7
+    12700,  // Level 8
+    25500,  // Level 9
+  ];
+
+  /**
+   * Calculate card level from current XP
+   * Works for all card types (Beast, Magic, Trap, Habitat, Buff)
+   * Uses standard XP thresholds for all cards
+   */
+  export function getCardLevel(currentXP: number): number {
+    // Standard XP thresholds
+    for (let level = 9; level >= 1; level--) {
+      if (currentXP >= CARD_XP_THRESHOLDS[level - 1]) {
+        return level;
+      }
+    }
+    return 1;
+  }
+
+  /**
+   * Calculate XP required for next level (uses standard progression)
+   */
+  export function getXPRequired(currentLevel: number, currentXP: number): number {
+    if (currentLevel >= 9) return 0; // Max level
+
+    const nextLevel = currentLevel + 1;
+
+    // Standard XP requirements
+    const nextLevelXP = CARD_XP_THRESHOLDS[nextLevel - 1];
+    return nextLevelXP - currentXP;
+  }
+
+  export function getXPThreshold(level: number): number {
+    return CARD_XP_THRESHOLDS[level - 1];
+  }
+
+  /**
+   * Get card definition by ID
+   */
+  export function getCardDefinition(cardId: string): AnyCard | undefined {
+    if (!_cardUtilsCatalogManager) {
+      console.warn('[cardUtils] catalogManager not initialized');
+      return undefined;
+    }
+    const allCards = _cardUtilsCatalogManager.getAllCardData();
+    return allCards.find((c: any) => c && c.id === cardId);
+  }
+
+  /**
+   * Extract base card ID (remove instance suffix)
+   * e.g., "forest-beast-1-1" → "forest-beast"
+   */
+  export function extractBaseCardId(instanceId: string): string {
+    if (!instanceId) return '';
+    return instanceId.replace(/-\d+-\d+$/, '');
+  }
+
+  // CardDisplay and computeCardDisplay have been removed.
+  // Use RuntimeCard directly (from engine/types/runtime).
+  // To convert CardInstance to RuntimeCard, use createBattleCard().
+
+  /**
+   * Compute level-scaled stat value
+   * Each level increases stats by 10% (Level 1 = 100%, Level 9 = 180%)
+   *
+   * @param baseStat - Base stat value at level 1
+   * @param level - Current level (1-9)
+   * @returns Scaled stat value
+   */
+  export function computeLeveledStat(baseStat: number, level: number): number {
+    if (level < 1) level = 1;
+    if (level > 9) level = 9;
+
+    const multiplier = 1.0 + ((level - 1) * 0.1); // 1.0 at level 1, 1.8 at level 9
+    return Math.round(baseStat * multiplier);
+  }
+
+  /**
+   * Create a RuntimeCard from a CardInstance
+   * Transforms collection instance into battle-ready card with computed level and stats
+   *
+   * @param instance - CardInstance from player's collection
+   * @param cardDef - Card definition from catalog
+   * @returns RuntimeCard ready for battle (deck, hand, or field)
+   */
+  export function createBattleCard(instance: CardInstance, cardDef: AnyCard): RuntimeCard {
+    const level = getCardLevel(instance.currentXP);
+
+    // For Beast cards, compute level-scaled stats
+    if (cardDef.type === CardTypeEnum.Beast && 'baseAttack' in cardDef && 'baseHealth' in cardDef) {
+      const beastCard = cardDef as BloomBeastCard;
+      const scaledAttack = computeLeveledStat(beastCard.baseAttack, level);
+      const scaledHealth = computeLeveledStat(beastCard.baseHealth, level);
+
+      const runtimeBeast: RuntimeBeast = {
+        ...beastCard,
+        instanceId: instance.id,
+        cardId: beastCard.id,      // Base card ID (required by RuntimeBeast)
+        currentXP: instance.currentXP,
+        level,
+        currentLevel: level as Level,  // Strongly-typed level (required by RuntimeBeast)
+        currentAttack: scaledAttack,
+        currentHealth: scaledHealth,
+        maxHealth: scaledHealth,
+        statusEffects: [],         // Initialize empty status effects (required by RuntimeBeast)
+      };
+
+      return runtimeBeast;
+    }
+
+    // For non-Beast cards, just add instance metadata
+    const runtimeCard = {
+      ...cardDef,
+      instanceId: instance.id,
+      currentXP: instance.currentXP,
+      level,
+    } as RuntimeCard;
+
+    return runtimeCard;
+  }
+
+  /**
+   * Get player's deck cards for battle
+   * Converts minimal CardInstance to full battle cards using definitions
+   */
+  export function getPlayerDeckCards(playerDeck: string[], cardInstances: CardInstance[]): RuntimeCard[] {
+    if (!_cardUtilsCatalogManager) {
+      console.warn('[cardUtils] catalogManager not initialized');
+      return [];
+    }
+
+    const deckCards: RuntimeCard[] = [];
+    const allCardDefs = _cardUtilsCatalogManager.getAllCardData();
+
+    // Convert all cards from player's deck to RuntimeCards
+    for (const cardId of playerDeck) {
+      const cardInstance = cardInstances.find(c => c.id === cardId);
+
+      if (cardInstance) {
+        // Get the card definition
+        const baseCardId = extractBaseCardId(cardInstance.cardId);
+        const cardDef = allCardDefs.find((card: any) => card && card.id === baseCardId);
+
+        if (!cardDef) {
+          console.warn(`[cardUtils] Card definition not found for ${cardInstance.cardId}`);
+          continue;
+        }
+
+        // Use createBattleCard to get level-scaled stats
+        const battleCard = createBattleCard(cardInstance, cardDef as AnyCard);
+        deckCards.push(battleCard);
+      }
+    }
+
+    return deckCards;
+  }
+
+  /**
+   * Award experience to all cards in the player's deck
+   * Level is computed from XP on-demand, so we just add XP here
+   */
+  export function awardDeckExperience(totalCardXP: number, playerDeck: string[], cardInstances: CardInstance[]): void {
+    if (playerDeck.length === 0) return;
+
+    // Distribute XP evenly across all cards in deck
+    const xpPerCard = Math.floor(totalCardXP / playerDeck.length);
+
+    // Award XP to each card in the deck
+    for (const cardId of playerDeck) {
+      const cardInstance = cardInstances.find(c => c.id === cardId);
+      if (cardInstance) {
+        cardInstance.currentXP += xpPerCard;
+      }
+    }
+  }
+
+  /**
+   * Add card reward to collection (minimal format)
+   */
+  export function addCardReward(card: any, cardInstances: CardInstance[], index: number): void {
+    const instanceId = `${card.id}-reward-${Date.now()}-${index}`;
+
+    // Create minimal card instance (all types use same format)
+    const cardInstance: CardInstance = {
+      id: instanceId,
+      cardId: card.id,
+      currentXP: 0, // New cards start at 0 XP (level 1)
+    };
+
+    cardInstances.push(cardInstance);
+  }
 
   // ==================== bloombeasts\ui\screens\common\CardRenderer.ts ====================
 
@@ -5642,7 +3955,7 @@ namespace BloomBeasts {
 
 
   export interface CardRendererProps {
-    card: CardDisplayData;
+    card: RuntimeCard;
     isInDeck?: boolean;
     onClick?: (cardId: string) => void;
     showDeckIndicator?: boolean;
@@ -5651,10 +3964,10 @@ namespace BloomBeasts {
   /**
    * Create a card UI component with proper multi-layer rendering
    * This follows the standard card format:
-   * - Layer 1: Card artwork (185x185) - beast image for Bloom, card art for others
-   * - Layer 2: Card frame (210x280) - base-card for Bloom, type-specific for others (buff-card, magic-card, etc.)
-   * - Layer 3: Affinity icon (for Bloom cards)
-   * - Layer 4: Experience bar (for Bloom cards with levels)
+   * - Layer 1: Card artwork (185x185) - beast image for Beast, card art for others
+   * - Layer 2: Card frame (210x280) - base-card for Beast, type-specific for others (buff-card, magic-card, etc.)
+   * - Layer 3: Affinity icon (for Beast cards)
+   * - Layer 4: Experience bar (for Beast cards with levels)
    * - Layer 5: Text overlays (name, cost, stats, level, ability)
    * - Layer 6: Deck indicator (if showDeckIndicator is true)
    */
@@ -5699,33 +4012,36 @@ namespace BloomBeasts {
     const cardImageKey = baseId; // Card images use the base card ID
     const beastImageKey = baseId; // Beast images use the base card ID
 
-    // Card frame key: Bloom cards use base-card, others use type-specific frames
+    // Check if card has affinity property (Beast, Buff, Habitat cards)
+    const affinity = 'affinity' in card ? (card as any).affinity : undefined;
+
+    // Card frame key: Beast cards use base-card, others use type-specific frames
     let cardFrameKey = '';
-    if (card.type === 'Bloom') {
+    if (card.type === CardType.Beast) {
       cardFrameKey = 'base-card';
-    } else if (card.type === 'Habitat' && card.affinity) {
-      cardFrameKey = `${card.affinity.toLowerCase()}-habitat`;
+    } else if (card.type === CardType.Habitat && affinity) {
+      cardFrameKey = `${affinity.toLowerCase()}-habitat`;
     } else {
       cardFrameKey = `${card.type.toLowerCase()}-card`;
     }
 
     // Affinity icon key format: affinity-icon (e.g., 'forest-icon', 'fire-icon')
-    const affinityKey = card.affinity ? `${card.affinity.toLowerCase()}-icon` : '';
+    const affinityKey = affinity ? `${affinity.toLowerCase()}-icon` : '';
     const expBarKey = 'experience-bar';
 
     // Get card description for ability text using the official cardDescriptionGenerator
     const abilityText = getCardDescription(card);
 
     // Debug logging for cards without descriptions
-    if ((!abilityText || abilityText.trim() === '') && card.type !== 'Bloom') {
-    } else if (card.type !== 'Bloom') {
+    if ((!abilityText || abilityText.trim() === '') && card.type !== 'Beast') {
+    } else if (card.type !== 'Beast') {
     }
 
-    const imageSourceKey = card.type === 'Bloom' ? beastImageKey : cardImageKey;
+    const imageSourceKey = card.type === CardType.Beast ? beastImageKey : cardImageKey;
 
     const children = [
         // Layer 1: Card/Beast artwork image (185x185)
-        // For Bloom cards: use beast image
+        // For Beast cards: use beast image
         // For other cards (Magic/Trap/Buff/Habitat): use card artwork image
         ui.Image({
           source: ui.assetIdToImageSource?.(imageSourceKey) || null,
@@ -5738,7 +4054,7 @@ namespace BloomBeasts {
           },
         }),
 
-        // Layer 2: Card frame - Bloom cards use base-card, others use type-specific frames
+        // Layer 2: Card frame - Beast cards use base-card, others use type-specific frames
         ui.Image({
           source: ui.assetIdToImageSource?.(cardFrameKey) || null,
           style: {
@@ -5750,8 +4066,8 @@ namespace BloomBeasts {
           },
         }),
 
-        // Layer 3: Affinity icon (for Bloom cards)
-        ...(card.type === 'Bloom' && card.affinity && affinityKey ? [
+        // Layer 3: Affinity icon (for Beast cards)
+        ...(card.type === CardType.Beast && card.affinity && affinityKey ? [
           ui.Image({
             source: ui.assetIdToImageSource?.(affinityKey) || null,
             style: {
@@ -5795,8 +4111,8 @@ namespace BloomBeasts {
           })
         ] : []),
 
-        // Attack and Health (for Bloom cards)
-        ...(card.type === 'Bloom' && ((card as any).currentAttack !== undefined || (card as any).baseAttack !== undefined) ? [
+        // Attack and Health (for Beast cards)
+        ...(card.type === CardType.Beast && ((card as any).currentAttack !== undefined || (card as any).baseAttack !== undefined) ? [
           ui.Text({
             text: String((card as any).currentAttack ?? (card as any).baseAttack ?? 0),
             style: {
@@ -5811,7 +4127,7 @@ namespace BloomBeasts {
           })
         ] : []),
 
-        ...(card.type === 'Bloom' && ((card as any).currentHealth !== undefined || (card as any).baseHealth !== undefined) ? [
+        ...(card.type === CardType.Beast && ((card as any).currentHealth !== undefined || (card as any).baseHealth !== undefined) ? [
           ui.Text({
             text: String((card as any).currentHealth ?? (card as any).baseHealth ?? 0),
             style: {
@@ -5829,7 +4145,7 @@ namespace BloomBeasts {
         // Level and Experience (for all cards with level)
         ...(card.level !== undefined ? [
           ui.Text({
-            text: `lvl ${card.level}. ${card.experience || 0}/${card.experienceRequired || 0}`,
+            text: `lvl ${card.level}. ${card.currentXP || 0}/${getXPThreshold(card.level)}`,
             style: {
               position: 'absolute',
               top: positions.level.y,
@@ -5971,13 +4287,13 @@ namespace BloomBeasts {
 
     // Helper to get card from combined data
     // Now accepts uiState, playerData, and battleDisplay to properly react to changes
-    const getCard = (uiState: UIState, playerData: PlayerData, battleDisplay: BattleDisplay | null): CardDisplayData | null => {
+    const getCard = (uiState: UIState, playerData: PlayerData, battleDisplay: BattleDisplay | null): RuntimeCard | null => {
       // Battle modes - get card directly from battleDisplay
       if (isBattleBeastMode && slotIndex !== undefined && player) {
         if (!battleDisplay) return null;
         const field = player === 'player' ? battleDisplay.playerField : battleDisplay.opponentField;
         const beast = field?.[slotIndex];
-        return beast || null; // BattleDisplay cards are already in CardDisplayData format
+        return beast || null; // BattleDisplay cards are already RuntimeCard
       }
 
       if (isBattleHandMode && slotIndex !== undefined && cardsPerPage !== undefined) {
@@ -5985,12 +4301,12 @@ namespace BloomBeasts {
         const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
         const actualIndex = scrollOffset * cardsPerPage + slotIndex;
         const card = battleDisplay.playerHand?.[actualIndex];
-        return card || null; // BattleDisplay cards are already in CardDisplayData format
+        return card || null; // BattleDisplay cards are already RuntimeCard
       }
 
       if (isBattleSelectedCardMode) {
         const card = uiState.battle?.selectedCardDetail;
-        return card || null; // BattleDisplay cards are already in CardDisplayData format
+        return card || null; // BattleDisplay cards are already RuntimeCard
       }
 
       // PlayerData modes - get card from collected cards
@@ -6010,8 +4326,11 @@ namespace BloomBeasts {
         instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
       }
 
-      // Compute display data from instance
-      return instance ? computeCardDisplay(instance) : null;
+      // Convert CardInstance to RuntimeCard
+      if (!instance) return null;
+      const baseCardId = extractBaseCardId(instance.cardId);
+      const cardDef = getCardDefinition(baseCardId);
+      return cardDef ? createBattleCard(instance, cardDef) : null;
     };
 
 
@@ -6052,9 +4371,9 @@ namespace BloomBeasts {
       const card = isBattleMode
         ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
         : getCard(uiState, data as PlayerData, null);
-      if (!card || card.type !== 'Bloom') return '';
-      const bloomCard = card as any;
-      return String(bloomCard.currentAttack ?? bloomCard.baseAttack ?? 0);
+      if (!card || card.type !== CardType.Beast) return '';
+      const beastCard = card as any;
+      return String(beastCard.currentAttack ?? beastCard.baseAttack ?? 0);
     });
 
     const cardHealthBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
@@ -6062,9 +4381,9 @@ namespace BloomBeasts {
       const card = isBattleMode
         ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
         : getCard(uiState, data as PlayerData, null);
-      if (!card || card.type !== 'Bloom') return '';
-      const bloomCard = card as any;
-      return String(bloomCard.currentHealth ?? bloomCard.baseHealth ?? 0);
+      if (!card || card.type !== CardType.Beast) return '';
+      const beastCard = card as any;
+      return String(beastCard.currentHealth ?? beastCard.baseHealth ?? 0);
     });
 
     const cardLevelBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
@@ -6075,9 +4394,8 @@ namespace BloomBeasts {
       if (!card || card.level === undefined) return '';
 
       // For all cards, show level and experience
-      const exp = card.experience || 0;
-      const expRequired = card.experienceRequired || 0;
-      return `lvl ${card.level}. ${exp}/${expRequired}`;
+      const exp = card.currentXP || 0;
+      return `lvl ${card.level}. ${exp}/${getXPThreshold(card.level)}`;
     });
 
     const abilityTextBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
@@ -6094,10 +4412,15 @@ namespace BloomBeasts {
       const card = isBattleMode
         ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
         : getCard(uiState, data as PlayerData, null);
-      if (!card) return null;
+      if (!card) {
+        return null;
+      }
       const baseId = extractBaseId(card.id, card.name);
-      if (!baseId) return null;
-      return ui.assetIdToImageSource?.(baseId) ?? null;
+      if (!baseId) {
+        return null;
+      }
+      const imageSource = ui.assetIdToImageSource?.(baseId) ?? null;
+      return imageSource;
     });
 
     const templateImageBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
@@ -6108,9 +4431,9 @@ namespace BloomBeasts {
       if (!card) return null;
 
       let templateAssetId = '';
-      if (card.type === 'Habitat' && card.affinity) {
+      if (card.type === CardType.Habitat && card.affinity) {
         templateAssetId = `${card.affinity.toLowerCase()}-habitat`;
-      } else if (card.type !== 'Bloom') {
+      } else if (card.type !== CardType.Beast) {
         templateAssetId = `${card.type.toLowerCase()}-card`;
       }
 
@@ -6122,7 +4445,7 @@ namespace BloomBeasts {
       const card = isBattleMode
         ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
         : getCard(uiState, data as PlayerData, null);
-      if (!card || card.type !== 'Bloom' || !card.affinity) return null;
+      if (!card || card.type !== CardType.Beast || !card.affinity) return null;
       const affinityAssetId = `${card.affinity.toLowerCase()}-icon`;
       if (!affinityAssetId) return null;
       return ui.assetIdToImageSource?.(affinityAssetId) ?? null;
@@ -6153,14 +4476,14 @@ namespace BloomBeasts {
             : getCard(uiState, data as PlayerData, null);
           if (!card) return null;
 
-          // Bloom cards use base-card
-          if (card.type === 'Bloom') {
+          // Beast cards use base-card
+          if (card.type === CardType.Beast) {
             return ui.assetIdToImageSource?.('base-card') ?? null;
           }
 
           // Other cards use their type-specific frame
           let frameAssetId = '';
-          if (card.type === 'Habitat' && card.affinity) {
+          if (card.type === CardType.Habitat && card.affinity) {
             frameAssetId = `${card.affinity.toLowerCase()}-habitat`;
           } else {
             frameAssetId = `${card.type.toLowerCase()}-card`;
@@ -6676,9 +4999,9 @@ namespace BloomBeasts {
                 if (!card) return null;
 
                 let templateKey = '';
-                if (card.type === 'Bloom') {
+                if (card.type === CardType.Beast) {
                   templateKey = 'base-card';
-                } else if (card.type === 'Habitat' && card.affinity) {
+                } else if (card.type === CardType.Habitat && card.affinity) {
                   templateKey = `${card.affinity.toLowerCase()}-habitat`;
                 } else {
                   templateKey = `${card.type.toLowerCase()}-card`;
@@ -6811,7 +5134,7 @@ namespace BloomBeasts {
           const buttonId = `btn-card-${buttonText.toLowerCase().replace(/ /g, '-')}`;
           propsSnapshot?.onButtonClick?.(buttonId);
         },
-        color: (buttonText === 'Add' ? 'green' : buttonText === 'Remove' ? 'red' : 'default') as ButtonColor,
+        color: (buttonText === 'Add' ? 'green' : buttonText === 'Remove' ? 'red' : 'default') as any,
       }));
 
     return createPopup({
@@ -8136,6 +6459,572 @@ namespace BloomBeasts {
     }
   }
 
+  // ==================== bloombeasts\engine\utils\Logger.ts ====================
+
+  /**
+   * Logger
+   *
+   * Professional logging system with configurable log levels.
+   * Replaces console.log statements throughout the codebase.
+   */
+
+  export enum LogLevel {
+    DEBUG = 0,
+    INFO = 1,
+    WARN = 2,
+    ERROR = 3,
+    NONE = 4,
+  }
+
+  export interface LoggerConfig {
+    level: LogLevel;
+    prefix?: string;
+    timestamps?: boolean;
+    colors?: boolean;
+  }
+
+  class LoggerClass {
+    private config: LoggerConfig = {
+      level: LogLevel.INFO,
+      timestamps: true,
+      colors: true,
+    };
+
+    /**
+     * Configure the logger
+     * @param config Logger configuration
+     */
+    configure(config: Partial<LoggerConfig>): void {
+      this.config = { ...this.config, ...config };
+    }
+
+    /**
+     * Set log level
+     * @param level The minimum log level to display
+     */
+    setLevel(level: LogLevel): void {
+      this.config.level = level;
+    }
+
+    /**
+     * Get current log level
+     * @returns Current log level
+     */
+    getLevel(): LogLevel {
+      return this.config.level;
+    }
+
+    /**
+     * Format log message with timestamp and prefix
+     */
+    private format(level: string, message: string, prefix?: string): string {
+      const parts: string[] = [];
+
+      if (this.config.timestamps) {
+        const timestamp = new Date().toISOString();
+        parts.push(`[${timestamp}]`);
+      }
+
+      parts.push(`[${level}]`);
+
+      if (prefix || this.config.prefix) {
+        parts.push(`[${prefix || this.config.prefix}]`);
+      }
+
+      parts.push(message);
+
+      return parts.join(' ');
+    }
+
+    /**
+     * Log debug message
+     * @param message Message to log
+     * @param data Optional data to log
+     */
+    debug(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.DEBUG) {
+        const formatted = this.format('DEBUG', message);
+        console.log(formatted, ...data);
+      }
+    }
+
+    /**
+     * Log info message
+     * @param message Message to log
+     * @param data Optional data to log
+     */
+    info(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.INFO) {
+        const formatted = this.format('INFO', message);
+        console.log(formatted, ...data);
+      }
+    }
+
+    /**
+     * Log warning message
+     * @param message Message to log
+     * @param data Optional data to log
+     */
+    warn(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.WARN) {
+        const formatted = this.format('WARN', message);
+        console.warn(formatted, ...data);
+      }
+    }
+
+    /**
+     * Log error message
+     * @param message Message to log
+     * @param data Optional data to log
+     */
+    error(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.ERROR) {
+        const formatted = this.format('ERROR', message);
+        console.error(formatted, ...data);
+      }
+    }
+
+    /**
+     * Create a child logger with a specific prefix
+     * @param prefix Prefix for all logs from this logger
+     * @returns New logger instance with prefix
+     */
+    child(prefix: string): ChildLogger {
+      return new ChildLogger(this, prefix);
+    }
+
+    private timers: Map<string, number> = new Map();
+
+    /**
+     * Group related logs together (simplified for basic console support)
+     * @param label Group label
+     * @param collapsed Whether group should be collapsed by default (ignored)
+     */
+    group(label: string, collapsed: boolean = false): void {
+      if (this.config.level <= LogLevel.INFO) {
+        const formatted = this.format('GROUP', `>>> ${label}`);
+        console.log(formatted);
+      }
+    }
+
+    /**
+     * End a log group (simplified for basic console support)
+     */
+    groupEnd(): void {
+      if (this.config.level <= LogLevel.INFO) {
+        const formatted = this.format('GROUP', `<<<`);
+        console.log(formatted);
+      }
+    }
+
+    /**
+     * Log a table (simplified for basic console support)
+     * @param data Data to display as table
+     */
+    table(data: any): void {
+      if (this.config.level <= LogLevel.INFO) {
+        const formatted = this.format('TABLE', JSON.stringify(data, null, 2));
+        console.log(formatted);
+      }
+    }
+
+    /**
+     * Start a performance timer
+     * @param label Timer label
+     */
+    time(label: string): void {
+      if (this.config.level <= LogLevel.DEBUG) {
+        this.timers.set(label, Date.now());
+        const formatted = this.format('TIMER', `${label}: started`);
+        console.log(formatted);
+      }
+    }
+
+    /**
+     * End a performance timer and log the result
+     * @param label Timer label
+     */
+    timeEnd(label: string): void {
+      if (this.config.level <= LogLevel.DEBUG) {
+        const startTime = this.timers.get(label);
+        if (startTime) {
+          const duration = Date.now() - startTime;
+          this.timers.delete(label);
+          const formatted = this.format('TIMER', `${label}: ${duration}ms`);
+          console.log(formatted);
+        }
+      }
+    }
+
+    /**
+     * Assert a condition and log error if false
+     * @param condition Condition to check
+     * @param message Error message if condition is false
+     */
+    assert(condition: boolean, message: string): void {
+      if (this.config.level <= LogLevel.ERROR) {
+        if (!condition) {
+          const formatted = this.format('ASSERT', message);
+          console.error(formatted);
+        }
+      }
+    }
+  }
+
+  /**
+   * Child logger with a specific prefix
+   */
+  class ChildLogger {
+    constructor(
+      private parent: LoggerClass,
+      private prefix: string
+    ) {}
+
+    debug(message: string, ...data: any[]): void {
+      this.parent.debug(`[${this.prefix}] ${message}`, ...data);
+    }
+
+    info(message: string, ...data: any[]): void {
+      this.parent.info(`[${this.prefix}] ${message}`, ...data);
+    }
+
+    warn(message: string, ...data: any[]): void {
+      this.parent.warn(`[${this.prefix}] ${message}`, ...data);
+    }
+
+    error(message: string, ...data: any[]): void {
+      this.parent.error(`[${this.prefix}] ${message}`, ...data);
+    }
+
+    group(label: string, collapsed?: boolean): void {
+      this.parent.group(`[${this.prefix}] ${label}`, collapsed);
+    }
+
+    groupEnd(): void {
+      this.parent.groupEnd();
+    }
+
+    table(data: any): void {
+      this.parent.table(data);
+    }
+
+    time(label: string): void {
+      this.parent.time(`[${this.prefix}] ${label}`);
+    }
+
+    timeEnd(label: string): void {
+      this.parent.timeEnd(`[${this.prefix}] ${label}`);
+    }
+  }
+
+  // Export singleton instance
+  export const Logger = new LoggerClass();
+
+  // Configure based on environment
+  // if (typeof process !== 'undefined' && process.env) {
+  //   const env = 'development';
+
+  //   if (env === 'production') {
+  //     Logger.setLevel(LogLevel.WARN);
+  //   } else if (env === 'test') {
+  //     Logger.setLevel(LogLevel.ERROR);
+  //   } else {
+      Logger.setLevel(LogLevel.DEBUG);
+  //   }
+  // }
+
+  // ==================== bloombeasts\engine\constants\gameRules.ts ====================
+
+  /**
+   * Game Rules Constants
+   *
+   * Central location for all game rule constants to avoid magic numbers
+   * throughout the codebase.
+   */
+
+  // Field Configuration
+  export const FIELD_SIZE = 3;
+
+  // Deck Configuration
+  export const DECK_SIZE = 30;
+  export const MIN_DECK_SIZE = 30;
+  export const MAX_DECK_SIZE = 30;
+
+  // Health Configuration
+  export const STARTING_HEALTH = 30;
+  export const PLAYER_MAX_HEALTH = 30;
+
+  // Turn Configuration
+  export const TURN_TIME_LIMIT = 60; // seconds
+  export const MAX_TURNS = 100; // to prevent infinite games
+
+  // Hand Configuration
+  export const MAX_HAND_SIZE = 10;
+  export const STARTING_HAND_SIZE = 5;
+
+  // Zone Limits
+  export const MAX_TRAP_ZONE_SIZE = 3;
+  export const MAX_MAGIC_ZONE_SIZE = 3;
+
+  // Cost Limits
+  export const MAX_CARD_COST = 10;
+  export const MIN_CARD_COST = 0;
+
+  // Resource Limits
+  export const MAX_ENERGY = 10;
+  export const MIN_ENERGY = 0;
+
+  // Level Configuration
+  export const MIN_LEVEL = 1;
+  // MAX_LEVEL is defined in leveling.ts
+
+  // Stat Limits
+  export const MAX_ATTACK = 99;
+  export const MAX_HEALTH = 99;
+  export const MIN_ATTACK = 0;
+  export const MIN_HEALTH = 1;
+
+  // Counter limits removed
+
+  // Card Limits
+  export const MAX_COPIES_PER_CARD = 3;
+
+  // Battle Configuration
+  export const FIRST_PLAYER_DRAWS_ON_FIRST_TURN = false;
+
+  // ==================== bloombeasts\engine\utils\fieldUtils.ts ====================
+
+  /**
+   * Field Utilities
+   *
+   * Helper functions for working with the battlefield and beast fields.
+   * Eliminates common iteration patterns throughout the codebase.
+   */
+
+
+  /**
+   * Iterate over all beasts in the field, including null slots
+   * @param field The field array
+   * @param callback Function to call for each slot
+   */
+  export function forEachBeast(
+    field: (RuntimeBeast | null)[],
+    callback: (beast: RuntimeBeast | null, index: number) => void
+  ): void {
+    field.forEach((beast, index) => callback(beast, index));
+  }
+
+  /**
+   * Iterate over only non-null beasts in the field
+   * @param field The field array
+   * @param callback Function to call for each beast
+   */
+  export function forEachActiveBeast(
+    field: (RuntimeBeast | null)[],
+    callback: (beast: RuntimeBeast, index: number) => void
+  ): void {
+    field.forEach((beast, index) => {
+      if (beast !== null) {
+        callback(beast, index);
+      }
+    });
+  }
+
+  /**
+   * Get all beasts from the field (including null slots)
+   * @param field The field array
+   * @returns Array of beasts and nulls
+   */
+  export function getAllSlots(field: (RuntimeBeast | null)[]): (RuntimeBeast | null)[] {
+    return [...field];
+  }
+
+  /**
+   * Get all non-null beasts from the field
+   * @param field The field array
+   * @returns Array of beasts (no nulls)
+   */
+  export function getAllBeasts(field: (RuntimeBeast | null)[]): RuntimeBeast[] {
+    return field.filter((beast): beast is RuntimeBeast => beast !== null);
+  }
+
+  /**
+   * Get all alive (HP > 0) beasts from the field
+   * @param field The field array
+   * @returns Array of alive beasts
+   */
+  export function getAliveBeasts(field: (RuntimeBeast | null)[]): RuntimeBeast[] {
+    return field.filter(
+      (beast): beast is RuntimeBeast => beast !== null && beast.currentHealth > 0
+    );
+  }
+
+  /**
+   * Get all dead (HP <= 0) beasts from the field
+   * @param field The field array
+   * @returns Array of dead beasts
+   */
+  export function getDeadBeasts(field: (RuntimeBeast | null)[]): RuntimeBeast[] {
+    return field.filter(
+      (beast): beast is RuntimeBeast => beast !== null && beast.currentHealth <= 0
+    );
+  }
+
+  /**
+   * Count alive beasts in the field
+   * @param field The field array
+   * @returns Number of alive beasts
+   */
+  export function countAliveBeasts(field: (RuntimeBeast | null)[]): number {
+    return getAliveBeasts(field).length;
+  }
+
+  /**
+   * Count total beasts in the field (excluding null slots)
+   * @param field The field array
+   * @returns Number of beasts
+   */
+  export function countBeasts(field: (RuntimeBeast | null)[]): number {
+    return getAllBeasts(field).length;
+  }
+
+  /**
+   * Find first empty slot in the field
+   * @param field The field array
+   * @returns Index of first empty slot, or -1 if none
+   */
+  export function findEmptySlot(field: (RuntimeBeast | null)[]): number {
+    return field.findIndex((beast) => beast === null);
+  }
+
+  /**
+   * Check if field has any empty slots
+   * @param field The field array
+   * @returns True if at least one empty slot exists
+   */
+  export function hasEmptySlot(field: (RuntimeBeast | null)[]): boolean {
+    return findEmptySlot(field) !== -1;
+  }
+
+  /**
+   * Check if field is full (no empty slots)
+   * @param field The field array
+   * @returns True if no empty slots
+   */
+  export function isFieldFull(field: (RuntimeBeast | null)[]): boolean {
+    return !hasEmptySlot(field);
+  }
+
+  /**
+   * Get beasts by affinity
+   * @param field The field array
+   * @param affinity The affinity to filter by
+   * @returns Array of beasts with matching affinity
+   */
+  export function getBeastsByAffinity(
+    field: (RuntimeBeast | null)[],
+    affinity: string
+  ): RuntimeBeast[] {
+    return getAllBeasts(field).filter((beast) => beast.affinity === affinity);
+  }
+
+  /**
+   * Get beast at specific index
+   * @param field The field array
+   * @param index The slot index
+   * @returns Beast at index or null
+   */
+  export function getBeastAtIndex(
+    field: (RuntimeBeast | null)[],
+    index: number
+  ): RuntimeBeast | null {
+    if (index < 0 || index >= field.length) {
+      return null;
+    }
+    return field[index];
+  }
+
+  /**
+   * Find beast by instance ID
+   * @param field The field array
+   * @param instanceId The instance ID to find
+   * @returns Object with beast and index, or null if not found
+   */
+  export function findBeastById(
+    field: (RuntimeBeast | null)[],
+    instanceId: string
+  ): { beast: RuntimeBeast; index: number } | null {
+    for (let i = 0; i < field.length; i++) {
+      const beast = field[i];
+      if (beast && beast.instanceId === instanceId) {
+        return { beast, index: i };
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get adjacent beasts (left and right neighbors)
+   * @param field The field array
+   * @param index The slot index
+   * @returns Array of adjacent beasts (may be empty or contain 1-2 beasts)
+   */
+  export function getAdjacentBeasts(
+    field: (RuntimeBeast | null)[],
+    index: number
+  ): RuntimeBeast[] {
+    const adjacent: RuntimeBeast[] = [];
+
+    // Left neighbor
+    if (index > 0 && field[index - 1]) {
+      adjacent.push(field[index - 1]!);
+    }
+
+    // Right neighbor
+    if (index < field.length - 1 && field[index + 1]) {
+      adjacent.push(field[index + 1]!);
+    }
+
+    return adjacent;
+  }
+
+  /**
+   * Clear all dead beasts from field and move to graveyard
+   * @param player The player whose field to clear
+   * @returns Array of removed beasts
+   */
+  export function clearDeadBeasts(player: Player): RuntimeBeast[] {
+    const deadBeasts: RuntimeBeast[] = [];
+
+    for (let i = 0; i < player.field.length; i++) {
+      const beast = player.field[i];
+      if (beast && beast.currentHealth <= 0) {
+        deadBeasts.push(beast);
+        player.field[i] = null;
+      }
+    }
+
+    return deadBeasts;
+  }
+
+  /**
+   * Get total attack power of all alive beasts
+   * @param field The field array
+   * @returns Sum of all attack values
+   */
+  export function getTotalAttackPower(field: (RuntimeBeast | null)[]): number {
+    return getAliveBeasts(field).reduce((total, beast) => total + beast.currentAttack, 0);
+  }
+
+  /**
+   * Get total health of all alive beasts
+   * @param field The field array
+   * @returns Sum of all health values
+   */
+  export function getTotalHealth(field: (RuntimeBeast | null)[]): number {
+    return getAliveBeasts(field).reduce((total, beast) => total + beast.currentHealth, 0);
+  }
+
   // ==================== bloombeasts\engine\utils\combatHelpers.ts ====================
 
   /**
@@ -8148,8 +7037,8 @@ namespace BloomBeasts {
    */
   export function calculateDamage(
     baseDamage: number,
-    attacker: BloomBeastInstance,
-    defender: BloomBeastInstance
+    attacker: RuntimeBeast,
+    defender: RuntimeBeast
   ): number {
     let damage = baseDamage;
 
@@ -8171,7 +7060,7 @@ namespace BloomBeasts {
   /**
    * Check if a beast can attack
    */
-  export function canAttack(beast: BloomBeastInstance): boolean {
+  export function canAttack(beast: RuntimeBeast): boolean {
     // Check summoning sickness
     if (beast.summoningSickness) {
       return false;
@@ -8192,14 +7081,14 @@ namespace BloomBeasts {
    * Get valid attack targets for a beast
    */
   export function getValidTargets(
-    attacker: BloomBeastInstance,
+    attacker: RuntimeBeast,
     gameState: GameState,
     attackerPlayer: number
-  ): BloomBeastInstance[] {
+  ): RuntimeBeast[] {
     const opponentPlayer = attackerPlayer === 0 ? 1 : 0;
     const opponent = gameState.players[opponentPlayer];
 
-    const targets: BloomBeastInstance[] = [];
+    const targets: RuntimeBeast[] = [];
 
     // Check for taunt effects
     const allOpponentBeasts = getAllBeasts(opponent.field);
@@ -8219,7 +7108,7 @@ namespace BloomBeasts {
    * Check if a beast has a specific ability effect
    */
   export function hasAbilityEffect(
-    beast: BloomBeastInstance,
+    beast: RuntimeBeast,
     effectType: string
   ): boolean {
     return beast.statusEffects?.some(e => e.type === effectType) || false;
@@ -8229,7 +7118,7 @@ namespace BloomBeasts {
    * Apply a status effect to a beast
    */
   export function applyStatusEffect(
-    beast: BloomBeastInstance,
+    beast: RuntimeBeast,
     effect: AbilityEffect
   ): void {
     if (!beast.statusEffects) {
@@ -8273,7 +7162,7 @@ namespace BloomBeasts {
   /**
    * Remove expired status effects
    */
-  export function cleanupStatusEffects(beast: BloomBeastInstance): void {
+  export function cleanupStatusEffects(beast: RuntimeBeast): void {
     if (!beast.statusEffects) return;
 
     beast.statusEffects = beast.statusEffects.filter(effect => {
@@ -8285,7 +7174,7 @@ namespace BloomBeasts {
   /**
    * Decrease status effect durations
    */
-  export function tickStatusEffects(beast: BloomBeastInstance): void {
+  export function tickStatusEffects(beast: RuntimeBeast): void {
     if (!beast.statusEffects) return;
 
     beast.statusEffects.forEach(effect => {
@@ -8321,6 +7210,48 @@ namespace BloomBeasts {
 
     return !hasFieldBeasts && !hasPlayableCards;
   }
+
+  // ==================== bloombeasts\engine\constants\battleConstants.ts ====================
+
+  /**
+   * Battle System Constants
+   *
+   * Centralized constants for battle timing, limits, and other magic numbers.
+   * Extract magic numbers here to improve maintainability and readability.
+   */
+
+  /**
+   * AI Turn Execution
+   */
+  export const MAX_AI_ACTIONS_PER_TURN = 50;
+
+  /**
+   * Animation and Delay Timing (milliseconds)
+   */
+  export const BEAST_PLAY_DELAY_MS = 1200;
+  export const MAGIC_PLAY_DELAY_MS = 3500;
+  export const TRAP_PLAY_DELAY_MS = 1200;
+  export const BUFF_PLAY_DELAY_MS = 1200;
+  export const HABITAT_PLAY_DELAY_MS = 1200;
+  export const ATTACK_ANIMATION_DELAY_MS = 1000;
+  export const AUTO_ATTACK_TOTAL_DELAY_MS = 3500;
+
+  /**
+   * Turn Timer (seconds)
+   */
+  export const TURN_TIMER_SECONDS = 300; // 5 minutes per turn
+
+  /**
+   * Field Limits
+   */
+  export const MAX_BEASTS_ON_FIELD = 3;
+  export const MAX_TRAPS_IN_ZONE = 3;
+  export const MAX_BUFFS_IN_ZONE = 2;
+
+  /**
+   * Battle Event Thresholds
+   */
+  export const LOW_HEALTH_THRESHOLD_PERCENT = 10;
 
   // ==================== bloombeasts\ui\screens\battle\types.ts ====================
 
@@ -8372,7 +7303,7 @@ namespace BloomBeasts {
       buffOne: { x: 20, y: 50 },
       buffTwo: { x: 20, y: 193 },
       health: { x: 30, y: 10 },
-      nectar: { x: 930, y: 10 },
+      energy: { x: 930, y: 10 },
       deckCount: { x: 1150, y: 10 },
     },
     playerTwo: {
@@ -8385,7 +7316,7 @@ namespace BloomBeasts {
       buffOne: { x: 1160, y: 477 },
       buffTwo: { x: 1160, y: 587 },
       health: { x: 30, y: 680 },
-      nectar: { x: 930, y: 680 },
+      energy: { x: 930, y: 680 },
       deckCount: { x: 1150, y: 680 },
     },
     habitatZone: { x: 330, y: 293 },
@@ -9035,7 +7966,7 @@ namespace BloomBeasts {
                     if (card) {
 
                       // Show card popup for magic/buff cards, then play
-                      if (card.type === 'Magic' || card.type === 'Buff') {
+                      if (card.type === CardType.Magic || card.type === CardType.Buff) {
                         this.showPlayedCard?.(card, () => {
                           this.onAction?.(`play-card-${actualIndex}`);
                         });
@@ -9072,7 +8003,7 @@ namespace BloomBeasts {
                     const actualIndex = scrollOffset * cardsPerPage + slotIndex;
                     const card = display.playerHand[actualIndex];
                     if (!card) return 'transparent';
-                    const canAfford = card.cost <= display.playerNectar;
+                    const canAfford = card.cost <= display.playerEnergy;
                     return canAfford ? 'transparent' : 'rgba(0, 0, 0, 0.5)';
                   }
                 ),
@@ -9284,9 +8215,16 @@ namespace BloomBeasts {
   // ==================== bloombeasts\ui\screens\battle\InfoDisplays.ts ====================
 
   /**
-   * Player and opponent info displays (health, nectar, deck count, timer)
+   * Player and opponent info displays (health, energy, deck count, timer)
    */
 
+
+  // Helper to format timer display
+  function formatTime(seconds: number): string {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  }
 
   export class InfoDisplays {
     private ui: InfoDisplaysProps['ui'];
@@ -9345,7 +8283,7 @@ namespace BloomBeasts {
               // Timer
               this.ui.Text({
                 text: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
-                  state.battle?.opponentTimer ? `⏱️ ${state.battle.opponentTimer}` : '⏱️ 0:00'
+                  state.battle?.opponentTimer ? `⏱️ ${formatTime(state.battle.opponentTimer)}` : '⏱️ 0:00'
                 ),
                 style: {
                   fontSize: 15,
@@ -9368,7 +8306,7 @@ namespace BloomBeasts {
               }),
               this.ui.Text({
                 text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
-                  state ? `${nectarEmoji} ${state.opponentNectar}/10` : `${nectarEmoji} 0/10`
+                  state ? `${energyEmoji} ${state.opponentEnergy}/10` : `${energyEmoji} 0/10`
                 ),
                 style: {
                   fontSize: 15,
@@ -9410,7 +8348,7 @@ namespace BloomBeasts {
               // Timer
               this.ui.Text({
                 text: this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) =>
-                  state.battle?.playerTimer ? `⏱️ ${state.battle.playerTimer}` : '⏱️ 0:00'
+                  state.battle?.playerTimer ? `⏱️ ${formatTime(state.battle.playerTimer)}` : '⏱️ 0:00'
                 ),
                 style: {
                   fontSize: 15,
@@ -9433,7 +8371,7 @@ namespace BloomBeasts {
               }),
               this.ui.Text({
                 text: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
-                  state ? `${nectarEmoji} ${state.playerNectar}/10` : `${nectarEmoji} 0/10`
+                  state ? `${energyEmoji} ${state.playerEnergy}/10` : `${energyEmoji} 0/10`
                 ),
                 style: {
                   fontSize: 15,
@@ -9700,14 +8638,11 @@ namespace BloomBeasts {
     private timerInterval: number | null = null;
 
     // Track binding values separately (as per Horizon docs - no .get() method)
-    private playerTimerValue = 300; // 5 minutes = 300 seconds
-    private opponentTimerValue = 300; // 5 minutes = 300 seconds
+    private playerTimerValue = TURN_TIMER_SECONDS;
+    private opponentTimerValue = TURN_TIMER_SECONDS;
     private isPlayerTurnValue = false;
     private battleDisplayValue: any | null = null;
     private hasAttackableBeasts = false;
-    private showHandValue = true;
-    private handScrollOffsetValue = 0;
-    private selectedCardDetailValue: any = null;
 
     // Track current UIState value for updates
     private currentUIState: any = {
@@ -9719,10 +8654,6 @@ namespace BloomBeasts {
         selectedCardDetail: null,
       },
     };
-
-    // Configuration
-    private cardsPerRow = 5;
-    private rowsPerPage = 1;
 
     // Render guard to prevent infinite loops
     private isRendering = false;
@@ -9750,11 +8681,8 @@ namespace BloomBeasts {
       this.async = props.async;
 
       // Initialize local value trackers
-      this.showHandValue = true;
-      this.handScrollOffsetValue = 0;
-      this.playerTimerValue = 300;
-      this.opponentTimerValue = 300;
-      this.selectedCardDetailValue = null;
+      this.playerTimerValue = TURN_TIMER_SECONDS;
+      this.opponentTimerValue = TURN_TIMER_SECONDS;
 
       // Wrap onAction to add logging
       this.onAction = props.onAction ? (action: string) => {
@@ -9785,14 +8713,15 @@ namespace BloomBeasts {
           }
         }
 
-        // Start/stop timer based on turn changes
+        // Start/restart timer based on turn changes or if timer not running
         if (this.isPlayerTurnValue !== newIsPlayerTurn) {
           this.isPlayerTurnValue = newIsPlayerTurn;
-          if (newIsPlayerTurn) {
-            this.startTurnTimer();
-          } else {
-            this.stopTurnTimer();
-          }
+          // Restart timer to ensure it's tracking the correct player
+          this.stopTurnTimer();
+          this.startTurnTimer();
+        } else if (state && this.timerInterval === null) {
+          // Start timer if it's not running but we have a valid battle state
+          this.startTurnTimer();
         }
 
         return newIsPlayerTurn;
@@ -9812,7 +8741,6 @@ namespace BloomBeasts {
       this.trapZoneComponent = new TrapZone({
         ui: this.ui,
         onCardDetailSelected: (card) => {
-          this.selectedCardDetailValue = card;
           this.updateUIState({ selectedCardDetail: card });
         },
       });
@@ -9820,7 +8748,6 @@ namespace BloomBeasts {
       this.buffZoneComponent = new BuffZone({
         ui: this.ui,
         onCardDetailSelected: (card) => {
-          this.selectedCardDetailValue = card;
           this.updateUIState({ selectedCardDetail: card });
         },
       });
@@ -9829,7 +8756,6 @@ namespace BloomBeasts {
         ui: this.ui,
         onCardDetailSelected: (card) => {
           const habitatWithType = { ...card, type: 'Habitat' };
-          this.selectedCardDetailValue = habitatWithType;
           this.updateUIState({ selectedCardDetail: habitatWithType });
         },
       });
@@ -9839,11 +8765,9 @@ namespace BloomBeasts {
         getBattleDisplayValue: () => this.battleDisplayValue,
         onAction: this.onAction,
         onShowHandChange: (newValue) => {
-          this.showHandValue = newValue;
           this.updateUIState({ showHand: newValue });
         },
         onScrollOffsetChange: (newValue) => {
-          this.handScrollOffsetValue = newValue;
           this.updateUIState({ handScrollOffset: newValue });
         },
         onRenderNeeded: this.onRenderNeeded,
@@ -9866,7 +8790,7 @@ namespace BloomBeasts {
             // Wait for attack animations to complete (auto-attack-all can have multiple animations)
             // Each attack takes about 1 second, and there can be up to 3 attacks
             await new Promise<void>((resolve) => {
-              this.async.setTimeout(() => resolve(), 3500);
+              this.async.setTimeout(() => resolve(), AUTO_ATTACK_TOTAL_DELAY_MS);
             });
           }
         },
@@ -9887,18 +8811,6 @@ namespace BloomBeasts {
         },
       };
       this.ui.bindingManager.setBinding(BindingType.UIState, this.currentUIState);
-      this.onRenderNeeded?.();
-    }
-
-    /**
-     * Safe render wrapper to prevent infinite loops
-     */
-    private safeRender(): void {
-      if (this.isRendering) {
-        // Already rendering, schedule for after current render completes
-        this.needsRerender = true;
-        return;
-      }
       this.onRenderNeeded?.();
     }
 
@@ -10029,7 +8941,6 @@ namespace BloomBeasts {
               // Black backdrop
               this.ui.Pressable({
                 onClick: () => {
-                  this.selectedCardDetailValue = null;
                   this.updateUIState({ selectedCardDetail: null });
                 },
                 style: {
@@ -10140,8 +9051,8 @@ namespace BloomBeasts {
           const current = this.playerTimerValue;
           if (current <= 0) {
             this.stopTurnTimer();
-            // Trigger loss - forfeit the battle
-            this.onAction?.('forfeit');
+            // Player ran out of time - they lose immediately
+            this.onAction?.('timeout-player');
           } else {
             this.playerTimerValue = current - 1;
             this.updateUIState({ playerTimer: this.playerTimerValue });
@@ -10150,9 +9061,8 @@ namespace BloomBeasts {
           const current = this.opponentTimerValue;
           if (current <= 0) {
             this.stopTurnTimer();
-            // Opponent loses - this should trigger victory
-            // For now, just end their turn
-            this.onAction?.('end-turn');
+            // Opponent ran out of time - they lose immediately
+            this.onAction?.('timeout-opponent');
           } else {
             this.opponentTimerValue = current - 1;
             this.updateUIState({ opponentTimer: this.opponentTimerValue });
@@ -10233,11 +9143,8 @@ namespace BloomBeasts {
     public cleanup(): void {
       this.stopTurnTimer();
       // Reset all UI state
-      this.playerTimerValue = 300;
-      this.opponentTimerValue = 300;
-      this.showHandValue = true;
-      this.handScrollOffsetValue = 0;
-      this.selectedCardDetailValue = null;
+      this.playerTimerValue = TURN_TIMER_SECONDS;
+      this.opponentTimerValue = TURN_TIMER_SECONDS;
 
       // Update UIState with reset values
       this.updateUIState({
@@ -11259,1564 +10166,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts\engine\systems\GameEngine.ts ====================
-
-  /**
-   * Game Engine - Main game controller and state manager
-   */
-
-
-  export interface MatchOptions {
-    player1Name?: string;
-    player2Name?: string;
-    turnTimeLimit?: number;
-    maxTurns?: number;
-  }
-
-  export class GameEngine {
-    private gameState: GameState | null = null;
-    private combatSystem: CombatSystem;
-    private abilityProcessor: AbilityProcessor;
-    private levelingSystem: LevelingSystem;
-    private cardDatabase: Map<string, AnyCard> | null = null;
-    private catalogManager: any;
-
-    constructor(catalogManager: any) {
-      // Don't create game state yet - it will be created when startMatch() is called
-      // This allows GameEngine to be constructed before asset catalogs are loaded
-      this.combatSystem = new CombatSystem();
-      this.abilityProcessor = new AbilityProcessor();
-      this.levelingSystem = new LevelingSystem();
-      this.catalogManager = catalogManager;
-    }
-
-    /**
-     * Ensure game state exists - throws error if called before startMatch()
-     */
-    private ensureGameState(): GameState {
-      if (!this.gameState) {
-        throw new Error('GameEngine: Game state not initialized. Call startMatch() first.');
-      }
-      return this.gameState;
-    }
-
-    /**
-     * Get game state (with non-null assertion for internal use)
-     * Only use this after you're certain startMatch() has been called
-     */
-    private get state(): GameState {
-      return this.gameState!;
-    }
-
-    /**
-     * Build card database from all card definitions
-     * Called lazily on first access
-     */
-    private buildCardDatabase(): Map<string, AnyCard> {
-      const db = new Map<string, AnyCard>();
-      const allCards = this.catalogManager.getAllCardData();
-      allCards.forEach((card: any) => {
-        if (card && card.id && card.type) {
-          db.set(card.id, card as AnyCard);
-        }
-      });
-      return db;
-    }
-
-    /**
-     * Get card database, building it lazily if needed
-     */
-    private getCardDatabase(): Map<string, AnyCard> {
-      if (!this.cardDatabase) {
-        this.cardDatabase = this.buildCardDatabase();
-      }
-      return this.cardDatabase;
-    }
-
-    /**
-     * Create initial game state
-     */
-    private createInitialState(): GameState {
-      return {
-        turn: 1,
-        phase: 'Setup',
-        battleState: BattlePhase.Setup,
-        activePlayer: 0,
-        players: [
-          this.createPlayer('Player 1'),
-          this.createPlayer('Player 2'),
-        ],
-        habitatZone: null,
-        turnHistory: [],
-      };
-    }
-
-    /**
-     * Create a new player
-     */
-    private createPlayer(name: string): Player {
-      // Create player with empty deck - real deck is set when startMatch() is called
-      // This allows GameEngine to be constructed before asset catalogs are loaded
-      return {
-        name,
-        health: STARTING_HEALTH,
-        currentNectar: 0,
-        deck: [],  // Empty deck initially - populated by startMatch()
-        hand: [],
-        field: Array(FIELD_SIZE).fill(null),
-        trapZone: Array(FIELD_SIZE).fill(null),
-        buffZone: [null, null],
-        graveyard: [],
-        summonsThisTurn: 0,
-      };
-    }
-
-    /**
-     * Start a new match
-     */
-    public async startMatch(
-      player1Deck: DeckList,
-      player2Deck: DeckList,
-      options: MatchOptions = {}
-    ): Promise<void> {
-      Logger.debug('Starting new match...');
-
-      // Create initial game state now that catalogs are loaded
-      if (!this.gameState) {
-        this.gameState = this.createInitialState();
-      }
-
-      // Set player names
-      if (options.player1Name) {
-        this.state.players[0].name = options.player1Name;
-      }
-      if (options.player2Name) {
-        this.state.players[1].name = options.player2Name;
-      }
-
-      // Load decks
-      this.state.players[0].deck = [...player1Deck.cards];
-      this.state.players[1].deck = [...player2Deck.cards];
-
-      // Shuffle decks
-      this.shuffleDeck(this.state.players[0]);
-      this.shuffleDeck(this.state.players[1]);
-
-      // Draw initial hands
-      this.drawCards(this.state.players[0], 5);
-      this.drawCards(this.state.players[1], 5);
-
-      // Transition to first player's turn
-      this.state.phase = 'Main';
-      this.state.battleState = BattlePhase.Player1StartOfTurn;
-      await this.transitionState();
-    }
-
-    /**
-     * State machine transition logic
-     */
-    private async transitionState(): Promise<void> {
-      // Check for win condition before any state processing
-      if (this.checkForBattleEnd()) {
-        this.state.battleState = BattlePhase.Finished;
-        return;
-      }
-
-      const currentState = this.state.battleState;
-      Logger.debug(`Transitioning from state: ${currentState}`);
-
-      switch (currentState) {
-        case BattlePhase.Player1StartOfTurn:
-          await this.processPlayerStartOfTurn(0);
-          this.state.battleState = BattlePhase.Player1Playing;
-          break;
-
-        case BattlePhase.Player1Playing:
-          // This state waits for player input (endTurn call)
-          break;
-
-        case BattlePhase.Player1EndOfTurn:
-          await this.processPlayerEndOfTurn(0);
-          this.state.battleState = BattlePhase.Player2StartOfTurn;
-          await this.transitionState();
-          break;
-
-        case BattlePhase.Player2StartOfTurn:
-          await this.processPlayerStartOfTurn(1);
-          this.state.battleState = BattlePhase.Player2Playing;
-          break;
-
-        case BattlePhase.Player2Playing:
-          // This state waits for player input (endTurn call)
-          break;
-
-        case BattlePhase.Player2EndOfTurn:
-          await this.processPlayerEndOfTurn(1);
-          // Increment turn counter after both players have played
-          this.state.turn++;
-          this.state.battleState = BattlePhase.Player1StartOfTurn;
-          await this.transitionState();
-          break;
-
-        case BattlePhase.Finished:
-          // Battle has ended
-          const result = this.combatSystem.checkWinCondition(this.state);
-          this.endMatch(result);
-          break;
-      }
-    }
-
-    /**
-     * Process player start of turn
-     */
-    private async processPlayerStartOfTurn(playerIndex: 0 | 1): Promise<void> {
-      this.state.activePlayer = playerIndex;
-      const activePlayer = this.state.players[playerIndex];
-      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
-
-      Logger.debug(`Turn ${this.state.turn}: ${activePlayer.name}'s turn begins`);
-
-      // Reset turn counters
-      activePlayer.summonsThisTurn = 0;
-
-      // Draw card (except first turn for player 1)
-      if (!(this.state.turn === 1 && playerIndex === 0)) {
-        this.drawCards(activePlayer, 1);
-      }
-
-      // Gain nectar
-      activePlayer.currentNectar = Math.min(MAX_NECTAR, this.state.turn);
-
-      // Remove summoning sickness from all beasts
-      for (const beast of activePlayer.field) {
-        if (beast) {
-          beast.summoningSickness = false;
-        }
-      }
-
-      // Counter effects removed
-
-      // Check for death
-      if (this.checkForBattleEnd()) {
-        this.state.battleState = BattlePhase.Finished;
-        return;
-      }
-
-      // Trigger start of turn abilities based on state
-      await this.triggerStateBasedAbilities(playerIndex, 'start');
-
-      // Set phase to main
-      this.state.phase = 'Main';
-    }
-
-    /**
-     * Process player end of turn
-     */
-    private async processPlayerEndOfTurn(playerIndex: 0 | 1): Promise<void> {
-      const activePlayer = this.state.players[playerIndex];
-      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
-
-      // Trigger end of turn abilities based on state
-      await this.triggerStateBasedAbilities(playerIndex, 'end');
-
-      // Clear temporary effects
-      for (const beast of activePlayer.field) {
-        if (beast) {
-          this.clearTemporaryEffects(beast);
-        }
-      }
-
-      // Check for death after end of turn effects
-      if (this.checkForBattleEnd()) {
-        this.state.battleState = BattlePhase.Finished;
-        return;
-      }
-    }
-
-    /**
-     * Check if battle should end (player health <= 0)
-     */
-    private checkForBattleEnd(): boolean {
-      const player1 = this.state.players[0];
-      const player2 = this.state.players[1];
-
-      return player1.health <= 0 || player2.health <= 0;
-    }
-
-    /**
-     * End current turn
-     */
-    public async endTurn(): Promise<void> {
-      const state = this.ensureGameState();
-
-      // Determine which end of turn state to transition to
-      if (state.battleState === BattlePhase.Player1Playing) {
-        state.battleState = BattlePhase.Player1EndOfTurn;
-      } else if (state.battleState === BattlePhase.Player2Playing) {
-        state.battleState = BattlePhase.Player2EndOfTurn;
-      } else {
-        Logger.error(`Unexpected state during endTurn: ${state.battleState}`);
-        return;
-      }
-
-      // Continue state transitions
-      await this.transitionState();
-    }
-
-    /**
-     * Summon a beast to the field
-     */
-    public summonBeast(
-      player: Player,
-      beastCard: AnyCard,
-      position: number
-    ): boolean {
-      if (position < 0 || position > 2) {
-        Logger.error('Invalid field position');
-        return false;
-      }
-
-      if (player.field[position] !== null) {
-        Logger.error('Field position already occupied');
-        return false;
-      }
-
-      if (player.summonsThisTurn >= 1) {
-        Logger.error('Already summoned this turn');
-        return false;
-      }
-
-      // Create beast instance
-      const instance: BloomBeastInstance = {
-        instanceId: `${beastCard.id}-${Date.now()}`,
-        cardId: beastCard.id,
-        name: beastCard.name,
-        affinity: (beastCard as any).affinity || 'Generic',
-        currentLevel: 1,
-        currentXP: 0,
-        baseAttack: (beastCard as any).baseAttack || 0,
-        baseHealth: (beastCard as any).baseHealth || 0,
-        currentAttack: (beastCard as any).baseAttack || 0,
-        currentHealth: (beastCard as any).baseHealth || 0,
-        maxHealth: (beastCard as any).baseHealth || 0,
-        statusEffects: [],
-        summoningSickness: true,
-        slotIndex: position,
-      };
-
-      // Place on field
-      player.field[position] = instance;
-      player.summonsThisTurn++;
-
-      // Apply WhileOnField buff card stat modifications to the newly summoned beast
-      this.applyWhileOnFieldBuffStats(instance, player);
-
-      // Trigger summon abilities on the summoned beast
-      this.triggerSummonAbilities(instance);
-
-      // Trigger OnAllySummon abilities on other beasts
-      this.triggerAllySummonAbilities(instance, player);
-
-      return true;
-    }
-
-    /**
-     * Play a card from hand
-     */
-    public async playCard(
-      player: Player,
-      cardIndex: number,
-      target?: any
-    ): Promise<boolean> {
-      if (cardIndex < 0 || cardIndex >= player.hand.length) {
-        Logger.error('Invalid card index');
-        return false;
-      }
-
-      const card = player.hand[cardIndex];
-
-      // Check nectar cost
-      if (card.cost > player.currentNectar) {
-        Logger.error('Not enough nectar');
-        return false;
-      }
-
-      // Pay cost
-      player.currentNectar -= card.cost;
-
-      // Remove from hand
-      player.hand.splice(cardIndex, 1);
-
-      // Handle based on card type
-      switch (card.type) {
-        case 'Bloom':
-          // Check for traps before playing
-          await this.checkTraps('OnBloomPlay', player, { bloomCard: card });
-
-          // Find empty field position
-          const emptyPos = player.field.findIndex(slot => slot === null);
-          if (emptyPos !== -1) {
-            return this.summonBeast(player, card, emptyPos);
-          }
-          player.graveyard.push(card);
-          break;
-
-        case 'Habitat':
-          // Check for traps before playing
-          const trapData = { habitatCard: card, countered: false };
-          await this.checkTraps('OnHabitatPlay', player, trapData);
-
-          // Only apply habitat if not countered
-          if (!trapData.countered) {
-            // Replace current habitat
-            if (this.state.habitatZone) {
-              player.graveyard.push(this.state.habitatZone);
-            }
-            this.state.habitatZone = card;
-            Logger.debug(`Played habitat: ${card.name}`);
-            // Apply habitat effects
-            this.applyHabitatEffects();
-          } else {
-            // Countered - send to graveyard
-            player.graveyard.push(card);
-          }
-          break;
-
-        case 'Magic':
-          // Execute magic card effect immediately
-          this.processMagicCard(card as MagicCard, player, target);
-          player.graveyard.push(card);
-          Logger.debug(`Played magic card: ${card.name}`);
-          break;
-
-        case 'Trap':
-          // Place trap card face-down in trap zone
-          const emptyTrapSlot = player.trapZone.findIndex(slot => slot === null);
-          if (emptyTrapSlot !== -1) {
-            player.trapZone[emptyTrapSlot] = card;
-            Logger.debug(`Set trap card: ${card.name}`);
-          } else {
-            // No trap slots available, send to graveyard
-            Logger.debug('No trap slots available');
-            player.graveyard.push(card);
-          }
-          break;
-
-        case 'Buff':
-          // Place buff card in buff zone
-          const emptyBuffSlot = player.buffZone.findIndex(slot => slot === null);
-          if (emptyBuffSlot !== -1) {
-            player.buffZone[emptyBuffSlot] = card;
-            Logger.debug(`Played buff card: ${card.name}`);
-            // Apply any OnSummon effects immediately
-            this.applyBuffCardEffects(card as any, player);
-          } else {
-            // No buff slots available, send to graveyard
-            Logger.debug('No buff slots available');
-            player.graveyard.push(card);
-          }
-          break;
-      }
-
-      return true;
-    }
-
-    /**
-     * Process magic card effects using structured effects
-     */
-    private processMagicCard(card: MagicCard, player: Player, target?: any): void {
-      // Determine which player is playing the card and get the other player as opponent
-      const playerIndex = this.state.players.indexOf(player);
-      const opponent = this.state.players[playerIndex === 0 ? 1 : 0];
-
-      // Process each ability in the magic card (usually just one with OnSummon trigger)
-      for (const ability of card.abilities) {
-        // Magic cards typically have OnSummon trigger - process their effects immediately
-        if (ability.trigger === AbilityTrigger.OnSummon || !ability.trigger) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          // Process each effect in the ability
-          for (const effect of ability.effects) {
-            switch (effect.type) {
-              case EffectType.GainResource:
-                if (effect.resource === ResourceType.Nectar) {
-                  player.currentNectar = Math.min(MAX_NECTAR, player.currentNectar + effect.value);
-                }
-                break;
-
-              case EffectType.DrawCards:
-                this.drawCards(player, effect.value);
-                break;
-
-              // Counter effects removed
-
-              // Add more effect types as needed
-              default:
-                Logger.debug(`Unhandled magic card effect type: ${effect.type}`);
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * Apply habitat zone effects
-     */
-    private applyHabitatEffects(): void {
-      if (!this.state.habitatZone) return;
-
-      const habitat = this.state.habitatZone as HabitatCard;
-      const activePlayer = this.state.players[this.state.activePlayer];
-      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
-
-      // Process each ability in the habitat card
-      for (const ability of habitat.abilities) {
-        // Apply on-play effects immediately (OnSummon trigger)
-        if (ability.trigger === AbilityTrigger.OnSummon) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          for (const effect of ability.effects) {
-            this.processHabitatEffect(effect, activePlayer, opposingPlayer);
-          }
-        }
-        // Note: WhileOnField abilities are handled elsewhere during combat/ability processing
-      }
-
-      // Count ongoing WhileOnField abilities for logging
-      const ongoingCount = habitat.abilities.filter(a => a.trigger === AbilityTrigger.WhileOnField).length;
-      Logger.debug(`Habitat ${habitat.name} active with ${ongoingCount} ongoing abilities`);
-    }
-
-    /**
-     * Process a single habitat effect
-     */
-    private processHabitatEffect(effect: AbilityEffect, activePlayer: Player, opposingPlayer: Player): void {
-      switch (effect.type) {
-        // Counter effects removed
-
-        // Ongoing effects like stat boosts are handled by the AbilityProcessor during combat
-        case EffectType.ModifyStats:
-          Logger.debug(`Habitat provides ongoing stat modifications`);
-          break;
-
-        default:
-          Logger.debug(`Unhandled habitat effect type: ${effect.type}`);
-      }
-    }
-
-    /**
-     * Apply buff card effects when played
-     */
-    private applyBuffCardEffects(buffCard: any, player: Player): void {
-      // Determine which player is playing the buff and get the other player as opponent
-      const playerIndex = this.state.players.indexOf(player);
-      const opponent = this.state.players[playerIndex === 0 ? 1 : 0];
-
-      // Process each ability in the buff card
-      for (const ability of buffCard.abilities) {
-        // Apply on-play effects immediately (OnSummon trigger)
-        if (ability.trigger === AbilityTrigger.OnSummon) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          for (const effect of ability.effects) {
-            this.processBuffEffect(effect, player, opponent);
-          }
-        }
-
-        // Apply WhileOnField stat modifications to all existing beasts
-        if (ability.trigger === AbilityTrigger.WhileOnField) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          for (const effect of ability.effects) {
-            if (effect.type === EffectType.ModifyStats) {
-              // Apply to all beasts that match the target
-              const targetPlayers = effect.target === AbilityTarget.AllAllies || effect.target === AbilityTarget.AllUnits
-                ? [player]
-                : [];
-
-              for (const targetPlayer of targetPlayers) {
-                for (const beast of targetPlayer.field) {
-                  if (!beast) continue;
-
-                  // Apply the stat modification
-                  if (effect.stat === StatType.Health) {
-                    beast.currentHealth += effect.value;
-                    beast.maxHealth += effect.value;
-                    Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Health to ${beast.name}`);
-                  } else if (effect.stat === StatType.Attack) {
-                    beast.currentAttack += effect.value;
-                    Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Attack to ${beast.name}`);
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Count ongoing abilities for logging
-      const ongoingCount = buffCard.abilities.filter((a: any) =>
-        a.trigger === AbilityTrigger.WhileOnField ||
-        a.trigger === AbilityTrigger.OnOwnStartOfTurn ||
-        a.trigger === AbilityTrigger.OnOwnEndOfTurn
-      ).length;
-      Logger.debug(`Buff ${buffCard.name} active with ${ongoingCount} ongoing/triggered abilities`);
-    }
-
-    /**
-     * Process a single buff effect
-     */
-    private processBuffEffect(effect: AbilityEffect, player: Player, opponent: Player): void {
-      switch (effect.type) {
-        case EffectType.GainResource:
-          if (effect.resource === ResourceType.Nectar) {
-            player.currentNectar = Math.min(MAX_NECTAR, player.currentNectar + effect.value);
-            Logger.debug(`Buff grants ${effect.value} Nectar`);
-          }
-          break;
-
-        case EffectType.ModifyStats:
-          Logger.debug(`Buff provides stat modifications (handled by AbilityProcessor during combat)`);
-          break;
-
-        case EffectType.DrawCards:
-          this.drawCards(player, effect.value);
-          break;
-
-        // Ongoing effects like stat boosts are handled by the AbilityProcessor
-        default:
-          Logger.debug(`Buff effect type ${effect.type} (handled by AbilityProcessor if ongoing)`);
-      }
-    }
-
-    /**
-     * Apply WhileOnField buff card stat modifications to a beast
-     */
-    private applyWhileOnFieldBuffStats(beast: BloomBeastInstance, player: Player): void {
-      // Check all buff cards in the player's buff zone
-      for (const buffCard of player.buffZone) {
-        if (!buffCard) continue;
-
-        // Process each ability in the buff card
-        for (const ability of buffCard.abilities) {
-          // Only process WhileOnField abilities
-          if (ability.trigger !== AbilityTrigger.WhileOnField) continue;
-
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          // Process each effect
-          for (const effect of ability.effects) {
-            if (effect.type !== EffectType.ModifyStats) continue;
-
-            // Check if this effect applies to this beast
-            const applies =
-              effect.target === AbilityTarget.AllAllies ||
-              effect.target === AbilityTarget.AllUnits;
-
-            if (!applies) continue;
-
-            // Apply the stat modification
-            if (effect.stat === StatType.Health) {
-              beast.currentHealth += effect.value;
-              beast.maxHealth += effect.value;
-              Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Health to ${beast.name}`);
-            } else if (effect.stat === StatType.Attack) {
-              beast.currentAttack += effect.value;
-              Logger.debug(`Applied ${buffCard.name} WhileOnField: +${effect.value} Attack to ${beast.name}`);
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * Draw cards from deck
-     */
-    private drawCards(player: Player, count: number): void {
-      for (let i = 0; i < count; i++) {
-        if (player.deck.length > 0) {
-          const card = player.deck.pop();
-          if (card) {
-            player.hand.push(card);
-          }
-        }
-      }
-    }
-
-    /**
-     * Shuffle a player's deck
-     */
-    private shuffleDeck(player: Player): void {
-      for (let i = player.deck.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [player.deck[i], player.deck[j]] = [player.deck[j], player.deck[i]];
-      }
-    }
-
-    /**
-     * Trigger state-based abilities
-     */
-    private async triggerStateBasedAbilities(playerIndex: 0 | 1, phase: 'start' | 'end'): Promise<void> {
-      const activePlayer = this.state.players[playerIndex];
-      const opposingPlayer = this.state.players[playerIndex === 0 ? 1 : 0];
-
-      // Trigger abilities based on phase
-      if (phase === 'start') {
-        // Trigger OnOwnStartOfTurn for active player's beasts
-        for (const beast of activePlayer.field) {
-          if (beast) {
-            await this.triggerBeastAbility(beast, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
-          }
-        }
-
-        // Trigger OnOwnStartOfTurn for active player's buff cards
-        for (const buffCard of activePlayer.buffZone) {
-          if (buffCard) {
-            await this.triggerBuffCardAbility(buffCard, 'OnOwnStartOfTurn', activePlayer, opposingPlayer);
-          }
-        }
-      } else {
-        // Trigger OnOwnEndOfTurn for active player's beasts
-        for (const beast of activePlayer.field) {
-          if (beast) {
-            await this.triggerBeastAbility(beast, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
-          }
-        }
-
-        // Trigger OnOwnEndOfTurn for active player's buff cards
-        for (const buffCard of activePlayer.buffZone) {
-          if (buffCard) {
-            await this.triggerBuffCardAbility(buffCard, 'OnOwnEndOfTurn', activePlayer, opposingPlayer);
-          }
-        }
-      }
-    }
-
-    /**
-     * Trigger all abilities for a beast that match a specific trigger
-     */
-    private async triggerBeastAbility(
-      beast: BloomBeastInstance,
-      trigger: string,
-      controllingPlayer: Player,
-      opposingPlayer: Player
-    ): Promise<void> {
-      const cardDef = this.getCardDefinition(beast.cardId);
-      if (!cardDef || cardDef.type !== 'Bloom') return;
-
-      const beastCard = cardDef as BloomBeastCard;
-      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
-
-      // Process each ability with this trigger
-      for (const ability of abilities) {
-        const results = this.abilityProcessor.processAbility(ability, {
-          source: beast,
-          sourceCard: beastCard,
-          trigger,
-          gameState: this.state,
-          controllingPlayer,
-          opposingPlayer,
-        });
-
-        // Apply ability results to game state
-        this.applyAbilityResults(results);
-
-        // Check for battle end after ability effects
-        if (this.checkForBattleEnd()) {
-          this.state.battleState = BattlePhase.Finished;
-        }
-      }
-    }
-
-    /**
-     * Trigger all abilities for a buff card that match a specific trigger
-     */
-    private async triggerBuffCardAbility(
-      buffCard: any,
-      trigger: string,
-      controllingPlayer: Player,
-      opposingPlayer: Player
-    ): Promise<void> {
-      // Process each ability in the buff card
-      for (const ability of buffCard.abilities) {
-        if (ability.trigger === trigger) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          // Process each effect in the ability
-          for (const effect of ability.effects) {
-            this.processBuffEffect(effect, controllingPlayer, opposingPlayer);
-          }
-        }
-      }
-    }
-
-    /**
-     * Trigger summon abilities
-     */
-    private triggerSummonAbilities(beast: BloomBeastInstance): void {
-      const activePlayer = this.state.players[this.state.activePlayer];
-      const opposingPlayer = this.state.players[this.state.activePlayer === 0 ? 1 : 0];
-
-      // Get the card definition to access abilities
-      const cardDef = this.getCardDefinition(beast.cardId);
-      if (!cardDef || cardDef.type !== 'Bloom') return;
-
-      const beastCard = cardDef as BloomBeastCard;
-      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, 'OnSummon');
-
-      // Process each OnSummon ability
-      for (const ability of abilities) {
-        const results = this.abilityProcessor.processAbility(ability, {
-          source: beast,
-          sourceCard: beastCard,
-          trigger: 'OnSummon',
-          gameState: this.state,
-          controllingPlayer: activePlayer,
-          opposingPlayer: opposingPlayer,
-        });
-
-        // Apply ability results to game state
-        this.applyAbilityResults(results);
-      }
-    }
-
-    /**
-     * Trigger OnAllySummon abilities on other beasts when a new ally is summoned
-     */
-    private triggerAllySummonAbilities(summonedBeast: BloomBeastInstance, controllingPlayer: Player): void {
-      // Determine which player controls the summoned beast and get the other player as opponent
-      const controllingPlayerIndex = this.state.players.indexOf(controllingPlayer);
-      const opposingPlayer = this.state.players[controllingPlayerIndex === 0 ? 1 : 0];
-
-      // Get the summoned beast's card definition for checking affinity condition
-      const summonedCardDef = this.getCardDefinition(summonedBeast.cardId);
-
-      // Check all other beasts on the same side
-      for (const beast of controllingPlayer.field) {
-        if (!beast || beast.instanceId === summonedBeast.instanceId) continue;
-
-        const cardDef = this.getCardDefinition(beast.cardId);
-        if (!cardDef || cardDef.type !== 'Bloom') continue;
-
-        const beastCard = cardDef as BloomBeastCard;
-        const abilities = this.getAbilitiesWithTrigger(beast, beastCard, 'OnAllySummon');
-
-        // Process each OnAllySummon ability
-        for (const ability of abilities) {
-          const results = this.abilityProcessor.processAbility(ability, {
-            source: beast,
-            sourceCard: beastCard,
-            trigger: 'OnAllySummon',
-            target: summonedBeast,  // Pass the summoned beast as target for condition checking
-            gameState: this.state,
-            controllingPlayer,
-            opposingPlayer,
-          });
-
-          // Apply ability results to game state
-          this.applyAbilityResults(results);
-        }
-      }
-    }
-
-    // Counter effects removed to reduce game complexity
-
-    /**
-     * Clear temporary effects from a beast and revert stat modifications
-     */
-    private clearTemporaryEffects(beast: BloomBeastInstance): void {
-      if (!beast.temporaryEffects) return;
-
-      // Process effects that are expiring and revert their stat modifications
-      beast.temporaryEffects = beast.temporaryEffects.filter(effect => {
-        if (effect.turnsRemaining !== undefined) {
-          effect.turnsRemaining--;
-
-          // If effect is expiring, revert its stat changes
-          if (effect.turnsRemaining <= 0 && effect.type === 'stat-mod') {
-            const statMod = effect as any;
-
-            // Revert attack modifications
-            if (statMod.stat === 'attack' || statMod.stat === 'both') {
-              beast.currentAttack = Math.max(0, beast.currentAttack - statMod.value);
-            }
-
-            // Revert health modifications (but don't reduce below current if it would "kill" the beast)
-            if (statMod.stat === 'health' || statMod.stat === 'both') {
-              // Only reduce current health if the beast had been healed by this effect
-              if (statMod.value > 0) {
-                beast.currentHealth = Math.max(1, Math.min(beast.maxHealth, beast.currentHealth - statMod.value));
-              }
-              // If it was a debuff (negative), restore health
-              else if (statMod.value < 0) {
-                beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth - statMod.value);
-              }
-            }
-
-            Logger.debug(`Cleared temporary ${statMod.stat} modification (${statMod.value}) from ${beast.instanceId}`);
-            return false; // Remove this effect
-          }
-
-          return effect.turnsRemaining > 0;
-        }
-        return false;
-      });
-    }
-
-    /**
-     * Get card definition by ID
-     */
-    private getCardDefinition(cardId: string): AnyCard | null {
-      return this.getCardDatabase().get(cardId) || null;
-    }
-
-    /**
-     * Get all current abilities for a beast based on its level
-     * Takes into account ability upgrades from leveling
-     */
-    private getCurrentAbilities(beast: BloomBeastInstance, beastCard: BloomBeastCard): any[] {
-      const { abilities } = this.levelingSystem.getCurrentAbilities(beastCard, beast.currentLevel);
-      return abilities;
-    }
-
-    /**
-     * Get abilities for a beast that match a specific trigger
-     */
-    private getAbilitiesWithTrigger(beast: BloomBeastInstance, beastCard: BloomBeastCard, trigger: string): any[] {
-      const abilities = this.getCurrentAbilities(beast, beastCard);
-      return abilities.filter(ability => ability.trigger === trigger);
-    }
-
-    /**
-     * Check if a beast has a specific attack modification
-     */
-    private hasAttackModification(
-      beast: BloomBeastInstance,
-      modification: 'attack-first' | 'cannot-counterattack' | 'double-damage' | 'triple-damage' | 'attack-twice' | 'instant-destroy' | 'piercing' | 'lifesteal'
-    ): boolean {
-      const cardDef = this.getCardDefinition(beast.cardId);
-      if (!cardDef || cardDef.type !== 'Bloom') return false;
-
-      const beastCard = cardDef as BloomBeastCard;
-      const abilities = this.getCurrentAbilities(beast, beastCard);
-
-      // Check all abilities for the attack modification
-      for (const ability of abilities) {
-        // Only StructuredAbility has effects
-        if (!ability || !('effects' in ability)) continue;
-
-        // Check if any effect is an AttackModification with the specified modification
-        for (const effect of ability.effects) {
-          if (effect.type === EffectType.AttackModification && (effect as any).modification === modification) {
-            // Check condition if present
-            const attackModEffect = effect as any;
-            if (attackModEffect.condition) {
-              // TODO: Implement condition checking
-              // For now, if there's a condition we need to evaluate it
-              // Example: Dewdrop Drake only has attack-first when it's the only unit on field
-              Logger.debug(`Attack modification '${modification}' has condition, assuming true for now`);
-            }
-            return true;
-          }
-        }
-      }
-
-      return false;
-    }
-
-
-    /**
-     * End the match
-     */
-    private endMatch(result: any): void {
-      Logger.debug('Match ended!', result);
-      // TODO: Handle match end, rewards, etc.
-    }
-
-    /**
-     * Execute attack from one beast to another or to player
-     */
-    public async executeAttack(
-      attackingPlayer: Player,
-      attackerIndex: number,
-      targetType: 'beast' | 'player',
-      targetIndex?: number
-    ): Promise<boolean> {
-      if (attackerIndex < 0 || attackerIndex >= attackingPlayer.field.length) {
-        Logger.error('Invalid attacker index');
-        return false;
-      }
-
-      const attacker = attackingPlayer.field[attackerIndex];
-      if (!attacker) {
-        Logger.error('No beast at attacker position');
-        return false;
-      }
-
-      if (attacker.summoningSickness) {
-        Logger.error('Beast has summoning sickness');
-        return false;
-      }
-
-      // Determine which player is attacking and get the other player as defender
-      const attackingPlayerIndex = this.state.players.indexOf(attackingPlayer);
-      const defendingPlayer = this.state.players[attackingPlayerIndex === 0 ? 1 : 0];
-
-      // Check for traps on attack
-      const attackData = { attackNegated: false };
-      await this.checkTraps('OnAttack', attackingPlayer, attackData);
-
-      // If attack was negated by trap, return
-      if (attackData.attackNegated) {
-        Logger.debug('Attack was negated by a trap');
-        return false;
-      }
-
-      // Trigger OnAttack abilities
-      this.triggerCombatAbilities('OnAttack', attacker, attackingPlayer, defendingPlayer);
-
-      if (targetType === 'beast' && targetIndex !== undefined) {
-        const defender = defendingPlayer.field[targetIndex];
-        if (!defender) {
-          Logger.error('No beast at defender position');
-          return false;
-        }
-
-        // Check for attack modifications
-        const attackerHasFirstStrike = this.hasAttackModification(attacker, 'attack-first');
-        const attackerCannotBeCountered = this.hasAttackModification(attacker, 'cannot-counterattack');
-
-        const attackerDamage = attacker.currentAttack;
-        const defenderDamage = defender.currentAttack;
-
-        Logger.debug(`Combat: ${attacker.cardId} (${attackerDamage} ATK) vs ${defender.cardId} (${defenderDamage} ATK)${attackerHasFirstStrike ? ' [ATTACK-FIRST]' : ''}${attackerCannotBeCountered ? ' [NO-COUNTER]' : ''}`);
-
-        // Handle attack-first mechanic
-        if (attackerHasFirstStrike) {
-          // Attacker deals damage first
-          defender.currentHealth = Math.max(0, defender.currentHealth - attackerDamage);
-          Logger.debug(`${attacker.cardId} attacked first for ${attackerDamage} damage. ${defender.cardId} HP: ${defender.currentHealth}/${defender.maxHealth}`);
-
-          // Trigger OnDamage abilities on defender
-          this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer, undefined, attacker);
-
-          // Check if defender died from first strike
-          if (defender.currentHealth <= 0) {
-            Logger.debug(`${defender.cardId} was destroyed by first strike! No counter-attack.`);
-            this.triggerCombatAbilities('OnDestroy', defender, defendingPlayer, attackingPlayer);
-            const index = defendingPlayer.field.indexOf(defender);
-            if (index !== -1) {
-              defendingPlayer.field[index] = null;
-              defendingPlayer.graveyard.push(defender as any);
-            }
-
-            // Check for battle end immediately
-            if (this.checkForBattleEnd()) {
-              this.state.battleState = BattlePhase.Finished;
-              await this.transitionState();
-            }
-            return true; // Combat ends, defender died before counter-attacking
-          }
-
-          // Defender survived, now counter-attacks (unless attacker has cannot-counterattack)
-          if (!attackerCannotBeCountered) {
-            attacker.currentHealth = Math.max(0, attacker.currentHealth - defenderDamage);
-            Logger.debug(`${defender.cardId} countered for ${defenderDamage} damage. ${attacker.cardId} HP: ${attacker.currentHealth}/${attacker.maxHealth}`);
-
-            // Trigger OnDamage abilities on attacker
-            this.triggerCombatAbilities('OnDamage', attacker, attackingPlayer, defendingPlayer, undefined, defender);
-
-            // Check if attacker died from counter
-            if (attacker.currentHealth <= 0) {
-              Logger.debug(`${attacker.cardId} was destroyed by counter-attack!`);
-              this.triggerCombatAbilities('OnDestroy', attacker, attackingPlayer, defendingPlayer);
-              const index = attackingPlayer.field.indexOf(attacker);
-              if (index !== -1) {
-                attackingPlayer.field[index] = null;
-                attackingPlayer.graveyard.push(attacker as any);
-              }
-
-              // Check for battle end
-              if (this.checkForBattleEnd()) {
-                this.state.battleState = BattlePhase.Finished;
-                await this.transitionState();
-              }
-            }
-          } else {
-            Logger.debug(`${defender.cardId} cannot counter-attack (attacker has cannot-counterattack)`);
-          }
-        } else {
-          // Normal simultaneous damage
-          defender.currentHealth = Math.max(0, defender.currentHealth - attackerDamage);
-
-          // Counter-attack happens unless prevented
-          if (!attackerCannotBeCountered) {
-            attacker.currentHealth = Math.max(0, attacker.currentHealth - defenderDamage);
-            Logger.debug(`Simultaneous combat: ${attacker.cardId} dealt ${attackerDamage}, ${defender.cardId} dealt ${defenderDamage}`);
-          } else {
-            Logger.debug(`${attacker.cardId} dealt ${attackerDamage} damage, ${defender.cardId} cannot counter`);
-          }
-
-          // Trigger OnDamage abilities
-          this.triggerCombatAbilities('OnDamage', defender, defendingPlayer, attackingPlayer, undefined, attacker);
-          if (!attackerCannotBeCountered) {
-            this.triggerCombatAbilities('OnDamage', attacker, attackingPlayer, defendingPlayer, undefined, defender);
-          }
-
-          // Check for deaths
-          let defenderDied = false;
-          if (defender.currentHealth <= 0) {
-            defenderDied = true;
-            Logger.debug(`${defender.cardId} was destroyed!`);
-            this.triggerCombatAbilities('OnDestroy', defender, defendingPlayer, attackingPlayer);
-            const index = defendingPlayer.field.indexOf(defender);
-            if (index !== -1) {
-              defendingPlayer.field[index] = null;
-              defendingPlayer.graveyard.push(defender as any);
-            }
-          }
-
-          if (attacker.currentHealth <= 0) {
-            Logger.debug(`${attacker.cardId} was destroyed!`);
-            this.triggerCombatAbilities('OnDestroy', attacker, attackingPlayer, defendingPlayer);
-            const index = attackingPlayer.field.indexOf(attacker);
-            if (index !== -1) {
-              attackingPlayer.field[index] = null;
-              attackingPlayer.graveyard.push(attacker as any);
-            }
-          }
-
-          // Check for battle end after any death
-          if (this.checkForBattleEnd()) {
-            this.state.battleState = BattlePhase.Finished;
-            await this.transitionState();
-          }
-        }
-      } else if (targetType === 'player') {
-        // Direct attack to player
-        const damage = attacker.currentAttack;
-        defendingPlayer.health = Math.max(0, defendingPlayer.health - damage);
-        Logger.debug(`${attacker.cardId} attacked player for ${damage} damage`);
-
-        // Check if player was defeated
-        if (defendingPlayer.health <= 0) {
-          Logger.debug(`${defendingPlayer.name} was defeated!`);
-          this.state.battleState = BattlePhase.Finished;
-          await this.transitionState();
-        }
-      }
-
-      // Always check for battle end after any damage
-      if (this.checkForBattleEnd()) {
-        this.state.battleState = BattlePhase.Finished;
-        await this.transitionState();
-      }
-
-      return true;
-    }
-
-    /**
-     * Trigger combat-related abilities
-     */
-    private triggerCombatAbilities(
-      trigger: 'OnAttack' | 'OnDamage' | 'OnDestroy',
-      beast: BloomBeastInstance,
-      controllingPlayer: Player,
-      opposingPlayer: Player,
-      target?: BloomBeastInstance,
-      attacker?: BloomBeastInstance
-    ): void {
-      const cardDef = this.getCardDefinition(beast.cardId);
-      if (!cardDef || cardDef.type !== 'Bloom') return;
-
-      const beastCard = cardDef as BloomBeastCard;
-      const abilities = this.getAbilitiesWithTrigger(beast, beastCard, trigger);
-
-      // Process each ability with this trigger
-      for (const ability of abilities) {
-        const results = this.abilityProcessor.processAbility(ability, {
-          source: beast,
-          sourceCard: beastCard,
-          trigger,
-          target,
-          attacker,
-          gameState: this.state,
-          controllingPlayer,
-          opposingPlayer,
-        });
-
-        // Apply ability results to game state
-        this.applyAbilityResults(results);
-      }
-    }
-
-    /**
-     * Check and trigger traps based on an event
-     * Only triggers the FIRST matching trap (in order)
-     */
-    private async checkTraps(
-      triggerType: 'OnBloomPlay' | 'OnHabitatPlay' | 'OnAttack' | 'OnDamage',
-      triggeringPlayer: Player,
-      data?: any
-    ): Promise<void> {
-      const opposingPlayer = triggeringPlayer === this.state.players[0]
-        ? this.state.players[1]
-        : this.state.players[0];
-
-      // Check opponent's traps - only activate FIRST matching trap
-      for (let i = 0; i < opposingPlayer.trapZone.length; i++) {
-        const trapCard = opposingPlayer.trapZone[i];
-        if (!trapCard || trapCard.type !== 'Trap') continue;
-
-        const trap = trapCard as TrapCard;
-        let shouldTrigger = false;
-
-        // Check if trap activation condition matches the trigger
-        switch (triggerType) {
-          case 'OnBloomPlay':
-            shouldTrigger = trap.activation.trigger === TrapTrigger.OnBloomPlay;
-            break;
-          case 'OnHabitatPlay':
-            shouldTrigger = trap.activation.trigger === TrapTrigger.OnHabitatPlay;
-            break;
-          case 'OnAttack':
-            shouldTrigger = trap.activation.trigger === TrapTrigger.OnAttack;
-            break;
-          case 'OnDamage':
-            shouldTrigger = trap.activation.trigger === TrapTrigger.OnDamage;
-            break;
-        }
-
-        if (shouldTrigger) {
-          Logger.debug(`Trap activated: ${trap.name}`);
-
-          // Process trap effect
-          await this.processTrapEffect(trap, opposingPlayer, triggeringPlayer, data);
-
-          // Remove trap from zone and send to graveyard
-          opposingPlayer.trapZone[i] = null;
-          opposingPlayer.graveyard.push(trap);
-
-          // Only activate ONE trap per event
-          return;
-        }
-      }
-    }
-
-    /**
-     * Process trap card effect using structured effects
-     */
-    private async processTrapEffect(
-      trap: TrapCard,
-      trapOwner: Player,
-      opponent: Player,
-      data?: any
-    ): Promise<void> {
-      // Process each ability in the trap card (usually just one with OnSummon trigger)
-      for (const ability of trap.abilities) {
-        // Trap abilities trigger when activated (OnSummon for immediate effects)
-        if (ability.trigger === AbilityTrigger.OnSummon || !ability.trigger) {
-          // Type guard: only process structured abilities with effects
-          if (!('effects' in ability)) continue;
-
-          // Process each effect in the ability
-          for (const effect of ability.effects) {
-            switch (effect.type) {
-              case EffectType.NullifyEffect:
-                // Counter/nullify the triggering effect
-                if (data && data.habitatCard) {
-                  Logger.debug(`Habitat countered by ${trap.name}`);
-                  data.countered = true;
-                }
-                if (data && data.attackNegated !== undefined) {
-                  data.attackNegated = true;
-                  Logger.debug(`Attack negated by ${trap.name}`);
-                }
-                break;
-
-              case EffectType.DealDamage:
-                // Deal damage based on target
-                if (effect.target === AbilityTarget.AllEnemies) {
-                  for (const beast of opponent.field) {
-                    if (beast) {
-                      const damage = typeof effect.value === 'number' ? effect.value : 0;
-                      beast.currentHealth = Math.max(0, beast.currentHealth - damage);
-                      if (beast.currentHealth <= 0) {
-                        const index = opponent.field.indexOf(beast);
-                        if (index !== -1) {
-                          opponent.field[index] = null;
-                          opponent.graveyard.push(beast as any);
-                        }
-                      }
-                    }
-                  }
-                } else if (effect.target === AbilityTarget.Opponent) {
-                  const damage = typeof effect.value === 'number' ? effect.value : 0;
-                  opponent.health = Math.max(0, opponent.health - damage);
-                }
-                break;
-
-              case EffectType.DrawCards:
-                this.drawCards(trapOwner, effect.value);
-                break;
-
-              // Add more effect types as needed
-              default:
-                Logger.debug(`Unhandled trap effect type: ${effect.type}`);
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * Apply ability results to game state
-     */
-    private applyAbilityResults(results: any[]): void {
-      for (const result of results) {
-        if (!result.success) continue;
-
-        // Apply modified units back to the field
-        if (result.modifiedUnits && result.modifiedUnits.length > 0) {
-          for (const modifiedUnit of result.modifiedUnits) {
-            // Find and update the unit in both players' fields
-            for (const player of this.state.players) {
-              const index = player.field.findIndex(
-                u => u && u.instanceId === modifiedUnit.instanceId
-              );
-              if (index !== -1) {
-                player.field[index] = modifiedUnit;
-                break;
-              }
-            }
-          }
-        }
-
-        // Apply modified state
-        if (result.modifiedState) {
-          if (result.modifiedState.players) {
-            this.state.players = result.modifiedState.players;
-          }
-          if (result.modifiedState.drawCardsQueued !== undefined) {
-            const playerIndex = result.modifiedState.drawForPlayerIndex ?? this.state.activePlayer;
-            const player = this.state.players[playerIndex];
-            this.drawCards(player, result.modifiedState.drawCardsQueued);
-          }
-        }
-
-        // Log the result message if available
-        if (result.message) {
-          Logger.debug(result.message);
-        }
-      }
-
-      // Always check for battle end after applying ability results
-      if (this.checkForBattleEnd()) {
-        this.state.battleState = BattlePhase.Finished;
-        // Don't transition immediately here as we might be in the middle of processing
-        // The next game loop iteration will handle the transition
-      }
-    }
-
-    /**
-     * Get current game state
-     */
-    public getState(): GameState | null {
-      return this.gameState;
-    }
-
-    /**
-     * Reset for new game
-     */
-    public reset(): void {
-      // Reset to null - will be recreated on next startMatch()
-      this.gameState = null;
-      this.combatSystem.reset();
-    }
-  }
-
-  // ==================== bloombeasts\systems\CardCollectionManager.ts ====================
-
-  /**
-   * CardCollectionManager - Manages card operations and transformations
-   * Handles card display conversion, leveling, abilities, deck building, and XP awards
-   */
-
-
-  export class CardCollectionManager {
-    private levelingSystem: LevelingSystem;
-    private catalogManager: any;
-
-    constructor(catalogManager: any) {
-      this.levelingSystem = new LevelingSystem();
-      this.catalogManager = catalogManager;
-    }
-
-    /**
-     * Extract base card ID from instance ID
-     * Card IDs may have timestamp suffixes (e.g., "nectar-block-1761200302194-0")
-     * We need to extract the base ID (e.g., "nectar-block") to match catalog IDs
-     */
-    private extractBaseCardId(cardId: string): string {
-      // Remove timestamp pattern: -digits-digits at the end
-      return cardId.replace(/-\d+-\d+$/, '');
-    }
-
-    /**
-     * Get abilities for a card based on its level
-     */
-    getAbilitiesForLevel(cardInstance: CardInstance): { abilities: any[] } {
-      // Get the base card definition
-      const allCards = this.catalogManager.getAllCardData();
-      const baseCardId = this.extractBaseCardId(cardInstance.cardId);
-      const cardDef = allCards.find((card: any) =>
-        card && card.id === baseCardId
-      ) as BloomBeastCard | undefined;
-
-      if (!cardDef || cardDef.type !== 'Bloom') {
-        return {
-          abilities: []
-        };
-      }
-
-      // Abilities remain constant across all levels
-      const abilities = [...cardDef.abilities];
-
-      return { abilities };
-    }
-
-    /**
-     * Get player's deck cards for battle
-     * Converts minimal CardInstance to full battle cards using definitions
-     */
-    getPlayerDeckCards(playerDeck: string[], cardInstances: CardInstance[]): AnyCard[] {
-      const deckCards: AnyCard[] = [];
-      const allCardDefs = this.catalogManager.getAllCardData();
-
-      // Convert all cards from player's deck
-      for (const cardId of playerDeck) {
-        const cardInstance = cardInstances.find(c => c.id === cardId);
-
-        if (cardInstance) {
-          // Get the card definition
-          const baseCardId = this.extractBaseCardId(cardInstance.cardId);
-          const cardDef = allCardDefs.find((card: any) =>
-            card && card.id === baseCardId
-          );
-
-          if (!cardDef) {
-            Logger.warn(`Card definition not found for ${cardInstance.cardId}`);
-            continue;
-          }
-
-          // For Bloom cards, apply level-based upgrades
-          if (cardDef.type === 'Bloom') {
-            const level = getCardLevel(cardInstance.currentXP);
-            const abilities = this.getAbilitiesForLevel(cardInstance);
-
-            // Convert to BloomBeastCard format for battle
-            const bloomCard: BloomBeastCard = {
-              id: cardDef.id,
-              instanceId: cardInstance.id, // Used for unique identification in battle
-              name: cardDef.name,
-              type: 'Bloom',
-              affinity: cardDef.affinity || 'Forest',
-              cost: cardDef.cost,
-              baseAttack: cardDef.baseAttack || 0,
-              baseHealth: cardDef.baseHealth || 0,
-              abilities: abilities.abilities,
-              level: level, // Include computed level for beast instance (added to Card interface)
-            };
-
-            deckCards.push(bloomCard);
-          } else {
-            // For non-Bloom cards, use the card definition directly
-            deckCards.push(cardDef as AnyCard);
-          }
-        }
-      }
-
-      return deckCards;
-    }
-
-    /**
-     * Award experience to all cards in the player's deck (simplified)
-     * Level is computed from XP on-demand, so we just add XP here
-     */
-    awardDeckExperience(totalCardXP: number, playerDeck: string[], cardInstances: CardInstance[]): void {
-      // Distribute XP evenly across all cards in deck
-      const xpPerCard = Math.floor(totalCardXP / playerDeck.length);
-
-      // Award XP to each card in the deck
-      for (const cardId of playerDeck) {
-        const cardInstance = cardInstances.find(c => c.id === cardId);
-
-        if (!cardInstance) continue;
-
-        const oldXP = cardInstance.currentXP;
-        cardInstance.currentXP += xpPerCard;
-
-        // Log XP gain (level is computed from XP using cardUtils)
-        Logger.debug(`Card ${cardId} gained ${xpPerCard} XP (${oldXP} → ${cardInstance.currentXP})`);
-      }
-    }
-
-    /**
-     * Initialize starting collection with minimal CardInstance format
-     */
-    async initializeStartingCollection(cardInstances: CardInstance[], playerDeck: string[]): Promise<string[]> {
-      // Give player a proper starter deck (Forest starter deck)
-      const starterDeckList = getStarterDeck('Forest');
-      const starterCards = starterDeckList.cards;
-
-      Logger.info(`Initializing starter deck: ${starterDeckList.name} with ${starterCards.length} cards`);
-
-      starterCards.forEach((card: any, index: number) => {
-        const instanceId = `${card.id}-${Date.now()}-${index}`;
-
-        // Create minimal card instance (all types use same format now)
-        const cardInstance: CardInstance = {
-          id: instanceId,
-          cardId: card.id,
-          currentXP: 0, // Start at 0 XP (level 1)
-        };
-
-        cardInstances.push(cardInstance);
-
-        // Add to player's deck (all starter deck cards go in the deck)
-        playerDeck.push(cardInstance.id);
-      });
-
-      Logger.info(`Starter deck initialized with ${playerDeck.length} cards in deck and ${cardInstances.length} cards collected`);
-
-      return playerDeck;
-    }
-
-    /**
-     * Add card reward to collection (minimal format)
-     */
-    addCardReward(card: any, cardInstances: CardInstance[], index: number): void {
-      const instanceId = `${card.id}-reward-${Date.now()}-${index}`;
-
-      // Create minimal card instance (all types use same format)
-      const cardInstance: CardInstance = {
-        id: instanceId,
-        cardId: card.id,
-        currentXP: 0, // New cards start at 0 XP (level 1)
-      };
-
-      cardInstances.push(cardInstance);
-    }
-
-  }
-
-  // ==================== bloombeasts\systems\BattleDisplayManager.ts ====================
+  // ==================== bloombeasts\screens\battle\BattleDisplayManager.ts ====================
 
   /**
    * BattleDisplayManager - Handles battle UI rendering and display enrichment
@@ -12834,7 +10184,7 @@ namespace BloomBeasts {
      * Create a battle display object from battle state
      */
     createBattleDisplay(
-      battleState: any,
+      battleUIState: any,
       attackAnimation?: {
         attackerPlayer: 'player' | 'opponent';
         attackerIndex: number;
@@ -12842,38 +10192,47 @@ namespace BloomBeasts {
         targetIndex?: number;
       } | null
     ): BattleDisplay | null {
-      if (!battleState || !battleState.gameState) {
+      // Handle new TURBO-based battle state structure
+      if (!battleUIState || !battleUIState.battleState || !battleUIState.battleState.turboState) {
         return null;
       }
 
-      // Players is a tuple [Player, Player] where index 0 is typically the player
-      const player = battleState.gameState.players[0];
-      const opponent = battleState.gameState.players[1];
+      const turboState = battleUIState.battleState.turboState;
+      const gameData = turboState.gameData;
+
+      // Extract players and field from TURBO state
+      const player = gameData.players[0];
+      const opponent = gameData.players[1];
+      const playerField = gameData.field.player1;
+      const opponentField = gameData.field.player2;
 
       if (!player || !opponent) return null;
+
+      // Determine current turn player
+      const turnPlayer = turboState.turnInfo.currentPlayerId === 'player' ? 'player' : 'opponent';
 
       // Convert to display format
       const display: BattleDisplay = {
         playerHealth: player.health,
-        playerMaxHealth: player.maxHealth || STARTING_HEALTH, // Default to STARTING_HEALTH if undefined
+        playerMaxHealth: player.maxHealth || STARTING_HEALTH,
         playerDeckCount: player.deck.length,
-        playerNectar: player.currentNectar,
-        playerHand: player.hand,
-        playerTrapZone: player.trapZone || [null, null, null],
-        playerBuffZone: player.buffZone || [null, null],
+        playerEnergy: player.energy,
+        playerHand: this.enrichHandCards(player.hand),
+        playerTrapZone: playerField.traps || [],
+        playerBuffZone: playerField.buffs || [],
         opponentHealth: opponent.health,
-        opponentMaxHealth: opponent.maxHealth || STARTING_HEALTH, // Default to STARTING_HEALTH if undefined
+        opponentMaxHealth: opponent.maxHealth || STARTING_HEALTH,
         opponentDeckCount: opponent.deck.length,
-        opponentNectar: opponent.currentNectar,
-        opponentField: this.enrichFieldBeasts(opponent.field, battleState.gameState, 1), // Opponent is player index 1
-        opponentTrapZone: opponent.trapZone || [null, null, null],
-        opponentBuffZone: opponent.buffZone || [null, null],
-        playerField: this.enrichFieldBeasts(player.field, battleState.gameState, 0), // Player is player index 0
-        currentTurn: battleState.gameState.turn,
-        turnPlayer: battleState.gameState.activePlayer === 0 ? 'player' : 'opponent',
+        opponentEnergy: opponent.energy,
+        opponentField: this.enrichFieldBeasts(opponentField.beasts, turboState, 1),
+        opponentTrapZone: opponentField.traps || [],
+        opponentBuffZone: opponentField.buffs || [],
+        playerField: this.enrichFieldBeasts(playerField.beasts, turboState, 0),
+        currentTurn: turboState.turnInfo.turnNumber,
+        turnPlayer: turnPlayer,
         turnTimeRemaining: TURN_TIME_LIMIT,
-        objectives: this.getObjectiveDisplay(battleState),
-        habitatZone: battleState.gameState.habitatZone,
+        objectives: this.getObjectiveDisplay(battleUIState),
+        habitatZone: playerField.habitat || opponentField.habitat, // Use whichever has a habitat
         attackAnimation: attackAnimation,
       };
 
@@ -12908,42 +10267,18 @@ namespace BloomBeasts {
     }
 
     /**
-     * Enrich field beasts with card definition data
+     * Return field beasts as RuntimeCard
      * NOTE: Do NOT apply bonuses here - the engine's StatModifierManager already handles this!
      */
-    private enrichFieldBeasts(field: any[], gameState?: any, playerIndex?: number): any[] {
-      // Create a card lookup map from all card definitions
-      const cardMap = new Map<string, BloomBeastCard>();
-      const allCards = this.catalogManager.getAllCardData();
-      allCards.forEach((card: any) => {
-        if (card && card.type === 'Bloom') {
-          cardMap.set(card.id, card as BloomBeastCard);
-        }
-      });
+    private enrichFieldBeasts(field: RuntimeCard[], turboState?: any, playerIndex?: number): RuntimeCard[] {
+      return field.filter(beast => beast !== null);
+    }
 
-      return field.map(beast => {
-        if (!beast) return null;
-
-        // Get the card definition
-        const cardDef = cardMap.get(beast.cardId);
-
-        if (!cardDef) return beast; // Return as-is if card not found
-
-        // Merge instance data with card definition data
-        // The engine's StatModifierManager already includes all bonuses in currentAttack/currentHealth/maxHealth
-        // We do NOT need to calculate or apply bonuses here
-        return {
-          ...beast,
-          name: beast.name || cardDef.name,
-          affinity: beast.affinity || cardDef.affinity,
-          cost: beast.cost || cardDef.cost,
-          abilities: beast.abilities || cardDef.abilities,
-          // Use stats as-is from the engine (bonuses are already applied by StatModifierManager)
-          currentAttack: beast.currentAttack || 0,
-          currentHealth: beast.currentHealth || 0,
-          maxHealth: beast.maxHealth || 0,
-        };
-      });
+    /**
+     * Return hand cards as RuntimeCard
+     */
+    private enrichHandCards(hand: RuntimeCard[]): RuntimeCard[] {
+      return hand.filter(card => card !== null);
     }
 
   }
@@ -13031,7 +10366,7 @@ namespace BloomBeasts {
 
     // AI behavior weights (0-1)
     aggressiveness: number;       // Likelihood to attack
-    resourceManagement: number;   // How well it manages nectar
+    resourceManagement: number;   // How well it manages energy
     targetPriority: 'strongest' | 'weakest' | 'random' | 'strategic';
     abilityUsage: number;        // Likelihood to use abilities
 
@@ -13040,7 +10375,7 @@ namespace BloomBeasts {
   }
 
   export interface AIBehavior {
-    trigger: 'low-health' | 'high-nectar' | 'empty-field' | 'turn-count';
+    trigger: 'low-health' | 'high-energy' | 'empty-field' | 'turn-count';
     condition?: number;
     action: 'play-defensive' | 'all-out-attack' | 'summon-rush' | 'ability-spam';
   }
@@ -13057,7 +10392,7 @@ namespace BloomBeasts {
     // Rewards earned
     xpEarned: number;
     cardsEarned: AnyCard[];
-    nectarEarned: number;
+    energyEarned: number;
   }
 
   export interface MissionProgress {
@@ -13235,10 +10570,10 @@ namespace BloomBeasts {
         return { name: 'Mosslet Deck', affinity: 'Forest', cards: [], totalCards: 0 };
       }
 
-      // Beginner deck: 2 Mosslets + 2 Rootlings + 3 Nectar Blocks
+      // Beginner deck: 2 Mosslets + 2 Rootlings + 3 Energy Blocks
       const mossletCard = game.catalogManager.getCard('mosslet');
       const rootlingCard = game.catalogManager.getCard('rootling');
-      const nectarBlockCard = game.catalogManager.getCard('nectar-block');
+      const energyBlockCard = game.catalogManager.getCard('nectar-block');
 
       const cards = [];
 
@@ -13252,9 +10587,9 @@ namespace BloomBeasts {
         cards.push({ ...rootlingCard, instanceId: `rootling-${i}` });
       }
 
-      // Add 3 Nectar Blocks
+      // Add 3 Energy Blocks
       for (let i = 1; i <= 5; i++) {
-        cards.push({ ...nectarBlockCard, instanceId: `nectar-block-${i}` });
+        cards.push({ ...energyBlockCard, instanceId: `nectar-block-${i}` });
       }
 
       return {
@@ -13316,7 +10651,7 @@ namespace BloomBeasts {
       // More advanced beginner deck with habitat
       const leafSpriteCard = game.catalogManager.getCard('leaf-sprite');
       const mushroomancerCard = game.catalogManager.getCard('mushroomancer');
-      const nectarBlockCard = game.catalogManager.getCard('nectar-block');
+      const energyBlockCard = game.catalogManager.getCard('nectar-block');
       const ancientForestCard = game.catalogManager.getCard('ancient-forest');
       const powerUpCard = game.catalogManager.getCard('power-up');
 
@@ -13335,9 +10670,9 @@ namespace BloomBeasts {
       // Add 1 Ancient Forest habitat
       cards.push({ ...ancientForestCard, instanceId: 'ancient-forest-1' });
 
-      // Add 5 Nectar Blocks
+      // Add 5 Energy Blocks
       for (let i = 1; i <= 6; i++) {
-        cards.push({ ...nectarBlockCard, instanceId: `nectar-block-${i}` });
+        cards.push({ ...energyBlockCard, instanceId: `nectar-block-${i}` });
       }
 
       // Add 1 Power Up
@@ -13962,13 +11297,21 @@ namespace BloomBeasts {
       };
     }
 
-    // Create 3 instances of Cluck Norris at level 9
-    const cluckNorrisCards: BloomBeastCard[] = [];
+    // Create 3 instances of Cluck Norris at level 9 as RuntimeBeast cards
+    const cluckNorrisCards: RuntimeBeast[] = [];
     for (let i = 1; i <= 3; i++) {
       cluckNorrisCards.push({
         ...cluckNorrisCard,
         instanceId: `cluck-norris-${i}`,
-        // Keep base stats at 99/99 as defined in the catalog
+        cardId: cluckNorrisCard.id,
+        currentXP: 25500, // Level 9 XP
+        level: 9,
+        currentLevel: 9 as any,
+        statusEffects: [],
+        // Keep base stats at 99/99 as defined in the catalog (already scaled for level 9)
+        currentAttack: cluckNorrisCard.baseAttack || 99,
+        currentHealth: cluckNorrisCard.baseHealth || 99,
+        maxHealth: cluckNorrisCard.baseHealth || 99,
       });
     }
 
@@ -14711,2041 +12054,5089 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\battle\types.ts ====================
+  // ==================== bloombeasts\lib\Turbo-Standalone.ts ====================
 
   /**
-   * Battle System Types
+   * TURBO - TURn-Based Operations
+   * Standalone TypeScript Bundle
    *
-   * Core type definitions for the generic battle system.
-   * This system works with any two players (human vs AI, human vs human, AI vs AI).
+   * This file contains the complete Turbo library in a single standalone TypeScript file.
+   * All code is wrapped in the Turbo namespace to avoid global scope pollution.
+   *
+   * Usage:
+   *   // Access types and classes via the Turbo namespace
+   *   const game = new Turbo.GameController(rules);
+   *   const ai = new Turbo.RandomAI(config);
+   *
+   * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
+   * Generated: 2025-11-05T20:11:51.717Z
+   * Files: 16
+   *
+   * @version 2.0.0
+   * @license MIT
    */
 
+  /* eslint-disable */
+  /* tslint:disable */
+
+  // ==================== Turbo Namespace ====================
+
+  namespace Turbo {
+
+    // ==================== Library Code ====================
+
+    // ==================== src\core\interfaces\IGame.ts ====================
+
+    /**
+     * Core game interfaces with proper type safety
+     */
+
+    /**
+     * Base game state interface
+     */
+    export interface IGameState<TState extends Record<string, unknown> = Record<string, unknown>> {
+      /** Game-specific state managed by the implementation */
+      gameData: TState;
+
+      /** Current turn information */
+      turnInfo: ITurnInfo;
+
+      /** Players in the game */
+      players: IPlayer[];
+
+      /** Current game phase */
+      phase: GamePhase;
+
+      /** Whether the game is complete */
+      isComplete: boolean;
+
+      /** Winner ID if game is complete */
+      winnerId?: string;
+    }
+
+    /**
+     * Player interface
+     */
+    export interface IPlayer {
+      readonly id: string;
+      readonly name: string;
+      readonly type: PlayerType;
+      metadata?: Record<string, unknown>;
+    }
+
+    /**
+     * Player type enumeration
+     */
+    export enum PlayerType {
+      HUMAN = 'human',
+      AI = 'ai',
+    }
+
+    /**
+     * Turn information
+     */
+    export interface ITurnInfo {
+      turnNumber: number;
+      currentPlayerId: string;
+      movesThisTurn: number;
+      maxMovesPerTurn?: number;
+      timeStarted: number;
+    }
+
+    /**
+     * Game phase enumeration
+     */
+    export enum GamePhase {
+      NOT_STARTED = 'not_started',
+      SETUP = 'setup',
+      PLAYING = 'playing',
+      PAUSED = 'paused',
+      COMPLETED = 'completed',
+    }
+
+    /**
+     * Game action interface
+     */
+    export interface IGameAction<TActionData extends Record<string, unknown> = Record<string, unknown>> {
+      readonly type: string;
+      readonly playerId: string;
+      readonly data: TActionData;
+      readonly timestamp?: number;
+    }
+
+    /**
+     * Action validation result
+     */
+    export interface IActionValidation {
+      readonly isValid: boolean;
+      readonly reason?: string;
+      readonly suggestions?: string[];
+    }
+
+    /**
+     * Action execution result
+     */
+    export interface IActionResult<TState extends Record<string, unknown> = Record<string, unknown>> {
+      readonly success: boolean;
+      readonly newState?: IGameState<TState>;
+      readonly error?: Error;
+      readonly sideEffects?: ISideEffect[];
+    }
+
+    /**
+     * Side effect from an action
+     */
+    export interface ISideEffect {
+      readonly type: string;
+      readonly description: string;
+      readonly data?: Record<string, unknown>;
+    }
+
+    /**
+     * Game configuration
+     */
+    export interface IGameConfig {
+      readonly players: IPlayer[];
+      readonly seed?: string;
+      readonly timeLimit?: number;
+      readonly customRules?: Record<string, unknown>;
+    }
+
+    /**
+     * Game controller interface
+     */
+    export interface IGameController<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>> {
+      initialize(config: IGameConfig): void;
+      getState(): IGameState<TState>;
+      executeAction(action: IGameAction<TAction>): IActionResult<TState>;
+      endTurn(): void;
+      isGameOver(): boolean;
+      getWinner(): string | undefined;
+      reset(): void;
+    }
+
+    // ==================== src\core\interfaces\IGameRules.ts ====================
+
+    /**
+     * Game rules interface - defines the rules and logic of a specific game
+     */
+
+
+    /**
+     * Interface for implementing game-specific rules
+     */
+    export interface IGameRules<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>> {
+      /**
+       * Initialize the game state
+       */
+      createInitialState(config: IGameConfig): IGameState<TState>;
+
+      /**
+       * Validate if an action can be performed
+       */
+      validateAction(action: IGameAction<TAction>, state: IGameState<TState>): IActionValidation;
+
+      /**
+       * Execute an action and return the new state
+       */
+      executeAction(action: IGameAction<TAction>, state: IGameState<TState>): IActionResult<TState>;
+
+      /**
+       * Get all valid actions for the current state
+       */
+      getValidActions(state: IGameState<TState>): IGameAction<TAction>[];
+
+      /**
+       * Check if the game has ended
+       */
+      checkEndCondition(state: IGameState<TState>): { isEnded: boolean; winnerId?: string; reason?: string };
+
+      /**
+       * Calculate score for a player
+       */
+      calculateScore?(state: IGameState<TState>, playerId: string): number;
+
+      /**
+       * Get the next phase based on current state
+       */
+      getNextPhase?(currentPhase: string, state: IGameState<TState>): string;
+    }
+
+    /**
+     * Turn order strategy interface
+     */
+    export interface ITurnOrderStrategy {
+      /**
+       * Determine the next player
+       */
+      getNextPlayer(currentPlayerId: string, players: string[]): string;
+
+      /**
+       * Reset turn order (e.g., for a new round)
+       */
+      reset?(): void;
+    }
+
+    /**
+     * Common turn order strategies
+     */
+    export class TurnOrderStrategies {
+      /**
+       * Sequential turn order
+       */
+      static sequential(): ITurnOrderStrategy {
+        return {
+          getNextPlayer(currentPlayerId: string, players: string[]): string {
+            const currentIndex = players.indexOf(currentPlayerId);
+            const nextIndex = (currentIndex + 1) % players.length;
+            return players[nextIndex];
+          }
+        };
+      }
+
+      /**
+       * Random turn order
+       */
+      static random(): ITurnOrderStrategy {
+        return {
+          getNextPlayer(_currentPlayerId: string, players: string[]): string {
+            return players[Math.floor(Math.random() * players.length)];
+          }
+        };
+      }
+
+      /**
+       * Custom turn order with predefined sequence
+       */
+      static custom(sequence: string[]): ITurnOrderStrategy {
+        let currentIndex = 0;
+        return {
+          getNextPlayer(): string {
+            const player = sequence[currentIndex];
+            currentIndex = (currentIndex + 1) % sequence.length;
+            return player;
+          },
+          reset() {
+            currentIndex = 0;
+          }
+        };
+      }
+    }
+
+    // ==================== src\ai\interfaces\IAI.ts ====================
+
+    /**
+     * AI player interfaces
+     */
+
+
+    /**
+     * Base AI player interface
+     */
+    export interface IAIPlayer<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>> {
+      /**
+       * Choose an action based on current state
+       */
+      chooseAction(
+        state: IGameState<TState>,
+        availableActions: IGameAction<TAction>[]
+      ): Promise<IGameAction<TAction> | null>;
+
+      /**
+       * Evaluate the state (higher is better for this player)
+       */
+      evaluateState(state: IGameState<TState>): number;
+
+      /**
+       * Get AI difficulty level
+       */
+      getDifficulty(): AILevel;
+
+      /**
+       * Set AI difficulty level
+       */
+      setDifficulty(level: AILevel): void;
+    }
+
+    /**
+     * AI difficulty levels
+     */
+    export enum AILevel {
+      EASY = 'easy',
+      MEDIUM = 'medium',
+      HARD = 'hard',
+      EXPERT = 'expert',
+    }
+
+    /**
+     * AI configuration
+     */
+    export interface IAIConfig {
+      playerId: string;
+      difficulty: AILevel;
+      thinkingTime?: {
+        min: number;
+        max: number;
+      };
+      randomSeed?: string;
+      maxDepth?: number;
+      evaluationFunction?: (state: IGameState) => number;
+    }
+
+    /**
+     * Monte Carlo Tree Search node
+     */
+    export interface IMCTSNode<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>> {
+      state: IGameState<TState>;
+      action: IGameAction<TAction> | null;
+      parent: IMCTSNode<TState, TAction> | null;
+      children: IMCTSNode<TState, TAction>[];
+      visits: number;
+      totalValue: number;
+
+      isLeaf(): boolean;
+      addChild(child: IMCTSNode<TState, TAction>): void;
+      getBestChild(explorationConstant: number): IMCTSNode<TState, TAction> | null;
+    }
+
+    // ==================== src\utils\deepClone.ts ====================
+
+    /**
+     * Efficient deep cloning utility using structured cloning when available
+     */
+
+    /**
+     * Deep clone an object using the most efficient method available
+     */
+    export function deepClone<T>(obj: T): T {
+      // Use structured cloning if available (Node 17+ and modern browsers)
+      if (typeof structuredClone === 'function') {
+        try {
+          return structuredClone(obj);
+        } catch {
+          // Fall back to manual cloning if structuredClone fails
+        }
+      }
+
+      // Manual deep clone for older environments
+      return manualDeepClone(obj);
+    }
+
+    /**
+     * Manual deep clone implementation
+     */
+    function manualDeepClone<T>(obj: T, visited = new WeakMap()): T {
+      // Handle primitives and null
+      if (obj === null || typeof obj !== 'object') {
+        return obj;
+      }
+
+      // Handle circular references
+      if (visited.has(obj as object)) {
+        return visited.get(obj as object) as T;
+      }
+
+      // Handle Date
+      if (obj instanceof Date) {
+        return new Date(obj.getTime()) as T;
+      }
+
+      // Handle RegExp
+      if (obj instanceof RegExp) {
+        return new RegExp(obj.source, obj.flags) as T;
+      }
+
+      // Handle Array
+      if (Array.isArray(obj)) {
+        const cloned: unknown[] = [];
+        visited.set(obj, cloned as T);
+
+        for (let i = 0; i < obj.length; i++) {
+          cloned[i] = manualDeepClone(obj[i], visited);
+        }
+
+        return cloned as unknown as T;
+      }
+
+      // Handle Map
+      if (obj instanceof Map) {
+        const cloned = new Map();
+        visited.set(obj, cloned as T);
+
+        obj.forEach((value, key) => {
+          cloned.set(
+            manualDeepClone(key, visited),
+            manualDeepClone(value, visited)
+          );
+        });
+
+        return cloned as unknown as T;
+      }
+
+      // Handle Set
+      if (obj instanceof Set) {
+        const cloned = new Set();
+        visited.set(obj, cloned as T);
+
+        obj.forEach(value => {
+          cloned.add(manualDeepClone(value, visited));
+        });
+
+        return cloned as unknown as T;
+      }
+
+      // Handle plain objects
+      const cloned: Record<string, unknown> = {};
+      visited.set(obj as object, cloned as T);
+
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          cloned[key] = manualDeepClone(obj[key], visited);
+        }
+      }
+
+      return cloned as T;
+    }
+
+    /**
+     * Create a shallow clone of an object
+     */
+    export function shallowClone<T extends Record<string, unknown>>(obj: T): T {
+      if (Array.isArray(obj)) {
+        return [...obj] as unknown as T;
+      }
+
+      return { ...obj };
+    }
+
+    // ==================== src\core\GameStateManager.ts ====================
+
+    /**
+     * Game state management with history and undo/redo support
+     */
+
+
+    /**
+     * Manages game state with history tracking
+     */
+    export class GameStateManager<TState extends Record<string, unknown> = Record<string, unknown>> {
+      private currentState: IGameState<TState> | null = null;
+      private history: IGameState<TState>[] = [];
+      private redoStack: IGameState<TState>[] = [];
+      private readonly maxHistorySize: number;
+
+      constructor(maxHistorySize = 100) {
+        this.maxHistorySize = maxHistorySize;
+      }
+
+      /**
+       * Set the current state
+       */
+      setState(state: IGameState<TState>): void {
+        if (this.currentState) {
+          this.history.push(deepClone(this.currentState));
+        }
+
+        this.currentState = deepClone(state);
+        this.redoStack = []; // Clear redo stack on new state
+
+        // Limit history size
+        if (this.history.length > this.maxHistorySize) {
+          this.history.shift();
+        }
+      }
+
+      /**
+       * Get current state (returns a clone to prevent mutations)
+       */
+      getCurrentState(): IGameState<TState> | null {
+        return this.currentState ? deepClone(this.currentState) : null;
+      }
+
+      /**
+       * Get state history
+       */
+      getHistory(): IGameState<TState>[] {
+        return this.history.map(state => deepClone(state));
+      }
+
+      /**
+       * Check if undo is possible
+       */
+      canUndo(): boolean {
+        return this.history.length > 0;
+      }
+
+      /**
+       * Undo to previous state
+       */
+      undo(): boolean {
+        if (!this.canUndo() || !this.currentState) {
+          return false;
+        }
+
+        this.redoStack.push(deepClone(this.currentState));
+        this.currentState = this.history.pop()!;
+        return true;
+      }
+
+      /**
+       * Check if redo is possible
+       */
+      canRedo(): boolean {
+        return this.redoStack.length > 0;
+      }
+
+      /**
+       * Redo to next state
+       */
+      redo(): boolean {
+        if (!this.canRedo()) {
+          return false;
+        }
+
+        if (this.currentState) {
+          this.history.push(deepClone(this.currentState));
+        }
+        this.currentState = this.redoStack.pop()!;
+        return true;
+      }
+
+      /**
+       * Create a checkpoint
+       */
+      createCheckpoint(): string {
+        const checkpointId = `checkpoint_${Date.now()}`;
+        // Store checkpoint separately from history
+        const checkpoint = this.currentState ? deepClone(this.currentState) : null;
+        this.checkpoints.set(checkpointId, checkpoint);
+        return checkpointId;
+      }
+
+      /**
+       * Restore from checkpoint
+       */
+      restoreCheckpoint(checkpointId: string): boolean {
+        const checkpoint = this.checkpoints.get(checkpointId);
+        if (!checkpoint) {
+          return false;
+        }
+
+        if (this.currentState) {
+          this.history.push(deepClone(this.currentState));
+        }
+        this.currentState = deepClone(checkpoint);
+        return true;
+      }
+
+      /**
+       * Reset state manager
+       */
+      reset(): void {
+        this.currentState = null;
+        this.history = [];
+        this.redoStack = [];
+        this.checkpoints.clear();
+      }
+
+      private checkpoints = new Map<string, IGameState<TState> | null>();
+    }
+
+    // ==================== src\core\TurnManager.ts ====================
+
+    /**
+     * Turn management system
+     */
+
+
+    /**
+     * Manages turn order and player rotation
+     */
+    export class TurnManager {
+      private players: IPlayer[] = [];
+      private currentPlayerIndex = 0;
+      private turnOrderStrategy: ITurnOrderStrategy;
+
+      constructor(strategy?: ITurnOrderStrategy) {
+        this.turnOrderStrategy = strategy || TurnOrderStrategies.sequential();
+      }
+
+      /**
+       * Initialize with players
+       */
+      initialize(players: IPlayer[]): void {
+        if (players.length < 2) {
+          throw new Error('At least 2 players required');
+        }
+
+        this.players = [...players];
+        this.currentPlayerIndex = 0;
+
+        if (this.turnOrderStrategy.reset) {
+          this.turnOrderStrategy.reset();
+        }
+      }
+
+      /**
+       * Get current player
+       */
+      getCurrentPlayer(): IPlayer {
+        if (this.players.length === 0) {
+          throw new Error('Turn manager not initialized');
+        }
+        return this.players[this.currentPlayerIndex];
+      }
+
+      /**
+       * Get next player
+       */
+      getNextPlayer(): string {
+        if (this.players.length === 0) {
+          throw new Error('Turn manager not initialized');
+        }
+
+        const currentPlayerId = this.players[this.currentPlayerIndex].id;
+        const playerIds = this.players.map(p => p.id);
+        const nextPlayerId = this.turnOrderStrategy.getNextPlayer(currentPlayerId, playerIds);
+
+        // Update current player index
+        this.currentPlayerIndex = this.players.findIndex(p => p.id === nextPlayerId);
+
+        if (this.currentPlayerIndex === -1) {
+          throw new Error(`Invalid next player ID: ${nextPlayerId}`);
+        }
+
+        return nextPlayerId;
+      }
+
+      /**
+       * Set turn order strategy
+       */
+      setStrategy(strategy: ITurnOrderStrategy): void {
+        this.turnOrderStrategy = strategy;
+        if (strategy.reset) {
+          strategy.reset();
+        }
+      }
+
+      /**
+       * Get all players
+       */
+      getPlayers(): IPlayer[] {
+        return [...this.players];
+      }
+
+      /**
+       * Get player by ID
+       */
+      getPlayer(playerId: string): IPlayer | undefined {
+        return this.players.find(p => p.id === playerId);
+      }
+
+      /**
+       * Reset turn manager
+       */
+      reset(): void {
+        this.players = [];
+        this.currentPlayerIndex = 0;
+        if (this.turnOrderStrategy.reset) {
+          this.turnOrderStrategy.reset();
+        }
+      }
+    }
+
+    // ==================== src\utils\EventBus.ts ====================
+
+    /**
+     * Type-safe event bus for game events
+     */
+
+    type EventHandler<T = unknown> = (data: T) => void | Promise<void>;
+
+    /**
+     * Type-safe event emitter
+     */
+    export class EventBus<TEvents extends Record<string, unknown>> {
+      private listeners = new Map<keyof TEvents, Set<EventHandler<unknown>>>();
+      private onceListeners = new Map<keyof TEvents, Set<EventHandler<unknown>>>();
+
+      /**
+       * Subscribe to an event
+       */
+      on<K extends keyof TEvents>(
+        event: K,
+        handler: EventHandler<TEvents[K]>
+      ): () => void {
+        if (!this.listeners.has(event)) {
+          this.listeners.set(event, new Set());
+        }
+
+        const handlers = this.listeners.get(event)!;
+        handlers.add(handler as EventHandler<unknown>);
+
+        // Return unsubscribe function
+        return () => {
+          handlers.delete(handler as EventHandler<unknown>);
+
+          if (handlers.size === 0) {
+            this.listeners.delete(event);
+          }
+        };
+      }
+
+      /**
+       * Subscribe to an event once
+       */
+      once<K extends keyof TEvents>(
+        event: K,
+        handler: EventHandler<TEvents[K]>
+      ): void {
+        if (!this.onceListeners.has(event)) {
+          this.onceListeners.set(event, new Set());
+        }
+
+        this.onceListeners.get(event)!.add(handler as EventHandler<unknown>);
+      }
+
+      /**
+       * Emit an event
+       */
+      emit<K extends keyof TEvents>(event: K, data: TEvents[K]): void {
+        // Handle regular listeners
+        const handlers = this.listeners.get(event);
+        if (handlers) {
+          handlers.forEach(handler => {
+            try {
+              handler(data);
+            } catch (error) {
+              console.error(`Error in event handler for ${String(event)}:`, error);
+            }
+          });
+        }
+
+        // Handle once listeners
+        const onceHandlers = this.onceListeners.get(event);
+        if (onceHandlers) {
+          onceHandlers.forEach(handler => {
+            try {
+              handler(data);
+            } catch (error) {
+              console.error(`Error in once handler for ${String(event)}:`, error);
+            }
+          });
+
+          this.onceListeners.delete(event);
+        }
+      }
+
+      /**
+       * Emit an event asynchronously
+       */
+      async emitAsync<K extends keyof TEvents>(event: K, data: TEvents[K]): Promise<void> {
+        const handlers = this.listeners.get(event);
+        const onceHandlers = this.onceListeners.get(event);
+
+        const allHandlers = [
+          ...(handlers || []),
+          ...(onceHandlers || []),
+        ];
+
+        await Promise.all(
+          allHandlers.map(async handler => {
+            try {
+              await handler(data);
+            } catch (error) {
+              console.error(`Error in async handler for ${String(event)}:`, error);
+            }
+          })
+        );
+
+        if (onceHandlers) {
+          this.onceListeners.delete(event);
+        }
+      }
+
+      /**
+       * Remove all listeners for an event
+       */
+      removeAllListeners(event?: keyof TEvents): void {
+        if (event) {
+          this.listeners.delete(event);
+          this.onceListeners.delete(event);
+        } else {
+          this.listeners.clear();
+          this.onceListeners.clear();
+        }
+      }
+
+      /**
+       * Get listener count for an event
+       */
+      listenerCount(event: keyof TEvents): number {
+        const regular = this.listeners.get(event)?.size || 0;
+        const once = this.onceListeners.get(event)?.size || 0;
+        return regular + once;
+      }
+
+      /**
+       * Check if there are any listeners for an event
+       */
+      hasListeners(event: keyof TEvents): boolean {
+        return this.listenerCount(event) > 0;
+      }
+    }
+
+    // ==================== src\core\GameEvents.ts ====================
+
+    /**
+     * Game event definitions
+     */
+
+
+    /**
+     * Game events type map
+     */
+    export interface GameEvents<TState extends Record<string, unknown> = Record<string, unknown>> {
+      [key: string]: unknown; // Index signature for EventBus compatibility
+
+      gameStarted: {
+        state: IGameState<TState>;
+        config: IGameConfig;
+      };
+
+      gameEnded: {
+        winnerId?: string;
+        reason?: string;
+        state: IGameState<TState>;
+      };
+
+      gameReset: Record<string, never>;
+
+      turnStarted: {
+        playerId: string;
+        turnNumber: number;
+      };
+
+      turnEnded: {
+        playerId: string;
+        turnNumber: number;
+      };
+
+      actionExecuted: {
+        action: IGameAction;
+        result: IActionResult<TState>;
+        state: IGameState<TState>;
+      };
+
+      actionUndone: {
+        state: IGameState<TState>;
+      };
+
+      actionRedone: {
+        state: IGameState<TState>;
+      };
+
+      sideEffect: ISideEffect;
+
+      phaseChanged: {
+        oldPhase: string;
+        newPhase: string;
+        state: IGameState<TState>;
+      };
+
+      error: {
+        error: Error;
+        context?: string;
+      };
+    }
+
+    // ==================== src\core\GameController.ts ====================
+
+    /**
+     * Main game controller - manages game flow and state
+     */
+
+
+    /**
+     * Core game controller implementation
+     */
+    export class GameController<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>>
+      implements IGameController<TState, TAction> {
+
+      private readonly rules: IGameRules<TState, TAction>;
+      private readonly stateManager: GameStateManager<TState>;
+      private readonly turnManager: TurnManager;
+      private readonly eventBus: EventBus<GameEvents<TState>> = new EventBus() as EventBus<GameEvents<TState>>;
+      private readonly aiPlayers: Map<string, IAIPlayer<TState, TAction>> = new Map();
+      private config: IGameConfig | null = null;
+
+      constructor(rules: IGameRules<TState, TAction>) {
+        this.rules = rules;
+        this.stateManager = new GameStateManager<TState>();
+        this.turnManager = new TurnManager();
+      }
+
+      /**
+       * Initialize a new game
+       */
+      initialize(config: IGameConfig): void {
+        this.validateConfig(config);
+
+        this.config = config;
+        const initialState = this.rules.createInitialState(config);
+
+        this.stateManager.setState(initialState);
+        this.turnManager.initialize(config.players);
+
+        this.eventBus.emit('gameStarted', { state: initialState, config });
+        this.eventBus.emit('turnStarted', {
+          playerId: initialState.turnInfo.currentPlayerId,
+          turnNumber: initialState.turnInfo.turnNumber
+        });
+      }
+
+      /**
+       * Get current game state
+       */
+      getState(): IGameState<TState> {
+        const state = this.stateManager.getCurrentState();
+        if (!state) {
+          throw new Error('Game not initialized');
+        }
+        return state;
+      }
+
+      /**
+       * Execute a game action
+       */
+      executeAction(action: IGameAction<TAction>): IActionResult<TState> {
+        const currentState = this.getState();
+
+        // Validate action
+        const validation = this.rules.validateAction(action, currentState);
+        if (!validation.isValid) {
+          return {
+            success: false,
+            error: new Error(validation.reason || 'Invalid action'),
+          };
+        }
+
+        // Execute action
+        const result = this.rules.executeAction(action, currentState);
+
+        if (result.success && result.newState) {
+          // Update state
+          this.stateManager.setState(result.newState);
+
+          // Emit events
+          this.eventBus.emit('actionExecuted', { action, result, state: result.newState });
+
+          if (result.sideEffects) {
+            result.sideEffects.forEach(effect => {
+              this.eventBus.emit('sideEffect', effect);
+            });
+          }
+
+          // Check end condition
+          const endCheck = this.rules.checkEndCondition(result.newState);
+          if (endCheck.isEnded) {
+            this.handleGameEnd(endCheck.winnerId, endCheck.reason);
+          }
+        }
+
+        return result;
+      }
+
+      /**
+       * End the current turn
+       */
+      endTurn(): void {
+        const currentState = this.getState();
+
+        if (currentState.isComplete) {
+          return;
+        }
+
+        const currentPlayerId = currentState.turnInfo.currentPlayerId;
+        const nextPlayerId = this.turnManager.getNextPlayer();
+        const currentTurnNumber = currentState.turnInfo.turnNumber;
+
+        // Update state with new turn info
+        const newState: IGameState<TState> = {
+          ...currentState,
+          turnInfo: {
+            ...currentState.turnInfo,
+            currentPlayerId: nextPlayerId,
+            turnNumber: currentTurnNumber + 1,
+            movesThisTurn: 0,
+            timeStarted: Date.now(),
+          },
+        };
+
+        this.stateManager.setState(newState);
+
+        // Emit events
+        this.eventBus.emit('turnEnded', {
+          playerId: currentPlayerId,
+          turnNumber: currentTurnNumber
+        });
+
+        this.eventBus.emit('turnStarted', {
+          playerId: nextPlayerId,
+          turnNumber: currentTurnNumber + 1
+        });
+      }
+
+      /**
+       * Check if the game is over
+       */
+      isGameOver(): boolean {
+        return this.getState().isComplete;
+      }
+
+      /**
+       * Get the winner
+       */
+      getWinner(): string | undefined {
+        const state = this.getState();
+        return state.isComplete ? state.winnerId : undefined;
+      }
+
+      /**
+       * Reset the game
+       */
+      reset(): void {
+        this.stateManager.reset();
+        this.turnManager.reset();
+        this.config = null;
+        this.eventBus.emit('gameReset', {});
+      }
+
+      /**
+       * Subscribe to game events
+       */
+      on<K extends keyof GameEvents<TState>>(
+        event: K,
+        handler: (data: GameEvents<TState>[K]) => void
+      ): () => void {
+        return this.eventBus.on(event, handler);
+      }
+
+      /**
+       * Get available actions for the current state
+       */
+      getAvailableActions(): IGameAction<TAction>[] {
+        const currentState = this.getState();
+        return this.rules.getValidActions(currentState);
+      }
+
+      /**
+       * Register an AI player
+       */
+      registerAI(playerId: string, ai: IAIPlayer<TState, TAction>): void {
+        this.aiPlayers.set(playerId, ai);
+      }
+
+      /**
+       * Unregister an AI player
+       */
+      unregisterAI(playerId: string): void {
+        this.aiPlayers.delete(playerId);
+      }
+
+      /**
+       * Check if a player is controlled by AI
+       */
+      isAIPlayer(playerId: string): boolean {
+        return this.aiPlayers.has(playerId);
+      }
+
+      /**
+       * Execute AI turn for the current player
+       */
+      async executeAITurn(): Promise<void> {
+        const currentState = this.getState();
+        const currentPlayerId = currentState.turnInfo.currentPlayerId;
+        const ai = this.aiPlayers.get(currentPlayerId);
+
+        if (!ai) {
+          throw new Error(`No AI registered for player ${currentPlayerId}`);
+        }
+
+        const availableActions = this.getAvailableActions();
+        const action = await ai.chooseAction(currentState, availableActions);
+
+        if (action) {
+          this.executeAction(action);
+        }
+      }
+
+      /**
+       * Get the complete winner information, checking if complete
+       */
+      isComplete(): boolean {
+        return this.getState().isComplete;
+      }
+
+      /**
+       * Perform an action (legacy method name for compatibility)
+       */
+      performAction(action: IGameAction<TAction>): IActionResult<TState> {
+        return this.executeAction(action);
+      }
+
+      /**
+       * Get action history
+       */
+      getActionHistory() {
+        return this.stateManager.getHistory();
+      }
+
+      /**
+       * Undo last action
+       */
+      undo(): boolean {
+        const success = this.stateManager.undo();
+        if (success) {
+          this.eventBus.emit('actionUndone', { state: this.getState() });
+        }
+        return success;
+      }
+
+      /**
+       * Redo previously undone action
+       */
+      redo(): boolean {
+        const success = this.stateManager.redo();
+        if (success) {
+          this.eventBus.emit('actionRedone', { state: this.getState() });
+        }
+        return success;
+      }
+
+      private validateConfig(config: IGameConfig): void {
+        if (!config.players || config.players.length < 2) {
+          throw new Error('At least 2 players are required');
+        }
+
+        const playerIds = new Set(config.players.map(p => p.id));
+        if (playerIds.size !== config.players.length) {
+          throw new Error('Player IDs must be unique');
+        }
+      }
+
+      private handleGameEnd(winnerId?: string, reason?: string): void {
+        const state = this.getState();
+        const endState: IGameState<TState> = {
+          ...state,
+          isComplete: true,
+          winnerId,
+          phase: GamePhase.COMPLETED,
+        };
+
+        this.stateManager.setState(endState);
+        this.eventBus.emit('gameEnded', { winnerId, reason, state: endState });
+      }
+    }
+
+    // ==================== src\ai\BaseAI.ts ====================
+
+    /**
+     * Base AI implementation with common functionality
+     */
+
+
+    /**
+     * Abstract base class for AI players
+     */
+    export abstract class BaseAI<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>>
+      implements IAIPlayer<TState, TAction> {
+
+      protected readonly playerId: string;
+      protected difficulty: AILevel;
+      protected thinkingTime: { min: number; max: number };
+      protected randomSeed?: string;
+
+      constructor(config: IAIConfig) {
+        this.playerId = config.playerId;
+        this.difficulty = config.difficulty;
+        this.thinkingTime = config.thinkingTime || this.getDefaultThinkingTime(config.difficulty);
+        this.randomSeed = config.randomSeed;
+      }
+
+      abstract chooseAction(
+        state: IGameState<TState>,
+        availableActions: IGameAction<TAction>[]
+      ): Promise<IGameAction<TAction> | null>;
+
+      abstract evaluateState(state: IGameState<TState>): number;
+
+      getDifficulty(): AILevel {
+        return this.difficulty;
+      }
+
+      setDifficulty(level: AILevel): void {
+        this.difficulty = level;
+        this.thinkingTime = this.getDefaultThinkingTime(level);
+      }
+
+      /**
+       * Simulate thinking delay for better UX
+       */
+      protected async simulateThinking(): Promise<void> {
+        const delay = this.thinkingTime.min +
+          Math.random() * (this.thinkingTime.max - this.thinkingTime.min);
+
+        return new Promise(resolve => setTimeout(resolve, delay));
+      }
+
+      /**
+       * Add randomness based on difficulty
+       */
+      protected addNoise(value: number, maxNoise: number): number {
+        const noiseFactor = this.getDifficultyNoiseFactor();
+        const noise = (Math.random() - 0.5) * maxNoise * noiseFactor;
+        return value + noise;
+      }
+
+      /**
+       * Get default thinking times by difficulty
+       */
+      private getDefaultThinkingTime(level: AILevel): { min: number; max: number } {
+        switch (level) {
+          case AILevel.EASY:
+            return { min: 200, max: 800 };
+          case AILevel.MEDIUM:
+            return { min: 300, max: 1200 };
+          case AILevel.HARD:
+            return { min: 500, max: 1500 };
+          case AILevel.EXPERT:
+            return { min: 800, max: 2000 };
+        }
+      }
+
+      /**
+       * Get noise factor based on difficulty (more noise = more mistakes)
+       */
+      private getDifficultyNoiseFactor(): number {
+        switch (this.difficulty) {
+          case AILevel.EASY:
+            return 2.0;
+          case AILevel.MEDIUM:
+            return 1.0;
+          case AILevel.HARD:
+            return 0.5;
+          case AILevel.EXPERT:
+            return 0.2;
+        }
+      }
+
+      /**
+       * Check if this is the AI's turn
+       */
+      protected isMyTurn(state: IGameState<TState>): boolean {
+        return state.turnInfo.currentPlayerId === this.playerId;
+      }
+
+      /**
+       * Get opponent IDs
+       */
+      protected getOpponentIds(state: IGameState<TState>): string[] {
+        return state.players
+          .filter(p => p.id !== this.playerId)
+          .map(p => p.id);
+      }
+    }
+
+    // ==================== src\ai\RandomAI.ts ====================
+
+    /**
+     * Random AI - chooses actions randomly
+     */
+
+
+    /**
+     * AI that chooses random actions
+     */
+    export class RandomAI<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>>
+      extends BaseAI<TState, TAction> {
+
+      constructor(config: IAIConfig) {
+        super(config);
+      }
+
+      async chooseAction(
+        _state: IGameState<TState>,
+        availableActions: IGameAction<TAction>[]
+      ): Promise<IGameAction<TAction> | null> {
+        await this.simulateThinking();
+
+        if (availableActions.length === 0) {
+          return null;
+        }
+
+        // Choose random action
+        const randomIndex = Math.floor(Math.random() * availableActions.length);
+        return availableActions[randomIndex];
+      }
+
+      evaluateState(_state: IGameState<TState>): number {
+        // Random AI doesn't evaluate, just returns random value
+        return Math.random() * 100;
+      }
+    }
+
+    // ==================== src\ai\GreedyAI.ts ====================
+
+    /**
+     * Greedy AI - chooses action with best immediate value
+     */
+
+
+    /**
+     * AI that chooses the action with best immediate value
+     */
+    export abstract class GreedyAI<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>>
+      extends BaseAI<TState, TAction> {
+
+      constructor(config: IAIConfig) {
+        super(config);
+      }
+
+      /**
+       * Evaluate an action's immediate value
+       * Must be implemented by specific game AI
+       */
+      abstract evaluateAction(
+        action: IGameAction<TAction>,
+        state: IGameState<TState>
+      ): number;
+
+      async chooseAction(
+        state: IGameState<TState>,
+        availableActions: IGameAction<TAction>[]
+      ): Promise<IGameAction<TAction> | null> {
+        await this.simulateThinking();
+
+        if (availableActions.length === 0) {
+          return null;
+        }
+
+        // Evaluate all actions
+        const evaluatedActions = availableActions.map(action => ({
+          action,
+          value: this.evaluateAction(action, state),
+        }));
+
+        // Add some noise based on difficulty
+        evaluatedActions.forEach(ea => {
+          ea.value = this.addNoise(ea.value, 20);
+        });
+
+        // Sort by value (descending) and pick best
+        evaluatedActions.sort((a, b) => b.value - a.value);
+        return evaluatedActions[0].action;
+      }
+    }
+
+    // ==================== src\ai\MinimaxAI.ts ====================
+
+    /**
+     * Minimax AI with alpha-beta pruning
+     */
+
+
+    /**
+     * AI using minimax algorithm with alpha-beta pruning
+     */
+    export abstract class MinimaxAI<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>>
+      extends BaseAI<TState, TAction> {
+
+      protected maxDepth: number;
+
+      constructor(config: IAIConfig) {
+        super(config);
+        this.maxDepth = config.maxDepth || this.getDepthByDifficulty(config.difficulty);
+      }
+
+      /**
+       * Simulate an action and return resulting state
+       * Must be implemented by specific game AI
+       */
+      abstract simulateAction(
+        action: IGameAction<TAction>,
+        state: IGameState<TState>
+      ): IGameState<TState>;
+
+      /**
+       * Get available actions for a given state and player
+       * Must be implemented by specific game AI
+       */
+      abstract getActionsForState(
+        state: IGameState<TState>,
+        playerId: string
+      ): IGameAction<TAction>[];
+
+      /**
+       * Check if the game is over in given state
+       * Must be implemented by specific game AI
+       */
+      abstract isTerminalState(state: IGameState<TState>): boolean;
+
+      async chooseAction(
+        state: IGameState<TState>,
+        availableActions: IGameAction<TAction>[]
+      ): Promise<IGameAction<TAction> | null> {
+        await this.simulateThinking();
+
+        if (availableActions.length === 0) {
+          return null;
+        }
+
+        // Evaluate each action using minimax
+        const evaluatedActions = availableActions.map(action => {
+          const newState = this.simulateAction(action, state);
+          const value = this.minimax(
+            newState,
+            this.maxDepth - 1,
+            Number.NEGATIVE_INFINITY,
+            Number.POSITIVE_INFINITY,
+            false // Next turn is opponent's
+          );
+
+          return {
+            action,
+            value: this.addNoise(value, 10),
+          };
+        });
+
+        // Sort by value and return best action
+        evaluatedActions.sort((a, b) => b.value - a.value);
+        return evaluatedActions[0].action;
+      }
+
+      /**
+       * Minimax algorithm with alpha-beta pruning
+       */
+      private minimax(
+        state: IGameState<TState>,
+        depth: number,
+        alpha: number,
+        beta: number,
+        maximizingPlayer: boolean
+      ): number {
+        // Terminal state or max depth reached
+        if (depth === 0 || this.isTerminalState(state)) {
+          return this.evaluateState(state);
+        }
+
+        const currentPlayerId = maximizingPlayer ? this.playerId : this.getOpponentIds(state)[0];
+        const actions = this.getActionsForState(state, currentPlayerId);
+
+        if (maximizingPlayer) {
+          let maxEval = Number.NEGATIVE_INFINITY;
+
+          for (const action of actions) {
+            const newState = this.simulateAction(action, state);
+            const evalValue = this.minimax(newState, depth - 1, alpha, beta, false);
+            maxEval = Math.max(maxEval, evalValue);
+            alpha = Math.max(alpha, evalValue);
+
+            if (beta <= alpha) {
+              break; // Beta cutoff
+            }
+          }
+
+          return maxEval;
+        } else {
+          let minEval = Number.POSITIVE_INFINITY;
+
+          for (const action of actions) {
+            const newState = this.simulateAction(action, state);
+            const evalValue = this.minimax(newState, depth - 1, alpha, beta, true);
+            minEval = Math.min(minEval, evalValue);
+            beta = Math.min(beta, evalValue);
+
+            if (beta <= alpha) {
+              break; // Alpha cutoff
+            }
+          }
+
+          return minEval;
+        }
+      }
+
+      /**
+       * Get search depth based on difficulty
+       */
+      private getDepthByDifficulty(level: AILevel): number {
+        switch (level) {
+          case AILevel.EASY:
+            return 1;
+          case AILevel.MEDIUM:
+            return 2;
+          case AILevel.HARD:
+            return 3;
+          case AILevel.EXPERT:
+            return 4;
+        }
+      }
+    }
+
+    // ==================== src\ai\MCTSAI.ts ====================
+
+    /**
+     * Monte Carlo Tree Search AI
+     */
+
+
+    /**
+     * MCTS Node implementation
+     */
+    class MCTSNode<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>>
+      implements IMCTSNode<TState, TAction> {
+
+      state: IGameState<TState>;
+      action: IGameAction<TAction> | null;
+      parent: MCTSNode<TState, TAction> | null;
+      children: MCTSNode<TState, TAction>[] = [];
+      visits = 0;
+      totalValue = 0;
+
+      constructor(
+        state: IGameState<TState>,
+        action: IGameAction<TAction> | null = null,
+        parent: MCTSNode<TState, TAction> | null = null
+      ) {
+        this.state = state;
+        this.action = action;
+        this.parent = parent;
+      }
+
+      isLeaf(): boolean {
+        return this.children.length === 0;
+      }
+
+      addChild(child: MCTSNode<TState, TAction>): void {
+        this.children.push(child);
+      }
+
+      getBestChild(explorationConstant: number): MCTSNode<TState, TAction> | null {
+        if (this.children.length === 0) {
+          return null;
+        }
+
+        let bestChild = this.children[0];
+        let bestValue = this.getUCB1Value(bestChild, explorationConstant);
+
+        for (const child of this.children) {
+          const value = this.getUCB1Value(child, explorationConstant);
+          if (value > bestValue) {
+            bestValue = value;
+            bestChild = child;
+          }
+        }
+
+        return bestChild;
+      }
+
+      private getUCB1Value(child: MCTSNode<TState, TAction>, c: number): number {
+        if (child.visits === 0) {
+          return Number.POSITIVE_INFINITY;
+        }
+
+        const exploitation = child.totalValue / child.visits;
+        const exploration = c * Math.sqrt(Math.log(this.visits) / child.visits);
+        return exploitation + exploration;
+      }
+    }
+
+    /**
+     * AI using Monte Carlo Tree Search
+     */
+    export abstract class MCTSAI<TState extends Record<string, unknown> = Record<string, unknown>, TAction extends Record<string, unknown> = Record<string, unknown>>
+      extends BaseAI<TState, TAction> {
+
+      protected iterations: number;
+      protected explorationConstant = 1.414;
+
+      constructor(config: IAIConfig) {
+        super(config);
+        this.iterations = this.getIterationsByDifficulty(config.difficulty);
+      }
+
+      /**
+       * Simulate a random playout from given state
+       * Must be implemented by specific game AI
+       */
+      abstract simulatePlayout(state: IGameState<TState>): number;
+
+      /**
+       * Get available actions for a given state and player
+       * Must be implemented by specific game AI
+       */
+      abstract getActionsForState(
+        state: IGameState<TState>,
+        playerId: string
+      ): IGameAction<TAction>[];
+
+      /**
+       * Simulate an action and return resulting state
+       * Must be implemented by specific game AI
+       */
+      abstract simulateAction(
+        action: IGameAction<TAction>,
+        state: IGameState<TState>
+      ): IGameState<TState>;
+
+      /**
+       * Check if the game is over in given state
+       * Must be implemented by specific game AI
+       */
+      abstract isTerminalState(state: IGameState<TState>): boolean;
+
+      async chooseAction(
+        state: IGameState<TState>,
+        availableActions: IGameAction<TAction>[]
+      ): Promise<IGameAction<TAction> | null> {
+        await this.simulateThinking();
+
+        if (availableActions.length === 0) {
+          return null;
+        }
+
+        // Create root node
+        const root = new MCTSNode<TState, TAction>(state);
+
+        // Run MCTS iterations
+        for (let i = 0; i < this.iterations; i++) {
+          let node = root;
+
+          // Selection - traverse tree to leaf
+          while (!node.isLeaf() && !this.isTerminalState(node.state)) {
+            const best = node.getBestChild(this.explorationConstant);
+            if (!best) break;
+            node = best;
+          }
+
+          // Expansion - add child if not terminal
+          if (!this.isTerminalState(node.state)) {
+            node = this.expand(node);
+          }
+
+          // Simulation - random playout
+          const value = this.simulatePlayout(node.state);
+
+          // Backpropagation - update values up the tree
+          this.backpropagate(node, value);
+        }
+
+        // Choose action with most visits
+        let bestChild = root.children[0];
+        for (const child of root.children) {
+          if (child.visits > bestChild.visits) {
+            bestChild = child;
+          }
+        }
+
+        return bestChild?.action || null;
+      }
+
+      /**
+       * Expand node by adding all possible children
+       */
+      private expand(node: MCTSNode<TState, TAction>): MCTSNode<TState, TAction> {
+        const currentPlayerId = node.state.turnInfo.currentPlayerId;
+        const actions = this.getActionsForState(node.state, currentPlayerId);
+
+        // Add all possible children
+        for (const action of actions) {
+          const newState = this.simulateAction(action, node.state);
+          const child = new MCTSNode(newState, action, node);
+          node.addChild(child);
+        }
+
+        // Return random child for simulation
+        if (node.children.length > 0) {
+          return node.children[Math.floor(Math.random() * node.children.length)];
+        }
+
+        return node;
+      }
+
+      /**
+       * Backpropagate value up the tree
+       */
+      private backpropagate(node: MCTSNode<TState, TAction> | null, value: number): void {
+        while (node !== null) {
+          node.visits++;
+          node.totalValue += value;
+          node = node.parent;
+        }
+      }
+
+      /**
+       * Get iterations based on difficulty
+       */
+      private getIterationsByDifficulty(level: AILevel): number {
+        switch (level) {
+          case AILevel.EASY:
+            return 100;
+          case AILevel.MEDIUM:
+            return 500;
+          case AILevel.HARD:
+            return 1000;
+          case AILevel.EXPERT:
+            return 2000;
+        }
+      }
+    }
+
+    // ==================== src\utils\Random.ts ====================
+
+    /**
+     * Random number generation utilities with seeding support
+     */
+
+    /**
+     * Seeded random number generator using xorshift algorithm
+     */
+    export class SeededRandom {
+      private seed: number;
+
+      constructor(seed: string | number) {
+        this.seed = typeof seed === 'string' ? this.hashString(seed) : seed;
+      }
+
+      /**
+       * Generate a random number between 0 and 1
+       */
+      next(): number {
+        this.seed = (this.seed * 9301 + 49297) % 233280;
+        return this.seed / 233280;
+      }
+
+      /**
+       * Generate a random integer between min and max (inclusive)
+       */
+      nextInt(min: number, max: number): number {
+        return Math.floor(this.next() * (max - min + 1)) + min;
+      }
+
+      /**
+       * Generate a random boolean
+       */
+      nextBoolean(probability = 0.5): boolean {
+        return this.next() < probability;
+      }
+
+      /**
+       * Shuffle an array
+       */
+      shuffle<T>(array: T[]): T[] {
+        const result = [...array];
+        for (let i = result.length - 1; i > 0; i--) {
+          const j = this.nextInt(0, i);
+          [result[i], result[j]] = [result[j], result[i]];
+        }
+        return result;
+      }
+
+      /**
+       * Pick a random element from an array
+       */
+      pick<T>(array: T[]): T | undefined {
+        if (array.length === 0) return undefined;
+        return array[this.nextInt(0, array.length - 1)];
+      }
+
+      /**
+       * Pick multiple random elements without replacement
+       */
+      pickMultiple<T>(array: T[], count: number): T[] {
+        const shuffled = this.shuffle(array);
+        return shuffled.slice(0, Math.min(count, array.length));
+      }
+
+      /**
+       * Generate a normally distributed random number (Box-Muller transform)
+       */
+      gaussian(mean = 0, stdDev = 1): number {
+        let u1 = 0;
+        let u2 = 0;
+
+        while (u1 === 0) u1 = this.next(); // Converting [0,1) to (0,1)
+        while (u2 === 0) u2 = this.next();
+
+        const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+        return z0 * stdDev + mean;
+      }
+
+      private hashString(str: string): number {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+          const char = str.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash; // Convert to 32-bit integer
+        }
+        return Math.abs(hash);
+      }
+    }
+
+    /**
+     * Weighted random selector
+     */
+    export class WeightedRandom<T> {
+      private items: Array<{ item: T; weight: number }>;
+      private totalWeight: number;
+
+      constructor(items: Array<{ item: T; weight: number }>) {
+        this.items = items;
+        this.totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+      }
+
+      /**
+       * Select a random item based on weights
+       */
+      select(random: () => number = Math.random): T | undefined {
+        if (this.items.length === 0 || this.totalWeight === 0) {
+          return undefined;
+        }
+
+        let randomValue = random() * this.totalWeight;
+
+        for (const { item, weight } of this.items) {
+          randomValue -= weight;
+          if (randomValue <= 0) {
+            return item;
+          }
+        }
+
+        return this.items[this.items.length - 1].item;
+      }
+
+      /**
+       * Update weight for an item
+       */
+      updateWeight(item: T, newWeight: number): void {
+        const entry = this.items.find(e => e.item === item);
+        if (entry) {
+          this.totalWeight = this.totalWeight - entry.weight + newWeight;
+          entry.weight = newWeight;
+        }
+      }
+
+      /**
+       * Add a new item with weight
+       */
+      add(item: T, weight: number): void {
+        this.items.push({ item, weight });
+        this.totalWeight += weight;
+      }
+
+      /**
+       * Remove an item
+       */
+      remove(item: T): boolean {
+        const index = this.items.findIndex(e => e.item === item);
+        if (index !== -1) {
+          this.totalWeight -= this.items[index].weight;
+          this.items.splice(index, 1);
+          return true;
+        }
+        return false;
+      }
+    }
+
+    // ==================== src\index.ts ====================
+
+    /**
+     * TURBO - TURn-Based Operations
+     * A modern, type-safe TypeScript library for turn-based game logic
+     *
+     * @version 2.0.0
+     */
+
+    // Core exports
+
+    // Interfaces
+
+    // Export enums as values (not just types)
+
+
+
+    // AI exports
+
+
+    // Export AILevel enum as value
+
+    // Utility exports
+
+    // Version
+    export const VERSION = '2.0.0';
+
+    /**
+     * Quick start example:
+     *
+     * ```typescript
+     * import { GameController, RandomAI, AILevel } from '@bloombeasts/turbo';
+     *
+     * // Define your game rules
+     * const rules = new MyGameRules();
+     *
+     * // Create game controller
+     * const game = new GameController(rules);
+     *
+     * // Initialize with players
+     * game.initialize({
+     *   players: [
+     *     { id: 'player1', name: 'Alice', type: PlayerType.HUMAN },
+     *     { id: 'player2', name: 'Bob', type: PlayerType.AI }
+     *   ]
+     * });
+     *
+     * // Register AI
+     * const ai = new RandomAI({
+     *   playerId: 'player2',
+     *   difficulty: AILevel.MEDIUM
+     * });
+     *
+     * // Play the game
+     * const action = { type: 'move', playerId: 'player1', data: {...} };
+     * const result = game.executeAction(action);
+     * ```
+     */
+
+  }
+
+  // Export the namespace as a module
+  { Turbo };
+
+  // Make Turbo available globally
+  if (typeof globalThis !== 'undefined') {
+    (globalThis as any).Turbo = Turbo;
+  }
+
+  // ==================== bloombeasts\engine\utils\random.ts ====================
 
   /**
-   * Result of a battle action
+   * Random Utilities
+   *
+   * Centralized random number generation and selection utilities.
+   * Makes randomization consistent and easier to test.
    */
-  export interface BattleActionResult {
-    success: boolean;
-    message?: string;
-    damage?: number;
-    isTrap?: boolean;
+
+  /**
+   * Pick a random element from an array
+   * @param array The array to pick from
+   * @returns Random element from array, or undefined if empty
+   */
+  export function pickRandom<T>(array: T[]): T | undefined {
+    if (array.length === 0) {
+      return undefined;
+    }
+    return array[Math.floor(Math.random() * array.length)];
   }
 
   /**
-   * Battle configuration - passed when initializing a battle
+   * Pick multiple random elements from an array (without replacement)
+   * @param array The array to pick from
+   * @param count Number of elements to pick
+   * @returns Array of random elements
    */
-  export interface BattleConfig {
-    player1: PlayerConfig;
-    player2: PlayerConfig;
+  export function pickRandomMultiple<T>(array: T[], count: number): T[] {
+    if (count <= 0 || array.length === 0) {
+      return [];
+    }
+
+    const result: T[] = [];
+    const available = [...array];
+
+    const actualCount = Math.min(count, available.length);
+
+    for (let i = 0; i < actualCount; i++) {
+      const index = Math.floor(Math.random() * available.length);
+      result.push(available[index]);
+      available.splice(index, 1);
+    }
+
+    return result;
   }
 
   /**
-   * Configuration for a player in a battle
+   * Shuffle an array in place using Fisher-Yates algorithm
+   * @param array The array to shuffle
+   * @returns The same array, shuffled
    */
-  export interface PlayerConfig {
-    id: string;
-    name: string;
-    deck: AnyCard[];
-    health?: number;
-    maxHealth?: number;
-    isAI?: boolean;
-    aiStrategy?: 'default' | 'aggressive' | 'defensive' | 'custom';
+  export function shuffle<T>(array: T[]): T[] {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
   }
 
   /**
-   * Current state of an active battle
+   * Get a random integer between min (inclusive) and max (inclusive)
+   * @param min Minimum value
+   * @param max Maximum value
+   * @returns Random integer
    */
-  export interface BattleState {
-    gameState: GameState;
-    isComplete: boolean;
-    winner: 'player1' | 'player2' | null;
-    turn: number;
+  export function randomInt(min: number, max: number): number {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
   /**
-   * Callbacks for battle events
+   * Get a random number between min (inclusive) and max (exclusive)
+   * @param min Minimum value
+   * @param max Maximum value
+   * @returns Random number
    */
-  export interface BattleCallbacks {
-    onTurnStart?: (playerIndex: number) => void;
-    onTurnEnd?: (playerIndex: number) => void;
-    onAction?: (action: string, playerId: string) => void;
-    onBattleEnd?: (winner: 'player1' | 'player2' | null) => void;
-    onRender?: () => void;
+  export function randomFloat(min: number, max: number): number {
+    return Math.random() * (max - min) + min;
   }
 
   /**
-   * Result of a completed battle
+   * Roll a percentage chance (0-100)
+   * @param chance Percentage chance (0-100)
+   * @returns True if roll succeeded
    */
-  export interface BattleResult {
-    winner: 'player1' | 'player2' | null;
-    turns: number;
-    player1Health: number;
-    player2Health: number;
+  export function rollChance(chance: number): boolean {
+    return Math.random() * 100 < chance;
+  }
+
+  /**
+   * Roll a probability (0-1)
+   * @param probability Probability (0-1)
+   * @returns True if roll succeeded
+   */
+  export function rollProbability(probability: number): boolean {
+    return Math.random() < probability;
+  }
+
+  /**
+   * Pick a weighted random element from an array
+   * @param items Array of items
+   * @param weights Array of weights (same length as items)
+   * @returns Random element based on weights, or undefined if empty
+   */
+  export function pickWeightedRandom<T>(items: T[], weights: number[]): T | undefined {
+    if (items.length === 0 || items.length !== weights.length) {
+      return undefined;
+    }
+
+    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+    let random = Math.random() * totalWeight;
+
+    for (let i = 0; i < items.length; i++) {
+      random -= weights[i];
+      if (random <= 0) {
+        return items[i];
+      }
+    }
+
+    return items[items.length - 1];
+  }
+
+  /**
+   * Generate a random ID string
+   * @param prefix Optional prefix for the ID
+   * @param length Length of random part (default: 8)
+   * @returns Random ID string
+   */
+  export function generateId(prefix: string = '', length: number = 8): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let id = prefix;
+    for (let i = 0; i < length; i++) {
+      id += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return id;
+  }
+
+  /**
+   * Coin flip - returns true or false with 50/50 chance
+   * @returns Random boolean
+   */
+  export function coinFlip(): boolean {
+    return Math.random() < 0.5;
+  }
+
+  /**
+   * Roll a dice with specified number of sides
+   * @param sides Number of sides on the dice
+   * @returns Random number from 1 to sides (inclusive)
+   */
+  export function rollDice(sides: number): number {
+    return randomInt(1, sides);
+  }
+
+  // ==================== bloombeasts\battle\actions\ActionHandler.ts ====================
+
+  /**
+   * Action Handler Interface
+   *
+   * Defines the contract for handling specific game actions.
+   * Each action type gets its own handler class, breaking down the monolithic
+   * executeAction() method into manageable, testable pieces.
+   *
+   * Benefits:
+   * - Single Responsibility: Each handler does one thing
+   * - Testability: Easy to unit test individual actions
+   * - Maintainability: Changes to one action don't affect others
+   * - Extensibility: Easy to add new action types
+   */
+
+
+
+  /**
+   * Generic action data shape
+   */
+  export interface ActionData {
+    type: string;
+    [key: string]: unknown;
+  }
+
+  /**
+   * Trigger context - data passed when processing triggers
+   */
+  export interface TriggerContext {
+    action?: string;
+    card?: AnyCard;
+    [key: string]: unknown;
+  }
+
+  /**
+   * Action handler context - additional dependencies passed to handlers
+   */
+  export interface ActionHandlerContext {
+    /**
+     * Process triggers at a specific timing
+     */
+    processTriggers?: (timing: string, state: Turbo.IGameState<BloomBeastsState>, context?: TriggerContext) => void;
+
+    /**
+     * Process magic card effects
+     */
+    processMagicCard?: (card: MagicCard, state: Turbo.IGameState<BloomBeastsState>) => void;
+  }
+
+  /**
+   * Action handler interface
+   * Implementations process a specific type of game action
+   */
+  export interface IActionHandler<TActionData extends ActionData = ActionData> {
+    /**
+     * The action type this handler processes
+     */
+    readonly actionType: string;
+
+    /**
+     * Validate that the action can be performed
+     * @returns { valid: true } if valid, or { valid: false, reason: string } if invalid
+     */
+    validate(
+      actionData: TActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string
+    ): ActionValidationResult;
+
+    /**
+     * Execute the action and return the full result including new state, events, and side effects
+     * Note: Must not mutate the input state
+     */
+    execute(
+      actionData: TActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string,
+      context?: ActionHandlerContext
+    ): Turbo.IActionResult<BloomBeastsState>;
+  }
+
+  /**
+   * Result of action validation
+   */
+  export interface ActionValidationResult {
+    valid: boolean;
+    reason?: string;
+  }
+
+  /**
+   * Action handler registry
+   * Maps action types to their handlers
+   */
+  export class ActionHandlerRegistry {
+    private handlers: Map<string, IActionHandler>;
+
+    constructor() {
+      this.handlers = new Map();
+    }
+
+    /**
+     * Register an action handler
+     */
+    register(handler: IActionHandler): void {
+      if (this.handlers.has(handler.actionType)) {
+        console.warn(`[ActionHandlerRegistry] Overwriting handler for action type: ${handler.actionType}`);
+      }
+      this.handlers.set(handler.actionType, handler);
+    }
+
+    /**
+     * Register multiple handlers at once
+     */
+    registerAll(handlers: IActionHandler[]): void {
+      handlers.forEach(handler => this.register(handler));
+    }
+
+    /**
+     * Get handler for an action type
+     */
+    get(actionType: string): IActionHandler | undefined {
+      return this.handlers.get(actionType);
+    }
+
+    /**
+     * Check if a handler is registered for an action type
+     */
+    has(actionType: string): boolean {
+      return this.handlers.has(actionType);
+    }
+
+    /**
+     * Get all registered action types
+     */
+    getRegisteredTypes(): string[] {
+      return Array.from(this.handlers.keys());
+    }
+  }
+
+  /**
+   * Base action handler with common utilities
+   * Extend this for specific action handlers
+   */
+  export abstract class BaseActionHandler<TActionData extends ActionData = ActionData>
+    implements IActionHandler<TActionData> {
+
+    abstract readonly actionType: string;
+
+    /**
+     * Validate the action
+     * Override to add specific validation logic
+     */
+    abstract validate(
+      actionData: TActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string
+    ): ActionValidationResult;
+
+    /**
+     * Execute the action and return full result
+     * Override to implement action-specific logic
+     */
+    abstract execute(
+      actionData: TActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string,
+      context?: ActionHandlerContext
+    ): Turbo.IActionResult<BloomBeastsState>;
+
+    /**
+     * Helper: Get current player from state
+     */
+    protected getCurrentPlayer(state: Turbo.IGameState<BloomBeastsState>, playerId: string) {
+      const player = state.gameData.players.find(p => p.id === playerId);
+      if (!player) {
+        throw new Error(`Player ${playerId} not found in state`);
+      }
+      return player;
+    }
+
+    /**
+     * Helper: Get opponent player from state
+     */
+    protected getOpponentPlayer(state: Turbo.IGameState<BloomBeastsState>, playerId: string) {
+      const opponent = state.gameData.players.find(p => p.id !== playerId);
+      if (!opponent) {
+        throw new Error(`Opponent not found for player ${playerId}`);
+      }
+      return opponent;
+    }
+
+    /**
+     * Helper: Get current player index
+     */
+    protected getCurrentPlayerIndex(state: Turbo.IGameState<BloomBeastsState>, playerId: string): number {
+      return state.gameData.players.findIndex(p => p.id === playerId);
+    }
+
+    /**
+     * Helper: Clone state (deep copy)
+     * Uses structuredClone for proper handling of Sets, Maps, Dates, etc.
+     */
+    protected cloneState(state: Turbo.IGameState<BloomBeastsState>): Turbo.IGameState<BloomBeastsState> {
+      return structuredClone(state) as Turbo.IGameState<BloomBeastsState>;
+    }
+
+    /**
+     * Helper: Create event for action result
+     */
+    protected createEvent(type: string, playerId: string, data?: Record<string, unknown>) {
+      return {
+        type,
+        description: `${type} for player ${playerId}`,
+        data: {
+          type,
+          playerId,
+          data: data || {},
+          timestamp: Date.now(),
+        }
+      };
+    }
+  }
+
+  // ==================== bloombeasts\battle\actions\DrawCardActionHandler.ts ====================
+
+  /**
+   * Draw Card Action Handler
+   *
+   * Handles the DRAW_CARD action, allowing a player to draw a card from their deck
+   */
+
+
+
+  export interface DrawCardActionData extends BloomBeastsActionData {
+    type: BloomBeastsActionType.DRAW_CARD;
+  }
+
+  export class DrawCardActionHandler extends BaseActionHandler<DrawCardActionData> {
+    readonly actionType = BloomBeastsActionType.DRAW_CARD;
+
+    validate(
+      actionData: DrawCardActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string
+    ): ActionValidationResult {
+      const playerIndex = state.gameData.players.findIndex(p => p.id === playerId);
+      const player = state.gameData.players[playerIndex];
+
+      // Check if already drawn this turn
+      if (state.gameData.currentTurnActions.hasDrawnCard) {
+        return { valid: false, reason: 'Already drew a card this turn' };
+      }
+
+      // Check if deck has cards
+      if (player.deck.length === 0) {
+        return { valid: false, reason: 'No cards left in deck' };
+      }
+
+      // Check if hand is full
+      if (player.hand.length >= player.maxHandSize) {
+        return { valid: false, reason: 'Hand is full' };
+      }
+
+      return { valid: true };
+    }
+
+    execute(
+      actionData: DrawCardActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string,
+      context?: ActionHandlerContext
+    ): Turbo.IActionResult<BloomBeastsState> {
+      const newState = this.cloneState(state);
+      const playerIndex = newState.gameData.players.findIndex(p => p.id === playerId);
+      const player = newState.gameData.players[playerIndex];
+
+      // Draw the card
+      if (player.deck.length > 0) {
+        const card = player.deck.shift()!;
+        player.hand.push(card);
+      }
+
+      // Update turn tracking
+      newState.gameData.currentTurnActions.hasDrawnCard = true;
+
+      // Create event
+      const event = this.createEvent('card_drawn', playerId);
+
+      return {
+        success: true,
+        newState,
+        sideEffects: [event],
+      };
+    }
+  }
+
+  // ==================== bloombeasts\battle\actions\PlayCardActionHandler.ts ====================
+
+  /**
+   * Play Card Action Handler
+   *
+   * Handles the PLAY_CARD action, allowing a player to play a card from their hand
+   */
+
+
+
+  export interface PlayCardActionData extends BloomBeastsActionData {
+    type: BloomBeastsActionType.PLAY_CARD;
+    cardId: string;
+    position?: number;
+  }
+
+  export class PlayCardActionHandler extends BaseActionHandler<PlayCardActionData> {
+    readonly actionType = BloomBeastsActionType.PLAY_CARD;
+
+    validate(
+      actionData: PlayCardActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string
+    ): ActionValidationResult {
+      const playerIndex = state.gameData.players.findIndex(p => p.id === playerId);
+      const player = state.gameData.players[playerIndex];
+
+      // Find the card in hand
+      const card = player.hand.find(c => c.id === actionData.cardId);
+      if (!card) {
+        return { valid: false, reason: 'Card not in hand' };
+      }
+
+      // Check energy cost
+      if (player.energy < card.cost) {
+        return { valid: false, reason: 'Not enough energy' };
+      }
+
+      // Validate card placement based on type
+      const field = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
+
+      switch (card.type) {
+        case 'Beast':
+          if (actionData.position === undefined) {
+            return { valid: false, reason: 'Position required for Beast cards' };
+          }
+          if (actionData.position >= field.beasts.length) {
+            return { valid: false, reason: 'Invalid position' };
+          }
+          if (field.beasts[actionData.position] !== null) {
+            return { valid: false, reason: 'Position occupied' };
+          }
+          break;
+
+        case 'Buff':
+          if (actionData.position === undefined) {
+            return { valid: false, reason: 'Position required for Buff cards' };
+          }
+          if (actionData.position >= field.buffs.length) {
+            return { valid: false, reason: 'Invalid position' };
+          }
+          if (field.buffs[actionData.position] !== null) {
+            return { valid: false, reason: 'Position occupied' };
+          }
+          break;
+
+        case 'Trap':
+          // Check max traps (matches DEFAULT_CONFIG.maxFieldTraps = 3)
+          const maxTraps = 3;
+          if (field.traps.length >= maxTraps) {
+            return { valid: false, reason: 'Too many traps' };
+          }
+          break;
+
+        case 'Habitat':
+        case 'Magic':
+          // These can always be played if you have energy
+          break;
+
+        default:
+          return { valid: false, reason: 'Unknown card type' };
+      }
+
+      return { valid: true };
+    }
+
+    execute(
+      actionData: PlayCardActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string,
+      context?: ActionHandlerContext
+    ): Turbo.IActionResult<BloomBeastsState> {
+      const newState = this.cloneState(state);
+      const playerIndex = newState.gameData.players.findIndex(p => p.id === playerId);
+      const player = newState.gameData.players[playerIndex];
+
+      // Find and remove card from hand
+      const cardIndex = player.hand.findIndex(c => c.id === actionData.cardId);
+      if (cardIndex === -1) {
+        throw new Error('Card not found in hand');
+      }
+      const card = player.hand.splice(cardIndex, 1)[0];
+
+      // Deduct energy cost
+      player.energy -= card.cost;
+
+      // Place card on field based on type
+      const field = playerIndex === 0 ? newState.gameData.field.player1 : newState.gameData.field.player2;
+
+      switch (card.type) {
+        case 'Beast':
+          // Card from hand should already be a RuntimeBeast with instanceId, level, and scaled stats
+          const runtimeBeast = card as RuntimeBeast;
+
+          // Create field beast preserving all RuntimeBeast properties
+          const fieldCard: RuntimeBeast = {
+            ...runtimeBeast,
+            // Set initial field state
+            summoningSickness: true,
+            usedAbilityThisTurn: false
+          };
+
+          if (actionData.position !== undefined) {
+            field.beasts[actionData.position] = fieldCard;
+          }
+          break;
+
+        case 'Magic':
+          // Magic cards go to graveyard immediately
+          player.graveyard.push(card);
+
+          // Process Magic card effects
+          if (context?.processMagicCard) {
+            context.processMagicCard(card as MagicCard, newState);
+          }
+          break;
+
+        case 'Trap':
+          field.traps.push(card as RuntimeTrap);
+          break;
+
+        case 'Buff':
+          if (actionData.position !== undefined) {
+            field.buffs[actionData.position] = card as RuntimeBuff;
+          }
+          break;
+
+        case 'Habitat':
+          field.habitat = card as RuntimeHabitat;
+          break;
+      }
+
+      // Update turn tracking
+      newState.gameData.currentTurnActions.cardsPlayed++;
+
+      // Process OnSummon triggers for Beast cards
+      if (card.type === CardType.Beast && context?.processTriggers) {
+        context.processTriggers('on_action', newState, { action: 'summon', card });
+      }
+
+      // Process WhileOnField effects for cards that have them
+      if ((card.type === CardType.Beast || card.type === 'Habitat') && card.abilities && context?.processTriggers) {
+        // Check if this card has WhileOnField abilities
+        const hasWhileOnField = card.abilities.some(ability =>
+          'trigger' in ability && ability.trigger === 'WhileOnField'
+        );
+        if (hasWhileOnField) {
+          // Apply WhileOnField effects immediately when card enters field
+          context.processTriggers('on_action', newState, { action: 'enter_field', card });
+        }
+      }
+
+      // Create event
+      const event = this.createEvent('card_played', playerId, {
+        cardId: card.id,
+        cardType: card.type
+      });
+
+      return {
+        success: true,
+        newState,
+        sideEffects: [event],
+      };
+    }
+  }
+
+  // ==================== bloombeasts\battle\actions\AttackActionHandler.ts ====================
+
+  /**
+   * Attack Action Handler
+   *
+   * Handles the ATTACK action, allowing a beast to attack a target (player or another beast)
+   */
+
+
+
+  export interface AttackActionData extends BloomBeastsActionData {
+    type: BloomBeastsActionType.ATTACK;
+    cardId: string;
+    targetId?: string;
+  }
+
+  export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
+    readonly actionType = BloomBeastsActionType.ATTACK;
+
+    validate(
+      actionData: AttackActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string
+    ): ActionValidationResult {
+      // Find the attacking beast
+      const attacker = this.findBeastOnField(actionData.cardId, state);
+      if (!attacker) {
+        return { valid: false, reason: 'Attacker not found' };
+      }
+
+      // Check summoning sickness
+      if (attacker.summoningSickness) {
+        return { valid: false, reason: 'Beast has summoning sickness' };
+      }
+
+      // Check if already attacked this turn
+      if (state.gameData.currentTurnActions.hasAttacked.has(actionData.cardId)) {
+        return { valid: false, reason: 'Beast already attacked this turn' };
+      }
+
+      // Check attack value
+      if (attacker.currentAttack <= 0) {
+        return { valid: false, reason: 'Beast has no attack power' };
+      }
+
+      // If there's a target, validate it exists
+      if (actionData.targetId) {
+        const playerIndex = state.gameData.players.findIndex(p => p.id === playerId);
+        const opponentIndex = 1 - playerIndex;
+        const opponent = state.gameData.players[opponentIndex];
+
+        // Check if targeting opponent player
+        if (actionData.targetId === opponent.id) {
+          return { valid: true };
+        }
+
+        // Check if targeting a beast
+        const target = this.findBeastOnField(actionData.targetId, state);
+        if (!target) {
+          return { valid: false, reason: 'Target not found' };
+        }
+      }
+
+      return { valid: true };
+    }
+
+    execute(
+      actionData: AttackActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string,
+      context?: ActionHandlerContext
+    ): Turbo.IActionResult<BloomBeastsState> {
+      const newState = this.cloneState(state);
+
+      const attacker = this.findBeastOnField(actionData.cardId, newState);
+      if (!attacker) {
+        throw new Error('Attacker not found');
+      }
+
+      const playerIndex = newState.gameData.players.findIndex(p => p.id === playerId);
+      const opponentIndex = 1 - playerIndex;
+      const opponent = newState.gameData.players[opponentIndex];
+
+      if (!actionData.targetId || actionData.targetId === opponent.id) {
+        // Direct attack on player
+        opponent.health -= attacker.currentAttack;
+      } else {
+        // Attack on beast
+        const target = this.findBeastOnField(actionData.targetId, newState);
+        if (!target) {
+          throw new Error('Target not found');
+        }
+
+        // Both creatures deal damage to each other
+        target.currentHealth -= attacker.currentAttack;
+        attacker.currentHealth -= target.currentAttack;
+
+        // Check for defeats
+        if (target.currentHealth <= 0) {
+          this.destroyBeast(target, newState);
+        }
+        if (attacker.currentHealth <= 0) {
+          this.destroyBeast(attacker, newState);
+        }
+      }
+
+      // Update turn tracking
+      newState.gameData.currentTurnActions.hasAttacked.add(actionData.cardId);
+
+      // Process OnAttack triggers
+      if (context?.processTriggers) {
+        context.processTriggers('on_action', newState, { action: 'attack' });
+      }
+
+      // Create event
+      const event = this.createEvent('attack', playerId);
+
+      return {
+        success: true,
+        newState,
+        sideEffects: [event],
+      };
+    }
+
+    /**
+     * Find a beast on the field by ID
+     */
+    private findBeastOnField(
+      beastId: string,
+      state: Turbo.IGameState<BloomBeastsState>
+    ): RuntimeBeast | null {
+      for (const field of [state.gameData.field.player1, state.gameData.field.player2]) {
+        for (const beast of field.beasts) {
+          if (beast?.id === beastId) {
+            return beast;
+          }
+        }
+      }
+      return null;
+    }
+
+    /**
+     * Remove a defeated beast from the field and add to graveyard
+     */
+    private destroyBeast(beast: RuntimeBeast, state: Turbo.IGameState<BloomBeastsState>): void {
+      // Remove from field
+      for (let playerIdx = 0; playerIdx < 2; playerIdx++) {
+        const field = playerIdx === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
+        const index = field.beasts.findIndex(b => b?.id === beast.id);
+        if (index !== -1) {
+          field.beasts[index] = null;
+
+          // Add to graveyard
+          const owner = state.gameData.players[playerIdx];
+          owner.graveyard.push(beast);
+          break;
+        }
+      }
+    }
+  }
+
+  // ==================== bloombeasts\battle\actions\EndTurnActionHandler.ts ====================
+
+  /**
+   * End Turn Action Handler
+   *
+   * Handles the END_TURN action, switching to the next player and resetting turn state
+   */
+
+
+
+  export interface EndTurnActionData extends BloomBeastsActionData {
+    type: BloomBeastsActionType.END_TURN;
+  }
+
+  export class EndTurnActionHandler extends BaseActionHandler<EndTurnActionData> {
+    readonly actionType = BloomBeastsActionType.END_TURN;
+
+    validate(
+      actionData: EndTurnActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string
+    ): ActionValidationResult {
+      // Can always end turn
+      return { valid: true };
+    }
+
+    execute(
+      actionData: EndTurnActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string,
+      context?: ActionHandlerContext
+    ): Turbo.IActionResult<BloomBeastsState> {
+      const newState = this.cloneState(state);
+
+      const currentPlayerIndex = newState.gameData.players.findIndex(p => p.id === playerId);
+      const players = newState.gameData.players;
+
+      // Process end of turn effects
+      if (context?.processTriggers) {
+        context.processTriggers('end_of_turn', newState);
+      }
+
+      // Clear temporary effects
+      this.clearTemporaryEffects(newState);
+
+      // Switch to next player
+      const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
+      const nextPlayerId = players[nextPlayerIndex].id;
+
+      // Update turn info
+      newState.turnInfo = {
+        ...newState.turnInfo,
+        currentPlayerId: nextPlayerId,
+        turnNumber: nextPlayerIndex === 0 ? newState.turnInfo.turnNumber + 1 : newState.turnInfo.turnNumber,
+        movesThisTurn: 0,
+        timeStarted: Date.now(),
+      };
+
+      // Start new turn for next player
+      this.startNewTurn(newState, nextPlayerIndex);
+
+      // Process start of turn effects for next player
+      if (context?.processTriggers) {
+        context.processTriggers('start_of_turn', newState);
+      }
+
+      // Create event
+      const event = this.createEvent('turn_ended', playerId);
+
+      return {
+        success: true,
+        newState,
+        sideEffects: [event],
+      };
+    }
+
+    /**
+     * Clear temporary effects at end of turn
+     */
+    private clearTemporaryEffects(state: Turbo.IGameState<BloomBeastsState>): void {
+      // Remove summoning sickness and reset ability usage
+      for (const field of [state.gameData.field.player1, state.gameData.field.player2]) {
+        field.beasts.forEach(beast => {
+          if (beast) {
+            beast.summoningSickness = false;
+          }
+        });
+      }
+    }
+
+    /**
+     * Initialize the new turn for a player
+     */
+    private startNewTurn(state: Turbo.IGameState<BloomBeastsState>, playerIndex: number): void {
+      const player = state.gameData.players[playerIndex];
+      const field = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
+
+      // Reset turn actions
+      state.gameData.currentTurnActions = {
+        hasDrawnCard: false,
+        cardsPlayed: 0,
+        hasAttacked: new Set<string>(),
+      };
+
+      // Increment energy (up to max turn energy)
+      const turnNumber = state.turnInfo.turnNumber;
+      player.energy = Math.min(turnNumber, 10); // Max 10 energy
+
+      // Auto-draw a card at the start of turn (if deck has cards and hand isn't full)
+      if (player.deck.length > 0 && player.hand.length < player.maxHandSize) {
+        const card = player.deck.shift()!;
+        player.hand.push(card);
+        state.gameData.currentTurnActions.hasDrawnCard = true;
+      }
+
+      // Reset ability usage for beasts
+      for (const beast of field.beasts) {
+        if (beast) {
+          beast.usedAbilityThisTurn = false;
+        }
+      }
+    }
+  }
+
+  // ==================== bloombeasts\battle\actions\TimeoutActionHandler.ts ====================
+
+  /**
+   * Timeout Action Handler
+   *
+   * Handles the TIMEOUT action, marking a player as having timed out
+   * This triggers the win condition checker to end the game with the opponent as winner
+   */
+
+
+
+  export interface TimeoutActionData extends BloomBeastsActionData {
+    type: BloomBeastsActionType.TIMEOUT;
+    timedOutPlayerId?: string; // Which player actually timed out (may differ from who executes the action)
+  }
+
+  export class TimeoutActionHandler extends BaseActionHandler<TimeoutActionData> {
+    readonly actionType = BloomBeastsActionType.TIMEOUT;
+
+    validate(
+      actionData: TimeoutActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string
+    ): ActionValidationResult {
+      // Can always timeout (though it should only happen when timer reaches 0)
+      return { valid: true };
+    }
+
+    execute(
+      actionData: TimeoutActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string,
+      context?: ActionHandlerContext
+    ): Turbo.IActionResult<BloomBeastsState> {
+      const newState = this.cloneState(state);
+
+      // Use timedOutPlayerId if provided, otherwise use the playerId executing the action
+      const actualTimedOutPlayer = actionData.timedOutPlayerId || playerId;
+
+      // Mark the sudden end due to timeout
+      newState.gameData.suddenEnd = {
+        playerId: actualTimedOutPlayer,
+        reason: SuddenEndReason.TIMEOUT
+      };
+
+      // Create event
+      const event = this.createEvent('timeout', actualTimedOutPlayer, {
+        reason: 'Timer expired'
+      });
+
+      return {
+        success: true,
+        newState,
+        sideEffects: [event],
+      };
+    }
+  }
+
+  // ==================== bloombeasts\battle\actions\ForfeitActionHandler.ts ====================
+
+  /**
+   * Forfeit Action Handler
+   *
+   * Handles the FORFEIT action, marking a player as having forfeited
+   * This triggers the win condition checker to end the game with the opponent as winner
+   */
+
+
+
+  export interface ForfeitActionData extends BloomBeastsActionData {
+    type: BloomBeastsActionType.FORFEIT;
+  }
+
+  export class ForfeitActionHandler extends BaseActionHandler<ForfeitActionData> {
+    readonly actionType = BloomBeastsActionType.FORFEIT;
+
+    validate(
+      actionData: ForfeitActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string
+    ): ActionValidationResult {
+      // Can always forfeit
+      return { valid: true };
+    }
+
+    execute(
+      actionData: ForfeitActionData,
+      state: Turbo.IGameState<BloomBeastsState>,
+      playerId: string,
+      context?: ActionHandlerContext
+    ): Turbo.IActionResult<BloomBeastsState> {
+      const newState = this.cloneState(state);
+
+      // Mark the sudden end due to forfeit
+      newState.gameData.suddenEnd = {
+        playerId,
+        reason: SuddenEndReason.FORFEIT
+      };
+
+      // Create event
+      const event = this.createEvent('forfeit', playerId, {
+        reason: 'Player forfeited'
+      });
+
+      return {
+        success: true,
+        newState,
+        sideEffects: [event],
+      };
+    }
+  }
+
+  // ==================== bloombeasts\battle\actions\index.ts ====================
+
+  /**
+   * Action Handlers - Exports all game action handlers
+   */
+
+  // ==================== bloombeasts\battle\core\WinConditionChecker.ts ====================
+
+  /**
+   * WinConditionChecker - Determines battle end conditions and winners
+   *
+   * Responsibilities:
+   * - Check if battle has ended
+   * - Determine winner
+   * - Calculate battle results
+   */
+
+
+
+  export class WinConditionChecker {
+    /**
+     * Check if the battle has ended and return result
+     */
+    checkBattleEnd(state: Turbo.IGameState<BloomBeastsState>): BattleResult | null {
+      if (!state.isComplete) {
+        return null;
+      }
+
+      const players = state.gameData.players;
+      const winner = this.determineWinner(state);
+
+      return {
+        winner,
+        turns: state.turnInfo.turnNumber,
+        player1Health: players[0].health,
+        player2Health: players[1].health,
+      };
+    }
+
+    /**
+     * Determine the winner from the game state
+     */
+    private determineWinner(state: Turbo.IGameState<BloomBeastsState>): 'player1' | 'player2' | null {
+      const players = state.gameData.players;
+
+      // Check sudden end (timeout/forfeit/disconnect) first (highest priority)
+      if (state.gameData.suddenEnd) {
+        const loserPlayerId = state.gameData.suddenEnd.playerId;
+        // Find which player caused the sudden end
+        if (players[0].id === loserPlayerId) {
+          return 'player2'; // Player 1 ended suddenly, player 2 wins
+        } else {
+          return 'player1'; // Player 2 ended suddenly, player 1 wins
+        }
+      }
+
+      // Check health-based win
+      if (players[0].health <= 0 && players[1].health > 0) {
+        return 'player2';
+      }
+      if (players[1].health <= 0 && players[0].health > 0) {
+        return 'player1';
+      }
+
+      // Check deck-out win
+      const p1HasCards = players[0].deck.length > 0 || players[0].hand.length > 0;
+      const p2HasCards = players[1].deck.length > 0 || players[1].hand.length > 0;
+
+      if (!p1HasCards && p2HasCards) {
+        return 'player2';
+      }
+      if (!p2HasCards && p1HasCards) {
+        return 'player1';
+      }
+
+      // Tie or draw
+      return null;
+    }
+
+    /**
+     * Check if the game should end based on current state
+     */
+    shouldGameEnd(state: Turbo.IGameState<BloomBeastsState>): boolean {
+      // Check sudden end (timeout/forfeit/disconnect) first (highest priority)
+      if (state.gameData.suddenEnd) {
+        return true;
+      }
+
+      const players = state.gameData.players;
+
+      // Check if any player is defeated
+      const aliveCount = players.filter(p => p.health > 0).length;
+      if (aliveCount < 2) {
+        return true;
+      }
+
+      // Check if any player is decked out
+      const playersWithCards = players.filter(p => p.deck.length > 0 || p.hand.length > 0).length;
+      if (playersWithCards < 2) {
+        return true;
+      }
+
+      return false;
+    }
+
+    /**
+     * Get winner ID from state (returns player ID, not 'player1'/'player2')
+     */
+    getWinnerId(state: Turbo.IGameState<BloomBeastsState>): string | null {
+      const winner = this.determineWinner(state);
+      if (!winner) return null;
+
+      return winner === 'player1' ? state.gameData.players[0].id : state.gameData.players[1].id;
+    }
+  }
+
+  // ==================== bloombeasts\battle\BloomBeastsGame.ts ====================
+
+  /**
+   * BloomBeasts game implementation using the TURBO library
+   */
+
+
+  // Import existing BloomBeasts types
+  // Import types from ./types to avoid circular dependencies with action handlers
+
+  /**
+   * Trigger timing enum for effect processing
+   */
+  enum TriggerTiming {
+    START_OF_TURN = 'start_of_turn',
+    END_OF_TURN = 'end_of_turn',
+    ON_ACTION = 'on_action',
+    ON_EVENT = 'on_event',
+  }
+
+  /**
+   * Effect system for processing game effects and triggers
+   */
+  class EffectSystem<TState extends Record<string, unknown>> {
+    processEffects(
+      timing: TriggerTiming,
+      state: Turbo.IGameState<TState>,
+      context?: TriggerContext
+    ): { success: boolean; newState?: Turbo.IGameState<TState> } {
+      // Clone state to avoid mutating the original - use structuredClone to preserve Sets, Maps, etc.
+      const newState = structuredClone(state) as Turbo.IGameState<TState>;
+      const bloomState = newState.gameData as unknown as BloomBeastsState;
+
+      // Handle OnSummon triggers
+      if (timing === TriggerTiming.ON_ACTION && context?.action === 'summon' && context.card) {
+        const card = context.card;
+
+        // Check if this card has abilities
+        if (card.abilities && card.abilities.length > 0) {
+          for (const ability of card.abilities) {
+            // Type guard: check if this is a StructuredAbility with trigger and effects
+            if ('trigger' in ability && ability.trigger === 'OnSummon' && 'effects' in ability && ability.effects) {
+              // Process each effect
+              for (const effect of ability.effects) {
+                this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId);
+              }
+            }
+          }
+        }
+      }
+
+      // Handle WhileOnField effects when card enters field
+      if (timing === TriggerTiming.ON_ACTION && context?.action === 'enter_field' && context.card) {
+        const card = context.card;
+
+        // Check if this card has abilities
+        if (card.abilities && card.abilities.length > 0) {
+          for (const ability of card.abilities) {
+            // Type guard: check if this is a StructuredAbility with trigger and effects
+            if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+              // Process each effect
+              for (const effect of ability.effects) {
+                this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId);
+              }
+            }
+          }
+        }
+      }
+
+      // Handle start of turn triggers
+      if (timing === TriggerTiming.START_OF_TURN) {
+        // Process OnOwnStartOfTurn triggers
+        this.processStartOfTurnTriggers(bloomState, newState.turnInfo!.currentPlayerId);
+      }
+
+      // Handle end of turn triggers
+      if (timing === TriggerTiming.END_OF_TURN) {
+        this.processEndOfTurnTriggers(bloomState, newState.turnInfo!.currentPlayerId);
+      }
+
+      return { success: true, newState };
+    }
+
+    private processEffect(effect: any, state: BloomBeastsState, currentPlayerId: string): void {
+      const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
+      const currentPlayer = state.players[currentPlayerIndex];
+
+      switch (effect.type) {
+        case 'draw-cards':
+          // Draw cards from deck
+          const cardsToDraw = effect.value || 1;
+          for (let i = 0; i < cardsToDraw; i++) {
+            if (currentPlayer.deck.length > 0 && currentPlayer.hand.length < currentPlayer.maxHandSize) {
+              const drawnCard = currentPlayer.deck.shift()!;
+              currentPlayer.hand.push(drawnCard);
+            }
+          }
+          break;
+
+        case 'modify-stats':
+          // Modify stats of target beasts
+          this.processStatModification(effect, state, currentPlayerIndex);
+          break;
+
+        case 'gain-resource':
+          // Gain resources (already handled in processMagicCard)
+          if (effect.resource === 'energy') {
+            const value = effect.value || 0;
+            currentPlayer.energy = Math.min(currentPlayer.energy + value, 10); // maxEnergy = 10
+          }
+          break;
+      }
+    }
+
+    private processStatModification(effect: any, state: BloomBeastsState, currentPlayerIndex: number): void {
+      const field = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
+      const targets = this.resolveTargets(effect.target, field, state);
+
+      for (const target of targets) {
+        if (effect.stat === 'attack' || effect.stat === 'both') {
+          target.currentAttack = Math.max(0, target.currentAttack + effect.value);
+        }
+        if (effect.stat === 'health' || effect.stat === 'both') {
+          target.currentHealth = Math.max(0, target.currentHealth + effect.value);
+          // Also increase maxHealth for permanent buffs
+          if (effect.duration === 'permanent' && effect.value > 0) {
+            target.maxHealth += effect.value;
+          }
+        }
+      }
+    }
+
+    private resolveTargets(targetType: string, field: any, state: BloomBeastsState): RuntimeBeast[] {
+      const targets: RuntimeBeast[] = [];
+
+      switch (targetType) {
+        case 'all-allies':
+          // Get all allied beasts on the field
+          for (const beast of field.beasts) {
+            if (beast !== null) {
+              targets.push(beast);
+            }
+          }
+          break;
+        case 'self':
+          // Would need context to know which beast is self
+          break;
+        // Add more target types as needed
+      }
+
+      return targets;
+    }
+
+    private processStartOfTurnTriggers(state: BloomBeastsState, currentPlayerId: string): void {
+      const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
+      const field = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
+
+      // Process OnOwnStartOfTurn triggers
+      for (const beast of field.beasts) {
+        if (beast && beast.abilities) {
+          for (const ability of beast.abilities) {
+            if ('trigger' in ability && ability.trigger === 'OnOwnStartOfTurn' && 'effects' in ability && ability.effects) {
+              for (const effect of ability.effects) {
+                this.processEffect(effect, state, currentPlayerId);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    private applyWhileOnFieldEffects(state: BloomBeastsState, currentPlayerId: string): void {
+      const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
+      const field = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
+
+      // Apply WhileOnField effects from beasts
+      for (const beast of field.beasts) {
+        if (beast && beast.abilities) {
+          for (const ability of beast.abilities) {
+            if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+              for (const effect of ability.effects) {
+                this.processEffect(effect, state, currentPlayerId);
+              }
+            }
+          }
+        }
+      }
+
+      // Apply WhileOnField effects from habitat
+      if (field.habitat && field.habitat.abilities) {
+        for (const ability of field.habitat.abilities) {
+          if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+            for (const effect of ability.effects) {
+              this.processEffect(effect, state, currentPlayerId);
+            }
+          }
+        }
+      }
+    }
+
+    private processEndOfTurnTriggers(state: BloomBeastsState, currentPlayerId: string): void {
+      const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
+      const field = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
+
+      // Process OnOwnEndOfTurn triggers
+      for (const beast of field.beasts) {
+        if (beast && beast.abilities) {
+          for (const ability of beast.abilities) {
+            if ('trigger' in ability && ability.trigger === 'OnOwnEndOfTurn' && 'effects' in ability && ability.effects) {
+              for (const effect of ability.effects) {
+                this.processEffect(effect, state, currentPlayerId);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    clearExpiredEffects(state: Turbo.IGameState<TState>): void {
+      // Stub implementation - clear temporary effects here
+    }
+  }
+
+  // Types are defined in ./types.ts to avoid circular dependencies
+
+  /**
+   * BloomBeasts game configuration
+   */
+  export interface BloomBeastsConfig {
+    startingHandSize: number;
+    maxFieldBeasts: number;
+    maxFieldBuffs: number;
+    maxFieldTraps: number;
+    startingHealth: number;
+    maxEnergy: number;
+  }
+
+  /**
+   * Default game configuration
+   */
+  const DEFAULT_CONFIG: BloomBeastsConfig = {
+    startingHandSize: 3,
+    maxFieldBeasts: 3,
+    maxFieldBuffs: 3,
+    maxFieldTraps: 3,
+    startingHealth: 30,
+    maxEnergy: 10,
+  };
+
+  /**
+   * BloomBeasts game rules implementation
+   */
+  export class BloomBeastsRules implements Turbo.IGameRules<BloomBeastsState, BloomBeastsActionData> {
+    private config: BloomBeastsConfig;
+    private effectSystem: EffectSystem<BloomBeastsState>;
+    private actionHandlers: ActionHandlerRegistry;
+    private winConditionChecker: WinConditionChecker;
+
+    constructor(config: Partial<BloomBeastsConfig> = {}) {
+      this.config = { ...DEFAULT_CONFIG, ...config };
+      this.effectSystem = new EffectSystem<BloomBeastsState>();
+      this.actionHandlers = new ActionHandlerRegistry();
+      this.winConditionChecker = new WinConditionChecker();
+
+      // Register action handlers
+      this.actionHandlers.registerAll([
+        new DrawCardActionHandler(),
+        new PlayCardActionHandler(),
+        new AttackActionHandler(),
+        new EndTurnActionHandler(),
+        new TimeoutActionHandler(),
+        new ForfeitActionHandler(),
+      ]);
+
+      this.registerEffectHandlers();
+    }
+
+    /**
+     * Initialize the game state
+     */
+    createInitialState(config: Turbo.IGameConfig): Turbo.IGameState<BloomBeastsState> {
+      const players = config.players.map(p => this.createPlayer(p));
+
+      // Shuffle decks and draw starting hands
+      players.forEach(player => {
+        player.deck = shuffle(player.deck);
+        for (let i = 0; i < this.config.startingHandSize; i++) {
+          this.drawCard(player);
+        }
+      });
+
+      const gameData: BloomBeastsState = {
+        players,
+        field: {
+          player1: {
+            beasts: [null, null, null],
+            buffs: [null, null, null],
+            habitat: null,
+            traps: [],
+          },
+          player2: {
+            beasts: [null, null, null],
+            buffs: [null, null, null],
+            habitat: null,
+            traps: [],
+          },
+        },
+        currentTurnActions: {
+          hasDrawnCard: false,
+          cardsPlayed: 0,
+          hasAttacked: new Set(),
+        },
+      };
+
+      // Give first player 1 energy to start the game
+      players[0].energy = 1;
+
+      return {
+        gameData,
+        turnInfo: {
+          turnNumber: 1,
+          currentPlayerId: players[0].id,
+          movesThisTurn: 0,
+          timeStarted: Date.now(),
+        },
+        players: config.players,
+        phase: Turbo.GamePhase.PLAYING,
+        isComplete: false,
+      };
+    }
+
+    /**
+     * Validate if an action can be performed
+     *
+     * This now delegates to action handlers for validation.
+     * Handlers contain all the validation logic specific to each action type.
+     */
+    validateAction(
+      action: Turbo.IGameAction<BloomBeastsActionData>,
+      state: Turbo.IGameState<BloomBeastsState>
+    ): Turbo.IActionValidation {
+      // Check if it's the current player's turn
+      const currentPlayerIndex = this.getCurrentPlayerIndex(state);
+      const currentPlayer = state.gameData!.players[currentPlayerIndex];
+
+      if (action.playerId !== currentPlayer.id) {
+        return { isValid: false, reason: 'Not your turn' };
+      }
+
+      // Get the appropriate handler
+      const handler = this.actionHandlers.get(action.data.type);
+      if (!handler) {
+        return { isValid: false, reason: 'Unknown action type' };
+      }
+
+      // Delegate validation to the handler
+      const validation = handler.validate(action.data, state, action.playerId);
+
+      return {
+        isValid: validation.valid,
+        reason: !validation.valid ? validation.reason : undefined,
+      };
+    }
+
+    /**
+     * Execute an action and return the new state
+     *
+     * This is now a simple dispatcher that delegates to action handlers.
+     * All action-specific logic, event generation, and trigger processing
+     * is handled by the respective action handlers.
+     */
+    executeAction(
+      action: Turbo.IGameAction<BloomBeastsActionData>,
+      state: Turbo.IGameState<BloomBeastsState>
+    ): Turbo.IActionResult<BloomBeastsState> {
+      try {
+        // Get the appropriate handler
+        const handler = this.actionHandlers.get(action.data.type);
+        if (!handler) {
+          return {
+            success: false,
+            error: new Error(`No handler found for action type: ${action.data.type}`),
+          };
+        }
+
+        // Validate the action
+        const validation = handler.validate(action.data, state, action.playerId);
+        if (!validation.valid) {
+          const reason = 'reason' in validation ? validation.reason : 'Validation failed';
+          return {
+            success: false,
+            error: new Error(reason),
+          };
+        }
+
+        // Create context with trigger and effect processing functions
+        const context = {
+          processTriggers: (timing: string, newState: Turbo.IGameState<BloomBeastsState>, ctx?: TriggerContext) => {
+            this.processTriggers(timing as TriggerTiming, newState, ctx);
+          },
+          processMagicCard: (card: MagicCard, newState: Turbo.IGameState<BloomBeastsState>) => {
+            this.processMagicCard(card, newState);
+          },
+        };
+
+        // Execute the action - handler returns full result with events
+        const result = handler.execute(action.data, state, action.playerId, context);
+
+        return result;
+      } catch (error) {
+        console.error('[BloomBeastsGame] Action execution failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error : new Error(String(error)),
+        };
+      }
+    }
+
+    /**
+     * Check if the game has ended
+     *
+     * Delegates to WinConditionChecker for all win condition logic
+     */
+    checkEndCondition(state: Turbo.IGameState<BloomBeastsState>): { isEnded: boolean; winnerId?: string; reason?: string } {
+      // Check if game should end using WinConditionChecker
+      if (!this.winConditionChecker.shouldGameEnd(state)) {
+        return { isEnded: false };
+      }
+
+      // Game should end - determine winner and reason
+      const winnerId = this.winConditionChecker.getWinnerId(state) ?? undefined;
+
+      // Determine reason based on state
+      let reason = 'Victory';
+
+      if (state.gameData.suddenEnd) {
+        const reasonMap = {
+          'timeout': 'Timeout',
+          'forfeit': 'Forfeit',
+          'disconnect': 'Disconnect'
+        };
+        reason = reasonMap[state.gameData.suddenEnd.reason] || 'Unknown';
+      } else {
+        const players = state.gameData!.players;
+        const aliveByHealth = players.filter(p => p.health > 0);
+        if (aliveByHealth.length < 2) {
+          reason = 'Opponent eliminated';
+        } else {
+          reason = 'Opponent decked out';
+        }
+      }
+
+      return { isEnded: true, winnerId, reason };
+    }
+
+    /**
+     * Get valid actions for the current player
+     */
+    getValidActions(state: Turbo.IGameState<BloomBeastsState>): Turbo.IGameAction<BloomBeastsActionData>[] {
+      const actions: Turbo.IGameAction<BloomBeastsActionData>[] = [];
+      const currentPlayer = state.gameData!.players[this.getCurrentPlayerIndex(state)];
+
+
+      // Draw card action
+      if (!state.gameData!.currentTurnActions.hasDrawnCard && currentPlayer.deck.length > 0) {
+        actions.push({
+          type: 'game_action',
+          playerId: currentPlayer.id,
+          data: { type: BloomBeastsActionType.DRAW_CARD },
+        });
+      }
+
+      // Play card actions
+      currentPlayer.hand.forEach(card => {
+        if (card.cost <= currentPlayer.energy) {
+          const positions = this.getValidPositionsForCard(card, state);
+          positions.forEach(position => {
+            actions.push({
+              type: 'game_action',
+              playerId: currentPlayer.id,
+              data: {
+                type: BloomBeastsActionType.PLAY_CARD,
+                cardId: card.id,
+                position,
+              },
+            });
+          });
+        }
+      });
+
+      // Attack actions
+      const field = this.getCurrentPlayerIndex(state) === 0 ? state.gameData!.field.player1 : state.gameData!.field.player2;
+      field.beasts.forEach(beast => {
+        if (beast && !beast.summoningSickness && !state.gameData!.currentTurnActions.hasAttacked.has(beast.id)) {
+          const targets = this.getValidAttackTargets(beast, state);
+          targets.forEach(targetId => {
+            actions.push({
+              type: 'game_action',
+              playerId: currentPlayer.id,
+              data: {
+                type: BloomBeastsActionType.ATTACK,
+                cardId: beast.id,
+                targetId,
+              },
+            });
+          });
+        }
+      });
+
+      // End turn action (always available)
+      actions.push({
+        type: 'game_action',
+        playerId: currentPlayer.id,
+        data: { type: BloomBeastsActionType.END_TURN },
+      });
+
+      return actions;
+    }
+
+    /**
+     * Handle phase transitions
+     */
+    getNextPhase(currentPhase: string, state: Turbo.IGameState<BloomBeastsState>): string {
+      // BloomBeasts has a simple phase structure
+      return 'main';
+    }
+
+    /**
+     * Private helper methods
+     */
+
+    private getCurrentPlayerIndex(state: Turbo.IGameState<BloomBeastsState>): number {
+      const currentPlayerId = state.turnInfo!.currentPlayerId;
+      return state.gameData!.players.findIndex(p => p.id === currentPlayerId);
+    }
+
+    private createPlayer(config: Turbo.IPlayer): BloomBeastsPlayer {
+      // Get deck from metadata - should already be RuntimeCard[] from BattleController
+      const deck = (config.metadata?.deck as RuntimeCard[]) || [];
+      return {
+        id: config.id,
+        name: config.name,
+        health: this.config.startingHealth,
+        energy: 0,
+        deck: [...deck],
+        hand: [],
+        graveyard: [],
+        maxHandSize: 10,
+        maxHealth: this.config.startingHealth,
+      };
+    }
+
+    private drawCard(player: BloomBeastsPlayer): RuntimeCard | null {
+      if (player.deck.length === 0) {
+        return null;
+      }
+
+      const card = player.deck.shift()!;
+      player.hand.push(card);
+      return card;
+    }
+
+    private getValidPositionsForCard(card: RuntimeCard, state: Turbo.IGameState<BloomBeastsState>): number[] {
+      const positions: number[] = [];
+      const field = this.getCurrentPlayerIndex(state) === 0 ? state.gameData!.field.player1 : state.gameData!.field.player2;
+
+      switch (card.type) {
+        case 'Beast':
+          field.beasts.forEach((slot, index) => {
+            if (slot === null) {
+              positions.push(index);
+            }
+          });
+          break;
+
+        case 'Buff':
+          field.buffs.forEach((slot, index) => {
+            if (slot === null) {
+              positions.push(index);
+            }
+          });
+          break;
+
+        case 'Trap':
+        case 'Habitat':
+        case 'Magic':
+          positions.push(0); // Single valid position for these
+          break;
+      }
+
+      return positions;
+    }
+
+    private findBeastOnField(beastId: string, state: Turbo.IGameState<BloomBeastsState>): RuntimeBeast | null {
+      for (const field of [state.gameData!.field.player1, state.gameData!.field.player2]) {
+        for (const beast of field.beasts) {
+          if (beast?.id === beastId) {
+            return beast;
+          }
+        }
+      }
+      return null;
+    }
+
+    private getValidAttackTargets(beast: RuntimeBeast, state: Turbo.IGameState<BloomBeastsState>): string[] {
+      const targets: string[] = [];
+      const opponentField = this.getCurrentPlayerIndex(state) === 0 ?
+                            state.gameData!.field.player2 :
+                            state.gameData!.field.player1;
+
+      // Can attack opponent beasts
+      opponentField.beasts.forEach(opponentBeast => {
+        if (opponentBeast) {
+          targets.push(opponentBeast.id);
+        }
+      });
+
+      // Can attack opponent directly if no beasts
+      if (opponentField.beasts.every(b => b === null)) {
+        const opponentPlayer = state.gameData!.players[1 - this.getCurrentPlayerIndex(state)];
+        targets.push(opponentPlayer.id);
+      }
+
+      return targets;
+    }
+
+    private processMagicCard(card: MagicCard, state: Turbo.IGameState<BloomBeastsState>): void {
+      // Process magic card effects
+      if (!card.abilities || card.abilities.length === 0) {
+        return;
+      }
+
+      // Get current player
+      const currentPlayerIndex = this.getCurrentPlayerIndex(state);
+      const currentPlayer = state.gameData.players[currentPlayerIndex];
+
+      // Process each ability
+      card.abilities.forEach(ability => {
+        // Type guard: check if this is a StructuredAbility with effects
+        if ('effects' in ability && ability.effects) {
+          ability.effects.forEach((effect: any) => {
+            // Handle GainResource effects (for Energy Block, Energy Surge, etc.)
+            if (effect.type === 'gain-resource' && effect.resource === 'energy') {
+              const value = effect.value || 0;
+              currentPlayer.energy = Math.min(
+                currentPlayer.energy + value,
+                this.config.maxEnergy
+              );
+            }
+            // Handle DrawCards effects
+            else if (effect.type === 'draw-cards') {
+              const cardsToDraw = effect.value || 1;
+              for (let i = 0; i < cardsToDraw; i++) {
+                if (currentPlayer.deck.length > 0 && currentPlayer.hand.length < currentPlayer.maxHandSize) {
+                  const drawnCard = currentPlayer.deck.shift()!;
+                  currentPlayer.hand.push(drawnCard);
+                }
+              }
+            }
+            // Add more effect handlers here as needed
+          });
+        }
+      });
+    }
+
+    private processTriggers(
+      timing: TriggerTiming,
+      state: Turbo.IGameState<BloomBeastsState>,
+      context?: TriggerContext
+    ): void {
+      // Process triggers using the effect system
+      const result = this.effectSystem.processEffects(timing, state, context);
+      if (result.success && result.newState) {
+        // Update state with processed effects
+        Object.assign(state, result.newState);
+      }
+    }
+
+    private registerEffectHandlers(): void{
+      // Register effect handlers for BloomBeasts-specific effects
+      // This would include handlers for abilities like:
+      // - Stat modifications
+      // - Damage effects
+      // - Healing
+      // - Card draw
+      // - etc.
+    }
+  }
+
+  /**
+   * Factory function to create a BloomBeasts game instance
+   */
+  export function createBloomBeastsGame(config?: Partial<BloomBeastsConfig>): Turbo.GameController<BloomBeastsState, BloomBeastsActionData> {
+    const rules = new BloomBeastsRules(config);
+    return new Turbo.GameController(rules);
+  }
+
+  // ==================== bloombeasts\battle\BloomBeastsAI.ts ====================
+
+  /**
+   * BloomBeasts AI implementation using the TURBO library
+   */
+
+
+
+  /**
+   * Player field structure
+   */
+  type PlayerField = {
+    beasts: (RuntimeBeast | null)[];
+    buffs: (RuntimeBuff | null)[];
+    habitat: RuntimeHabitat | null;
+    traps: RuntimeTrap[];
+  };
+
+  /**
+   * BloomBeasts Greedy AI implementation
+   */
+  export class BloomBeastsGreedyAI extends Turbo.GreedyAI<BloomBeastsState, BloomBeastsActionData> {
+    private currentState: Turbo.IGameState<BloomBeastsState> | null;
+
+    constructor(config: Turbo.IAIConfig) {
+      super({
+        ...config,
+        // Set longer thinking times for better UX
+        thinkingTime: config.thinkingTime || { min: 800, max: 2500 }
+      });
+      this.currentState = null;
+    }
+
+    /**
+     * Evaluate the current state (higher is better for this player)
+     */
+    evaluateState(state: Turbo.IGameState<BloomBeastsState>): number {
+      let score = 0;
+      const playerIndex = state.gameData.players.findIndex(p => p.id === this.playerId);
+      const player = state.gameData.players[playerIndex];
+      const opponent = state.gameData.players[1 - playerIndex];
+      const playerField = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
+      const opponentField = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
+
+      // Health difference (most important)
+      score += (player.health - opponent.health) * 10;
+
+      // Energy advantage
+      score += (player.energy - opponent.energy) * 2;
+
+      // Card advantage
+      score += (player.hand.length - opponent.hand.length) * 3;
+
+      // Board presence
+      const playerBeasts = playerField.beasts.filter(b => b !== null).length;
+      const opponentBeasts = opponentField.beasts.filter(b => b !== null).length;
+      score += (playerBeasts - opponentBeasts) * 5;
+
+      // Total stats on board
+      let playerStats = 0;
+      let opponentStats = 0;
+
+      playerField.beasts.forEach(beast => {
+        if (beast) {
+          playerStats += beast.currentAttack + beast.currentHealth;
+          // Bonus for special abilities
+          if (beast.abilities && beast.abilities.length > 0) {
+            playerStats += beast.abilities.length * 2;
+          }
+        }
+      });
+
+      opponentField.beasts.forEach(beast => {
+        if (beast) {
+          opponentStats += beast.currentAttack + beast.currentHealth;
+          if (beast.abilities && beast.abilities.length > 0) {
+            opponentStats += beast.abilities.length * 2;
+          }
+        }
+      });
+
+      score += (playerStats - opponentStats) * 2;
+
+      // Buffs and habitat bonus
+      score += playerField.buffs.filter(b => b !== null).length * 3;
+      score += playerField.habitat ? 4 : 0;
+
+      // Traps bonus
+      score += playerField.traps.length * 2;
+
+      return score;
+    }
+
+    /**
+     * Evaluate an action's immediate value
+     */
+    evaluateAction(
+      action: Turbo.IGameAction<BloomBeastsActionData>,
+      state: Turbo.IGameState<BloomBeastsState>
+    ): number {
+      const playerIndex = state.gameData.players.findIndex(p => p.id === this.playerId);
+      const player = state.gameData.players[playerIndex];
+      const opponent = state.gameData.players[1 - playerIndex];
+      const playerField = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
+      const opponentField = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
+
+      switch (action.data.type) {
+        case BloomBeastsActionType.DRAW_CARD:
+          // Drawing cards is generally good
+          return 5 + Math.random() * 2;
+
+        case BloomBeastsActionType.PLAY_CARD:
+          const card = player.hand.find(c => c.id === action.data.cardId);
+          if (!card) return 0;
+
+          let value = 0;
+
+          switch (card.type) {
+            case 'Beast':
+              const beast = card as BloomBeastCard;
+              // Value based on stats and abilities
+              value = beast.baseAttack * 2 + beast.baseHealth * 1.5;
+
+              // Bonus for abilities
+              if (beast.abilities) {
+                value += beast.abilities.length * 5;
+              }
+
+              // Efficiency bonus (stats per energy)
+              if (beast.cost > 0) {
+                value += (beast.baseAttack + beast.baseHealth) / beast.cost * 3;
+              }
+
+              // Board control bonus
+              if (this.playerBeasts < this.opponentBeasts) {
+                value += 10; // Extra value when behind on board
+              }
+              break;
+
+            case 'Magic':
+              // Magic cards vary widely, use base value
+              value = 8 + Math.random() * 4;
+              break;
+
+            case 'Trap':
+              // Traps are defensive
+              value = 6;
+              if (this.opponentBeasts > this.playerBeasts) {
+                value += 4; // More valuable when opponent has board advantage
+              }
+              break;
+
+            case 'Buff':
+              // Buffs need creatures to be valuable
+              value = this.playerBeasts * 4;
+              break;
+
+            case 'Habitat':
+              // Habitat provides long-term value
+              value = 7 + this.playerBeasts * 2;
+              break;
+          }
+
+          // Adjust for energy efficiency
+          if (card.cost > 0) {
+            const energyEfficiency = value / card.cost;
+            value = energyEfficiency * 5;
+          }
+
+          return value;
+
+        case BloomBeastsActionType.ATTACK:
+          const attackerId = action.data.cardId!;
+          const targetId = action.data.targetId;
+
+          const attacker = this.findBeast(attackerId, playerField);
+          if (!attacker) return 0;
+
+          let attackValue = 0;
+
+          if (!targetId || targetId === opponent.id) {
+            // Direct attack on opponent
+            attackValue = attacker.currentAttack * 3;
+
+            // Lethal bonus
+            if (attacker.currentAttack >= opponent.health) {
+              attackValue += 1000; // Win the game!
+            }
+          } else {
+            // Attack on creature
+            const target = this.findBeast(targetId, opponentField);
+            if (!target) return 0;
+
+            // Value of removing opponent creature
+            attackValue = target.currentAttack * 2 + target.currentHealth * 1.5;
+
+            // Favorable trade bonus
+            if (attacker.currentAttack >= target.currentHealth && target.currentAttack < attacker.currentHealth) {
+              attackValue += 15; // We survive, they don't
+            }
+
+            // Penalty for unfavorable trade
+            if (target.currentAttack >= attacker.currentHealth && attacker.currentAttack < target.currentHealth) {
+              attackValue -= 10; // We die, they don't
+            }
+
+            // Equal trade evaluation
+            if (attacker.currentAttack >= target.currentHealth && target.currentAttack >= attacker.currentHealth) {
+              // Compare creature values
+              const attackerValue = attacker.currentAttack * 2 + attacker.currentHealth * 1.5;
+              const targetValue = target.currentAttack * 2 + target.currentHealth * 1.5;
+              attackValue = targetValue - attackerValue + 5; // Slight bonus for proactive play
+            }
+          }
+
+          return attackValue;
+
+        case BloomBeastsActionType.END_TURN:
+          // Only end turn when nothing better to do
+          return -10;
+
+        default:
+          return 0;
+      }
+    }
+
+    /**
+     * Override chooseAction to implement turn logic
+     */
+    async chooseAction(
+      state: Turbo.IGameState<BloomBeastsState>,
+      availableActions: Turbo.IGameAction<BloomBeastsActionData>[]
+    ): Promise<Turbo.IGameAction<BloomBeastsActionData> | null> {
+      // Store state for getter methods
+      this.currentState = state;
+
+      // Add thinking delay for better UX (configured in constructor)
+      await this.simulateThinking();
+
+      if (availableActions.length === 0) {
+        return null;
+      }
+
+      // Group actions by type
+      const actionsByType = new Map<BloomBeastsActionType, Turbo.IGameAction<BloomBeastsActionData>[]>();
+      availableActions.forEach(action => {
+        const type = action.data.type;
+        if (!actionsByType.has(type)) {
+          actionsByType.set(type, []);
+        }
+        actionsByType.get(type)!.push(action);
+      });
+
+      // Priority order for action types
+      const priorityOrder = [
+        BloomBeastsActionType.DRAW_CARD,    // Always draw first if available
+        BloomBeastsActionType.ATTACK,       // Then attack
+        BloomBeastsActionType.PLAY_CARD,    // Then play cards
+        BloomBeastsActionType.END_TURN,     // End turn last
+      ];
+
+      // Find best action considering priorities
+      for (const actionType of priorityOrder) {
+        const actionsOfType = actionsByType.get(actionType);
+        if (!actionsOfType || actionsOfType.length === 0) continue;
+
+        // Special handling for END_TURN
+        if (actionType === BloomBeastsActionType.END_TURN) {
+          // Only end turn if no other valuable actions
+          const otherActions = availableActions.filter(a => a.data.type !== BloomBeastsActionType.END_TURN);
+          const hasValuableActions = otherActions.some(a => this.evaluateAction(a, state) > 5);
+
+          if (hasValuableActions) {
+            continue; // Skip END_TURN and look for better actions
+          }
+
+          return actionsOfType[0]; // End turn
+        }
+
+        // Evaluate all actions of this type
+        const evaluatedActions = actionsOfType.map(action => ({
+          action,
+          value: this.evaluateAction(action, state),
+        }));
+
+        // Filter out low-value actions (except draw which is always good)
+        const valuableActions = evaluatedActions.filter(ea =>
+          ea.value > 0 || actionType === BloomBeastsActionType.DRAW_CARD
+        );
+
+        if (valuableActions.length > 0) {
+          // Add randomness based on difficulty
+          valuableActions.forEach(ea => {
+            ea.value = this.addNoise(ea.value, this.difficulty === 'easy' ? 30 : 10);
+          });
+
+          // Sort by value and return best
+          valuableActions.sort((a, b) => b.value - a.value);
+          return valuableActions[0].action;
+        }
+      }
+
+      // Fallback: end turn
+      const endTurnAction = availableActions.find(a => a.data.type === BloomBeastsActionType.END_TURN);
+      return endTurnAction || null;
+    }
+
+    /**
+     * Helper methods
+     */
+
+    private findBeast(id: string, field: PlayerField): RuntimeBeast | null {
+      for (const beast of field.beasts) {
+        if (beast?.id === id) {
+          return beast;
+        }
+      }
+      return null;
+    }
+
+    private get playerBeasts(): number {
+      const state = this.currentState;
+      if (!state) return 0;
+      const playerIndex = state.gameData.players.findIndex(p => p.id === this.playerId);
+      const field = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
+      return field.beasts.filter(b => b !== null).length;
+    }
+
+    private get opponentBeasts(): number {
+      const state = this.currentState;
+      if (!state) return 0;
+      const playerIndex = state.gameData.players.findIndex(p => p.id === this.playerId);
+      const field = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
+      return field.beasts.filter(b => b !== null).length;
+    }
+  }
+
+  /**
+   * Simple Random AI for testing
+   */
+  export class BloomBeastsRandomAI extends BloomBeastsGreedyAI {
+    evaluateAction(
+      action: Turbo.IGameAction<BloomBeastsActionData>,
+      state: Turbo.IGameState<BloomBeastsState>
+    ): number {
+      // Random evaluation with slight preference for non-END_TURN actions
+      if (action.data.type === BloomBeastsActionType.END_TURN) {
+        return Math.random() * 10;
+      }
+      return Math.random() * 100;
+    }
+  }
+
+  // ==================== bloombeasts\battle\core\AIManager.ts ====================
+
+  /**
+   * AIManager - Manages AI players and their turn execution
+   *
+   * Responsibilities:
+   * - Register AI players
+   * - Execute AI turns
+   * - Check if current player is AI
+   */
+
+
+
+  export class AIManager {
+    private game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>;
+    private aiPlayers: Set<string>;
+
+    constructor(game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>) {
+      this.game = game;
+      this.aiPlayers = new Set();
+    }
+
+    /**
+     * Register AI players from battle config
+     */
+    registerAIPlayers(config: BattleConfig): void {
+      if (config.player1.isAI) {
+        const difficulty = this.mapStrategyToDifficulty(config.player1.aiStrategy);
+        const ai = new BloomBeastsGreedyAI({
+          playerId: config.player1.id,
+          difficulty
+        });
+        this.game.registerAI(config.player1.id, ai);
+        this.aiPlayers.add(config.player1.id);
+        Logger.info(`[AIManager] Registered AI for player1: ${config.player1.id}`);
+      }
+
+      if (config.player2.isAI) {
+        const difficulty = this.mapStrategyToDifficulty(config.player2.aiStrategy);
+        const ai = new BloomBeastsGreedyAI({
+          playerId: config.player2.id,
+          difficulty
+        });
+        this.game.registerAI(config.player2.id, ai);
+        this.aiPlayers.add(config.player2.id);
+        Logger.info(`[AIManager] Registered AI for player2: ${config.player2.id}`);
+      }
+    }
+
+    /**
+     * Map strategy string to AILevel
+     */
+    private mapStrategyToDifficulty(strategy?: string): Turbo.AILevel {
+      switch (strategy) {
+        case 'aggressive':
+          return Turbo.AILevel.HARD;
+        case 'defensive':
+          return Turbo.AILevel.EASY;
+        default:
+          return Turbo.AILevel.MEDIUM;
+      }
+    }
+
+    /**
+     * Execute AI turn - loops until AI ends turn or game ends
+     * @param onActionComplete Optional callback called after each AI action to update UI
+     */
+    async executeAITurn(onActionComplete?: () => void): Promise<void> {
+      const state = this.game.getState();
+      const currentPlayerId = state.turnInfo.currentPlayerId;
+      const currentPlayer = state.gameData.players.find(p => p.id === currentPlayerId);
+
+      if (!currentPlayer) {
+        Logger.error('[AIManager] Current player not found');
+        return;
+      }
+
+      Logger.info(`[AIManager] Executing AI turn for ${currentPlayer.name} (${currentPlayerId})`);
+
+      try {
+        let actionCount = 0;
+        const maxActions = MAX_AI_ACTIONS_PER_TURN;
+
+        while (actionCount < maxActions) {
+          const currentState = this.game.getState();
+
+          // Check if turn switched (AI ended turn)
+          if (currentState.turnInfo.currentPlayerId !== currentPlayerId) {
+            Logger.info(`[AIManager] AI turn ended, turn switched to: ${currentState.turnInfo.currentPlayerId}`);
+            break;
+          }
+
+          // Check if game completed
+          if (currentState.isComplete) {
+            Logger.info('[AIManager] Game completed during AI turn');
+            break;
+          }
+
+          // Execute one AI action
+          await this.game.executeAITurn();
+          actionCount++;
+
+          Logger.debug(`[AIManager] AI executed action ${actionCount}`);
+
+          // Trigger UI update after each action
+          if (onActionComplete) {
+            onActionComplete();
+          }
+        }
+
+        if (actionCount >= maxActions) {
+          Logger.warn('[AIManager] AI reached maximum action limit');
+        }
+
+        Logger.info('[AIManager] AI turn execution completed');
+      } catch (error) {
+        Logger.error('[AIManager] AI turn execution failed:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Check if the current player is an AI
+     */
+    isAIPlayerTurn(): boolean {
+      const state = this.game.getState();
+      const currentPlayerId = state.turnInfo.currentPlayerId;
+      return this.aiPlayers.has(currentPlayerId);
+    }
+
+    /**
+     * Check if a specific player is AI
+     */
+    isAIPlayer(playerId: string): boolean {
+      return this.aiPlayers.has(playerId);
+    }
+
+    /**
+     * Clear all registered AIs
+     */
+    clear(): void {
+      this.aiPlayers.clear();
+    }
+  }
+
+  // ==================== bloombeasts\battle\core\ActionProcessor.ts ====================
+
+  /**
+   * ActionProcessor - Processes player actions
+   *
+   * Responsibilities:
+   * - Execute player actions (play card, attack, etc.)
+   * - Validate actions before execution
+   * - Return action results
+   */
+
+
+
+  export class ActionProcessor {
+    private game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>;
+
+    constructor(game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>) {
+      this.game = game;
+    }
+
+    /**
+     * Draw a card
+     */
+    drawCard(playerId: string): boolean {
+      const result = this.game.performAction({
+        type: 'game_action',
+        playerId,
+        data: {
+          type: BloomBeastsActionType.DRAW_CARD,
+        }
+      });
+
+      if (!result.success) {
+        Logger.warn(`[ActionProcessor] Failed to draw card: ${result.error}`);
+      }
+
+      return result.success;
+    }
+
+    /**
+     * Play a card
+     */
+    playCard(cardId: string, playerId: string, position?: number): boolean {
+      const result = this.game.performAction({
+        type: 'game_action',
+        playerId,
+        data: {
+          type: BloomBeastsActionType.PLAY_CARD,
+          cardId,
+          position,
+        }
+      });
+
+      if (!result.success) {
+        Logger.warn(`[ActionProcessor] Failed to play card: ${result.error}`);
+      }
+
+      return result.success;
+    }
+
+    /**
+     * Attack with a beast
+     */
+    attack(attackerId: string, targetId: string, playerId: string): boolean {
+      const result = this.game.performAction({
+        type: 'game_action',
+        playerId,
+        data: {
+          type: BloomBeastsActionType.ATTACK,
+          cardId: attackerId,
+          targetId,
+        }
+      });
+
+      if (!result.success) {
+        Logger.warn(`[ActionProcessor] Failed to attack: ${result.error}`);
+      }
+
+      return result.success;
+    }
+
+    /**
+     * Attack player directly
+     */
+    attackPlayer(attackerId: string, playerId: string): boolean {
+      const state = this.game.getState();
+      const currentPlayerId = state.turnInfo.currentPlayerId;
+      const currentIndex = state.gameData.players.findIndex(p => p.id === currentPlayerId);
+      const targetPlayer = state.gameData.players[1 - currentIndex];
+
+      return this.attack(attackerId, targetPlayer.id, playerId);
+    }
+
+    /**
+     * Use creature ability
+     */
+    useAbility(creatureId: string, targetId: string | null, playerId: string): boolean {
+      const result = this.game.performAction({
+        type: 'game_action',
+        playerId,
+        data: {
+          type: BloomBeastsActionType.USE_ABILITY,
+          cardId: creatureId,
+          targetId: targetId || undefined,
+          abilityId: 'default',
+        }
+      });
+
+      if (!result.success) {
+        Logger.warn(`[ActionProcessor] Failed to use ability: ${result.error}`);
+      }
+
+      return result.success;
+    }
+
+    /**
+     * End turn
+     */
+    endTurn(playerId: string): boolean {
+      Logger.info(`[ActionProcessor] Ending turn for ${playerId}`);
+
+      const result = this.game.performAction({
+        type: 'game_action',
+        playerId,
+        data: {
+          type: BloomBeastsActionType.END_TURN,
+        }
+      });
+
+      if (result.success) {
+        const newState = this.game.getState();
+        const currentPlayerId = newState.turnInfo.currentPlayerId;
+        Logger.info(`[ActionProcessor] Turn ended successfully. New current player: ${currentPlayerId}`);
+      } else {
+        Logger.error(`[ActionProcessor] Failed to end turn: ${result.error}`);
+      }
+
+      return result.success;
+    }
+
+    /**
+     * Get available actions for current player
+     */
+    getAvailableActions() {
+      return this.game.getAvailableActions();
+    }
+  }
+
+  // ==================== bloombeasts\battle\core\BattleOrchestrator.ts ====================
+
+  /**
+   * BattleOrchestrator - Orchestrates battle lifecycle and coordinates subsystems
+   *
+   * Responsibilities:
+   * - Initialize battles
+   * - Subscribe to game events
+   * - Coordinate between subsystems (AI, Actions, Win conditions)
+   * - Manage battle lifecycle
+   */
+
+
+
+  export class BattleOrchestrator {
+    private async: AsyncMethods;
+    private game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>;
+    private config: BattleConfig | null = null;
+
+    // Subsystems
+    public readonly ai: AIManager;
+    public readonly actions: ActionProcessor;
+    public readonly winChecker: WinConditionChecker;
+
+    constructor(async: AsyncMethods) {
+      this.async = async;
+      this.game = createBloomBeastsGame();
+
+      // Initialize subsystems
+      this.ai = new AIManager(this.game);
+      this.actions = new ActionProcessor(this.game);
+      this.winChecker = new WinConditionChecker();
+    }
+
+    /**
+     * Initialize a new battle
+     */
+    initializeBattle(config: BattleConfig): BattleState {
+      Logger.info('[BattleOrchestrator] Initializing battle with TURBO engine');
+
+      this.config = config;
+
+      // Initialize the TURBO game
+      this.game.initialize({
+        players: [
+          {
+            id: config.player1.id,
+            name: config.player1.name,
+            type: config.player1.isAI ? Turbo.PlayerType.AI : Turbo.PlayerType.HUMAN,
+            metadata: {
+              deck: [...config.player1.deck],
+              health: config.player1.health ?? 30,
+              maxHealth: config.player1.maxHealth ?? 30,
+            }
+          },
+          {
+            id: config.player2.id,
+            name: config.player2.name,
+            type: config.player2.isAI ? Turbo.PlayerType.AI : Turbo.PlayerType.HUMAN,
+            metadata: {
+              deck: [...config.player2.deck],
+              health: config.player2.health ?? 30,
+              maxHealth: config.player2.maxHealth ?? 30,
+            }
+          }
+        ]
+      });
+
+      // Register AI players
+      this.ai.registerAIPlayers(config);
+
+      Logger.info('[BattleOrchestrator] Battle initialized successfully');
+
+      return this.getState();
+    }
+
+    /**
+     * Get the underlying TURBO game controller
+     * Consumers should subscribe to TURBO events directly
+     */
+    getGameController(): Turbo.GameController<BloomBeastsState, BloomBeastsActionData> {
+      return this.game;
+    }
+
+    /**
+     * Get current battle state
+     */
+    getState(): BattleState {
+      return {
+        turboState: this.game.getState(),
+      };
+    }
+
+    /**
+     * Get current player
+     */
+    getCurrentPlayer(): BloomBeastsPlayer {
+      const state = this.game.getState();
+      const currentPlayerId = state.turnInfo.currentPlayerId;
+      const currentPlayer = state.gameData.players.find(p => p.id === currentPlayerId);
+
+      if (!currentPlayer) {
+        throw new Error('Current player not found');
+      }
+
+      return currentPlayer;
+    }
+
+    /**
+     * Get opponent player
+     */
+    getOpponentPlayer(): BloomBeastsPlayer {
+      const state = this.game.getState();
+      const currentPlayerId = state.turnInfo.currentPlayerId;
+      const currentIndex = state.gameData.players.findIndex(p => p.id === currentPlayerId);
+      const opponentIndex = 1 - currentIndex;
+
+      return state.gameData.players[opponentIndex];
+    }
+
+    /**
+     * Check if game is complete
+     */
+    isComplete(): boolean {
+      return this.game.isComplete();
+    }
+
+    /**
+     * Get game winner
+     */
+    getWinner(): string | null {
+      return this.game.getWinner() || null;
+    }
+
+    /**
+     * Dispose battle resources
+     */
+    dispose(): void {
+      this.game.reset();
+      this.ai.clear();
+      this.config = null;
+      Logger.info('[BattleOrchestrator] Battle disposed');
+    }
   }
 
   // ==================== bloombeasts\battle\core\BattleController.ts ====================
 
   /**
-   * BattleController - Core battle orchestrator
+   * BattleController - Thin facade for battle management
    *
-   * Generic battle controller that works with any two players.
-   * Handles:
-   * - Battle initialization
-   * - Turn management
-   * - Victory conditions
-   * - Action processing coordination
+   * This is now a simple facade that delegates to specialized subsystems:
+   * - BattleOrchestrator: Battle lifecycle and event coordination
+   * - AIManager: AI player management and turn execution
+   * - ActionProcessor: Player action handling
+   * - WinConditionChecker: Battle end conditions
    *
-   * This class is platform-agnostic and player-agnostic - it doesn't care
-   * if players are human, AI, or networked.
+   * All the complex logic has been extracted into focused, testable classes.
+   *
+   * Consumers should use getGameController() to subscribe to TURBO events directly
+   * instead of using callbacks.
    */
 
 
-  export class BattleController {
-    private async: AsyncMethods;
-    private currentBattle: BattleState | null = null;
-    private callbacks: BattleCallbacks;
 
-    constructor(async: AsyncMethods, callbacks: BattleCallbacks = {}) {
-      this.async = async;
-      this.callbacks = callbacks;
+  export class BattleController {
+    private orchestrator: BattleOrchestrator;
+
+    constructor(async: AsyncMethods) {
+      this.orchestrator = new BattleOrchestrator(async);
     }
 
     /**
-     * Initialize a new battle between two players
+     * Initialize a new battle
      */
     initializeBattle(config: BattleConfig): BattleState {
-      Logger.info('[BattleController] Initializing battle');
-
-      // Create player 1
-      const player1: Player = {
-        id: config.player1.id,
-        name: config.player1.name,
-        health: config.player1.health ?? 30,
-        maxHealth: config.player1.maxHealth ?? 30,
-        deck: [...config.player1.deck], // Copy deck to avoid mutation
-        hand: [],
-        field: [],
-        graveyard: [],
-        trapZone: [],
-        buffZone: [],
-        currentNectar: 1,
-        summonsThisTurn: 0,
-      };
-
-      // Create player 2
-      const player2: Player = {
-        id: config.player2.id,
-        name: config.player2.name,
-        health: config.player2.health ?? 30,
-        maxHealth: config.player2.maxHealth ?? 30,
-        deck: [...config.player2.deck], // Copy deck to avoid mutation
-        hand: [],
-        field: [],
-        graveyard: [],
-        trapZone: [],
-        buffZone: [],
-        currentNectar: 1,
-        summonsThisTurn: 0,
-      };
-
-      // Create game state
-      const gameState: GameState = {
-        players: [player1, player2],
-        activePlayer: 0,
-        habitatZone: null,
-        turn: 1,
-        phase: 'Setup',
-        battleState: BattlePhase.Player1StartOfTurn,
-        turnHistory: [],
-      };
-
-      // Create battle state
-      this.currentBattle = {
-        gameState,
-        isComplete: false,
-        winner: null,
-        turn: 1,
-      };
-
-      // Shuffle decks
-      this.shuffleDeck(player1.deck);
-      this.shuffleDeck(player2.deck);
-
-      // Draw initial hands (3 cards each)
-      for (let i = 0; i < 3; i++) {
-        this.drawCard(player1);
-        this.drawCard(player2);
-      }
-
-      console.log(`[BattleController] Battle initialized - Turn ${gameState.turn}, Player 1 nectar: ${player1.currentNectar}, Player 2 nectar: ${player2.currentNectar}`);
-      Logger.info('[BattleController] Battle initialized');
-
-      // Start the first turn for player 1
-      this.startTurn(0);
-
-      return this.currentBattle;
+      return this.orchestrator.initializeBattle(config);
     }
 
     /**
-     * Get the current battle state
+     * Get current battle state
      */
     getCurrentBattle(): BattleState | null {
-      return this.currentBattle;
+      return this.orchestrator.getState();
     }
 
     /**
-     * Check if battle has ended and determine winner
+     * Check if battle has ended
      */
     checkBattleEnd(): BattleResult | null {
-      if (!this.currentBattle) return null;
-
-      const player1 = this.currentBattle.gameState.players[0];
-      const player2 = this.currentBattle.gameState.players[1];
-
-      console.log(`[BattleController] Checking battle end: P1(${player1.id}) HP=${player1.health}, P2(${player2.id}) HP=${player2.health}`);
-      Logger.debug(`[BattleController] Checking battle end: P1(${player1.id}) HP=${player1.health}, P2(${player2.id}) HP=${player2.health}`);
-
-      // Check if either player is defeated
-      if (player1.health <= 0 && player2.health <= 0) {
-        // Both died (rare tie case)
-        console.log('[BattleController] Both players died - TIE!');
-        Logger.debug('[BattleController] Both players died - tie!');
-        return {
-          winner: null,
-          turns: this.currentBattle.turn,
-          player1Health: player1.health,
-          player2Health: player2.health,
-        };
-      } else if (player1.health <= 0) {
-        // Player 1 lost
-        console.log('[BattleController] Player 1 (YOU) died - Player 2 (OPPONENT) WINS!');
-        Logger.debug('[BattleController] Player 1 died - Player 2 wins!');
-        return {
-          winner: 'player2',
-          turns: this.currentBattle.turn,
-          player1Health: player1.health,
-          player2Health: player2.health,
-        };
-      } else if (player2.health <= 0) {
-        // Player 2 lost
-        console.log('[BattleController] Player 2 (OPPONENT) died - Player 1 (YOU) WINS!');
-        Logger.debug('[BattleController] Player 2 died - Player 1 wins!');
-        return {
-          winner: 'player1',
-          turns: this.currentBattle.turn,
-          player1Health: player1.health,
-          player2Health: player2.health,
-        };
-      }
-
-      // Check deck-out condition (no cards left to draw)
-      // Only consider it a deck-out if field has beasts but all are null, or field is empty AND they have no resources left
-      if (player1.deck.length === 0 && player1.hand.length === 0 && player1.field.length > 0 && player1.field.every(b => !b)) {
-        return {
-          winner: 'player2',
-          turns: this.currentBattle.turn,
-          player1Health: player1.health,
-          player2Health: player2.health,
-        };
-      }
-      if (player2.deck.length === 0 && player2.hand.length === 0 && player2.field.length > 0 && player2.field.every(b => !b)) {
-        return {
-          winner: 'player1',
-          turns: this.currentBattle.turn,
-          player1Health: player1.health,
-          player2Health: player2.health,
-        };
-      }
-
-      return null;
+      const state = this.orchestrator.getState().turboState;
+      return this.orchestrator.winChecker.checkBattleEnd(state);
     }
 
     /**
      * Mark battle as complete
      */
     completeBattle(winner: 'player1' | 'player2' | null): void {
-      if (!this.currentBattle) return;
-
-      this.currentBattle.isComplete = true;
-      this.currentBattle.winner = winner;
-
-      if (this.callbacks.onBattleEnd) {
-        this.callbacks.onBattleEnd(winner);
-      }
-
-      Logger.info(`[BattleController] Battle complete. Winner: ${winner || 'tie'}`);
+      // Battle completion is handled automatically by TURBO
     }
 
     /**
-     * Start a player's turn
+     * Draw a card
      */
-    startTurn(playerIndex: number): void {
-      if (!this.currentBattle) return;
-
-      const gameState = this.currentBattle.gameState;
-      gameState.activePlayer = playerIndex as 0 | 1;
-
-      const player = gameState.players[playerIndex];
-      const opponent = gameState.players[1 - playerIndex];
-
-      // Draw a card at start of turn
-      this.drawCard(player);
-
-      // Increase nectar (max 10) - use gameState.turn which is the actual turn counter
-      player.currentNectar = Math.min(10, gameState.turn);
-      console.log(`[BattleController] Turn ${gameState.turn}: ${player.name} gains ${player.currentNectar} nectar`);
-
-      // Reset summoning sickness and ability usage for player's beasts
-      player.field.forEach((beast: any) => {
-        if (beast) {
-          beast.summoningSickness = false;
-          beast.usedAbilityThisTurn = false;
-        }
-      });
-
-      if (this.callbacks.onTurnStart) {
-        this.callbacks.onTurnStart(playerIndex);
-      }
-
-      if (this.callbacks.onRender) {
-        this.callbacks.onRender();
-      }
+    drawCard(playerId: string): boolean {
+      return this.orchestrator.actions.drawCard(playerId);
     }
 
     /**
-     * End a player's turn
+     * Play a card
      */
-    endTurn(playerIndex: number): void {
-      if (!this.currentBattle) return;
-
-      if (this.callbacks.onTurnEnd) {
-        this.callbacks.onTurnEnd(playerIndex);
-      }
-
-      // Increment turn counter when player 2 ends their turn
-      if (playerIndex === 1) {
-        this.currentBattle.turn++;
-      }
+    playCard(cardId: string, playerId: string, position?: number): boolean {
+      return this.orchestrator.actions.playCard(cardId, playerId, position);
     }
 
     /**
-     * Draw a card from player's deck
+     * Attack with a beast
      */
-    private drawCard(player: Player): void {
-      if (player.deck.length === 0) {
-        Logger.debug(`[BattleController] No cards left in deck for ${player.name}`);
-        return;
-      }
-
-      const card = player.deck.shift();
-      if (card) {
-        player.hand.push(card);
-        Logger.debug(`[BattleController] ${player.name} drew a card: ${card.name}`);
-      }
+    attackBeast(attackerId: string, targetId: string, playerId: string): boolean {
+      return this.orchestrator.actions.attack(attackerId, targetId, playerId);
     }
 
     /**
-     * Shuffle a deck
+     * Attack player directly
      */
-    private shuffleDeck(deck: AnyCard[]): void {
-      shuffle(deck);
+    attackPlayer(attackerId: string, playerId: string): boolean {
+      return this.orchestrator.actions.attackPlayer(attackerId, playerId);
     }
 
     /**
-     * Clean up battle resources
+     * Use creature ability
+     */
+    useAbility(creatureId: string, targetId: string | null, playerId: string): boolean {
+      return this.orchestrator.actions.useAbility(creatureId, targetId, playerId);
+    }
+
+    /**
+     * End turn
+     */
+    endTurn(playerId: string): void {
+      this.orchestrator.actions.endTurn(playerId);
+    }
+
+    /**
+     * REMOVED: timeoutLoss() - Timeout is now handled through TURBO actions
+     * See TimeoutActionHandler and WinConditionChecker for timeout handling
+     */
+
+    /**
+     * Execute AI turn
+     * @param onActionComplete Optional callback called after each AI action to update UI
+     */
+    async executeAITurn(onActionComplete?: () => void): Promise<void> {
+      return this.orchestrator.ai.executeAITurn(onActionComplete);
+    }
+
+    /**
+     * Get current player
+     */
+    getCurrentPlayer() {
+      return this.orchestrator.getCurrentPlayer();
+    }
+
+    /**
+     * Get opponent player
+     */
+    getOpponentPlayer() {
+      return this.orchestrator.getOpponentPlayer();
+    }
+
+    /**
+     * Check if current player is AI
+     */
+    isAIPlayerTurn(): boolean {
+      return this.orchestrator.ai.isAIPlayerTurn();
+    }
+
+    /**
+     * Get available actions
+     */
+    getAvailableActions() {
+      return this.orchestrator.actions.getAvailableActions();
+    }
+
+    /**
+     * Get the underlying TURBO game controller
+     * Use this to subscribe to TURBO events directly
+     */
+    getGameController(): Turbo.GameController<BloomBeastsState, BloomBeastsActionData> {
+      return this.orchestrator.getGameController();
+    }
+
+    /**
+     * Dispose battle resources
      */
     dispose(): void {
-      this.currentBattle = null;
-      Logger.info('[BattleController] Battle controller disposed');
+      this.orchestrator.dispose();
     }
   }
 
-  // ==================== bloombeasts\engine\utils\StatModifierManager.ts ====================
+  // ==================== bloombeasts\battle\types\actions.ts ====================
 
   /**
-   * StatModifierManager - Centralized stat modification management
+   * Typed Action System
    *
-   * This utility handles all stat modifications in a consistent way across the game.
-   * It tracks different sources of modifications and calculates final stats.
+   * Replaces string-based action parsing with proper TypeScript discriminated unions.
+   * This provides type safety, better IDE support, and eliminates string parsing bugs.
+   *
+   * Migration from:
+   *   action = 'play-card-0-target-2'
+   * To:
+   *   action = { type: 'play-card', cardIndex: 0, targetIndex: 2 }
    */
-
-
-  export class StatModifierManager {
-    /**
-     * Add a stat modifier to a beast
-     */
-    static addModifier(
-      beast: BloomBeastInstance,
-      source: StatModifierSource,
-      sourceId: string,
-      stat: 'attack' | 'health' | 'maxHealth',
-      value: number,
-      duration?: 'permanent' | 'end-of-turn' | 'while-active',
-      turnsRemaining?: number
-    ): void {
-      if (!beast.statModifiers) {
-        beast.statModifiers = [];
-      }
-
-      const modifier: StatModifier = {
-        source,
-        sourceId,
-        stat,
-        value,
-        duration,
-        turnsRemaining
-      };
-
-      beast.statModifiers.push(modifier);
-      Logger.debug(`Added ${stat} modifier: ${value > 0 ? '+' : ''}${value} from ${source} (${sourceId})`);
-
-      // Recalculate stats after adding modifier
-      this.recalculateStats(beast);
-    }
-
-    /**
-     * Remove all modifiers from a specific source
-     */
-    static removeModifiersBySource(
-      beast: BloomBeastInstance,
-      source: StatModifierSource,
-      sourceId?: string
-    ): void {
-      if (!beast.statModifiers) return;
-
-      const before = beast.statModifiers.length;
-
-      if (sourceId) {
-        beast.statModifiers = beast.statModifiers.filter(
-          m => !(m.source === source && m.sourceId === sourceId)
-        );
-      } else {
-        beast.statModifiers = beast.statModifiers.filter(m => m.source !== source);
-      }
-
-      const removed = before - beast.statModifiers.length;
-      if (removed > 0) {
-        Logger.debug(`Removed ${removed} modifier(s) from ${source}${sourceId ? ` (${sourceId})` : ''}`);
-        this.recalculateStats(beast);
-      }
-    }
-
-    /**
-     * Update modifiers for end of turn (decrement turns remaining, remove expired)
-     */
-    static updateEndOfTurn(beast: BloomBeastInstance): void {
-      if (!beast.statModifiers) return;
-
-      const before = beast.statModifiers.length;
-
-      beast.statModifiers = beast.statModifiers.filter(modifier => {
-        // Remove end-of-turn effects
-        if (modifier.duration === 'end-of-turn') {
-          Logger.debug(`Removing end-of-turn modifier: ${modifier.stat} ${modifier.value > 0 ? '+' : ''}${modifier.value}`);
-          return false;
-        }
-
-        // Decrement turns remaining for temporary effects
-        if (modifier.turnsRemaining !== undefined) {
-          modifier.turnsRemaining--;
-          if (modifier.turnsRemaining <= 0) {
-            Logger.debug(`Removing expired temporary modifier: ${modifier.stat} ${modifier.value > 0 ? '+' : ''}${modifier.value}`);
-            return false;
-          }
-        }
-
-        return true;
-      });
-
-      const removed = before - beast.statModifiers.length;
-      if (removed > 0) {
-        this.recalculateStats(beast);
-      }
-    }
-
-    /**
-     * Recalculate all current stats from base + modifiers
-     */
-    static recalculateStats(beast: BloomBeastInstance): void {
-      // Store current health percentage to maintain damage
-      const healthPercent = beast.maxHealth > 0 ? beast.currentHealth / beast.maxHealth : 1;
-
-      // Start with base stats
-      let calculatedAttack = beast.baseAttack;
-      let calculatedMaxHealth = beast.baseHealth;
-
-      // Apply all modifiers
-      if (beast.statModifiers) {
-        for (const modifier of beast.statModifiers) {
-          if (modifier.stat === 'attack') {
-            calculatedAttack += modifier.value;
-          } else if (modifier.stat === 'maxHealth' || modifier.stat === 'health') {
-            calculatedMaxHealth += modifier.value;
-          }
-        }
-      }
-
-      // Ensure stats don't go below minimum values
-      calculatedAttack = Math.max(0, calculatedAttack);
-      calculatedMaxHealth = Math.max(1, calculatedMaxHealth);
-
-      // Update current stats
-      const oldMaxHealth = beast.maxHealth;
-      beast.currentAttack = calculatedAttack;
-      beast.maxHealth = calculatedMaxHealth;
-
-      // Adjust current health proportionally if max health changed
-      if (oldMaxHealth !== calculatedMaxHealth && oldMaxHealth > 0) {
-        beast.currentHealth = Math.max(1, Math.min(
-          Math.floor(calculatedMaxHealth * healthPercent),
-          calculatedMaxHealth
-        ));
-      }
-
-      // Ensure current health doesn't exceed max health
-      beast.currentHealth = Math.min(beast.currentHealth, beast.maxHealth);
-    }
-
-    /**
-     * Get total modifier value for a specific stat from all sources
-     */
-    static getTotalModifier(beast: BloomBeastInstance, stat: 'attack' | 'health' | 'maxHealth'): number {
-      if (!beast.statModifiers) return 0;
-
-      return beast.statModifiers
-        .filter(m => m.stat === stat || (m.stat === 'health' && stat === 'maxHealth'))
-        .reduce((sum, m) => sum + m.value, 0);
-    }
-
-    /**
-     * Get modifiers from a specific source
-     */
-    static getModifiersBySource(
-      beast: BloomBeastInstance,
-      source: StatModifierSource,
-      sourceId?: string
-    ): StatModifier[] {
-      if (!beast.statModifiers) return [];
-
-      return beast.statModifiers.filter(m => {
-        if (sourceId) {
-          return m.source === source && m.sourceId === sourceId;
-        }
-        return m.source === source;
-      });
-    }
-
-    /**
-     * Clear all modifiers (useful when beast is destroyed or returned to hand)
-     */
-    static clearAllModifiers(beast: BloomBeastInstance): void {
-      beast.statModifiers = [];
-      this.recalculateStats(beast);
-    }
-
-    /**
-     * Initialize a beast's stat system (call when beast is created/summoned)
-     */
-    static initializeStatSystem(beast: BloomBeastInstance): void {
-      if (!beast.statModifiers) {
-        beast.statModifiers = [];
-      }
-
-      // Ensure baseAttack and baseHealth are set
-      if (beast.baseAttack === undefined) {
-        beast.baseAttack = beast.currentAttack;
-      }
-      if (beast.baseHealth === undefined) {
-        beast.baseHealth = beast.maxHealth;
-      }
-
-      // Recalculate to ensure consistency
-      this.recalculateStats(beast);
-    }
-  }
-
-  // ==================== bloombeasts\battle\core\BattleRules.ts ====================
 
   /**
-   * BattleStateManager - Handles battle state and game rules
-   *
-   * Responsibilities:
-   * - Card playing logic (validation, field management)
-   * - Combat resolution (attack calculations, damage dealing)
-   * - Ability and effect processing
-   * - Trigger management (OnSummon, OnAttack, OnDamage, OnDestroy, StartOfTurn, EndOfTurn)
-   * - Trap activation
-   * - Buff and debuff application
-   * - Win/loss conditions
+   * Base action that all battle actions extend
    */
-
-
-  export interface PlayCardResult {
-    success: boolean;
-    message?: string;
-    isTrap?: boolean;
+  export interface BaseBattleAction {
+    type: string;
+    playerId?: string;
+    timestamp?: number;
   }
-
-  export interface AttackResult {
-    success: boolean;
-    damage?: number;
-    message?: string;
-  }
-
-  export interface AbilityResult {
-    success: boolean;
-    message?: string;
-  }
-
-  export class BattleStateManager {
-
-    /**
-     * Play a card from a player's hand
-     */
-    playCard(
-      cardIndex: number,
-      player: Player,
-      opponent: Player,
-      gameState: GameState,
-      targetIndex?: number
-    ): PlayCardResult {
-      // Validate card index
-      if (cardIndex < 0 || cardIndex >= player.hand.length) {
-        Logger.error(`Invalid card index: ${cardIndex}`);
-        return { success: false, message: 'Invalid card index' };
-      }
-
-      const card: any = player.hand[cardIndex];
-
-      // Check if player has enough nectar
-      if (card.cost > player.currentNectar) {
-        Logger.debug('Not enough nectar to play this card');
-        return { success: false, message: 'Not enough nectar' };
-      }
-
-      // Handle different card types
-      switch (card.type) {
-        case 'Bloom':
-          return this.playBloomCard(cardIndex, player, opponent);
-
-        case 'Magic':
-          return this.playMagicCard(cardIndex, player, opponent, targetIndex);
-
-        case 'Trap':
-          return this.playTrapCard(cardIndex, player);
-
-        case 'Buff':
-          return this.playBuffCard(cardIndex, player);
-
-        case 'Habitat':
-          return this.playHabitatCard(cardIndex, player, opponent, gameState);
-
-        default:
-          Logger.debug(`Cannot play card type: ${card.type}`);
-          return { success: false, message: 'Invalid card type' };
-      }
-    }
-
-    /**
-     * Play a Bloom Beast card
-     */
-    private playBloomCard(cardIndex: number, player: Player, opponent: Player): PlayCardResult {
-      // Check if field has space (max 3 beasts)
-      if (player.field.length >= 3) {
-        Logger.debug('Field is full');
-        return { success: false, message: 'Field is full' };
-      }
-
-      const bloomCard: any = player.hand.splice(cardIndex, 1)[0];
-      player.currentNectar -= bloomCard.cost;
-
-      // Create BloomBeastInstance for the field
-      const beastInstance: any = {
-        cardId: bloomCard.id,
-        instanceId: bloomCard.instanceId || `${bloomCard.id}-${Date.now()}`,
-        currentLevel: (bloomCard as any).level || 1,
-        currentXP: 0,
-        baseAttack: bloomCard.baseAttack,
-        baseHealth: bloomCard.baseHealth,
-        currentAttack: bloomCard.baseAttack,
-        currentHealth: bloomCard.baseHealth,
-        maxHealth: bloomCard.baseHealth,
-        statusEffects: [],
-        slotIndex: player.field.length,
-        summoningSickness: true,
-        usedAbilityThisTurn: false,
-        statModifiers: [],
-        // Store original card data for display
-        type: 'Bloom',
-        name: bloomCard.name,
-        affinity: bloomCard.affinity,
-        cost: bloomCard.cost,
-        ability: bloomCard.abilities && bloomCard.abilities.length > 0 ? bloomCard.abilities[0] : undefined,
-      };
-
-      // Initialize stat system
-      StatModifierManager.initializeStatSystem(beastInstance);
-
-      player.field.push(beastInstance);
-
-      // Apply buff effects and process OnSummon trigger
-      this.applyStatBuffEffects(player);
-      this.processOnSummonTrigger(beastInstance, player, opponent);
-
-      Logger.debug(`Played ${bloomCard.name} - Nectar: ${player.currentNectar}`);
-      return { success: true, message: `Played ${bloomCard.name}` };
-    }
-
-    /**
-     * Play a Magic card
-     */
-    private playMagicCard(cardIndex: number, player: Player, opponent: Player, targetIndex?: number): PlayCardResult {
-      const magicCard: any = player.hand.splice(cardIndex, 1)[0];
-      player.currentNectar -= magicCard.cost;
-
-      // Get the target beast if targetIndex is provided
-      let target = null;
-      if (targetIndex !== undefined && targetIndex >= 0 && targetIndex < opponent.field.length) {
-        target = opponent.field[targetIndex];
-        Logger.debug(`Magic card targeting opponent beast at index ${targetIndex}: ${target?.name}`);
-      }
-
-      // Process magic card effects immediately
-      // Magic cards use the structured ability system with abilities array
-      if (magicCard.abilities && Array.isArray(magicCard.abilities)) {
-        for (const ability of magicCard.abilities) {
-          if (ability.effects && Array.isArray(ability.effects)) {
-            for (const effect of ability.effects) {
-              this.processMagicEffect(effect, player, opponent, { target });
-            }
-          }
-        }
-      }
-
-      player.graveyard.push(magicCard);
-
-      Logger.debug(`Played magic card: ${magicCard.name}`);
-      return { success: true, message: `Played ${magicCard.name}` };
-    }
-
-    /**
-     * Play a Trap card
-     */
-    private playTrapCard(cardIndex: number, player: Player): PlayCardResult {
-      // Check if trap zone has space (max 3 traps)
-      if (player.trapZone.length >= 3) {
-        Logger.debug('Trap zone is full');
-        return { success: false, message: 'Trap zone is full' };
-      }
-
-      const trapCard: any = player.hand.splice(cardIndex, 1)[0];
-      player.currentNectar -= trapCard.cost;
-      player.trapZone.push(trapCard);
-
-      Logger.debug(`Set trap: ${trapCard.name}`);
-      return { success: true, message: `Set ${trapCard.name}`, isTrap: true };
-    }
-
-    /**
-     * Play a Buff card
-     */
-    private playBuffCard(cardIndex: number, player: Player): PlayCardResult {
-      // Check if buff zone has space (max 2 buffs)
-      if (player.buffZone.length >= 2) {
-        Logger.debug('Buff zone is full');
-        return { success: false, message: 'Buff zone is full' };
-      }
-
-      const buffCard: any = player.hand.splice(cardIndex, 1)[0];
-      player.currentNectar -= buffCard.cost;
-      player.buffZone.push(buffCard);
-
-      // Apply initial stat buff effects immediately
-      this.applyStatBuffEffects(player);
-
-      Logger.debug(`Played buff: ${buffCard.name}`);
-      return { success: true, message: `Played ${buffCard.name}` };
-    }
-
-    /**
-     * Play a Habitat card
-     */
-    private playHabitatCard(
-      cardIndex: number,
-      player: Player,
-      opponent: Player,
-      gameState: GameState
-    ): PlayCardResult {
-      const habitatCard: any = player.hand.splice(cardIndex, 1)[0];
-      player.currentNectar -= habitatCard.cost;
-
-      // Set habitat zone
-      gameState.habitatZone = habitatCard;
-
-      // Process on-play effects
-      if (habitatCard.onPlayEffects && Array.isArray(habitatCard.onPlayEffects)) {
-        for (const effect of habitatCard.onPlayEffects) {
-          this.processHabitatEffect(effect, player, opponent);
-        }
-      }
-
-      Logger.debug(`Played habitat: ${habitatCard.name}`);
-      return { success: true, message: `Played ${habitatCard.name}` };
-    }
-
-    /**
-     * Attack an opponent beast with a player beast
-     */
-    attackBeast(
-      attackerIndex: number,
-      targetIndex: number,
-      player: Player,
-      opponent: Player,
-      onTrapCallback?: (trapName: string) => void
-    ): AttackResult {
-      // Validate indices
-      if (attackerIndex < 0 || attackerIndex >= player.field.length) {
-        return { success: false, message: 'Invalid attacker' };
-      }
-      if (targetIndex < 0 || targetIndex >= opponent.field.length) {
-        return { success: false, message: 'Invalid target' };
-      }
-
-      const attacker: any = player.field[attackerIndex];
-      const target: any = opponent.field[targetIndex];
-
-      // Check if attacker can attack
-      if (attacker.summoningSickness) {
-        Logger.debug('Beast has summoning sickness and cannot attack');
-        return { success: false, message: 'Summoning sickness' };
-      }
-
-      Logger.debug(`${attacker.name} attacks ${target.name}!`);
-
-      // Process OnAttack trigger
-      this.processOnAttackTrigger(attacker, player, opponent);
-
-      // Check for trap activation - pass the trap owner and attacking player
-      this.checkAndActivateTraps(opponent, player, attacker, 'attack', onTrapCallback);
-
-      // Deal damage to each other
-      const attackerDamage = attacker.currentAttack || 0;
-      const targetDamage = target.currentAttack || 0;
-
-      target.currentHealth -= attackerDamage;
-      attacker.currentHealth -= targetDamage;
-
-      // Process OnDamage triggers
-      if (attackerDamage > 0) {
-        this.processOnDamageTrigger(target, opponent, player);
-      }
-      if (targetDamage > 0) {
-        this.processOnDamageTrigger(attacker, player, opponent);
-      }
-
-      // Remove dead beasts
-      if (target.currentHealth <= 0) {
-        this.processOnDestroyTrigger(target, opponent, player);
-        opponent.field.splice(targetIndex, 1);
-        Logger.debug(`${target.name} was defeated!`);
-      }
-      if (attacker.currentHealth <= 0) {
-        this.processOnDestroyTrigger(attacker, player, opponent);
-        player.field.splice(attackerIndex, 1);
-        Logger.debug(`${attacker.name} was defeated!`);
-      }
-
-      // Mark beast as having attacked
-      if (attacker.currentHealth > 0) {
-        attacker.summoningSickness = true;
-      }
-
-      return { success: true, damage: attackerDamage };
-    }
-
-    /**
-     * Attack opponent player directly
-     */
-    attackPlayer(
-      attackerIndex: number,
-      player: Player,
-      opponent: Player,
-      onTrapCallback?: (trapName: string) => void
-    ): AttackResult {
-      // Validate index
-      if (attackerIndex < 0 || attackerIndex >= player.field.length) {
-        return { success: false, message: 'Invalid attacker' };
-      }
-
-      // Can only attack player directly if opponent has no beasts
-      if (opponent.field.length > 0) {
-        Logger.debug('Cannot attack player directly while opponent has beasts');
-        return { success: false, message: 'Must attack beasts first' };
-      }
-
-      const attacker: any = player.field[attackerIndex];
-
-      // Check if attacker can attack
-      if (attacker.summoningSickness) {
-        Logger.debug('Beast has summoning sickness and cannot attack');
-        return { success: false, message: 'Summoning sickness' };
-      }
-
-      const damage = attacker.currentAttack || 0;
-
-      // Process OnAttack trigger
-      this.processOnAttackTrigger(attacker, player, opponent);
-
-      // Check for trap activation - pass the trap owner and attacking player
-      this.checkAndActivateTraps(opponent, player, attacker, 'attack', onTrapCallback);
-
-      opponent.health -= damage;
-
-      Logger.debug(`${attacker.name} attacks opponent for ${damage} damage!`);
-
-      // Mark beast as having attacked
-      attacker.summoningSickness = true;
-
-      return { success: true, damage };
-    }
-
-    /**
-     * Use a beast's ability
-     */
-    useAbility(
-      beastIndex: number,
-      player: Player,
-      opponent: Player,
-      gameState: GameState
-    ): AbilityResult {
-      // Validate beast index
-      if (beastIndex < 0 || beastIndex >= player.field.length) {
-        return { success: false, message: 'Invalid beast index' };
-      }
-
-      const beast: any = player.field[beastIndex];
-      if (!beast) {
-        return { success: false, message: 'No beast at this position' };
-      }
-
-      // Check if beast has summoning sickness
-      if (beast.summoningSickness) {
-        return { success: false, message: 'Beast has summoning sickness' };
-      }
-
-      // Check if beast has an ability
-      if (!beast.ability) {
-        return { success: false, message: 'Beast has no ability' };
-      }
-
-      // Check if ability was already used this turn
-      if (beast.usedAbilityThisTurn) {
-        return { success: false, message: 'Ability already used this turn' };
-      }
-
-      const ability = beast.ability as any;
-
-      // Check and pay costs
-      if (ability.cost) {
-        const costResult = this.payAbilityCost(ability.cost, player, gameState);
-        if (!costResult.success) {
-          return costResult;
-        }
-      }
-
-      // Process ability effects
-      if (ability.effects && Array.isArray(ability.effects)) {
-        for (const effect of ability.effects) {
-          this.processAbilityEffect(effect, beast, player, opponent);
-        }
-      }
-
-      // Mark ability as used this turn
-      beast.usedAbilityThisTurn = true;
-
-      Logger.debug(`Activated ability: ${ability.name}`);
-      return { success: true, message: `Used ${ability.name}` };
-    }
-
-    /**
-     * Pay the cost for an ability
-     */
-    private payAbilityCost(cost: any, player: Player, gameState: GameState): AbilityResult {
-      switch (cost.type) {
-        case 'nectar':
-          const nectarCost = cost.value || 1;
-          if (player.currentNectar < nectarCost) {
-            return { success: false, message: 'Not enough nectar' };
-          }
-          player.currentNectar -= nectarCost;
-          break;
-
-        case 'discard':
-          const discardCost = cost.value || 1;
-          if (player.hand.length < discardCost) {
-            return { success: false, message: 'Not enough cards to discard' };
-          }
-          for (let i = 0; i < discardCost; i++) {
-            const card = player.hand.pop();
-            if (card) player.graveyard.push(card);
-          }
-          break;
-      }
-
-      return { success: true };
-    }
-
-    /**
-     * Process a single ability effect
-     */
-    processAbilityEffect(effect: any, source: any, player: any, opponent: any): void {
-      switch (effect.type) {
-        case 'modify-stats':
-          if (effect.target === 'self') {
-            // Determine duration based on effect.duration or default to end-of-turn
-            const duration = effect.duration || 'end-of-turn';
-            const turnsRemaining = duration === 'end-of-turn' ? 1 : undefined;
-
-            if (effect.stat === 'attack') {
-              StatModifierManager.addModifier(
-                source,
-                StatModifierSource.Ability,
-                source.ability?.name || 'ability',
-                'attack',
-                effect.value || 0,
-                duration,
-                turnsRemaining
-              );
-            } else if (effect.stat === 'health') {
-              StatModifierManager.addModifier(
-                source,
-                StatModifierSource.Ability,
-                source.ability?.name || 'ability',
-                'maxHealth',
-                effect.value || 0,
-                duration,
-                turnsRemaining
-              );
-            }
-          }
-          break;
-
-        case 'heal':
-          if (effect.target === 'self') {
-            const healAmount = effect.value || 0;
-            source.currentHealth = Math.min(source.maxHealth, source.currentHealth + healAmount);
-          }
-          break;
-
-        case 'damage':
-          const damageTargets = this.getEffectTargets(effect.target, player, opponent, effect.condition);
-          damageTargets.forEach((target: any) => {
-            if (target.currentHealth !== undefined) {
-              // It's a beast
-              target.currentHealth -= effect.value || 0;
-              if (target.currentHealth <= 0) {
-                const ownerField = player.field.includes(target) ? player.field : opponent.field;
-                const owner = player.field.includes(target) ? player : opponent;
-                const otherPlayer = player.field.includes(target) ? opponent : player;
-                const index = ownerField.indexOf(target);
-                if (index > -1) {
-                  this.processOnDestroyTrigger(target, owner, otherPlayer);
-                  ownerField.splice(index, 1);
-                  Logger.debug(`${target.name} was destroyed by ${source.name}'s ability!`);
-                }
-              }
-            } else if (target.health !== undefined) {
-              // It's a player
-              target.health -= effect.value || 0;
-              Logger.debug(`${effect.value} damage dealt to ${target.name}`);
-            }
-          });
-          break;
-
-        case 'immunity':
-          if (effect.target === 'self') {
-            if (!source.statusEffects) source.statusEffects = [];
-            const immunityEffect = {
-              type: 'immunity',
-              immuneTo: effect.immuneTo || 'all',
-              duration: effect.duration || 'permanent'
-            };
-            source.statusEffects.push(immunityEffect);
-            Logger.debug(`${source.name} gained immunity to ${effect.immuneTo || 'all'}`);
-          }
-          break;
-
-        case 'draw-cards':
-        case 'DrawCards':
-          // Draw cards from deck to hand
-          const abilityDrawCount = effect.value || 1;
-          for (let i = 0; i < abilityDrawCount; i++) {
-            if (player.deck.length > 0) {
-              const card = player.deck.pop();
-              if (card) {
-                player.hand.push(card);
-                Logger.debug(`Drew card: ${card.name}`);
-              }
-            } else {
-              Logger.debug('Deck is empty - cannot draw');
-            }
-          }
-          break;
-
-        default:
-          Logger.debug(`Unknown effect type: ${effect.type}`);
-      }
-    }
-
-    /**
-     * Process a magic card effect
-     */
-    processMagicEffect(effect: any, player: any, opponent: any, context?: { attacker?: any, target?: any }): void {
-      switch (effect.type) {
-        case 'deal-damage':
-          const damageTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
-          damageTarget.forEach((target: any) => {
-            if (target.currentHealth !== undefined) {
-              target.currentHealth -= effect.value || 0;
-              if (target.currentHealth <= 0) {
-                const ownerField = player.field.includes(target) ? player.field : opponent.field;
-                const owner = player.field.includes(target) ? player : opponent;
-                const otherPlayer = player.field.includes(target) ? opponent : player;
-                const index = ownerField.indexOf(target);
-                if (index > -1) {
-                  this.processOnDestroyTrigger(target, owner, otherPlayer);
-                  ownerField.splice(index, 1);
-                }
-              }
-            } else if (target.health !== undefined) {
-              target.health -= effect.value || 0;
-            }
-          });
-          break;
-
-        case 'heal':
-          const healTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
-          healTarget.forEach((target: any) => {
-            if (target.currentHealth !== undefined && target.maxHealth !== undefined) {
-              target.currentHealth = Math.min(target.maxHealth, target.currentHealth + (effect.value || 0));
-            } else if (target.health !== undefined && target.maxHealth !== undefined) {
-              target.health = Math.min(target.maxHealth, target.health + (effect.value || 0));
-            }
-          });
-          break;
-
-        case 'draw-cards':
-        case 'DrawCards':
-          // Draw cards from deck to hand
-          const drawCount = effect.value || 1;
-          for (let i = 0; i < drawCount; i++) {
-            if (player.deck.length > 0) {
-              const card = player.deck.pop();
-              if (card) {
-                player.hand.push(card);
-                Logger.debug(`Drew card: ${card.name}`);
-              }
-            } else {
-              Logger.debug('Deck is empty - cannot draw');
-            }
-          }
-          break;
-
-        case 'destroy':
-          const destroyTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
-          destroyTarget.forEach((target: any) => {
-            if (target.currentHealth !== undefined) {
-              const ownerField = player.field.includes(target) ? player.field : opponent.field;
-              const owner = player.field.includes(target) ? player : opponent;
-              const otherPlayer = player.field.includes(target) ? opponent : player;
-              const index = ownerField.indexOf(target);
-              if (index > -1) {
-                this.processOnDestroyTrigger(target, owner, otherPlayer);
-                ownerField.splice(index, 1);
-              }
-            }
-          });
-          break;
-
-        case 'modify-stats':
-          const statTarget = this.getEffectTargets(effect.target, player, opponent, effect.condition, context);
-          const magicDuration = effect.duration || 'permanent';
-          statTarget.forEach((target: any) => {
-            if (target.currentAttack !== undefined) {
-              if (effect.stat === 'attack' || effect.stat === 'both') {
-                StatModifierManager.addModifier(
-                  target,
-                  StatModifierSource.Magic,
-                  'magic-card',
-                  'attack',
-                  effect.value || 0,
-                  magicDuration
-                );
-              }
-              if (effect.stat === 'health' || effect.stat === 'both') {
-                StatModifierManager.addModifier(
-                  target,
-                  StatModifierSource.Magic,
-                  'magic-card',
-                  'maxHealth',
-                  effect.value || 0,
-                  magicDuration
-                );
-              }
-            }
-          });
-          break;
-
-        case 'gain-resource':
-          if (effect.resource === 'nectar') {
-            player.currentNectar += effect.value || 1;
-            Logger.debug(`Gained ${effect.value || 1} nectar`);
-          }
-          break;
-
-        default:
-          Logger.debug(`Unhandled magic effect type: ${effect.type}`);
-      }
-    }
-
-    /**
-     * Process a habitat card effect
-     */
-    processHabitatEffect(effect: any, player: any, opponent: any): void {
-      switch (effect.type) {
-        case 'gain-resource':
-          if (effect.resource === 'nectar') {
-            player.currentNectar += effect.value || 1;
-          }
-          break;
-
-        case 'modify-stats':
-          if (effect.affinity) {
-            player.field.forEach((beast: any) => {
-              if (beast.affinity === effect.affinity) {
-                const habitatDuration = effect.duration || 'while-active';
-                if (effect.stat === 'attack' || effect.stat === 'both') {
-                  StatModifierManager.addModifier(
-                    beast,
-                    StatModifierSource.Habitat,
-                    'habitat',
-                    'attack',
-                    effect.value || 0,
-                    habitatDuration
-                  );
-                }
-                if (effect.stat === 'health' || effect.stat === 'both') {
-                  StatModifierManager.addModifier(
-                    beast,
-                    StatModifierSource.Habitat,
-                    'habitat',
-                    'maxHealth',
-                    effect.value || 0,
-                    habitatDuration
-                  );
-                }
-              }
-            });
-          }
-          break;
-
-        case 'draw-cards':
-        case 'DrawCards':
-          // Draw cards from deck to hand
-          const habitatDrawCount = effect.value || 1;
-          for (let i = 0; i < habitatDrawCount; i++) {
-            if (player.deck.length > 0) {
-              const card = player.deck.pop();
-              if (card) {
-                player.hand.push(card);
-                Logger.debug(`Drew card: ${card.name}`);
-              }
-            } else {
-              Logger.debug('Deck is empty - cannot draw');
-            }
-          }
-          break;
-
-        case 'deal-damage':
-          const damageTargetsHabitat = this.getEffectTargets(effect.target, player, opponent, effect.condition);
-          damageTargetsHabitat.forEach((target: any) => {
-            if (target.currentHealth !== undefined) {
-              target.currentHealth -= effect.value || 0;
-              if (target.currentHealth <= 0) {
-                const ownerField = player.field.includes(target) ? player.field : opponent.field;
-                const owner = player.field.includes(target) ? player : opponent;
-                const otherPlayer = player.field.includes(target) ? opponent : player;
-                const index = ownerField.indexOf(target);
-                if (index > -1) {
-                  this.processOnDestroyTrigger(target, owner, otherPlayer);
-                  ownerField.splice(index, 1);
-                }
-              }
-            } else if (target.health !== undefined) {
-              target.health -= effect.value || 0;
-            }
-          });
-          break;
-
-        default:
-          Logger.debug(`Unhandled habitat effect type: ${effect.type}`);
-      }
-    }
-
-    /**
-     * Get effect targets based on target type
-     */
-    private getEffectTargets(targetType: string, player: any, opponent: any, condition?: any, context?: { attacker?: any, target?: any }): any[] {
-      let targets: any[] = [];
-
-      switch (targetType) {
-        case 'all-enemies':
-          targets = [...opponent.field];
-          break;
-        case 'all-allies':
-          targets = [...player.field];
-          break;
-        case 'random-enemy':
-          const randomEnemy = pickRandom(opponent.field);
-          targets = randomEnemy ? [randomEnemy] : [];
-          break;
-        case 'opponent':
-          targets = [opponent];
-          break;
-        case 'player':
-          targets = [player];
-          break;
-        case 'all-units':
-          targets = [...player.field, ...opponent.field];
-          break;
-        case 'attacker':
-          // For trap cards - the attacker who triggered the trap
-          targets = context?.attacker ? [context.attacker] : [];
-          break;
-        case 'target':
-          // For targeted spells - specific target selected by player
-          targets = context?.target ? [context.target] : [];
-          break;
-        default:
-          targets = [];
-      }
-
-      // Apply condition filtering if provided
-      if (condition) {
-        targets = targets.filter(target => this.checkCondition(target, condition));
-      }
-
-      return targets;
-    }
-
-    /**
-     * Check if a target passes a condition
-     */
-    private checkCondition(target: any, condition: any): boolean {
-      if (!condition || !condition.type) return true;
-
-      switch (condition.type) {
-        case 'affinity-matches':
-          return target.affinity === condition.value;
-
-        case 'affinity-not-matches':
-          return target.affinity !== condition.value;
-
-        case 'health-below':
-          if (target.currentHealth === undefined) return false;
-          const comparison = condition.comparison || 'less';
-          if (comparison === 'less') {
-            return target.currentHealth < (condition.value || 0);
-          } else if (comparison === 'less-equal') {
-            return target.currentHealth <= (condition.value || 0);
-          }
-          return false;
-
-        case 'health-above':
-          if (target.currentHealth === undefined) return false;
-          return target.currentHealth > (condition.value || 0);
-
-        case 'is-damaged':
-          return target.currentHealth !== undefined &&
-                 target.maxHealth !== undefined &&
-                 target.currentHealth < target.maxHealth;
-
-        case 'is-wilting':
-          if (target.currentHealth === undefined || target.maxHealth === undefined) return false;
-          return target.currentHealth < (target.maxHealth / 2);
-
-        case 'cost-above':
-          return target.cost > (condition.value || 0);
-
-        case 'cost-below':
-          return target.cost < (condition.value || 0);
-
-        default:
-          Logger.debug(`Unknown condition type: ${condition.type}`);
-          return true;
-      }
-    }
-
-    /**
-     * Process OnSummon triggers for a beast that was just summoned
-     */
-    processOnSummonTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.abilities || !Array.isArray(beast.abilities)) return;
-
-      // Process all abilities that have OnSummon trigger
-      for (const ability of beast.abilities) {
-        // Check if ability has OnSummon trigger
-        if (ability.trigger === 'OnSummon') {
-          console.log(`[BattleRules] OnSummon trigger activated for ${beast.name}!`);
-          Logger.debug(`OnSummon trigger activated for ${beast.name}!`);
-
-          if (ability.effects && Array.isArray(ability.effects)) {
-            for (const effect of ability.effects) {
-              this.processAbilityEffect(effect, beast, owner, opponent);
-            }
-          }
-        }
-
-        // Also check for Passive abilities that apply on summon
-        if (ability.trigger === 'Passive') {
-          if (ability.effects && Array.isArray(ability.effects)) {
-            for (const effect of ability.effects) {
-              if (effect.type === 'remove-summoning-sickness') {
-                beast.summoningSickness = false;
-                console.log(`[BattleRules] ${beast.name} can attack immediately (Passive)!`);
-                Logger.debug(`${beast.name} can attack immediately (Passive: RemoveSummoningSickness)!`);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * Process OnAttack triggers for a beast that is attacking
-     */
-    processOnAttackTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.abilities || !Array.isArray(beast.abilities)) return;
-
-      // Process all abilities that have OnAttack trigger
-      for (const ability of beast.abilities) {
-        if (ability.trigger === 'OnAttack') {
-          console.log(`[BattleRules] OnAttack trigger activated for ${beast.name}!`);
-          Logger.debug(`OnAttack trigger activated for ${beast.name}!`);
-
-          if (ability.effects && Array.isArray(ability.effects)) {
-            for (const effect of ability.effects) {
-              this.processAbilityEffect(effect, beast, owner, opponent);
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * Process OnDamage triggers for a beast that took damage
-     */
-    processOnDamageTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.abilities || !Array.isArray(beast.abilities)) return;
-
-      // Process all abilities that have OnDamage trigger
-      for (const ability of beast.abilities) {
-        if (ability.trigger === 'OnDamage') {
-          console.log(`[BattleRules] OnDamage trigger activated for ${beast.name}!`);
-          Logger.debug(`OnDamage trigger activated for ${beast.name}!`);
-
-          if (ability.effects && Array.isArray(ability.effects)) {
-            for (const effect of ability.effects) {
-              this.processAbilityEffect(effect, beast, owner, opponent);
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * Process OnDestroy triggers for a beast that is about to be destroyed
-     */
-    processOnDestroyTrigger(beast: any, owner: any, opponent: any): void {
-      if (!beast.abilities || !Array.isArray(beast.abilities)) return;
-
-      // Process all abilities that have OnDestroy trigger
-      for (const ability of beast.abilities) {
-        if (ability.trigger === 'OnDestroy') {
-          console.log(`[BattleRules] OnDestroy trigger activated for ${beast.name}!`);
-          Logger.debug(`OnDestroy trigger activated for ${beast.name}!`);
-
-          if (ability.effects && Array.isArray(ability.effects)) {
-            for (const effect of ability.effects) {
-              this.processAbilityEffect(effect, beast, owner, opponent);
-            }
-          }
-        }
-      }
-    }
-
-    /**
-     * Process StartOfTurn triggers for all beasts on the field
-     */
-    processStartOfTurnTriggers(player: any, opponent: any): void {
-      player.field.forEach((beast: any) => {
-        if (!beast || !beast.ability) return;
-
-        const ability = beast.ability as any;
-
-        if (ability.trigger === 'StartOfTurn') {
-          Logger.debug(`StartOfTurn trigger activated for ${beast.name}!`);
-
-          if (ability.effects && Array.isArray(ability.effects)) {
-            for (const effect of ability.effects) {
-              this.processAbilityEffect(effect, beast, player, opponent);
-            }
-          }
-        }
-      });
-    }
-
-    /**
-     * Process EndOfTurn triggers for all beasts on the field
-     */
-    processEndOfTurnTriggers(player: any, opponent: any): void {
-      player.field.forEach((beast: any) => {
-        if (!beast) return;
-
-        // Update stat modifiers (remove expired effects)
-        StatModifierManager.updateEndOfTurn(beast);
-
-        // Process ability triggers
-        if (beast.ability) {
-          const ability = beast.ability as any;
-
-          if (ability.trigger === 'EndOfTurn') {
-            Logger.debug(`EndOfTurn trigger activated for ${beast.name}!`);
-
-            if (ability.effects && Array.isArray(ability.effects)) {
-              for (const effect of ability.effects) {
-                this.processAbilityEffect(effect, beast, player, opponent);
-              }
-            }
-          }
-        }
-      });
-    }
-
-    /**
-     * Check and activate traps based on trigger event
-     */
-    checkAndActivateTraps(
-      trapOwner: any,
-      attackingPlayer: any,
-      attackingBeast: any,
-      triggerType: string,
-      onTrapCallback?: (trapName: string) => void
-    ): void {
-      if (!trapOwner.trapZone || trapOwner.trapZone.length === 0) return;
-
-      for (let i = trapOwner.trapZone.length - 1; i >= 0; i--) {
-        const trap: any = trapOwner.trapZone[i];
-
-        // Check the activation trigger correctly - trap cards have activation.trigger property
-        const trapTrigger = trap.activation?.trigger || trap.trigger;
-
-        // Map triggerType to expected trap trigger values
-        let shouldActivate = false;
-        if (triggerType === 'attack') {
-          // OnAttack trigger should activate on attack
-          shouldActivate = trapTrigger === 'OnAttack' || trapTrigger === 'OnPlayerAttack';
-        }
-
-        if (shouldActivate) {
-          Logger.debug(`Trap activated: ${trap.name}!`);
-
-          if (onTrapCallback) {
-            onTrapCallback(trap.name);
-          }
-
-          // Process trap effects using the abilities structure
-          // Pass context with attacker information for trap effects that target the attacker
-          if (trap.abilities && Array.isArray(trap.abilities)) {
-            for (const ability of trap.abilities) {
-              if (ability.effects && Array.isArray(ability.effects)) {
-                for (const effect of ability.effects) {
-                  // Trap owner is the caster, attacking player is the opponent
-                  this.processMagicEffect(effect, trapOwner, attackingPlayer, { attacker: attackingBeast });
-                }
-              }
-            }
-          }
-
-          // Remove trap from zone
-          const activatedTrap = trapOwner.trapZone.splice(i, 1)[0];
-          trapOwner.graveyard.push(activatedTrap);
-
-          // Only activate ONE trap per event
-          break;
-        }
-      }
-    }
-
-    /**
-     * Apply stat modification effects from active buff cards
-     * Uses the StatModifierManager to properly track buff zone modifications
-     *
-     * This should be called when:
-     * 1. A buff is played
-     * 2. A new beast is summoned (to apply existing buffs)
-     * 3. A buff is removed from the buff zone
-     */
-    applyStatBuffEffects(player: any): void {
-      // First, remove all existing buff-zone modifiers from all beasts
-      player.field.forEach((beast: any) => {
-        StatModifierManager.removeModifiersBySource(beast, StatModifierSource.BuffZone);
-      });
-
-      // Now apply current buff effects to all beasts
-      if (!player.buffZone || player.buffZone.length === 0) return;
-
-      player.buffZone.forEach((buff: any) => {
-        if (!buff.ongoingEffects) return;
-
-        buff.ongoingEffects.forEach((effect: any) => {
-          if (effect.type === 'modify-stats' && effect.target === 'all-allies') {
-            player.field.forEach((beast: any) => {
-              if (effect.stat === 'attack') {
-                StatModifierManager.addModifier(
-                  beast,
-                  StatModifierSource.BuffZone,
-                  buff.id || buff.name,
-                  'attack',
-                  effect.value || 0,
-                  'while-active'
-                );
-              } else if (effect.stat === 'health') {
-                StatModifierManager.addModifier(
-                  beast,
-                  StatModifierSource.BuffZone,
-                  buff.id || buff.name,
-                  'maxHealth',
-                  effect.value || 0,
-                  'while-active'
-                );
-              }
-            });
-          }
-        });
-      });
-    }
-
-    /**
-     * Apply start-of-turn effects from active buff cards
-     */
-    applyBuffStartOfTurnEffects(player: any, opponent: any): void {
-      if (!player.buffZone || player.buffZone.length === 0) return;
-
-      player.buffZone.forEach((buff: any) => {
-        if (!buff.ongoingEffects) return;
-
-        buff.ongoingEffects.forEach((effect: any) => {
-          switch (effect.type) {
-            case 'gain-resource':
-              if (effect.resource === 'nectar') {
-                player.currentNectar += effect.value || 1;
-                Logger.debug(`${buff.name}: Gained ${effect.value || 1} nectar`);
-              }
-              break;
-
-            case 'heal':
-              if (effect.target === 'all-allies') {
-                player.field.forEach((beast: any) => {
-                  if (beast.currentHealth < beast.maxHealth) {
-                    beast.currentHealth = Math.min(beast.maxHealth, beast.currentHealth + (effect.value || 1));
-                  }
-                });
-                Logger.debug(`${buff.name}: Healed all beasts for ${effect.value || 1} HP`);
-              }
-              break;
-          }
-        });
-      });
-    }
-  }
-
-  // ==================== bloombeasts\battle\ai\OpponentAI.ts ====================
 
   /**
-   * OpponentAI - Handles AI decision making for opponent players
-   *
-   * Responsibilities:
-   * - Card play decisions (which cards to play, when to play them)
-   * - Attack decisions (target selection, when to attack)
-   * - Resource management (nectar spending)
-   * - Turn sequencing with delays for UI visibility
+   * Play a card from hand
    */
-
-
-  export interface AICallbacks {
-    async: AsyncMethods;
-    onAction?: (action: string) => void;
-    onRender?: () => void;
+  export interface PlayCardAction extends BaseBattleAction {
+    type: 'play-card';
+    cardIndex: number;
+    cardId?: string;
+    targetIndex?: number; // For targeted cards like Magic
+    position?: number; // For beast placement
   }
 
-  export interface AIDecision {
-    type: 'play-card' | 'attack-beast' | 'attack-player' | 'end-turn';
-    cardIndex?: number;
+  /**
+   * Attack with a beast
+   */
+  export interface AttackBeastAction extends BaseBattleAction {
+    type: 'attack-beast';
+    attackerId: string;
     attackerIndex?: number;
+    targetId?: string;
     targetIndex?: number;
-    card?: any;
   }
-
-  export class OpponentAI {
-    private callbacks: AICallbacks;
-    private async: AsyncMethods;
-
-    constructor(callbacks: AICallbacks) {
-      this.callbacks = callbacks;
-      this.async = callbacks.async;
-    }
-
-    /**
-     * Execute a full AI turn
-     * @param opponent The AI player
-     * @param player The human player
-     * @param gameState Current game state (for habitat zone, turn number, etc.)
-     * @param effectProcessors Functions to process various effects
-     * @param shouldStopGetter Function that returns true if AI should stop processing
-     */
-    async executeTurn(
-      opponent: Player,
-      player: Player,
-      gameState: any,
-      effectProcessors: {
-        processOnSummonTrigger: (beast: any, owner: any, opponent: any) => void;
-        processOnAttackTrigger: (beast: any, owner: any, opponent: any) => void;
-        processOnDamageTrigger: (beast: any, owner: any, opponent: any) => void;
-        processOnDestroyTrigger: (beast: any, owner: any, opponent: any) => void;
-        processMagicEffect: (effect: any, player: any, opponent: any) => void;
-        processHabitatEffect: (effect: any, player: any, opponent: any) => void;
-        applyStatBuffEffects: (player: any) => void;
-      },
-      shouldStopGetter?: () => boolean
-    ): Promise<void> {
-      const delay = (ms: number) => new Promise(resolve => this.async.setTimeout(resolve, ms));
-
-      // Play cards phase
-      const cardDecisions = this.decideCardPlays(opponent, player, gameState);
-      for (const decision of cardDecisions) {
-        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
-
-        await this.executeCardPlay(
-          decision,
-          opponent,
-          player,
-          gameState,
-          effectProcessors
-        );
-        if (this.callbacks.onRender) this.callbacks.onRender();
-
-        // Longer delay for non-Bloom cards to show popup
-        const delayTime = decision.card?.type === 'Bloom' ? 1200 : 3500;
-        await delay(delayTime);
-
-        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
-      }
-
-      // Attack phase
-      const attackDecisions = this.decideAttacks(opponent, player);
-      for (const decision of attackDecisions) {
-        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
-
-        await this.executeAttack(
-          decision,
-          opponent,
-          player,
-          effectProcessors
-        );
-        if (this.callbacks.onRender) this.callbacks.onRender();
-        await delay(1000);
-
-        if (shouldStopGetter && shouldStopGetter()) return; // Stop if battle ended
-
-        // Check if player was defeated during attack
-        if (player.health <= 0) {
-          return; // Stop turn processing
-        }
-      }
-
-      Logger.debug('Opponent turn ended');
-    }
-
-    /**
-     * Decide which cards to play this turn
-     */
-    private decideCardPlays(opponent: Player, player: Player, gameState: any): AIDecision[] {
-      const decisions: AIDecision[] = [];
-
-      // Simple greedy AI: Play cards from hand if affordable and field has space
-      for (let i = opponent.hand.length - 1; i >= 0; i--) {
-        const card: any = opponent.hand[i];
-
-        if (card.cost <= opponent.currentNectar) {
-          if (card.type === 'Bloom' && opponent.field.length < 3) {
-            decisions.push({
-              type: 'play-card',
-              cardIndex: i,
-              card: card,
-            });
-            opponent.currentNectar -= card.cost; // Deduct for decision calculation
-          } else if (card.type === 'Magic') {
-            decisions.push({
-              type: 'play-card',
-              cardIndex: i,
-              card: card,
-            });
-            opponent.currentNectar -= card.cost;
-          } else if (card.type === 'Trap' && opponent.trapZone.length < 3) {
-            decisions.push({
-              type: 'play-card',
-              cardIndex: i,
-              card: card,
-            });
-            opponent.currentNectar -= card.cost;
-          } else if (card.type === 'Buff' && opponent.buffZone.length < 2) {
-            decisions.push({
-              type: 'play-card',
-              cardIndex: i,
-              card: card,
-            });
-            opponent.currentNectar -= card.cost;
-          } else if (card.type === 'Habitat' && !gameState.habitatZone) {
-            decisions.push({
-              type: 'play-card',
-              cardIndex: i,
-              card: card,
-            });
-            opponent.currentNectar -= card.cost;
-          }
-        }
-      }
-
-      return decisions;
-    }
-
-    /**
-     * Execute a card play decision
-     */
-    private async executeCardPlay(
-      decision: AIDecision,
-      opponent: Player,
-      player: Player,
-      gameState: any,
-      effectProcessors: any
-    ): Promise<void> {
-      if (decision.cardIndex === undefined) return;
-
-      const card: any = opponent.hand[decision.cardIndex];
-      if (!card) return;
-
-      const playedCard: any = opponent.hand.splice(decision.cardIndex, 1)[0];
-      // Note: Nectar already deducted in decision phase
-
-      switch (playedCard.type) {
-        case 'Bloom':
-          const beastInstance: any = {
-            cardId: playedCard.id,
-            instanceId: playedCard.instanceId || `${playedCard.id}-${Date.now()}`,
-            currentLevel: 1 as any,
-            currentXP: 0,
-            baseAttack: playedCard.baseAttack,
-            baseHealth: playedCard.baseHealth,
-            currentAttack: playedCard.baseAttack,
-            currentHealth: playedCard.baseHealth,
-            maxHealth: playedCard.baseHealth,
-            statusEffects: [],
-            slotIndex: opponent.field.length,
-            summoningSickness: true,
-            usedAbilityThisTurn: false,
-            statModifiers: [],
-            // Store original card data for display
-            type: 'Bloom',
-            name: playedCard.name,
-            affinity: playedCard.affinity,
-            cost: playedCard.cost,
-            ability: playedCard.abilities && playedCard.abilities.length > 0 ? playedCard.abilities[0] : undefined,
-          };
-
-          // Initialize stat system (beasts need this even before buffs are applied)
-          opponent.field.push(beastInstance);
-          effectProcessors.applyStatBuffEffects(opponent);
-          effectProcessors.processOnSummonTrigger(beastInstance, opponent, player);
-
-          Logger.debug(`Opponent played ${playedCard.name}`);
-          if (this.callbacks.onAction) this.callbacks.onAction('play-card');
-          break;
-
-        case 'Magic':
-          if (playedCard.effects && Array.isArray(playedCard.effects)) {
-            for (const effect of playedCard.effects) {
-              effectProcessors.processMagicEffect(effect, opponent, player);
-            }
-          }
-          opponent.graveyard.push(playedCard);
-          Logger.debug(`Opponent played magic card: ${playedCard.name}`);
-          if (this.callbacks.onAction) {
-            this.callbacks.onAction(`play-magic-card:${JSON.stringify(playedCard)}`);
-          }
-          break;
-
-        case 'Trap':
-          opponent.trapZone.push(playedCard);
-          Logger.debug(`Opponent set trap: ${playedCard.name}`);
-          if (this.callbacks.onAction) {
-            this.callbacks.onAction(`play-trap-card:${JSON.stringify(playedCard)}`);
-          }
-          break;
-
-        case 'Buff':
-          opponent.buffZone.push(playedCard);
-          effectProcessors.applyStatBuffEffects(opponent);
-          Logger.debug(`Opponent played buff: ${playedCard.name}`);
-          if (this.callbacks.onAction) {
-            this.callbacks.onAction(`play-buff-card:${JSON.stringify(playedCard)}`);
-          }
-          break;
-
-        case 'Habitat':
-          gameState.habitatZone = playedCard;
-          if (playedCard.onPlayEffects && Array.isArray(playedCard.onPlayEffects)) {
-            for (const effect of playedCard.onPlayEffects) {
-              effectProcessors.processHabitatEffect(effect, opponent, player);
-            }
-          }
-          Logger.debug(`Opponent played habitat: ${playedCard.name}`);
-          if (this.callbacks.onAction) {
-            this.callbacks.onAction(`play-habitat-card:${JSON.stringify(playedCard)}`);
-          }
-          break;
-      }
-    }
-
-    /**
-     * Decide which beasts should attack
-     */
-    private decideAttacks(opponent: Player, player: Player): AIDecision[] {
-      const decisions: AIDecision[] = [];
-
-      // Attack with all beasts that can attack
-      for (let index = 0; index < opponent.field.length; index++) {
-        const beast: any = opponent.field[index];
-
-        if (beast && !beast.summoningSickness) {
-          if (player.field.length > 0) {
-            // Attack a random player beast
-            const target: any = pickRandom(player.field);
-            const targetIndex = target ? player.field.indexOf(target) : -1;
-
-            if (target && targetIndex >= 0) {
-              decisions.push({
-                type: 'attack-beast',
-                attackerIndex: index,
-                targetIndex: targetIndex,
-              });
-            }
-          } else {
-            // Attack player directly
-            decisions.push({
-              type: 'attack-player',
-              attackerIndex: index,
-            });
-          }
-        }
-      }
-
-      return decisions;
-    }
-
-    /**
-     * Execute an attack decision
-     */
-    private async executeAttack(
-      decision: AIDecision,
-      opponent: Player,
-      player: Player,
-      effectProcessors: any
-    ): Promise<void> {
-      if (decision.attackerIndex === undefined) return;
-
-      const attacker: any = opponent.field[decision.attackerIndex];
-      if (!attacker) return;
-
-      if (decision.type === 'attack-beast' && decision.targetIndex !== undefined) {
-        const target: any = player.field[decision.targetIndex];
-        if (!target) return;
-
-        Logger.debug(`Opponent's ${attacker.name} attacks ${target.name}`);
-
-        effectProcessors.processOnAttackTrigger(attacker, opponent, player);
-
-        if (this.callbacks.onAction) {
-          this.callbacks.onAction(`attack-beast-opponent-${decision.attackerIndex}-player-${decision.targetIndex}`);
-        }
-
-        // Deal damage to each other
-        const opponentBeastDamage = attacker.currentAttack || 0;
-        const playerBeastDamage = target.currentAttack || 0;
-
-        target.currentHealth -= opponentBeastDamage;
-        attacker.currentHealth -= playerBeastDamage;
-
-        // Process OnDamage triggers
-        if (opponentBeastDamage > 0) {
-          effectProcessors.processOnDamageTrigger(target, player, opponent);
-        }
-        if (playerBeastDamage > 0) {
-          effectProcessors.processOnDamageTrigger(attacker, opponent, player);
-        }
-
-        // Remove dead beasts
-        if (target.currentHealth <= 0) {
-          effectProcessors.processOnDestroyTrigger(target, player, opponent);
-          player.field.splice(decision.targetIndex, 1);
-          Logger.debug(`${target.name} was defeated!`);
-        }
-        if (attacker.currentHealth <= 0) {
-          effectProcessors.processOnDestroyTrigger(attacker, opponent, player);
-          opponent.field.splice(decision.attackerIndex, 1);
-          Logger.debug(`Opponent's ${attacker.name} was defeated!`);
-        }
-
-      } else if (decision.type === 'attack-player') {
-        const damage = attacker.currentAttack || 0;
-
-        effectProcessors.processOnAttackTrigger(attacker, opponent, player);
-
-        const previousHealth = player.health;
-        player.health -= damage;
-        Logger.debug(`Opponent's ${attacker.name} attacks you directly for ${damage} damage!`);
-
-        // Check for low health threshold (10%)
-        const healthPercentage = (player.health / (player.maxHealth || 30)) * 100;
-        if (healthPercentage <= 10 && previousHealth > player.health) {
-          if (this.callbacks.onAction) {
-            this.callbacks.onAction('player-low-health');
-          }
-        }
-
-        if (this.callbacks.onAction) {
-          this.callbacks.onAction(`attack-player-opponent-${decision.attackerIndex}`);
-        }
-      }
-    }
-  }
-
-  // ==================== bloombeasts\screens\missions\MissionBattleUI.ts ====================
 
   /**
-   * Mission Battle UI - Mission-specific wrapper around the generic battle system
+   * Attack opponent player directly
+   */
+  export interface AttackPlayerAction extends BaseBattleAction {
+    type: 'attack-player';
+    attackerId: string;
+    attackerIndex?: number;
+  }
+
+  /**
+   * Use a beast's ability
+   */
+  export interface UseAbilityAction extends BaseBattleAction {
+    type: 'use-ability';
+    beastId: string;
+    beastIndex?: number;
+    abilityIndex: number;
+    targetId?: string;
+    targetIndex?: number;
+  }
+
+  /**
+   * End the current turn
+   */
+  export interface EndTurnAction extends BaseBattleAction {
+    type: 'end-turn';
+  }
+
+  /**
+   * Forfeit the battle
+   */
+  export interface ForfeitAction extends BaseBattleAction {
+    type: 'forfeit';
+  }
+
+  /**
+   * Timeout - player ran out of time
+   */
+  export interface TimeoutAction extends BaseBattleAction {
+    type: 'timeout';
+    timedOutPlayerId?: string; // Which player actually timed out
+  }
+
+  /**
+   * Auto-attack with all available beasts
+   */
+  export interface AutoAttackAllAction extends BaseBattleAction {
+    type: 'auto-attack-all';
+  }
+
+  /**
+   * Discriminated union of all possible battle actions
+   */
+  export type BattleAction =
+    | PlayCardAction
+    | AttackBeastAction
+    | AttackPlayerAction
+    | UseAbilityAction
+    | EndTurnAction
+    | ForfeitAction
+    | TimeoutAction
+    | AutoAttackAllAction;
+
+  /**
+   * Action creator functions for type-safe action construction
+   */
+  export const BattleActions = {
+    playCard: (cardIndex: number, options?: {
+      cardId?: string;
+      targetIndex?: number;
+      position?: number;
+      playerId?: string;
+    }): PlayCardAction => ({
+      type: 'play-card',
+      cardIndex,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    attackBeast: (attackerId: string, options?: {
+      attackerIndex?: number;
+      targetId?: string;
+      targetIndex?: number;
+      playerId?: string;
+    }): AttackBeastAction => ({
+      type: 'attack-beast',
+      attackerId,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    attackPlayer: (attackerId: string, options?: {
+      attackerIndex?: number;
+      playerId?: string;
+    }): AttackPlayerAction => ({
+      type: 'attack-player',
+      attackerId,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    useAbility: (beastId: string, abilityIndex: number, options?: {
+      beastIndex?: number;
+      targetId?: string;
+      targetIndex?: number;
+      playerId?: string;
+    }): UseAbilityAction => ({
+      type: 'use-ability',
+      beastId,
+      abilityIndex,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    endTurn: (playerId?: string): EndTurnAction => ({
+      type: 'end-turn',
+      playerId,
+      timestamp: Date.now(),
+    }),
+
+    forfeit: (playerId?: string): ForfeitAction => ({
+      type: 'forfeit',
+      playerId,
+      timestamp: Date.now(),
+    }),
+
+    timeout: (playerId?: string): TimeoutAction => ({
+      type: 'timeout',
+      playerId,
+      timestamp: Date.now(),
+    }),
+
+    autoAttackAll: (playerId?: string): AutoAttackAllAction => ({
+      type: 'auto-attack-all',
+      playerId,
+      timestamp: Date.now(),
+    }),
+  };
+
+  /**
+   * Parse legacy string-based actions into typed actions
+   * This function helps migrate from old string format to new typed format.
    *
-   * This class adds mission-specific functionality on top of the generic BattleController:
+   * Examples:
+   *   'play-card-0' -> { type: 'play-card', cardIndex: 0 }
+   *   'play-card-0-target-2' -> { type: 'play-card', cardIndex: 0, targetIndex: 2 }
+   *   'attack-beast-1-2' -> { type: 'attack-beast', attackerIndex: 1, targetIndex: 2 }
+   *   'end-turn' -> { type: 'end-turn' }
+   */
+  export function parseActionString(actionStr: string, playerId?: string): BattleAction | null {
+    // End turn
+    if (actionStr === 'end-turn') {
+      return BattleActions.endTurn(playerId);
+    }
+
+    // Forfeit
+    if (actionStr === 'forfeit') {
+      return BattleActions.forfeit(playerId);
+    }
+
+    // Auto attack all
+    if (actionStr === 'auto-attack-all') {
+      return BattleActions.autoAttackAll(playerId);
+    }
+
+    // Play card: 'play-card-0' or 'play-card-0-target-2'
+    if (actionStr.startsWith('play-card-')) {
+      const parts = actionStr.substring('play-card-'.length).split('-target-');
+      const cardIndex = parseInt(parts[0], 10);
+      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
+
+      if (isNaN(cardIndex)) return null;
+
+      return BattleActions.playCard(cardIndex, { targetIndex, playerId });
+    }
+
+    // Attack beast: 'attack-beast-1-2' (attacker index 1, target index 2)
+    if (actionStr.startsWith('attack-beast-')) {
+      const parts = actionStr.substring('attack-beast-'.length).split('-');
+      if (parts.length >= 2) {
+        const attackerIndex = parseInt(parts[0], 10);
+        const targetIndex = parseInt(parts[1], 10);
+
+        if (isNaN(attackerIndex) || isNaN(targetIndex)) return null;
+
+        return BattleActions.attackBeast(attackerIndex.toString(), {
+          attackerIndex,
+          targetIndex,
+          playerId,
+        });
+      }
+    }
+
+    // Attack player: 'attack-player-1' (attacker index 1)
+    if (actionStr.startsWith('attack-player-')) {
+      const attackerIndex = parseInt(actionStr.substring('attack-player-'.length), 10);
+
+      if (isNaN(attackerIndex)) return null;
+
+      return BattleActions.attackPlayer(attackerIndex.toString(), {
+        attackerIndex,
+        playerId,
+      });
+    }
+
+    // Use ability: 'use-ability-1' or 'use-ability-1-target-2'
+    if (actionStr.startsWith('use-ability-')) {
+      const parts = actionStr.substring('use-ability-'.length).split('-target-');
+      const beastIndex = parseInt(parts[0], 10);
+      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
+
+      if (isNaN(beastIndex)) return null;
+
+      return BattleActions.useAbility(beastIndex.toString(), 0, {
+        beastIndex,
+        targetIndex,
+        playerId,
+      });
+    }
+
+    // Unknown action
+    console.warn(`[ActionParser] Unknown action string: ${actionStr}`);
+    return null;
+  }
+
+  /**
+   * Convert typed action back to legacy string format
+   * Used during migration to maintain compatibility with old code.
+   */
+  export function actionToString(action: BattleAction): string {
+    switch (action.type) {
+      case 'play-card':
+        if (action.targetIndex !== undefined) {
+          return `play-card-${action.cardIndex}-target-${action.targetIndex}`;
+        }
+        return `play-card-${action.cardIndex}`;
+
+      case 'attack-beast':
+        return `attack-beast-${action.attackerIndex ?? action.attackerId}-${action.targetIndex ?? action.targetId}`;
+
+      case 'attack-player':
+        return `attack-player-${action.attackerIndex ?? action.attackerId}`;
+
+      case 'use-ability':
+        if (action.targetIndex !== undefined) {
+          return `use-ability-${action.beastIndex ?? action.beastId}-target-${action.targetIndex}`;
+        }
+        return `use-ability-${action.beastIndex ?? action.beastId}`;
+
+      case 'end-turn':
+        return 'end-turn';
+
+      case 'forfeit':
+        return 'forfeit';
+
+      case 'timeout':
+        return 'timeout';
+
+      case 'auto-attack-all':
+        return 'auto-attack-all';
+
+      default:
+        // Exhaustiveness check
+        const exhaustive: never = action;
+        throw new Error(`Unknown action type: ${(exhaustive as any).type}`);
+    }
+  }
+
+  /**
+   * Type guard to check if an object is a valid BattleAction
+   */
+  export function isBattleAction(obj: any): obj is BattleAction {
+    return obj && typeof obj === 'object' && typeof obj.type === 'string';
+  }
+
+  // ==================== bloombeasts\screens\battle\BattleUI.ts ====================
+
+  /**
+   * Battle UI - Manages battle state and connects missions to the battle system
+   *
+   * This class handles:
+   * - Battle initialization and configuration
    * - Mission setup (special rules, opponent configuration)
    * - Reward calculation
    * - Progress tracking
@@ -16757,21 +17148,36 @@ namespace BloomBeasts {
 
   export interface BattleUIState {
     mission: Mission;
-    gameState: GameState | null;
+    battleState: BattleState | null;
     progress: MissionRunProgress | null;
     isComplete: boolean;
     rewards: RewardResult | null;
   }
 
-  export class MissionBattleUI {
+  /**
+   * Convert AnyCard[] to RuntimeCard[] for opponent decks
+   * Creates minimal CardInstances (level 1, 0 XP) and converts them to RuntimeCards
+   */
+  function convertDeckToRuntimeCards(cards: AnyCard[]): RuntimeCard[] {
+    return cards.map((cardDef, index) => {
+      // Create minimal CardInstance for opponent cards (level 1)
+      const minimalInstance: CardInstance = {
+        id: `${cardDef.id}-opp-${index}`,
+        cardId: cardDef.id,
+        currentXP: 0, // Level 1 (0 XP)
+      };
+
+      return createBattleCard(minimalInstance, cardDef);
+    });
+  }
+
+  export class BattleUI {
     private missionManager: MissionManager;
-    private gameEngine: GameEngine;
+    // private gameEngine: GameEngine;
     private async: AsyncMethods;
 
     // Battle system components
     private battleController: BattleController;
-    private battleStateManager: BattleStateManager;
-    private opponentAI: OpponentAI;
 
     // Current state
     private currentBattle: BattleUIState | null = null;
@@ -16779,40 +17185,37 @@ namespace BloomBeasts {
 
     // Callbacks
     private renderCallback: (() => void) | null = null;
-    private opponentActionCallback: ((action: string) => void) | null = null;
-    private playerLowHealthTriggered: boolean = false;
 
-    constructor(missionManager: MissionManager, gameEngine: GameEngine, async: AsyncMethods) {
+    constructor(missionManager: MissionManager, async: AsyncMethods) {
       this.missionManager = missionManager;
-      this.gameEngine = gameEngine;
       this.async = async;
 
-      // Initialize battle components
-      this.battleStateManager = new BattleStateManager();
-      this.opponentAI = new OpponentAI({
-        async,
-        onAction: (action: string) => {
-          if (this.opponentActionCallback) this.opponentActionCallback(action);
-        },
-        onRender: () => {
-          if (this.renderCallback) this.renderCallback();
-        },
+      // Initialize battle controller
+      this.battleController = new BattleController(async);
+
+      // Subscribe to TURBO events
+      this.setupEventListeners();
+    }
+
+    /**
+     * Setup TURBO event listeners
+     */
+    private setupEventListeners(): void {
+      const game = this.battleController.getGameController();
+
+      game.on('turnStarted', ({ playerId, turnNumber }) => {
+        Logger.debug(`[BattleUI] Turn ${turnNumber} started for player ${playerId}`);
       });
 
-      // Initialize battle controller with callbacks
-      const battleCallbacks: BattleCallbacks = {
-        onTurnStart: (playerIndex: number) => {
-          Logger.debug(`[MissionBattleUI] Turn started for player ${playerIndex}`);
-        },
-        onTurnEnd: (playerIndex: number) => {
-          Logger.debug(`[MissionBattleUI] Turn ended for player ${playerIndex}`);
-        },
-        onRender: () => {
-          if (this.renderCallback) this.renderCallback();
-        },
-      };
+      game.on('turnEnded', ({ playerId }) => {
+        Logger.debug(`[BattleUI] Turn ended for player ${playerId}`);
+      });
 
-      this.battleController = new BattleController(async, battleCallbacks);
+      game.on('stateChanged', () => {
+        if (this.renderCallback) {
+          this.renderCallback();
+        }
+      });
     }
 
     /**
@@ -16823,18 +17226,10 @@ namespace BloomBeasts {
     }
 
     /**
-     * Set a callback for opponent actions (for sound effects, etc.)
-     */
-    setOpponentActionCallback(callback: (action: string) => void): void {
-      this.opponentActionCallback = callback;
-    }
-
-    /**
      * Initialize a mission battle
      */
-    initializeBattle(playerDeckCards: AnyCard[], playerName?: string): BattleUIState | null {
+    initializeBattle(playerDeckCards: RuntimeCard[], playerName?: string): BattleUIState | null {
       this.shouldStopAI = false;
-      this.playerLowHealthTriggered = false;
 
       const mission = this.missionManager.getCurrentMission();
       if (!mission) {
@@ -16844,6 +17239,9 @@ namespace BloomBeasts {
 
       // Resolve the opponent deck
       const opponentDeck = resolveDeck(mission.opponentDeck);
+
+      // Convert opponent deck cards to RuntimeCards (level 1)
+      const opponentRuntimeCards = convertDeckToRuntimeCards(opponentDeck.cards);
 
       // Configure opponent health (mission 1 has reduced health for tutorial)
       const opponentHealth = mission.id === 'mission-01' ? 1 : 30;
@@ -16861,7 +17259,7 @@ namespace BloomBeasts {
         player2: {
           id: 'opponent',
           name: mission.name,  // Use mission name as opponent name (e.g., "Rootling")
-          deck: opponentDeck.cards,
+          deck: opponentRuntimeCards,
           health: opponentHealth,
           maxHealth: opponentMaxHealth,
           isAI: true,
@@ -16874,7 +17272,7 @@ namespace BloomBeasts {
       // Create mission-specific state
       this.currentBattle = {
         mission,
-        gameState: battle.gameState,
+        battleState: battle,
         progress: this.missionManager.getProgress(),
         isComplete: false,
         rewards: null,
@@ -16891,55 +17289,186 @@ namespace BloomBeasts {
     }
 
     /**
-     * Process a player action
+     * Helper: Get player from TURBO state (player is always index 0)
      */
-    async processPlayerAction(action: string, data: any): Promise<void> {
-      if (!this.currentBattle || !this.currentBattle.gameState) {
+    private getPlayer() {
+      return this.currentBattle?.battleState?.turboState.gameData.players[0];
+    }
+
+    /**
+     * Helper: Get opponent from TURBO state (opponent is always index 1)
+     */
+    private getOpponent() {
+      return this.currentBattle?.battleState?.turboState.gameData.players[1];
+    }
+
+    /**
+     * Helper: Get player field from TURBO state
+     */
+    private getPlayerField() {
+      return this.currentBattle?.battleState?.turboState.gameData.field.player1;
+    }
+
+    /**
+     * Helper: Get opponent field from TURBO state
+     */
+    private getOpponentField() {
+      return this.currentBattle?.battleState?.turboState.gameData.field.player2;
+    }
+
+    /**
+     * Process a typed player action
+     */
+    async processTypedAction(action: BattleAction, data?: any): Promise<void> {
+      if (!this.currentBattle?.battleState) {
         Logger.error('No active battle');
         return;
       }
 
+      const player = this.getPlayer();
+      const opponent = this.getOpponent();
+
+      if (!player || !opponent) {
+        Logger.error('Invalid battle state: missing players');
+        return;
+      }
+
       let result: any = { success: false, damage: data?.damage || 0 };
+      const playerId = action.playerId || 'player';
 
-      // Handle different action types using BattleStateManager
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
+      // Process based on action type
+      switch (action.type) {
+        case 'play-card': {
+          // Get the card from player's hand
+          const card = player.hand[action.cardIndex];
+          if (card) {
+            // Use the card's id property
+            const cardId = action.cardId || (card as any).id || (card as any).name || action.cardIndex.toString();
 
-      if (action.startsWith('play-card-')) {
-        const parts = action.substring('play-card-'.length).split('-target-');
-        const cardIndex = parseInt(parts[0], 10);
-        const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
-        result = this.battleStateManager.playCard(cardIndex, player, opponent, this.currentBattle.gameState, targetIndex);
+            // For Beast and Buff cards, find an empty position if not specified
+            let position = action.position || action.targetIndex;
+            if (position === undefined) {
+              const playerField = this.getPlayerField();
+              if (playerField) {
+                if (card.type === CardType.Beast) {
+                  // Find the first empty beast slot
+                  for (let i = 0; i < 3; i++) {
+                    if (!playerField.beasts[i]) {
+                      position = i;
+                      break;
+                    }
+                  }
+                } else if (card.type === CardType.Buff) {
+                  // Find the first empty buff slot
+                  for (let i = 0; i < 3; i++) {
+                    if (!playerField.buffs[i]) {
+                      position = i;
+                      break;
+                    }
+                  }
+                }
+              }
+            }
 
-      } else if (action.startsWith('use-ability-')) {
-        const beastIndex = parseInt(action.substring('use-ability-'.length), 10);
-        result = this.battleStateManager.useAbility(beastIndex, player, opponent, this.currentBattle.gameState);
+            result.success = this.battleController.playCard(cardId, playerId, position);
+          }
+          break;
+        }
 
-      } else if (action === 'auto-attack-all') {
-        result = await this.autoAttackAll(player, opponent, data?.onAttackAnimation);
+        case 'use-ability': {
+          const beastIndex = action.beastIndex;
+          if (beastIndex !== undefined) {
+            const playerField = this.getPlayerField();
+            const beast = playerField?.beasts[beastIndex];
+            if (beast) {
+              const beastId = action.beastId || (beast as any).id || (beast as any).instanceId || beastIndex.toString();
+              result.success = this.battleController.useAbility(beastId, null, playerId);
+            }
+          }
+          break;
+        }
 
-      } else if (action.startsWith('attack-beast-')) {
-        const parts = action.substring('attack-beast-'.length).split('-');
-        const attackerIndex = parseInt(parts[0], 10);
-        const targetIndex = parseInt(parts[1], 10);
-        result = this.battleStateManager.attackBeast(attackerIndex, targetIndex, player, opponent, (trapName: string) => {
-          if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
-        });
+        case 'auto-attack-all': {
+          result = await this.autoAttackAll(player, opponent, data?.onAttackAnimation);
+          break;
+        }
 
-      } else if (action.startsWith('attack-player-')) {
-        const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
-        result = this.battleStateManager.attackPlayer(attackerIndex, player, opponent, (trapName: string) => {
-          if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
-        });
+        case 'attack-beast': {
+          const attackerIndex = action.attackerIndex;
+          const targetIndex = action.targetIndex;
+          if (attackerIndex !== undefined && targetIndex !== undefined) {
+            const playerField = this.getPlayerField();
+            const opponentField = this.getOpponentField();
+            const attacker = playerField?.beasts[attackerIndex];
+            const target = opponentField?.beasts[targetIndex];
+            if (attacker && target) {
+              const attackerId = action.attackerId || (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
+              const targetId = action.targetId || (target as any).id || (target as any).instanceId || targetIndex.toString();
+              result.success = this.battleController.attackBeast(attackerId, targetId, playerId);
+            }
+          }
+          break;
+        }
 
-      } else if (action === 'end-turn') {
-        result = await this.endPlayerTurn();
+        case 'attack-player': {
+          const attackerIndex = action.attackerIndex;
+          if (attackerIndex !== undefined) {
+            const playerField = this.getPlayerField();
+            const attacker = playerField?.beasts[attackerIndex];
+            if (attacker) {
+              const attackerId = action.attackerId || (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
+              result.success = this.battleController.attackPlayer(attackerId, playerId);
+            }
+          }
+          break;
+        }
+
+        case 'end-turn': {
+          result = await this.endPlayerTurn();
+          break;
+        }
+
+        case 'forfeit': {
+          // Process forfeit action through TURBO
+          const turboResult = this.battleController.getGameController().performAction({
+            type: 'game_action',
+            playerId,
+            data: { type: 'forfeit' as any }, // BloomBeastsActionType.FORFEIT
+          });
+          result.success = turboResult.success;
+          break;
+        }
+
+        case 'timeout': {
+          // Process timeout action through TURBO
+          // Action is executed by current player, but marks who actually timed out
+          const turboResult = this.battleController.getGameController().performAction({
+            type: 'game_action',
+            playerId,
+            data: {
+              type: 'timeout' as any, // BloomBeastsActionType.TIMEOUT
+              timedOutPlayerId: action.timedOutPlayerId || playerId
+            },
+          });
+          result.success = turboResult.success;
+          break;
+        }
+
+        default: {
+          Logger.warn(`[BattleUI] Unknown action type: ${(action as any).type}`);
+        }
+      }
+
+      // Sync state from BattleController immediately after action
+      const updatedBattle = this.battleController.getCurrentBattle();
+      if (updatedBattle && this.currentBattle) {
+        this.currentBattle.battleState = updatedBattle;
       }
 
       // Update mission progress
       this.updateMissionProgress(action, result);
 
-      // Check for battle end
+      // Check for battle end with the freshly synced state
       const battleResult = this.battleController.checkBattleEnd();
       if (battleResult) {
         this.endBattle();
@@ -16950,34 +17479,45 @@ namespace BloomBeasts {
      * Auto-attack with all beasts
      */
     private async autoAttackAll(
-      player: Player,
-      opponent: Player,
+      player: BloomBeastsPlayer,
+      opponent: BloomBeastsPlayer,
       onAttackAnimation?: (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => Promise<void>
     ): Promise<any> {
       let anyAttackSucceeded = false;
       const results: any[] = [];
+      const playerId = 'player';
+
+      const playerField = this.getPlayerField();
+      const opponentField = this.getOpponentField();
+
+      if (!playerField || !opponentField) {
+        return {
+          success: false,
+          results: [],
+          message: 'Field data not available'
+        };
+      }
 
       for (let i = 0; i < 3; i++) {
-        const attackerBeast = player.field[i];
+        const attackerBeast = playerField.beasts[i];
         if (!attackerBeast || attackerBeast.summoningSickness) continue;
 
-        const opposingBeast = opponent.field[i];
+        const opposingBeast = opponentField.beasts[i];
+        let success = false;
 
         if (opposingBeast) {
           if (onAttackAnimation) await onAttackAnimation(i, 'beast', i);
-          const result = this.battleStateManager.attackBeast(i, i, player, opponent, (trapName: string) => {
-            if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
-          });
-          results.push(result);
-          if (result.success) anyAttackSucceeded = true;
+          const attackerId = (attackerBeast as any).id || (attackerBeast as any).instanceId || i.toString();
+          const targetId = (opposingBeast as any).id || (opposingBeast as any).instanceId || i.toString();
+          success = this.battleController.attackBeast(attackerId, targetId, playerId);
         } else {
           if (onAttackAnimation) await onAttackAnimation(i, 'health');
-          const result = this.battleStateManager.attackPlayer(i, player, opponent, (trapName: string) => {
-            if (this.opponentActionCallback) this.opponentActionCallback('trap-activated');
-          });
-          results.push(result);
-          if (result.success) anyAttackSucceeded = true;
+          const attackerId = (attackerBeast as any).id || (attackerBeast as any).instanceId || i.toString();
+          success = this.battleController.attackPlayer(attackerId, playerId);
         }
+
+        results.push({ success });
+        if (success) anyAttackSucceeded = true;
 
         const battleResult = this.battleController.checkBattleEnd();
         if (battleResult) break;
@@ -16994,52 +17534,50 @@ namespace BloomBeasts {
      * End player's turn and start opponent's turn
      */
     private async endPlayerTurn(): Promise<any> {
-      if (!this.currentBattle || !this.currentBattle.gameState) {
+      Logger.info('[BattleUI] endPlayerTurn called');
+      if (!this.currentBattle?.battleState) {
+        Logger.warn('[BattleUI] No current battle for endPlayerTurn');
         return { success: false };
       }
 
       // Check if battle is already complete (e.g., player just won)
       if (this.currentBattle.isComplete) {
+        Logger.info('[BattleUI] Battle is already complete');
         return { success: false };
       }
-
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
 
       // Check if battle has ended before processing end-of-turn
       const battleResultBeforeTurn = this.battleController.checkBattleEnd();
       if (battleResultBeforeTurn) {
+        Logger.info('[BattleUI] Battle ended before turn could end');
         return { success: false };
       }
 
-      // Process end-of-turn effects
-      player.field.forEach((beast: any) => {
-        if (beast) {
-          beast.summoningSickness = false;
-          beast.usedAbilityThisTurn = false;
-        }
-      });
-      this.battleStateManager.processEndOfTurnTriggers(player, opponent);
+      // End player turn using BattleController
+      Logger.info('[BattleUI] Ending player turn via BattleController');
+      this.battleController.endTurn('player');
 
-      // Switch to opponent turn
-      this.currentBattle.gameState.activePlayer = 1;
+      // Update the local game state immediately after turn change
+      const stateAfterTurnEnd = this.battleController.getCurrentBattle();
+      if (stateAfterTurnEnd) {
+        this.currentBattle.battleState = stateAfterTurnEnd;
+        Logger.info('[BattleUI] Updated local battle state after turn end');
+        // Trigger render to update UI with new turn
+        if (this.renderCallback) this.renderCallback();
+      }
 
       // Process opponent AI turn
+      Logger.info('[BattleUI] Now processing opponent turn');
       await this.processOpponentTurn();
 
-      // Switch back to player and increment turn
-      this.currentBattle.gameState.activePlayer = 0;
-      this.currentBattle.gameState.turn++;
-
-      console.log(`[MissionBattleUI] Starting player turn ${this.currentBattle.gameState.turn}`);
-
-      // Start player's new turn
-      this.battleController.startTurn(0);
-
-      // Process start-of-turn buff effects
-      this.battleStateManager.applyBuffStartOfTurnEffects(player, opponent);
-      this.battleStateManager.processStartOfTurnTriggers(player, opponent);
-      this.battleStateManager.applyStatBuffEffects(player);
+      // Update the local game state again after AI turn
+      const battleState = this.battleController.getCurrentBattle();
+      if (battleState) {
+        this.currentBattle.battleState = battleState;
+        Logger.info('[BattleUI] Updated local battle state after AI turn');
+        // Trigger render to update UI to show player's turn
+        if (this.renderCallback) this.renderCallback();
+      }
 
       return { success: true };
     }
@@ -17048,69 +17586,60 @@ namespace BloomBeasts {
      * Process opponent's AI turn
      */
     private async processOpponentTurn(): Promise<void> {
-      if (!this.currentBattle || !this.currentBattle.gameState) return;
-
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
+      Logger.info('[BattleUI] Processing opponent turn');
+      if (!this.currentBattle?.battleState) {
+        Logger.warn('[BattleUI] No current battle state for opponent turn');
+        return;
+      }
 
       // Helper function for delays
       const delay = (ms: number) => new Promise(resolve => this.async.setTimeout(resolve, ms));
 
-      // Draw a card for opponent
-      if (opponent.deck.length > 0) {
-        const card = opponent.deck.shift();
-        if (card) opponent.hand.push(card);
-      }
-      if (this.renderCallback) this.renderCallback();
-      await delay(800);
-      if (this.shouldStopAI) return;
-
-      // Increase opponent nectar
-      opponent.currentNectar = Math.min(10, this.currentBattle.gameState.turn);
-      if (this.renderCallback) this.renderCallback();
-      await delay(500);
-      if (this.shouldStopAI) return;
-
-      // Apply start-of-turn buff effects
-      this.battleStateManager.applyBuffStartOfTurnEffects(opponent, player);
-      this.battleStateManager.processStartOfTurnTriggers(opponent, player);
-      this.battleStateManager.applyStatBuffEffects(opponent);
-
-      // Remove summoning sickness
-      opponent.field.forEach((beast: any) => {
-        if (beast) {
-          beast.summoningSickness = false;
-          beast.usedAbilityThisTurn = false;
+      try {
+        // Check if it's actually an AI player's turn
+        if (!this.battleController.isAIPlayerTurn()) {
+          Logger.info('[BattleUI] Current player is not AI, skipping AI turn');
+          return;
         }
-      });
 
-      // Use AI to execute opponent turn with proper effect processors
-      await this.opponentAI.executeTurn(
-        opponent,
-        player,
-        this.currentBattle.gameState,
-        {
-          processOnSummonTrigger: this.battleStateManager.processOnSummonTrigger.bind(this.battleStateManager),
-          processOnAttackTrigger: this.battleStateManager.processOnAttackTrigger.bind(this.battleStateManager),
-          processOnDamageTrigger: this.battleStateManager.processOnDamageTrigger.bind(this.battleStateManager),
-          processOnDestroyTrigger: this.battleStateManager.processOnDestroyTrigger.bind(this.battleStateManager),
-          processMagicEffect: this.battleStateManager.processMagicEffect.bind(this.battleStateManager),
-          processHabitatEffect: this.battleStateManager.processHabitatEffect.bind(this.battleStateManager),
-          applyStatBuffEffects: this.battleStateManager.applyStatBuffEffects.bind(this.battleStateManager),
-        },
-        () => this.shouldStopAI
-      );
+        // Small delay before AI starts for better UX
+        await delay(500);
+        if (this.shouldStopAI) return;
+
+        // Execute AI turn using BattleController
+        // The TURBO system will handle all the turn mechanics
+        // Pass callback to update UI after each AI action
+        Logger.info('[BattleUI] Executing AI turn');
+        await this.battleController.executeAITurn(() => {
+          // Update display after each AI action for smoother UX and timer updates
+          const updatedState = this.battleController.getCurrentBattle();
+          if (updatedState) {
+            // this.currentBattle.battleState = updatedState;
+            if (this.renderCallback) this.renderCallback();
+          }
+        });
+        Logger.info('[BattleUI] AI turn completed');
+
+        // Final update after AI completes
+        const updatedState = this.battleController.getCurrentBattle();
+        if (updatedState) {
+          this.currentBattle.battleState = updatedState;
+          if (this.renderCallback) this.renderCallback();
+        }
+      } catch (error) {
+        Logger.error('[BattleUI] Failed to process opponent turn:', error);
+      }
     }
 
     /**
      * Update mission progress based on action
      */
-    private updateMissionProgress(action: string, result: any): void {
+    private updateMissionProgress(action: BattleAction, result: any): void {
       if (!this.currentBattle) return;
 
-      if (!this.currentBattle.gameState) return;
-      const player = this.currentBattle.gameState.players[0];
-      const opponent = this.currentBattle.gameState.players[1];
+      const player = this.getPlayer();
+      const opponent = this.getOpponent();
+      if (!player || !opponent) return;
 
       // Update health values in mission progress
       this.missionManager.updateProgress('health-update', {
@@ -17120,21 +17649,14 @@ namespace BloomBeasts {
 
       // Check if opponent is defeated
       if (opponent.health <= 0) {
-        console.log('[MissionBattleUI] Opponent defeated! Updating mission progress.');
+        console.log('[BattleUI] Opponent defeated! Updating mission progress.');
         this.missionManager.updateProgress('opponent-defeated', {});
       }
 
       // Track other actions
-      if (action.startsWith('play-card-')) {
+      if (action.type === 'play-card') {
         this.missionManager.updateProgress('beast-summoned', {});
       }
-    }
-
-    /**
-     * Check if battle has ended
-     */
-    private checkBattleEnd(): boolean {
-      return this.battleController.checkBattleEnd() !== null;
     }
 
     /**
@@ -17142,24 +17664,24 @@ namespace BloomBeasts {
      */
     private endBattle(): void {
       if (!this.currentBattle) {
-        console.log('[MissionBattleUI] endBattle called but no current battle');
+        console.log('[BattleUI] endBattle called but no current battle');
         return;
       }
 
       // Prevent multiple calls
       if (this.currentBattle.isComplete) {
-        console.log('[MissionBattleUI] Battle already completed, ignoring duplicate endBattle call');
+        console.log('[BattleUI] Battle already completed, ignoring duplicate endBattle call');
         return;
       }
 
       const battleResult = this.battleController.checkBattleEnd();
       if (!battleResult) {
-        console.log('[MissionBattleUI] endBattle called but battle not ended yet');
+        console.log('[BattleUI] endBattle called but battle not ended yet');
         return;
       }
 
-      console.log(`[MissionBattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
-      Logger.info(`[MissionBattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
+      console.log(`[BattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
+      Logger.info(`[BattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
 
       this.shouldStopAI = true;
       this.currentBattle.isComplete = true;
@@ -17167,26 +17689,26 @@ namespace BloomBeasts {
       // Calculate rewards based on winner
       if (battleResult.winner === 'player1') {
         // Player won!
-        console.log('[MissionBattleUI] Player 1 (YOU) won! Awarding rewards.');
-        Logger.info('[MissionBattleUI] Player 1 won! Awarding rewards.');
+        console.log('[BattleUI] Player 1 (YOU) won! Awarding rewards.');
+        Logger.info('[BattleUI] Player 1 won! Awarding rewards.');
         this.currentBattle.rewards = this.missionManager.completeMission();
         this.battleController.completeBattle('player1');
       } else if (battleResult.winner === 'player2') {
         // Player lost
-        console.log('[MissionBattleUI] Player 2 (OPPONENT) won! No rewards.');
-        Logger.info('[MissionBattleUI] Player 2 won! No rewards.');
+        console.log('[BattleUI] Player 2 (OPPONENT) won! No rewards.');
+        Logger.info('[BattleUI] Player 2 won! No rewards.');
         this.currentBattle.rewards = null;
         this.battleController.completeBattle('player2');
       } else {
         // Tie (both died) - treat as loss for now
-        console.log('[MissionBattleUI] Tie (both died)! No rewards.');
-        Logger.info('[MissionBattleUI] Tie! No rewards.');
+        console.log('[BattleUI] Tie (both died)! No rewards.');
+        Logger.info('[BattleUI] Tie! No rewards.');
         this.currentBattle.rewards = null;
         this.battleController.completeBattle(null);
       }
 
-      console.log(`[MissionBattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}, Rewards object:`, this.currentBattle.rewards);
-      Logger.info(`[MissionBattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}`);
+      console.log(`[BattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}, Rewards object:`, this.currentBattle.rewards);
+      Logger.info(`[BattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}`);
     }
 
     /**
@@ -17204,204 +17726,6 @@ namespace BloomBeasts {
       this.battleController.dispose();
       this.currentBattle = null;
     }
-  }
-
-  // ==================== bloombeasts\AssetCatalog.ts ====================
-
-  /**
-   * Asset Catalog - Dynamically Generated Asset IDs
-   *
-   * This file generates asset IDs from game data (cards, etc.)
-   * Platforms must provide mappings for these IDs to actual assets.
-   *
-   * NO platform-specific code should be in this file!
-   */
-
-
-  /**
-   * Get all card IDs that need image assets
-   */
-  export function getCardImageAssetIds(catalogManager: any): string[] {
-    const cards = catalogManager.getAllCardData();
-    return cards.map((card: any) => card.id);
-  }
-
-  /**
-   * Get affinity icon asset IDs
-   */
-  export function getAffinityIconAssetIds(): string[] {
-    return ['Forest', 'Water', 'Fire', 'Sky'];
-  }
-
-  /**
-   * Get card template asset IDs
-   */
-  export function getCardTemplateAssetIds(): string[] {
-    return ['base-card', 'magic-card', 'trap-card', 'buff-card'];
-  }
-
-  /**
-   * Get card rendering asset IDs (for CardRenderer)
-   * These are the IDs that CardRenderer expects for rendering cards
-   */
-  export function getCardRenderingAssetIds(catalogManager: any): string[] {
-    const cards = catalogManager.getAllCardData();
-    const assetIds: string[] = [
-      'cardsContainer',  // Cards page background
-      'baseCard',        // Base card frame template
-      'magicCard',       // Magic card type overlay
-      'trapCard',        // Trap card type overlay
-      'buffCard',        // Buff card type overlay
-    ];
-
-    // Add individual card artwork for each card
-    for (const card of cards) {
-      if (card.type === 'Bloom') {
-        // Bloom cards use beast artwork
-        assetIds.push(`beast-${card.name}`);
-      } else {
-        // Other cards use card artwork
-        assetIds.push(`card-${card.name}`);
-      }
-    }
-
-    return assetIds;
-  }
-
-  /**
-   * Get habitat template asset IDs (affinity-specific)
-   */
-  export function getHabitatTemplateAssetIds(): string[] {
-    return ['forest-habitat', 'water-habitat', 'fire-habitat', 'sky-habitat'];
-  }
-
-  /**
-   * Get UI icon asset IDs
-   */
-  export function getUIIconAssetIds(): string[] {
-    return ['icon-play', 'icon-cards', 'icon-missions', 'icon-settings', 'icon-shop'];
-  }
-
-  /**
-   * Get UI element asset IDs (buttons, bars, menus, etc.)
-   */
-  export function getUIElementAssetIds(): string[] {
-    return [
-      'standardButton',
-      'greenButton',
-      'sideMenu',
-      'experienceBar',
-      // Menu animation frames (1-10)
-      ...Array.from({ length: 10 }, (_, i) => `menuFrame${i + 1}`)
-    ];
-  }
-
-  /**
-   * Get background image asset IDs
-   */
-  export function getBackgroundAssetIds(): string[] {
-    return ['background', 'menu-bg', 'cards-bg', 'mission-select-bg', 'menu'];
-  }
-
-  /**
-   * Get all image asset IDs
-   */
-  export function getAllImageAssetIds(catalogManager: any): string[] {
-    return [
-      ...getCardImageAssetIds(catalogManager),
-      ...getAffinityIconAssetIds(),
-      ...getCardTemplateAssetIds(),
-      ...getCardRenderingAssetIds(catalogManager),
-      ...getHabitatTemplateAssetIds(),
-      ...getUIIconAssetIds(),
-      ...getUIElementAssetIds(),
-      ...getBackgroundAssetIds()
-    ];
-  }
-
-  /**
-   * Sound Asset IDs - Enum for type safety
-   * These match the IDs in commonAssets.json
-   */
-  export enum SoundAssetIds {
-    // Music
-    BACKGROUND_MUSIC = 'music-background',
-    BATTLE_MUSIC = 'music-battle',
-
-    // SFX
-    MENU_BUTTON_SELECT = 'sfx-menu-button-select',
-    PLAY_CARD = 'sfx-play-card',
-    ATTACK = 'sfx-attack',
-    TRAP_ACTIVATED = 'sfx-trap-card-activated',
-    LOW_HEALTH = 'sfx-low-health',
-    WIN = 'sfx-win',
-    LOSE = 'sfx-lose',
-  }
-
-  /**
-   * Legacy sound ID mappings for backwards compatibility
-   * Maps old string IDs to new SoundAssetIds
-   */
-  export const LEGACY_SOUND_ID_MAP: Record<string, SoundAssetIds> = {
-    // Music (old format)
-    'BackgroundMusic.mp3': SoundAssetIds.BACKGROUND_MUSIC,
-    'BattleMusic.mp3': SoundAssetIds.BATTLE_MUSIC,
-
-    // SFX (old format with paths)
-    'sfx/menuButtonSelect.wav': SoundAssetIds.MENU_BUTTON_SELECT,
-    'sfx/playCard.wav': SoundAssetIds.PLAY_CARD,
-    'sfx/attack.wav': SoundAssetIds.ATTACK,
-    'sfx/trapCardActivated.wav': SoundAssetIds.TRAP_ACTIVATED,
-    'sfx/lowHealthSound.wav': SoundAssetIds.LOW_HEALTH,
-    'sfx/win.wav': SoundAssetIds.WIN,
-    'sfx/lose.wav': SoundAssetIds.LOSE,
-
-    // SFX (old format without extension/path)
-    'menuButtonSelect': SoundAssetIds.MENU_BUTTON_SELECT,
-    'playCard': SoundAssetIds.PLAY_CARD,
-    'attack': SoundAssetIds.ATTACK,
-  };
-
-  /**
-   * Get sound effect asset IDs
-   */
-  export function getSoundEffectAssetIds(): string[] {
-    return [
-      SoundAssetIds.MENU_BUTTON_SELECT,
-      SoundAssetIds.PLAY_CARD,
-      SoundAssetIds.ATTACK,
-      SoundAssetIds.TRAP_ACTIVATED,
-      SoundAssetIds.LOW_HEALTH,
-      SoundAssetIds.WIN,
-      SoundAssetIds.LOSE,
-    ];
-  }
-
-  /**
-   * Get music asset IDs
-   */
-  export function getMusicAssetIds(): string[] {
-    return [
-      SoundAssetIds.BACKGROUND_MUSIC,
-      SoundAssetIds.BATTLE_MUSIC,
-    ];
-  }
-
-  /**
-   * Get all sound asset IDs
-   */
-  export function getAllSoundAssetIds(): string[] {
-    return [
-      ...getSoundEffectAssetIds(),
-      ...getMusicAssetIds()
-    ];
-  }
-
-  /**
-   * Normalize a sound ID (convert legacy IDs to new format)
-   */
-  export function normalizeSoundId(soundId: string): string {
-    return LEGACY_SOUND_ID_MAP[soundId] || soundId;
   }
 
   // ==================== bloombeasts\BloomBeastsGame.ts ====================
@@ -17753,11 +18077,9 @@ namespace BloomBeasts {
     private platformGetImageAsset: (assetId: string) => any;
 
     // Core game systems
-    private gameEngine: GameEngine;
     private missionManager: MissionManager;
     private missionUI: MissionSelectionUI;
-    private battleUI: MissionBattleUI;
-    private cardCollectionManager: CardCollectionManager;
+    private battleUI: BattleUI;
 
     // Sound and display state
     private currentMusic: string | null = null;
@@ -17800,11 +18122,9 @@ namespace BloomBeasts {
       setCatalogManagerForDeckBuilder(config.catalogManager);
 
       // Initialize core systems
-      this.gameEngine = new GameEngine(config.catalogManager);
       this.missionManager = new MissionManager(config.catalogManager);
       this.missionUI = new MissionSelectionUI(this.missionManager);
-      this.battleUI = new MissionBattleUI(this.missionManager, this.gameEngine, this.asyncMethods);
-      this.cardCollectionManager = new CardCollectionManager(config.catalogManager);
+      this.battleUI = new BattleUI(this.missionManager, this.asyncMethods);
       this.battleDisplayManager = new BattleDisplayManager(config.catalogManager);
 
       // Get platform-specific UI methods and add bindingManager to them
@@ -18110,10 +18430,30 @@ namespace BloomBeasts {
      */
     private async initializeStartingCollection(): Promise<void> {
       if (!this.playerData) return;
-      this.playerData.cards.deck = await this.cardCollectionManager.initializeStartingCollection(
-        this.playerData.cards.collected,
-        this.playerData.cards.deck
-      );
+
+      // Get starter deck cards from deck builder
+      const starterDeckList = getStarterDeck('Forest');
+      const starterCards = starterDeckList.cards;
+
+      Logger.info(`[BloomBeastsGame] Initializing starter deck: ${starterDeckList.name} with ${starterCards.length} cards`);
+
+      // Create card instances and add to collection and deck
+      starterCards.forEach((card: any, index: number) => {
+        const instanceId = `${card.id}-${Date.now()}-${index}`;
+
+        // Create minimal card instance
+        const cardInstance: CardInstance = {
+          id: instanceId,
+          cardId: card.id,
+          currentXP: 0, // Start at 0 XP (level 1)
+        };
+
+        this.playerData!.cards.collected.push(cardInstance);
+        this.playerData!.cards.deck.push(cardInstance.id);
+      });
+
+      Logger.info(`[BloomBeastsGame] Starter deck initialized with ${this.playerData.cards.deck.length} cards in deck and ${this.playerData.cards.collected.length} cards collected`);
+
       await this.saveGameData();
     }
 
@@ -18273,7 +18613,7 @@ namespace BloomBeasts {
     /**
      * Handle forfeit - player gives up
      */
-    private handleForfeit(): void {
+    private async handleForfeit(): Promise<void> {
       // Close popup
       this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, null);
       this.triggerRender();
@@ -18281,16 +18621,9 @@ namespace BloomBeasts {
       // Play lose sound
       this.playSfx('sfx-lose');
 
-      // End battle as a loss
-      const currentBattle = this.battleUI.getCurrentBattle();
-      if (currentBattle) {
-        const defeatState = {
-          ...currentBattle,
-          isComplete: true,
-          rewards: null, // No rewards for forfeit
-          mission: currentBattle.mission,
-        };
-        this.handleBattleComplete(defeatState);
+      // Process FORFEIT action through TURBO instead of manual state manipulation
+      if (this.battleUI) {
+        await this.battleUI.processTypedAction(BattleActions.forfeit('player'));
       }
     }
 
@@ -18368,7 +18701,7 @@ namespace BloomBeasts {
       }
 
       // Get player's deck cards
-      const playerDeckCards = this.cardCollectionManager.getPlayerDeckCards(
+      const playerDeckCards = getPlayerDeckCards(
         this.playerData.cards.deck,
         this.playerData.cards.collected
       );
@@ -18388,6 +18721,21 @@ namespace BloomBeasts {
         if (battleState) {
           this.currentBattleId = missionId;
           this.battleStartTime = Date.now();  // Track start time for leaderboard
+
+          // Set up render callback for battle UI to update display during AI turns
+          this.battleUI.setRenderCallback(() => {
+            const currentBattle = this.battleUI.getCurrentBattle();
+            if (currentBattle && !currentBattle.isComplete) {
+              const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
+                currentBattle,
+                null
+              );
+              if (updatedDisplay) {
+                this.UI.bindingManager.setBinding(BindingType.BattleDisplay, updatedDisplay);
+                this.triggerRender();
+              }
+            }
+          });
 
           // Create battle display from battle state
           const battleDisplay = this.battleDisplayManager.createBattleDisplay(
@@ -18513,8 +18861,33 @@ namespace BloomBeasts {
 
     /**
      * Handle battle actions
+     * Converts string actions from UI to typed actions
      */
     private async handleBattleAction(action: string): Promise<void> {
+      // Handle timeout losses - convert to TIMEOUT action
+      if (action === 'timeout-player' || action === 'timeout-opponent') {
+        // Determine which player timed out
+        const timedOutPlayerId = action === 'timeout-player' ? 'player' : 'opponent';
+
+        if (this.battleUI) {
+          // Get current turn player - timeout action must be executed by current player
+          const currentBattle = this.battleUI.getCurrentBattle();
+          if (currentBattle && currentBattle.battleState) {
+            const currentPlayerId = currentBattle.battleState.turboState.turnInfo.currentPlayerId;
+
+            // Process TIMEOUT action through TURBO
+            // Execute as current player, but mark who actually timed out
+            await this.battleUI.processTypedAction({
+              type: 'timeout',
+              playerId: currentPlayerId,
+              timedOutPlayerId,
+              timestamp: Date.now()
+            });
+          }
+        }
+        return;
+      }
+
       // Handle forfeit button - show confirmation popup
       if (action === 'btn-forfeit' || action === 'forfeit') {
         this.showForfeitConfirmation();
@@ -18546,13 +18919,20 @@ namespace BloomBeasts {
         return;
       }
 
+      // Parse string action to typed action
+      const typedAction = parseActionString(action, 'player');
+      if (!typedAction) {
+        Logger.warn(`[BloomBeastsGame] Failed to parse action: ${action}`);
+        return;
+      }
+
       // Play sound effects and show animations based on action type
-      if (action === 'auto-attack-all') {
+      if (typedAction.type === 'auto-attack-all') {
         // Handle auto-attack with animations
         this.playSfx('sfx-attack');
 
         // Process action with animation callback
-        await this.battleUI.processPlayerAction(action, {
+        await this.battleUI.processTypedAction(typedAction, {
           onAttackAnimation: async (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => {
             if (targetType === 'beast' && targetIndex !== undefined) {
               await this.showAttackAnimation('player', attackerIndex, 'opponent', targetIndex);
@@ -18580,24 +18960,39 @@ namespace BloomBeasts {
           }
         }
         return;
-      } else if (action.startsWith('attack-beast-')) {
+      } else if (typedAction.type === 'attack-beast') {
         this.playSfx('sfx-attack');
         // Animation already shown above
-      } else if (action.startsWith('attack-player-')) {
+      } else if (typedAction.type === 'attack-player') {
         this.playSfx('sfx-attack');
         // Extract attacker index and show animation for direct health attack
-        const attackerIndex = parseInt(action.substring('attack-player-'.length), 10);
-        await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
-      } else if (action.startsWith('play-card-')) {
+        if (typedAction.attackerIndex !== undefined) {
+          await this.showAttackAnimation('player', typedAction.attackerIndex, 'health', undefined);
+        }
+      } else if (typedAction.type === 'play-card') {
         this.playSfx('sfx-play-card');
       } else if (action.startsWith('activate-trap-')) {
+        // TODO: Convert activate-trap to typed action
         this.playSfx('sfx-trap-card-activated');
-      } else if (action === 'end-turn') {
+      } else if (typedAction.type === 'end-turn') {
         this.playSfx('sfx-menu-button-select');
       }
 
       // Process action
-      await this.battleUI.processPlayerAction(action, {});
+      await this.battleUI.processTypedAction(typedAction, {});
+
+      // Immediately update display after action to show cards instantly
+      const immediateState = this.battleUI.getCurrentBattle();
+      if (immediateState && !immediateState.isComplete) {
+        const immediateDisplay = this.battleDisplayManager.createBattleDisplay(
+          immediateState,
+          null
+        );
+        if (immediateDisplay) {
+          this.UI.bindingManager.setBinding(BindingType.BattleDisplay, immediateDisplay);
+          this.triggerRender();
+        }
+      }
 
       // Get updated battle state
       const updatedState = this.battleUI.getCurrentBattle();
@@ -18707,17 +19102,17 @@ namespace BloomBeasts {
         // Award XP
         this.addXP(battleState.rewards.xpGained);
 
-        // Award card XP
+        // Award card XP directly to deck cards
         const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
-        this.cardCollectionManager.awardDeckExperience(
+        awardDeckExperience(
           cardXP,
           playerData.cards.deck,
           playerData.cards.collected
         );
 
-        // Add cards to collection
+        // Add cards directly to collection
         battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
-          this.cardCollectionManager.addCardReward(card, playerData.cards.collected, index);
+          addCardReward(card, playerData.cards.collected, index);
         });
 
         // Add coins
@@ -19099,6 +19494,204 @@ namespace BloomBeasts {
     };
   }
 
+  // ==================== bloombeasts\AssetCatalog.ts ====================
+
+  /**
+   * Asset Catalog - Dynamically Generated Asset IDs
+   *
+   * This file generates asset IDs from game data (cards, etc.)
+   * Platforms must provide mappings for these IDs to actual assets.
+   *
+   * NO platform-specific code should be in this file!
+   */
+
+
+  /**
+   * Get all card IDs that need image assets
+   */
+  export function getCardImageAssetIds(catalogManager: any): string[] {
+    const cards = catalogManager.getAllCardData();
+    return cards.map((card: any) => card.id);
+  }
+
+  /**
+   * Get affinity icon asset IDs
+   */
+  export function getAffinityIconAssetIds(): string[] {
+    return ['Forest', 'Water', 'Fire', 'Sky'];
+  }
+
+  /**
+   * Get card template asset IDs
+   */
+  export function getCardTemplateAssetIds(): string[] {
+    return ['base-card', 'magic-card', 'trap-card', 'buff-card'];
+  }
+
+  /**
+   * Get card rendering asset IDs (for CardRenderer)
+   * These are the IDs that CardRenderer expects for rendering cards
+   */
+  export function getCardRenderingAssetIds(catalogManager: any): string[] {
+    const cards = catalogManager.getAllCardData();
+    const assetIds: string[] = [
+      'cardsContainer',  // Cards page background
+      'baseCard',        // Base card frame template
+      'magicCard',       // Magic card type overlay
+      'trapCard',        // Trap card type overlay
+      'buffCard',        // Buff card type overlay
+    ];
+
+    // Add individual card artwork for each card
+    for (const card of cards) {
+      if (card.type === CardType.Beast) {
+        // Beast cards use beast artwork
+        assetIds.push(`beast-${card.name}`);
+      } else {
+        // Other cards use card artwork
+        assetIds.push(`card-${card.name}`);
+      }
+    }
+
+    return assetIds;
+  }
+
+  /**
+   * Get habitat template asset IDs (affinity-specific)
+   */
+  export function getHabitatTemplateAssetIds(): string[] {
+    return ['forest-habitat', 'water-habitat', 'fire-habitat', 'sky-habitat'];
+  }
+
+  /**
+   * Get UI icon asset IDs
+   */
+  export function getUIIconAssetIds(): string[] {
+    return ['icon-play', 'icon-cards', 'icon-missions', 'icon-settings', 'icon-shop'];
+  }
+
+  /**
+   * Get UI element asset IDs (buttons, bars, menus, etc.)
+   */
+  export function getUIElementAssetIds(): string[] {
+    return [
+      'standardButton',
+      'greenButton',
+      'sideMenu',
+      'experienceBar',
+      // Menu animation frames (1-10)
+      ...Array.from({ length: 10 }, (_, i) => `menuFrame${i + 1}`)
+    ];
+  }
+
+  /**
+   * Get background image asset IDs
+   */
+  export function getBackgroundAssetIds(): string[] {
+    return ['background', 'menu-bg', 'cards-bg', 'mission-select-bg', 'menu'];
+  }
+
+  /**
+   * Get all image asset IDs
+   */
+  export function getAllImageAssetIds(catalogManager: any): string[] {
+    return [
+      ...getCardImageAssetIds(catalogManager),
+      ...getAffinityIconAssetIds(),
+      ...getCardTemplateAssetIds(),
+      ...getCardRenderingAssetIds(catalogManager),
+      ...getHabitatTemplateAssetIds(),
+      ...getUIIconAssetIds(),
+      ...getUIElementAssetIds(),
+      ...getBackgroundAssetIds()
+    ];
+  }
+
+  /**
+   * Sound Asset IDs - Enum for type safety
+   * These match the IDs in commonAssets.json
+   */
+  export enum SoundAssetIds {
+    // Music
+    BACKGROUND_MUSIC = 'music-background',
+    BATTLE_MUSIC = 'music-battle',
+
+    // SFX
+    MENU_BUTTON_SELECT = 'sfx-menu-button-select',
+    PLAY_CARD = 'sfx-play-card',
+    ATTACK = 'sfx-attack',
+    TRAP_ACTIVATED = 'sfx-trap-card-activated',
+    LOW_HEALTH = 'sfx-low-health',
+    WIN = 'sfx-win',
+    LOSE = 'sfx-lose',
+  }
+
+  /**
+   * Legacy sound ID mappings for backwards compatibility
+   * Maps old string IDs to new SoundAssetIds
+   */
+  export const LEGACY_SOUND_ID_MAP: Record<string, SoundAssetIds> = {
+    // Music (old format)
+    'BackgroundMusic.mp3': SoundAssetIds.BACKGROUND_MUSIC,
+    'BattleMusic.mp3': SoundAssetIds.BATTLE_MUSIC,
+
+    // SFX (old format with paths)
+    'sfx/menuButtonSelect.wav': SoundAssetIds.MENU_BUTTON_SELECT,
+    'sfx/playCard.wav': SoundAssetIds.PLAY_CARD,
+    'sfx/attack.wav': SoundAssetIds.ATTACK,
+    'sfx/trapCardActivated.wav': SoundAssetIds.TRAP_ACTIVATED,
+    'sfx/lowHealthSound.wav': SoundAssetIds.LOW_HEALTH,
+    'sfx/win.wav': SoundAssetIds.WIN,
+    'sfx/lose.wav': SoundAssetIds.LOSE,
+
+    // SFX (old format without extension/path)
+    'menuButtonSelect': SoundAssetIds.MENU_BUTTON_SELECT,
+    'playCard': SoundAssetIds.PLAY_CARD,
+    'attack': SoundAssetIds.ATTACK,
+  };
+
+  /**
+   * Get sound effect asset IDs
+   */
+  export function getSoundEffectAssetIds(): string[] {
+    return [
+      SoundAssetIds.MENU_BUTTON_SELECT,
+      SoundAssetIds.PLAY_CARD,
+      SoundAssetIds.ATTACK,
+      SoundAssetIds.TRAP_ACTIVATED,
+      SoundAssetIds.LOW_HEALTH,
+      SoundAssetIds.WIN,
+      SoundAssetIds.LOSE,
+    ];
+  }
+
+  /**
+   * Get music asset IDs
+   */
+  export function getMusicAssetIds(): string[] {
+    return [
+      SoundAssetIds.BACKGROUND_MUSIC,
+      SoundAssetIds.BATTLE_MUSIC,
+    ];
+  }
+
+  /**
+   * Get all sound asset IDs
+   */
+  export function getAllSoundAssetIds(): string[] {
+    return [
+      ...getSoundEffectAssetIds(),
+      ...getMusicAssetIds()
+    ];
+  }
+
+  /**
+   * Normalize a sound ID (convert legacy IDs to new format)
+   */
+  export function normalizeSoundId(soundId: string): string {
+    return LEGACY_SOUND_ID_MAP[soundId] || soundId;
+  }
+
   // ==================== bloombeasts\AssetCatalogManager.ts ====================
 
   /**
@@ -19113,8 +19706,72 @@ namespace BloomBeasts {
    * - Horizon: See deployments/horizon/src/AssetCatalogLoader.ts for fetchAsData()-based loading
    */
 
+  /**
+   * Type of asset reference (image, audio, animation)
+   */
+  export enum AssetReferenceType {
+    Image = 'image',
+    Audio = 'audio',
+    Animation = 'animation'
+  }
+
+  /**
+   * Type of asset entry (beast, buff, trap, magic, habitat, mission, ui)
+   */
+  export enum AssetEntryType {
+    Beast = 'beast',
+    Buff = 'buff',
+    Trap = 'trap',
+    Magic = 'magic',
+    Habitat = 'habitat',
+    Mission = 'mission',
+    UI = 'ui'
+  }
+
+  /**
+   * UI asset category types
+   */
+  export enum UICategory {
+    Frame = 'frame',
+    Button = 'button',
+    Background = 'background',
+    Icon = 'icon',
+    Chest = 'chest',
+    Container = 'container',
+    CardTemplate = 'card-template',
+    Upgrade = 'upgrade',
+    Other = 'other'
+  }
+
+  /**
+   * Catalog category types (for organizing asset catalogs)
+   */
+  export enum CatalogCategory {
+    Fire = 'fire',
+    Forest = 'forest',
+    Sky = 'sky',
+    Water = 'water',
+    Buff = 'buff',
+    Trap = 'trap',
+    Magic = 'magic',
+    Common = 'common',
+    Boss = 'boss'
+  }
+
+  /**
+   * Affinity types (lowercase for JSON compatibility)
+   * Maps to engine/types/core.ts Affinity enum
+   */
+  export enum AffinityLowercase {
+    Fire = 'fire',
+    Forest = 'forest',
+    Sky = 'sky',
+    Water = 'water',
+    Boss = 'boss'
+  }
+
   export interface AssetReference {
-    type: 'image' | 'audio' | 'animation';
+    type: AssetReferenceType;
     horizonAssetId?: string; // Optional - only for Horizon deployment
     path: string; // Relative path from project root
     description?: string; // Optional description for documentation
@@ -19122,9 +19779,9 @@ namespace BloomBeasts {
 
   export interface CardAssetEntry {
     id: string;
-    type: 'beast' | 'buff' | 'trap' | 'magic' | 'habitat';
-    cardType?: 'Bloom' | 'Magic' | 'Trap' | 'Buff'; // Game engine card type
-    affinity?: 'fire' | 'forest' | 'sky' | 'water' | 'boss'; // For beasts and habitats
+    type: AssetEntryType.Beast | AssetEntryType.Buff | AssetEntryType.Trap | AssetEntryType.Magic | AssetEntryType.Habitat;
+    cardType?: 'Beast' | 'Magic' | 'Trap' | 'Buff'; // Game engine card type
+    affinity?: AffinityLowercase; // For beasts and habitats
     data: {
       id: string;
       name: string;
@@ -19142,8 +19799,8 @@ namespace BloomBeasts {
 
   export interface MissionAssetEntry {
     id: string;
-    type: 'mission';
-    affinity?: 'fire' | 'forest' | 'sky' | 'water' | 'boss';
+    type: AssetEntryType.Mission;
+    affinity?: AffinityLowercase;
     name: string;
     description: string;
     assets: AssetReference[];
@@ -19151,8 +19808,8 @@ namespace BloomBeasts {
 
   export interface UIAssetEntry {
     id: string;
-    type: 'ui';
-    category: 'frame' | 'button' | 'background' | 'icon' | 'chest' | 'container' | 'card-template' | 'upgrade' | 'other';
+    type: AssetEntryType.UI;
+    category: UICategory;
     name: string;
     description?: string;
     assets: AssetReference[];
@@ -19160,10 +19817,14 @@ namespace BloomBeasts {
 
   export interface AssetCatalog {
     version: string;
-    category: 'fire' | 'forest' | 'sky' | 'water' | 'buff' | 'trap' | 'magic' | 'common' | 'boss';
+    category: CatalogCategory;
     description: string;
     data: (CardAssetEntry | MissionAssetEntry | UIAssetEntry)[];
   }
+
+  // Note: AssetCatalogManager now uses enums for type safety while maintaining
+  // compatibility with JSON catalog files through string enum values.
+  // The catalogs use lowercase enums that map to the JSON structure.
 
   /**
    * AssetCatalogManager - Manages loading and querying of asset catalogs
@@ -19224,13 +19885,13 @@ namespace BloomBeasts {
      * Get all assets of a specific type
      */
     getAssetsByType<T extends CardAssetEntry | MissionAssetEntry | UIAssetEntry>(
-      type: 'beast' | 'buff' | 'trap' | 'magic' | 'habitat' | 'mission' | 'ui'
+      type: AssetEntryType
     ): T[] {
       const results: T[] = [];
       this.assetIndex.forEach(entry => {
-        if (entry.type === type || (entry.type === 'ui' && type === 'ui')) {
+        if (entry.type === type || (entry.type === AssetEntryType.UI && type === AssetEntryType.UI)) {
           results.push(entry as T);
-        } else if (type !== 'mission' && type !== 'ui' && (entry as CardAssetEntry).type === type) {
+        } else if (type !== AssetEntryType.Mission && type !== AssetEntryType.UI && (entry as CardAssetEntry).type === type) {
           results.push(entry as T);
         }
       });
@@ -19240,10 +19901,10 @@ namespace BloomBeasts {
     /**
      * Get all cards by affinity
      */
-    getCardsByAffinity(affinity: 'fire' | 'forest' | 'sky' | 'water'): CardAssetEntry[] {
+    getCardsByAffinity(affinity: AffinityLowercase): CardAssetEntry[] {
       const results: CardAssetEntry[] = [];
       this.assetIndex.forEach(entry => {
-        if (entry.type === 'beast' || entry.type === 'habitat') {
+        if (entry.type === AssetEntryType.Beast || entry.type === AssetEntryType.Habitat) {
           const card = entry as CardAssetEntry;
           if (card.affinity === affinity) {
             results.push(card);
@@ -19256,7 +19917,7 @@ namespace BloomBeasts {
     /**
      * Get Horizon asset ID for a given asset
      */
-    getHorizonAssetId(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
+    getHorizonAssetId(assetId: string, assetType: AssetReferenceType = AssetReferenceType.Image): string | undefined {
       const asset = this.getAsset(assetId);
       if (!asset) return undefined;
 
@@ -19267,7 +19928,7 @@ namespace BloomBeasts {
     /**
      * Get local path for a given asset
      */
-    getAssetPath(assetId: string, assetType: 'image' | 'audio' = 'image'): string | undefined {
+    getAssetPath(assetId: string, assetType: AssetReferenceType = AssetReferenceType.Image): string | undefined {
       const asset = this.getAsset(assetId);
       if (!asset) return undefined;
 
@@ -19295,9 +19956,9 @@ namespace BloomBeasts {
       this.assetIndex.forEach((entry, id) => {
         entry.assets.forEach(asset => {
           // Only use the first asset of each type for the entry
-          if (asset.type === 'image' && !images[id]) {
+          if (asset.type === AssetReferenceType.Image && !images[id]) {
             images[id] = asset.path;
-          } else if (asset.type === 'audio' && !sounds[id]) {
+          } else if (asset.type === AssetReferenceType.Audio && !sounds[id]) {
             sounds[id] = asset.path;
           }
         });
@@ -19320,9 +19981,9 @@ namespace BloomBeasts {
         entry.assets.forEach(asset => {
           if (asset.horizonAssetId) {
             // Only use the first asset of each type for the entry
-            if (asset.type === 'image' && !images[id]) {
+            if (asset.type === AssetReferenceType.Image && !images[id]) {
               images[id] = asset.horizonAssetId;
-            } else if (asset.type === 'audio' && !sounds[id]) {
+            } else if (asset.type === AssetReferenceType.Audio && !sounds[id]) {
               sounds[id] = asset.horizonAssetId;
             }
           }
@@ -19355,14 +20016,16 @@ namespace BloomBeasts {
 
       this.assetIndex.forEach(entry => {
         // Only include card entries (beast, magic, trap, buff, habitat)
-        if (entry.type === 'beast' || entry.type === 'magic' ||
-            entry.type === 'trap' || entry.type === 'buff' || entry.type === 'habitat') {
+        const isCardEntry = entry.type === AssetEntryType.Beast || entry.type === AssetEntryType.Magic ||
+            entry.type === AssetEntryType.Trap || entry.type === AssetEntryType.Buff || entry.type === AssetEntryType.Habitat;
+
+        if (isCardEntry) {
           const cardEntry = entry as CardAssetEntry;
           // Add rarity for reward system (same logic as old getAllCards)
           const cardData: any = { ...cardEntry.data };
 
-          if (cardEntry.type === 'beast') {
-            // Assign rarity based on nectar cost
+          if (cardEntry.type === AssetEntryType.Beast) {
+            // Assign rarity based on energy cost
             const cost = cardData.cost || 0;
             if (cost >= 5) {
               cardData.rarity = 'rare';
@@ -19395,7 +20058,7 @@ namespace BloomBeasts {
      * Get all buff cards from the catalog
      */
     getAllBuffCards(): any[] {
-      const buffEntries = this.getAssetsByType('buff');
+      const buffEntries = this.getAssetsByType(AssetEntryType.Buff);
       return buffEntries.map((entry: any) => entry.data);
     }
 
@@ -19421,19 +20084,19 @@ namespace BloomBeasts {
 
   export const bossAssets: AssetCatalog = {
     version: "1.0.0",
-    category: "boss",
+    category: CatalogCategory.Boss,
     description: "Boss cards and assets",
     data: [
       {
         id: "cluck-norris",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "boss",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Boss,
         data: {
           id: "cluck-norris",
           name: "Cluck Norris",
-          type: "Bloom",
-          affinity: "Boss",
+          type: CardType.Beast,
+          affinity: Affinity.Boss,
           cost: 0,
           baseAttack: 99,
           baseHealth: 99,
@@ -19462,7 +20125,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1358389912362012",
             path: "assets/images/cards_boss_cluck-norris.png"
           }
@@ -19470,12 +20133,12 @@ namespace BloomBeasts {
       },
       {
         id: "boss-icon",
-        type: "ui",
-        category: "icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
         name: "Boss Icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "808398125136052",
             path: "assets/images/affinity_boss-icon.png"
           }
@@ -19483,13 +20146,13 @@ namespace BloomBeasts {
       },
       {
         id: "boss-mission",
-        type: "mission",
-        affinity: "boss",
+        type: AssetEntryType.Mission,
+        affinity: AffinityLowercase.Boss,
         name: "Cluck Norris",
         description: "Boss mission",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1358389912362012",
             path: "assets/images/cards_boss-mission.png"
           }
@@ -19509,17 +20172,17 @@ namespace BloomBeasts {
 
   export const buffAssets: AssetCatalog = {
     version: "1.0.0",
-    category: "buff",
+    category: CatalogCategory.Buff,
     description: "Buff cards and assets",
     data: [
       {
         id: "battle-fury",
-        type: "buff",
+        type: AssetEntryType.Buff,
         cardType: "Buff",
         data: {
           id: "battle-fury",
           name: "Battle Fury",
-          type: "Buff",
+          type: CardType.Buff,
           cost: 3,
           abilities: [
             {
@@ -19539,7 +20202,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1514404306279605",
             path: "assets/images/cards_buff_battle-fury.png"
           }
@@ -19547,12 +20210,12 @@ namespace BloomBeasts {
       },
       {
         id: "mystic-shield",
-        type: "buff",
+        type: AssetEntryType.Buff,
         cardType: "Buff",
         data: {
           id: "mystic-shield",
           name: "Mystic Shield",
-          type: "Buff",
+          type: CardType.Buff,
           cost: 3,
           abilities: [
             {
@@ -19572,7 +20235,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "787965707330770",
             path: "assets/images/cards_buff_mystic-shield.png"
           }
@@ -19580,14 +20243,14 @@ namespace BloomBeasts {
       },
       {
         id: "natures-blessing",
-        type: "buff",
+        type: AssetEntryType.Buff,
         cardType: "Buff",
-        affinity: "forest",
+        affinity: AffinityLowercase.Forest,
         data: {
           id: "natures-blessing",
           name: "Nature's Blessing",
-          type: "Buff",
-          affinity: "Forest",
+          type: CardType.Buff,
+          affinity: Affinity.Forest,
           cost: 4,
           abilities: [
             {
@@ -19605,7 +20268,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "4100038783597004",
             path: "assets/images/cards_buff_natures-blessing.png"
           }
@@ -19613,14 +20276,14 @@ namespace BloomBeasts {
       },
       {
         id: "swift-wind",
-        type: "buff",
+        type: AssetEntryType.Buff,
         cardType: "Buff",
-        affinity: "sky",
+        affinity: AffinityLowercase.Sky,
         data: {
           id: "swift-wind",
           name: "Swift Wind",
-          type: "Buff",
-          affinity: "Sky",
+          type: CardType.Buff,
+          affinity: Affinity.Sky,
           cost: 2,
           abilities: [
             {
@@ -19630,7 +20293,7 @@ namespace BloomBeasts {
                 {
                   type: EffectType.GainResource,
                   target: AbilityTarget.Player,
-                  resource: ResourceType.Nectar,
+                  resource: ResourceType.Energy,
                   value: 1
                 }
               ]
@@ -19639,7 +20302,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "657351040536713",
             path: "assets/images/cards_buff_swift-wind.png"
           }
@@ -19659,18 +20322,18 @@ namespace BloomBeasts {
 
   export const commonAssets: AssetCatalog = {
     version: "1.0.0",
-    category: "common",
+    category: CatalogCategory.Common,
     description: "Common UI elements, backgrounds, and shared assets",
     data: [
       {
         id: "background",
-        type: "ui",
-        category: "background",
+        type: AssetEntryType.UI,
+        category: UICategory.Background,
         name: "Main Background",
         description: "Main game background",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1341821670869568",
             path: "assets/images/bg_background.png"
           }
@@ -19678,13 +20341,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu",
-        type: "ui",
-        category: "background",
+        type: AssetEntryType.UI,
+        category: UICategory.Background,
         name: "Menu Background",
         description: "Menu screen background",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1341821670869568",
             path: "assets/images/misc_menu.png"
           }
@@ -19692,13 +20355,13 @@ namespace BloomBeasts {
       },
       {
         id: "playboard",
-        type: "ui",
-        category: "background",
+        type: AssetEntryType.UI,
+        category: UICategory.Background,
         name: "Playboard",
         description: "Battle playboard background",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "802255839066806",
             path: "assets/images/misc_playboard.png"
           }
@@ -19706,13 +20369,13 @@ namespace BloomBeasts {
       },
       {
         id: "cards-container",
-        type: "ui",
-        category: "container",
+        type: AssetEntryType.UI,
+        category: UICategory.Container,
         name: "Cards Container",
         description: "Cards collection screen container",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1360422829007789",
             path: "assets/images/misc_cards-container.png"
           }
@@ -19720,13 +20383,13 @@ namespace BloomBeasts {
       },
       {
         id: "mission-container",
-        type: "ui",
-        category: "container",
+        type: AssetEntryType.UI,
+        category: UICategory.Container,
         name: "Mission Container",
         description: "Mission selection container",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "828431839717203",
             path: "assets/images/misc_mission-container.png"
           }
@@ -19734,13 +20397,13 @@ namespace BloomBeasts {
       },
       {
         id: "standard-button",
-        type: "ui",
-        category: "button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
         name: "Standard Button",
         description: "Default button style (175x72)",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1976060856578244",
             path: "assets/images/ui_button_standard_default.png"
           }
@@ -19748,13 +20411,13 @@ namespace BloomBeasts {
       },
       {
         id: "green-button",
-        type: "ui",
-        category: "button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
         name: "Green Button",
         description: "Green variant button (175x72)",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "3694695314172287",
             path: "assets/images/ui_button_standard_green.png"
           }
@@ -19762,13 +20425,13 @@ namespace BloomBeasts {
       },
       {
         id: "red-button",
-        type: "ui",
-        category: "button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
         name: "Red Button",
         description: "Red variant button (175x72)",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1607838330179321",
             path: "assets/images/ui_button_standard_red.png"
           }
@@ -19776,13 +20439,13 @@ namespace BloomBeasts {
       },
       {
         id: "yellow-button",
-        type: "ui",
-        category: "button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
         name: "Yellow Button",
         description: "Yellow variant button (175x72)",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1977156269826109",
             path: "assets/images/ui_button_standard_yellow.png"
           }
@@ -19790,13 +20453,13 @@ namespace BloomBeasts {
       },
       {
         id: "long-green-button",
-        type: "ui",
-        category: "button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
         name: "Long Green Button",
         description: "Long green button variant",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1842026620010613",
             path: "assets/images/misc_long-green-button.png"
           }
@@ -19804,27 +20467,27 @@ namespace BloomBeasts {
       },
       {
         id: "small-button",
-        type: "ui",
-        category: "button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
         name: "Small Button",
         description: "Small button variant (89x89)",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "726833263789403",
-            path: "assets/images/ui_button_small.png"
+            path: "assets/images/ui_button_small_default.png"
           }
         ]
       },
       {
         id: "container-side-menu",
-        type: "ui",
-        category: "container",
+        type: AssetEntryType.UI,
+        category: UICategory.Container,
         name: "Side Menu Container",
         description: "Side menu panel container (225x497)",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "4238983773013268",
             path: "assets/images/ui_container_side-menu.png"
           }
@@ -19832,13 +20495,13 @@ namespace BloomBeasts {
       },
       {
         id: "player-stats-container",
-        type: "ui",
-        category: "container",
+        type: AssetEntryType.UI,
+        category: UICategory.Container,
         name: "Player Stats Container",
         description: "Container for player stats display",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2596874604027595",
             path: "assets/images/ui_container_player-stats.png"
           }
@@ -19846,13 +20509,13 @@ namespace BloomBeasts {
       },
       {
         id: "experience-bar",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Experience Bar",
         description: "XP progress bar",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1151343029773719",
             path: "assets/images/cards_experience-bar.png"
           }
@@ -19860,27 +20523,27 @@ namespace BloomBeasts {
       },
       {
         id: "base-card",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Base Card Frame",
         description: "Default card frame template",
         assets: [
           {
-            type: "image",
-            horizonAssetId: "1559448588566044",
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1549655239820199",
             path: "assets/images/cards_base-card.png"
           }
         ]
       },
       {
         id: "magic-card",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Magic Card Frame",
         description: "Magic card frame template",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2581420452257174",
             path: "assets/images/cards_magic-card.png"
           }
@@ -19888,13 +20551,13 @@ namespace BloomBeasts {
       },
       {
         id: "magic-card-playboard",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Magic Card Playboard",
         description: "Magic card on playboard",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2991234734402522",
             path: "assets/images/cards_magic-card-playboard.png"
           }
@@ -19902,13 +20565,13 @@ namespace BloomBeasts {
       },
       {
         id: "trap-card",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Trap Card Frame",
         description: "Trap card frame template",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "3122347641277336",
             path: "assets/images/cards_trap-card.png"
           }
@@ -19916,13 +20579,13 @@ namespace BloomBeasts {
       },
       {
         id: "trap-card-playboard",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Trap Card Playboard",
         description: "Trap card on playboard",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1724877334843483",
             path: "assets/images/cards_trap-card-playboard.png"
           }
@@ -19930,13 +20593,13 @@ namespace BloomBeasts {
       },
       {
         id: "buff-card",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Buff Card Frame",
         description: "Buff card frame template",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "3182045765293902",
             path: "assets/images/cards_buff-card.png"
           }
@@ -19944,13 +20607,13 @@ namespace BloomBeasts {
       },
       {
         id: "buff-card-playboard",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Buff Card Playboard",
         description: "Buff card on playboard",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2628573627486992",
             path: "assets/images/cards_buff-card-playboard.png"
           }
@@ -19958,13 +20621,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu-frame-1",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Menu Frame 1",
         description: "Menu animation frame 1",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1186506656766961",
             path: "assets/images/menu_frame-1.png"
           }
@@ -19972,13 +20635,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu-frame-2",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Menu Frame 2",
         description: "Menu animation frame 2",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "816845231314389",
             path: "assets/images/menu_frame-2.png"
           }
@@ -19986,13 +20649,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu-frame-3",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Menu Frame 3",
         description: "Menu animation frame 3",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2012665279305528",
             path: "assets/images/menu_frame-3.png"
           }
@@ -20000,13 +20663,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu-frame-4",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Menu Frame 4",
         description: "Menu animation frame 4",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "803392912558689",
             path: "assets/images/menu_frame-4.png"
           }
@@ -20014,13 +20677,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu-frame-5",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Menu Frame 5",
         description: "Menu animation frame 5",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1141897134114548",
             path: "assets/images/menu_frame-5.png"
           }
@@ -20028,13 +20691,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu-frame-6",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Menu Frame 6",
         description: "Menu animation frame 6",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1962288661350650",
             path: "assets/images/menu_frame-6.png"
           }
@@ -20042,13 +20705,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu-frame-7",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Menu Frame 7",
         description: "Menu animation frame 7",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "781356411339489",
             path: "assets/images/menu_frame-7.png"
           }
@@ -20056,13 +20719,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu-frame-8",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Menu Frame 8",
         description: "Menu animation frame 8",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "844985438202497",
             path: "assets/images/menu_frame-8.png"
           }
@@ -20070,13 +20733,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu-frame-9",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Menu Frame 9",
         description: "Menu animation frame 9",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1340487887747224",
             path: "assets/images/menu_frame-9.png"
           }
@@ -20084,13 +20747,13 @@ namespace BloomBeasts {
       },
       {
         id: "menu-frame-10",
-        type: "ui",
-        category: "frame",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
         name: "Menu Frame 10",
         description: "Menu animation frame 10",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1866001547625853",
             path: "assets/images/menu_frame-10.png"
           }
@@ -20098,13 +20761,13 @@ namespace BloomBeasts {
       },
       {
         id: "icon-attack",
-        type: "ui",
-        category: "icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
         name: "Attack Icon",
         description: "Attack indicator icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "818969787355942",
             path: "assets/images/icon_attack.png"
           }
@@ -20112,13 +20775,13 @@ namespace BloomBeasts {
       },
       {
         id: "icon-coin",
-        type: "ui",
-        category: "icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
         name: "Coin Icon",
         description: "Coin currency icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "4103662979871750",
             path: "assets/images/icon_coin.png"
           }
@@ -20126,13 +20789,13 @@ namespace BloomBeasts {
       },
       {
         id: "icon-serum",
-        type: "ui",
-        category: "icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
         name: "Serum Icon",
         description: "Serum item icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1152818320384366",
             path: "assets/images/icon_serum.png"
           }
@@ -20141,13 +20804,13 @@ namespace BloomBeasts {
       // Counter icons removed - counter system deprecated
       {
         id: "lose-image",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Lose Image",
         description: "Game over/lose screen image",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2155452308310801",
             path: "assets/images/misc_lose-image.png"
           }
@@ -20155,13 +20818,13 @@ namespace BloomBeasts {
       },
       {
         id: "sfx-menu-button-select",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Menu Button Select SFX",
         description: "Sound for menu button selection",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "3481449071995903",
             path: "assets/audio/sfx_menu-button-select.wav"
           }
@@ -20169,13 +20832,13 @@ namespace BloomBeasts {
       },
       {
         id: "sfx-play-card",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Play Card SFX",
         description: "Sound for playing a card",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "673115269189210",
             path: "assets/audio/sfx_play-card.wav"
           }
@@ -20183,13 +20846,13 @@ namespace BloomBeasts {
       },
       {
         id: "sfx-attack",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Attack SFX",
         description: "Sound for attack action",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "1718962638781724",
             path: "assets/audio/sfx_attack.wav"
           }
@@ -20197,13 +20860,13 @@ namespace BloomBeasts {
       },
       {
         id: "sfx-trap-card-activated",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Trap Activated SFX",
         description: "Sound for trap activation",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "1180175093968172",
             path: "assets/audio/sfx_trap-card-activated.wav"
           }
@@ -20211,13 +20874,13 @@ namespace BloomBeasts {
       },
       {
         id: "sfx-low-health",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Low Health SFX",
         description: "Warning sound for low health",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "828372796357589",
             path: "assets/audio/sfx_low-health.wav"
           }
@@ -20225,13 +20888,13 @@ namespace BloomBeasts {
       },
       {
         id: "sfx-win",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Win SFX",
         description: "Victory sound effect",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "4241684452770634",
             path: "assets/audio/sfx_win.wav"
           }
@@ -20239,13 +20902,13 @@ namespace BloomBeasts {
       },
       {
         id: "sfx-lose",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Lose SFX",
         description: "Defeat sound effect",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "1323050035978393",
             path: "assets/audio/sfx_lose.wav"
           }
@@ -20253,13 +20916,13 @@ namespace BloomBeasts {
       },
       {
         id: "sfx-upgrade",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Upgrade SFX",
         description: "Sound for purchasing upgrades",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "PLACEHOLDER_ID",
             path: "assets/audio/sfx_upgrade.wav"
           }
@@ -20267,13 +20930,13 @@ namespace BloomBeasts {
       },
       {
         id: "sfx-upgrade-rooster",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Upgrade Rooster SFX",
         description: "Sound for purchasing rooster upgrade",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "PLACEHOLDER_ID",
             path: "assets/audio/sfx_upgrade_rooster.wav"
           }
@@ -20281,13 +20944,13 @@ namespace BloomBeasts {
       },
       {
         id: "music-background",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Background Music",
         description: "Main background music",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "802288129374217",
             path: "assets/audio/music_background.mp3"
           }
@@ -20295,13 +20958,13 @@ namespace BloomBeasts {
       },
       {
         id: "music-battle",
-        type: "ui",
-        category: "other",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
         name: "Battle Music",
         description: "Battle scene music",
         assets: [
           {
-            type: "audio",
+            type: AssetReferenceType.Audio,
             horizonAssetId: "668023946362739",
             path: "assets/audio/music_battle.mp3"
           }
@@ -20309,13 +20972,13 @@ namespace BloomBeasts {
       },
       {
         id: "upgrade-coin-boost",
-        type: "ui",
-        category: "upgrade",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
         name: "Coin Boost Upgrade",
         description: "Coin boost upgrade icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1059820639487262",
             path: "assets/images/upgrade_coin-boost.png"
           }
@@ -20323,13 +20986,13 @@ namespace BloomBeasts {
       },
       {
         id: "upgrade-container-card",
-        type: "ui",
-        category: "upgrade",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
         name: "Container Card Upgrade",
         description: "Container card upgrade icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "3158472954326260",
             path: "assets/images/upgrade_container-card.png"
           }
@@ -20337,13 +21000,13 @@ namespace BloomBeasts {
       },
       {
         id: "upgrade-exp-boost",
-        type: "ui",
-        category: "upgrade",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
         name: "Experience Boost Upgrade",
         description: "Experience boost upgrade icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "662687460055242",
             path: "assets/images/upgrade_exp-boost.png"
           }
@@ -20351,13 +21014,13 @@ namespace BloomBeasts {
       },
       {
         id: "upgrade-luck-boost",
-        type: "ui",
-        category: "upgrade",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
         name: "Luck Boost Upgrade",
         description: "Luck boost upgrade icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2054672501734665",
             path: "assets/images/upgrade_luck-boost.png"
           }
@@ -20365,13 +21028,13 @@ namespace BloomBeasts {
       },
       {
         id: "upgrade-rooster",
-        type: "ui",
-        category: "upgrade",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
         name: "Rooster Upgrade",
         description: "Rooster upgrade icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1504708944108154",
             path: "assets/images/upgrade_rooster.png"
           }
@@ -20379,13 +21042,13 @@ namespace BloomBeasts {
       },
       {
         id: "upgrade-upgraded-box",
-        type: "ui",
-        category: "upgrade",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
         name: "Upgraded Box",
         description: "Upgraded box icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "814844064745019",
             path: "assets/images/upgrade_upgraded-box.png"
           }
@@ -20403,19 +21066,19 @@ namespace BloomBeasts {
 
   export const fireAssets: AssetCatalog = {
     version: "1.0.0",
-    category: "fire",
+    category: CatalogCategory.Fire,
     description: "Fire affinity cards and assets",
     data: [
       {
         id: "blazefinch",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "fire",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Fire,
         data: {
           id: "blazefinch",
           name: "Blazefinch",
-          type: "Bloom",
-          affinity: "Fire",
+          type: CardType.Beast,
+          affinity: Affinity.Fire,
           cost: 1,
           baseAttack: 1,
           baseHealth: 2,
@@ -20434,7 +21097,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "3218250765004566",
             path: "assets/images/cards_fire_blazefinch.png"
           }
@@ -20442,14 +21105,14 @@ namespace BloomBeasts {
       },
       {
         id: "cinder-pup",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "fire",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Fire,
         data: {
           id: "cinder-pup",
           name: "Cinder Pup",
-          type: "Bloom",
-          affinity: "Fire",
+          type: CardType.Beast,
+          affinity: Affinity.Fire,
           cost: 2,
           baseAttack: 2,
           baseHealth: 3,
@@ -20460,7 +21123,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.DealDamage,
-                  target: AbilityTarget.Target,
+                  target: AbilityTarget.AttackedEnemy,
                   value: 1
                 }
               ]
@@ -20469,7 +21132,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "913214814369510",
             path: "assets/images/cards_fire_cinder-pup.png"
           }
@@ -20477,14 +21140,14 @@ namespace BloomBeasts {
       },
       {
         id: "charcoil",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "fire",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Fire,
         data: {
           id: "charcoil",
           name: "Charcoil",
-          type: "Bloom",
-          affinity: "Fire",
+          type: CardType.Beast,
+          affinity: Affinity.Fire,
           cost: 2,
           baseAttack: 3,
           baseHealth: 4,
@@ -20504,7 +21167,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "785856391096811",
             path: "assets/images/cards_fire_charcoil.png"
           }
@@ -20512,14 +21175,14 @@ namespace BloomBeasts {
       },
       {
         id: "magmite",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "fire",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Fire,
         data: {
           id: "magmite",
           name: "Magmite",
-          type: "Bloom",
-          affinity: "Fire",
+          type: CardType.Beast,
+          affinity: Affinity.Fire,
           cost: 3,
           baseAttack: 4,
           baseHealth: 6,
@@ -20540,7 +21203,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "25339017082348952",
             path: "assets/images/cards_fire_magmite.png"
           }
@@ -20548,13 +21211,13 @@ namespace BloomBeasts {
       },
       {
         id: "volcanic-scar",
-        type: "habitat",
-        affinity: "fire",
+        type: AssetEntryType.Habitat,
+        affinity: AffinityLowercase.Fire,
         data: {
           id: "volcanic-scar",
           name: "Volcanic Scar",
-          type: "Habitat",
-          affinity: "Fire",
+          type: CardType.Habitat,
+          affinity: Affinity.Fire,
           cost: 1,
           abilities: [
             {
@@ -20576,17 +21239,17 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1878791053043603",
             path: "assets/images/cards_fire_volcanic-scar.png"
           },
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1574158663591082",
             path: "assets/images/cards_fire_habitat-card.png"
           },
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1863280224222620",
             path: "assets/images/cards_fire_habitat-card-playboard.png"
           }
@@ -20594,13 +21257,13 @@ namespace BloomBeasts {
       },
       {
         id: "fire-mission",
-        type: "mission",
-        affinity: "fire",
+        type: AssetEntryType.Mission,
+        affinity: AffinityLowercase.Fire,
         name: "Fire Mission",
         description: "Fire affinity mission",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "795064546836933",
             path: "assets/images/cards_fire_fire-mission.png"
           }
@@ -20608,12 +21271,12 @@ namespace BloomBeasts {
       },
       {
         id: "fire-chest-closed",
-        type: "ui",
-        category: "chest",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
         name: "Fire Chest Closed",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1168387145201364",
             path: "assets/images/chest_fire-chest-closed.png"
           }
@@ -20621,12 +21284,12 @@ namespace BloomBeasts {
       },
       {
         id: "fire-chest-opened",
-        type: "ui",
-        category: "chest",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
         name: "Fire Chest Opened",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "3716217982005558",
             path: "assets/images/chest_fire-chest-opened.png"
           }
@@ -20634,12 +21297,12 @@ namespace BloomBeasts {
       },
       {
         id: "fire-icon",
-        type: "ui",
-        category: "icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
         name: "Fire Icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2011015256402906",
             path: "assets/images/affinity_fire-icon.png"
           }
@@ -20647,13 +21310,13 @@ namespace BloomBeasts {
       },
       {
         id: "fire-habitat",
-        type: "ui",
-        category: "card-template",
+        type: AssetEntryType.UI,
+        category: UICategory.CardTemplate,
         name: "Fire Habitat Card Template",
         description: "Template overlay for fire habitat cards",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1574158663591082",
             path: "assets/images/cards_fire_habitat-card.png"
           }
@@ -20671,20 +21334,20 @@ namespace BloomBeasts {
 
   export const forestAssets: AssetCatalog = {
     version: "1.0.0",
-    category: "forest",
+    category: CatalogCategory.Forest,
     description: "Forest affinity cards and assets",
     data: [
       {
         id: "rootling",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "forest",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Forest,
         data: {
           id: "rootling",
           name: "Rootling",
           displayName: "Rootling",
-          type: "Bloom",
-          affinity: "Forest",
+          type: CardType.Beast,
+          affinity: Affinity.Forest,
           cost: 1,
           baseAttack: 1,
           baseHealth: 3,
@@ -20706,7 +21369,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1170317305016635",
             path: "assets/images/cards_forest_rootling.png",
             description: "Rootling card artwork"
@@ -20715,15 +21378,15 @@ namespace BloomBeasts {
       },
       {
         id: "leaf-sprite",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "forest",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Forest,
         data: {
           id: "leaf-sprite",
           name: "Leaf Sprite",
           displayName: "Leaf Sprite",
-          type: "Bloom",
-          affinity: "Forest",
+          type: CardType.Beast,
+          affinity: Affinity.Forest,
           cost: 1,
           baseAttack: 1,
           baseHealth: 2,
@@ -20743,7 +21406,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1733091247346351",
             path: "assets/images/cards_forest_leaf-sprite.png",
             description: "Leaf Sprite card artwork"
@@ -20752,15 +21415,15 @@ namespace BloomBeasts {
       },
       {
         id: "mosslet",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "forest",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Forest,
         data: {
           id: "mosslet",
           name: "Mosslet",
           displayName: "Mosslet",
-          type: "Bloom",
-          affinity: "Forest",
+          type: CardType.Beast,
+          affinity: Affinity.Forest,
           cost: 2,
           baseAttack: 2,
           baseHealth: 2,
@@ -20782,7 +21445,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1344114090714721",
             path: "assets/images/cards_forest_mosslet.png",
             description: "Mosslet card artwork"
@@ -20791,15 +21454,15 @@ namespace BloomBeasts {
       },
       {
         id: "mushroomancer",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "forest",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Forest,
         data: {
           id: "mushroomancer",
           name: "Mushroomancer",
           displayName: "Mushroomancer",
-          type: "Bloom",
-          affinity: "Forest",
+          type: CardType.Beast,
+          affinity: Affinity.Forest,
           cost: 3,
           baseAttack: 3,
           baseHealth: 4,
@@ -20819,7 +21482,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1393693032328550",
             path: "assets/images/cards_forest_mushroomancer.png",
             description: "Mushroomancer card artwork"
@@ -20828,14 +21491,14 @@ namespace BloomBeasts {
       },
       {
         id: "ancient-forest",
-        type: "habitat",
-        affinity: "forest",
+        type: AssetEntryType.Habitat,
+        affinity: AffinityLowercase.Forest,
         data: {
           id: "ancient-forest",
           name: "Ancient Forest",
           displayName: "Ancient Forest",
-          type: "Habitat",
-          affinity: "Forest",
+          type: CardType.Habitat,
+          affinity: Affinity.Forest,
           cost: 0,
           abilities: [
             {
@@ -20855,19 +21518,19 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1625867191715184",
             path: "assets/images/cards_forest_ancient-forest.png",
             description: "Ancient Forest habitat card artwork"
           },
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "715084184317947",
             path: "assets/images/cards_forest_habitat-card.png",
             description: "Forest habitat card template"
           },
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "805969505504149",
             path: "assets/images/cards_forest_habitat-card-playboard.png",
             description: "Forest habitat card playboard"
@@ -20876,13 +21539,13 @@ namespace BloomBeasts {
       },
       {
         id: "forest-mission",
-        type: "mission",
-        affinity: "forest",
+        type: AssetEntryType.Mission,
+        affinity: AffinityLowercase.Forest,
         name: "Forest Mission",
         description: "Forest affinity mission",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1351984712974001",
             path: "assets/images/cards_forest_forest-mission.png",
             description: "Forest mission card"
@@ -20891,13 +21554,13 @@ namespace BloomBeasts {
       },
       {
         id: "forest-chest-closed",
-        type: "ui",
-        category: "chest",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
         name: "Forest Chest Closed",
         description: "Forest chest in closed state",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "678586941962889",
             path: "assets/images/chest_forest-chest-closed.png"
           }
@@ -20905,13 +21568,13 @@ namespace BloomBeasts {
       },
       {
         id: "forest-chest-opened",
-        type: "ui",
-        category: "chest",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
         name: "Forest Chest Opened",
         description: "Forest chest in opened state",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1859963367965524",
             path: "assets/images/chest_forest-chest-opened.png"
           }
@@ -20919,13 +21582,13 @@ namespace BloomBeasts {
       },
       {
         id: "forest-icon",
-        type: "ui",
-        category: "icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
         name: "Forest Icon",
         description: "Forest affinity icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1869425844004279",
             path: "assets/images/affinity_forest-icon.png"
           }
@@ -20933,13 +21596,13 @@ namespace BloomBeasts {
       },
       {
         id: "forest-habitat",
-        type: "ui",
-        category: "card-template",
+        type: AssetEntryType.UI,
+        category: UICategory.CardTemplate,
         name: "Forest Habitat Card Template",
         description: "Template overlay for forest habitat cards",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "715084184317947",
             path: "assets/images/cards_forest_habitat-card.png"
           }
@@ -20957,27 +21620,28 @@ namespace BloomBeasts {
 
   export const magicAssets: AssetCatalog = {
     version: "1.0.0",
-    category: "magic",
+    category: CatalogCategory.Magic,
     description: "Magic cards and assets",
     data: [
       {
         id: "aether-swap",
-        type: "magic",
+        type: AssetEntryType.Magic,
         cardType: "Magic",
         data: {
           id: "aether-swap",
           name: "Aether Swap",
-          type: "Magic",
+          type: CardType.Magic,
           cost: 1,
-          targetRequired: true,
+          targetRequired: false,
           abilities: [
             {
               name: "Aether Swap",
               trigger: AbilityTrigger.OnSummon,
               effects: [
                 {
-                  type: EffectType.SwapPositions,
-                  target: AbilityTarget.Target
+                  type: EffectType.ReturnToHand,
+                  target: AbilityTarget.AllAllies,
+                  value: 1
                 }
               ]
             }
@@ -20985,7 +21649,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1846483789630405",
             path: "assets/images/cards_magic_aether-swap.png"
           }
@@ -20993,12 +21657,12 @@ namespace BloomBeasts {
       },
       {
         id: "cleansing-downpour",
-        type: "magic",
+        type: AssetEntryType.Magic,
         cardType: "Magic",
         data: {
           id: "cleansing-downpour",
           name: "Cleansing Downpour",
-          type: "Magic",
+          type: CardType.Magic,
           cost: 2,
           targetRequired: false,
           abilities: [
@@ -21017,7 +21681,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "710755475386192",
             path: "assets/images/cards_magic_cleansing-downpour.png"
           }
@@ -21025,12 +21689,12 @@ namespace BloomBeasts {
       },
       {
         id: "elemental-burst",
-        type: "magic",
+        type: AssetEntryType.Magic,
         cardType: "Magic",
         data: {
           id: "elemental-burst",
           name: "Elemental Burst",
-          type: "Magic",
+          type: CardType.Magic,
           cost: 3,
           targetRequired: false,
           abilities: [
@@ -21049,7 +21713,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1585232092889726",
             path: "assets/images/cards_magic_elemental-burst.png"
           }
@@ -21057,14 +21721,14 @@ namespace BloomBeasts {
       },
       {
         id: "lightning-strike",
-        type: "magic",
+        type: AssetEntryType.Magic,
         cardType: "Magic",
         data: {
           id: "lightning-strike",
           name: "Lightning Strike",
-          type: "Magic",
+          type: CardType.Magic,
           cost: 2,
-          targetRequired: true,
+          targetRequired: false,
           abilities: [
             {
               name: "Lightning Strike",
@@ -21072,7 +21736,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.DealDamage,
-                  target: AbilityTarget.Target,
+                  target: AbilityTarget.LowestHealthEnemy,
                   value: 5,
                   piercing: true
                 }
@@ -21082,7 +21746,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1155953239812167",
             path: "assets/images/cards_magic_lightning-strike.png"
           }
@@ -21090,25 +21754,25 @@ namespace BloomBeasts {
       },
       {
         id: "nectar-block",
-        type: "magic",
+        type: AssetEntryType.Magic,
         cardType: "Magic",
         data: {
           id: "nectar-block",
-          name: "Nectar Block",
-          type: "Magic",
+          name: "Energy Block",
+          type: CardType.Magic,
           cost: 0,
           targetRequired: false,
           abilities: [
             {
-              name: "Nectar Block",
+              name: "Energy Block",
               trigger: AbilityTrigger.OnSummon,
               effects: [
                 {
-                  type: "GainResource",
+                  type: EffectType.GainResource,
                   target: "Player",
-                  resource: "Nectar",
+                  resource: ResourceType.Energy,
                   value: 2,
-                  duration: "ThisTurn"
+                  duration: EffectDuration.ThisTurn
                 }
               ]
             }
@@ -21116,33 +21780,33 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1092559439363693",
-            path: "assets/images/cards_magic_nectar-block.png"
+            path: "assets/images/cards_magic_energy-block.png"
           }
         ]
       },
       {
         id: "nectar-drain",
-        type: "magic",
+        type: AssetEntryType.Magic,
         cardType: "Magic",
         data: {
           id: "nectar-drain",
-          name: "Nectar Drain",
-          type: "Magic",
+          name: "Energy Drain",
+          type: CardType.Magic,
           cost: 1,
           targetRequired: false,
           abilities: [
             {
-              name: "Nectar Drain",
+              name: "Energy Drain",
               trigger: AbilityTrigger.OnSummon,
               effects: [
                 {
-                  type: "GainResource",
+                  type: EffectType.GainResource,
                   target: "Player",
-                  resource: "Nectar",
+                  resource: ResourceType.Energy,
                   value: 2,
-                  duration: "ThisTurn"
+                  duration: EffectDuration.ThisTurn
                 },
                 {
                   type: EffectType.DrawCards,
@@ -21155,33 +21819,33 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1754732031852523",
-            path: "assets/images/cards_magic_nectar-drain.png"
+            path: "assets/images/cards_magic_energy-drain.png"
           }
         ]
       },
       {
         id: "nectar-surge",
-        type: "magic",
+        type: AssetEntryType.Magic,
         cardType: "Magic",
         data: {
           id: "nectar-surge",
-          name: "Nectar Surge",
-          type: "Magic",
+          name: "Energy Surge",
+          type: CardType.Magic,
           cost: 1,
           targetRequired: false,
           abilities: [
             {
-              name: "Nectar Surge",
+              name: "Energy Surge",
               trigger: AbilityTrigger.OnSummon,
               effects: [
                 {
-                  type: "GainResource",
+                  type: EffectType.GainResource,
                   target: "Player",
-                  resource: "Nectar",
+                  resource: ResourceType.Energy,
                   value: 3,
-                  duration: "ThisTurn"
+                  duration: EffectDuration.ThisTurn
                 },
                 {
                   type: EffectType.DrawCards,
@@ -21194,20 +21858,20 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1379310950488534",
-            path: "assets/images/cards_magic_nectar-surge.png"
+            path: "assets/images/cards_magic_energy-surge.png"
           }
         ]
       },
       {
         id: "overgrowth",
-        type: "magic",
+        type: AssetEntryType.Magic,
         cardType: "Magic",
         data: {
           id: "overgrowth",
           name: "Overgrowth",
-          type: "Magic",
+          type: CardType.Magic,
           cost: 3,
           targetRequired: false,
           abilities: [
@@ -21228,7 +21892,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1489977038895297",
             path: "assets/images/cards_magic_overgrowth.png"
           }
@@ -21236,14 +21900,14 @@ namespace BloomBeasts {
       },
       {
         id: "power-up",
-        type: "magic",
+        type: AssetEntryType.Magic,
         cardType: "Magic",
         data: {
           id: "power-up",
           name: "Power Up",
-          type: "Magic",
+          type: CardType.Magic,
           cost: 2,
-          targetRequired: true,
+          targetRequired: false,
           abilities: [
             {
               name: "Power Up",
@@ -21251,7 +21915,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.ModifyStats,
-                  target: AbilityTarget.Target,
+                  target: AbilityTarget.RandomAlly,
                   stat: StatType.Both,
                   value: 3,
                   duration: EffectDuration.Permanent
@@ -21262,7 +21926,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1140750044697552",
             path: "assets/images/cards_magic_power-up.png"
           }
@@ -21270,14 +21934,14 @@ namespace BloomBeasts {
       },
       {
         id: "purify",
-        type: "magic",
+        type: AssetEntryType.Magic,
         cardType: "Magic",
         data: {
           id: "purify",
           name: "Purify",
-          type: "Magic",
+          type: CardType.Magic,
           cost: 1,
-          targetRequired: true,
+          targetRequired: false,
           abilities: [
             {
               name: "Purify",
@@ -21285,7 +21949,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.Heal,
-                  target: AbilityTarget.Target,
+                  target: AbilityTarget.RandomAlly,
                   value: 3
                 }
               ]
@@ -21294,7 +21958,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "681285418362907",
             path: "assets/images/cards_magic_purify.png"
           }
@@ -21312,19 +21976,19 @@ namespace BloomBeasts {
 
   export const skyAssets: AssetCatalog = {
     version: "1.0.0",
-    category: "sky",
+    category: CatalogCategory.Sky,
     description: "Sky affinity cards and assets",
     data: [
       {
         id: "aero-moth",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "sky",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Sky,
         data: {
           id: "aero-moth",
           name: "Aero Moth",
-          type: "Bloom",
-          affinity: "Sky",
+          type: CardType.Beast,
+          affinity: Affinity.Sky,
           cost: 2,
           baseAttack: 3,
           baseHealth: 3,
@@ -21344,7 +22008,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1857788838498496",
             path: "assets/images/cards_sky_aero-moth.png"
           }
@@ -21352,14 +22016,14 @@ namespace BloomBeasts {
       },
       {
         id: "cirrus-floof",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "sky",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Sky,
         data: {
           id: "cirrus-floof",
           name: "Cirrus Floof",
-          type: "Bloom",
-          affinity: "Sky",
+          type: CardType.Beast,
+          affinity: Affinity.Sky,
           cost: 2,
           baseAttack: 1,
           baseHealth: 6,
@@ -21382,7 +22046,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "849446287592530",
             path: "assets/images/cards_sky_cirrus-floof.png"
           }
@@ -21390,14 +22054,14 @@ namespace BloomBeasts {
       },
       {
         id: "gale-glider",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "sky",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Sky,
         data: {
           id: "gale-glider",
           name: "Gale Glider",
-          type: "Bloom",
-          affinity: "Sky",
+          type: CardType.Beast,
+          affinity: Affinity.Sky,
           cost: 1,
           baseAttack: 2,
           baseHealth: 2,
@@ -21417,7 +22081,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1854780382097596",
             path: "assets/images/cards_sky_gale-glider.png"
           }
@@ -21425,14 +22089,14 @@ namespace BloomBeasts {
       },
       {
         id: "star-bloom",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "sky",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Sky,
         data: {
           id: "star-bloom",
           name: "Star Bloom",
-          type: "Bloom",
-          affinity: "Sky",
+          type: CardType.Beast,
+          affinity: Affinity.Sky,
           cost: 3,
           baseAttack: 4,
           baseHealth: 5,
@@ -21454,7 +22118,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "737222956003560",
             path: "assets/images/cards_sky_star-bloom.png"
           }
@@ -21462,13 +22126,13 @@ namespace BloomBeasts {
       },
       {
         id: "clear-zenith",
-        type: "habitat",
-        affinity: "sky",
+        type: AssetEntryType.Habitat,
+        affinity: AffinityLowercase.Sky,
         data: {
           id: "clear-zenith",
           name: "Clear Zenith",
-          type: "Habitat",
-          affinity: "Sky",
+          type: CardType.Habitat,
+          affinity: Affinity.Sky,
           cost: 1,
           titleColor: "#000000",
           abilities: [
@@ -21487,17 +22151,17 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1941325056416004",
             path: "assets/images/cards_sky_clear-zenith.png"
           },
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "724533667339482",
             path: "assets/images/cards_sky_habitat-card.png"
           },
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "674037762415336",
             path: "assets/images/cards_sky_habitat-card-playboard.png"
           }
@@ -21505,13 +22169,13 @@ namespace BloomBeasts {
       },
       {
         id: "sky-mission",
-        type: "mission",
-        affinity: "sky",
+        type: AssetEntryType.Mission,
+        affinity: AffinityLowercase.Sky,
         name: "Sky Mission",
         description: "Sky affinity mission",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1076415204381099",
             path: "assets/images/cards_sky_sky-mission.png"
           }
@@ -21519,12 +22183,12 @@ namespace BloomBeasts {
       },
       {
         id: "sky-chest-closed",
-        type: "ui",
-        category: "chest",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
         name: "Sky Chest Closed",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1988442925266143",
             path: "assets/images/chest_sky-chest-closed.png"
           }
@@ -21532,12 +22196,12 @@ namespace BloomBeasts {
       },
       {
         id: "sky-chest-opened",
-        type: "ui",
-        category: "chest",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
         name: "Sky Chest Opened",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "766596743048030",
             path: "assets/images/chest_sky-chest-opened.png"
           }
@@ -21545,12 +22209,12 @@ namespace BloomBeasts {
       },
       {
         id: "sky-icon",
-        type: "ui",
-        category: "icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
         name: "Sky Icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2078365889573892",
             path: "assets/images/affinity_sky-icon.png"
           }
@@ -21558,13 +22222,13 @@ namespace BloomBeasts {
       },
       {
         id: "sky-habitat",
-        type: "ui",
-        category: "card-template",
+        type: AssetEntryType.UI,
+        category: UICategory.CardTemplate,
         name: "Sky Habitat Card Template",
         description: "Template overlay for sky habitat cards",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "724533667339482",
             path: "assets/images/cards_sky_habitat-card.png"
           }
@@ -21582,17 +22246,17 @@ namespace BloomBeasts {
 
   export const trapAssets: AssetCatalog = {
     version: "1.0.0",
-    category: "trap",
+    category: CatalogCategory.Trap,
     description: "Trap cards and assets",
     data: [
       {
         id: "bear-trap",
-        type: "trap",
+        type: AssetEntryType.Trap,
         cardType: "Trap",
         data: {
           id: "bear-trap",
           name: "Bear Trap",
-          type: "Trap",
+          type: CardType.Trap,
           cost: 1,
           activation: {
             trigger: TrapTrigger.OnAttack
@@ -21613,7 +22277,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1518992622460625",
             path: "assets/images/cards_trap_bear-trap.png"
           }
@@ -21621,12 +22285,12 @@ namespace BloomBeasts {
       },
       {
         id: "emergency-bloom",
-        type: "trap",
+        type: AssetEntryType.Trap,
         cardType: "Trap",
         data: {
           id: "emergency-bloom",
           name: "Emergency Bloom",
-          type: "Trap",
+          type: CardType.Trap,
           cost: 1,
           activation: {
             trigger: TrapTrigger.OnDestroy
@@ -21647,7 +22311,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2247657455738264",
             path: "assets/images/cards_trap_emergency-bloom.png"
           }
@@ -21655,12 +22319,12 @@ namespace BloomBeasts {
       },
       {
         id: "habitat-lock",
-        type: "trap",
+        type: AssetEntryType.Trap,
         cardType: "Trap",
         data: {
           id: "habitat-lock",
           name: "Habitat Lock",
-          type: "Trap",
+          type: CardType.Trap,
           cost: 1,
           activation: {
             trigger: TrapTrigger.OnHabitatPlay
@@ -21672,7 +22336,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.NullifyEffect,
-                  target: AbilityTarget.Target
+                  target: AbilityTarget.PlayedCard
                 }
               ]
             }
@@ -21680,7 +22344,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "609610328807674",
             path: "assets/images/cards_trap_habitat-lock.png"
           }
@@ -21688,12 +22352,12 @@ namespace BloomBeasts {
       },
       {
         id: "habitat-shield",
-        type: "trap",
+        type: AssetEntryType.Trap,
         cardType: "Trap",
         data: {
           id: "habitat-shield",
           name: "Habitat Shield",
-          type: "Trap",
+          type: CardType.Trap,
           cost: 2,
           activation: {
             trigger: TrapTrigger.OnHabitatPlay
@@ -21705,7 +22369,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.NullifyEffect,
-                  target: AbilityTarget.Target
+                  target: AbilityTarget.PlayedCard
                 },
                 {
                   type: EffectType.DrawCards,
@@ -21718,7 +22382,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1362245262078336",
             path: "assets/images/cards_trap_habitat-shield.png"
           }
@@ -21726,12 +22390,12 @@ namespace BloomBeasts {
       },
       {
         id: "magic-shield",
-        type: "trap",
+        type: AssetEntryType.Trap,
         cardType: "Trap",
         data: {
           id: "magic-shield",
           name: "Magic Shield",
-          type: "Trap",
+          type: CardType.Trap,
           cost: 1,
           activation: {
             trigger: TrapTrigger.OnMagicPlay
@@ -21743,7 +22407,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.NullifyEffect,
-                  target: AbilityTarget.Target
+                  target: AbilityTarget.PlayedCard
                 }
               ]
             }
@@ -21751,7 +22415,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1239098601311749",
             path: "assets/images/cards_trap_magic-sheild.png"
           }
@@ -21759,12 +22423,12 @@ namespace BloomBeasts {
       },
       {
         id: "thorn-snare",
-        type: "trap",
+        type: AssetEntryType.Trap,
         cardType: "Trap",
         data: {
           id: "thorn-snare",
           name: "Thorn Snare",
-          type: "Trap",
+          type: CardType.Trap,
           cost: 2,
           activation: {
             trigger: TrapTrigger.OnAttack
@@ -21790,7 +22454,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "4210265565909373",
             path: "assets/images/cards_trap_thorn-snare.png"
           }
@@ -21798,15 +22462,15 @@ namespace BloomBeasts {
       },
       {
         id: "vaporize",
-        type: "trap",
+        type: AssetEntryType.Trap,
         cardType: "Trap",
         data: {
           id: "vaporize",
           name: "Vaporize",
-          type: "Trap",
+          type: CardType.Trap,
           cost: 2,
           activation: {
-            trigger: TrapTrigger.OnBloomPlay,
+            trigger: TrapTrigger.OnBeastPlay,
             condition: {
               type: "CostBelow",
               value: 4
@@ -21819,7 +22483,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: EffectType.Destroy,
-                  target: AbilityTarget.Target
+                  target: AbilityTarget.PlayedCard
                 }
               ]
             }
@@ -21827,7 +22491,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1903759173890506",
             path: "assets/images/cards_trap_vaporize.png"
           }
@@ -21835,12 +22499,12 @@ namespace BloomBeasts {
       },
       {
         id: "xp-harvest",
-        type: "trap",
+        type: AssetEntryType.Trap,
         cardType: "Trap",
         data: {
           id: "xp-harvest",
           name: "XP Harvest",
-          type: "Trap",
+          type: CardType.Trap,
           cost: 1,
           activation: {
             trigger: TrapTrigger.OnDestroy
@@ -21861,7 +22525,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "807213335392971",
             path: "assets/images/cards_trap_xpharvest.png"
           }
@@ -21879,19 +22543,19 @@ namespace BloomBeasts {
 
   export const waterAssets: AssetCatalog = {
     version: "1.0.0",
-    category: "water",
+    category: CatalogCategory.Water,
     description: "Water affinity cards and assets",
     data: [
       {
         id: "aqua-pebble",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "water",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Water,
         data: {
           id: "aqua-pebble",
           name: "Aqua Pebble",
-          type: "Bloom",
-          affinity: "Water",
+          type: CardType.Beast,
+          affinity: Affinity.Water,
           cost: 1,
           baseAttack: 1,
           baseHealth: 4,
@@ -21917,7 +22581,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2542562209453452",
             path: "assets/images/cards_water_aqua-pebble.png"
           }
@@ -21925,14 +22589,14 @@ namespace BloomBeasts {
       },
       {
         id: "bubblefin",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "water",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Water,
         data: {
           id: "bubblefin",
           name: "Bubblefin",
-          type: "Bloom",
-          affinity: "Water",
+          type: CardType.Beast,
+          affinity: Affinity.Water,
           cost: 2,
           baseAttack: 2,
           baseHealth: 5,
@@ -21954,7 +22618,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2957682524429594",
             path: "assets/images/cards_water_bubblefin.png"
           }
@@ -21962,14 +22626,14 @@ namespace BloomBeasts {
       },
       {
         id: "dewdrop-drake",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "water",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Water,
         data: {
           id: "dewdrop-drake",
           name: "Dewdrop Drake",
-          type: "Bloom",
-          affinity: "Water",
+          type: CardType.Beast,
+          affinity: Affinity.Water,
           cost: 3,
           baseAttack: 3,
           baseHealth: 6,
@@ -21994,7 +22658,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1232407695362881",
             path: "assets/images/cards_water_dewdrop-drake.png"
           }
@@ -22002,14 +22666,14 @@ namespace BloomBeasts {
       },
       {
         id: "kelp-cub",
-        type: "beast",
-        cardType: "Bloom",
-        affinity: "water",
+        type: AssetEntryType.Beast,
+        cardType: "Beast",
+        affinity: AffinityLowercase.Water,
         data: {
           id: "kelp-cub",
           name: "Kelp Cub",
-          type: "Bloom",
-          affinity: "Water",
+          type: CardType.Beast,
+          affinity: Affinity.Water,
           cost: 2,
           baseAttack: 3,
           baseHealth: 3,
@@ -22020,7 +22684,7 @@ namespace BloomBeasts {
               effects: [
                 {
                   type: "PreventAttack",
-                  target: AbilityTarget.Target,
+                  target: AbilityTarget.AttackedEnemy,
                   duration: "StartOfNextTurn"
                 }
               ]
@@ -22029,7 +22693,7 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "2278603722605464",
             path: "assets/images/cards_water_kelp-cub.png"
           }
@@ -22037,13 +22701,13 @@ namespace BloomBeasts {
       },
       {
         id: "deep-sea-grotto",
-        type: "habitat",
-        affinity: "water",
+        type: AssetEntryType.Habitat,
+        affinity: AffinityLowercase.Water,
         data: {
           id: "deep-sea-grotto",
           name: "Deep Sea Grotto",
-          type: "Habitat",
-          affinity: "Water",
+          type: CardType.Habitat,
+          affinity: Affinity.Water,
           cost: 1,
           abilities: [
             {
@@ -22067,17 +22731,17 @@ namespace BloomBeasts {
         },
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "594002380404766",
             path: "assets/images/cards_water_deep-sea-grotto.png"
           },
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1356075539231203",
             path: "assets/images/cards_water_habitat-card.png"
           },
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "805465575687502",
             path: "assets/images/cards_water_habitat-card-playboard.png"
           }
@@ -22085,13 +22749,13 @@ namespace BloomBeasts {
       },
       {
         id: "water-mission",
-        type: "mission",
-        affinity: "water",
+        type: AssetEntryType.Mission,
+        affinity: AffinityLowercase.Water,
         name: "Water Mission",
         description: "Water affinity mission",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1204438218330106",
             path: "assets/images/cards_water_water-mission.png"
           }
@@ -22099,12 +22763,12 @@ namespace BloomBeasts {
       },
       {
         id: "water-chest-closed",
-        type: "ui",
-        category: "chest",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
         name: "Water Chest Closed",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1502977104283894",
             path: "assets/images/chest_water-chest-closed.png"
           }
@@ -22112,12 +22776,12 @@ namespace BloomBeasts {
       },
       {
         id: "water-chest-opened",
-        type: "ui",
-        category: "chest",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
         name: "Water Chest Opened",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "817919940747617",
             path: "assets/images/chest_water-chest-opened.png"
           }
@@ -22125,12 +22789,12 @@ namespace BloomBeasts {
       },
       {
         id: "water-icon",
-        type: "ui",
-        category: "icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
         name: "Water Icon",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "803389222302576",
             path: "assets/images/affinity_water-icon.png"
           }
@@ -22138,13 +22802,13 @@ namespace BloomBeasts {
       },
       {
         id: "water-habitat",
-        type: "ui",
-        category: "card-template",
+        type: AssetEntryType.UI,
+        category: UICategory.CardTemplate,
         name: "Water Habitat Card Template",
         description: "Template overlay for water habitat cards",
         assets: [
           {
-            type: "image",
+            type: AssetReferenceType.Image,
             horizonAssetId: "1356075539231203",
             path: "assets/images/cards_water_habitat-card.png"
           }

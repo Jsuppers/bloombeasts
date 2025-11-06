@@ -164,8 +164,6 @@ export class UIRenderer {
         const style = this.resolveStyle(node.props.style || {});
         const box = this.calculateLayout(style, parentBox);
 
-        UIRenderer.DEBUG_ENABLED && console.log('renderView - box:', box, 'style.backgroundColor:', style.backgroundColor);
-
         // Handle opacity
         const opacity = style.opacity !== undefined ? Number(this.resolveAndTrack(style.opacity)) : 1;
 
@@ -673,14 +671,6 @@ export class UIRenderer {
             width: finalWidth,
             height: finalHeight,
         };
-
-        UIRenderer.DEBUG_ENABLED && console.log('calculateLayout:', {
-            styleWidth: style.width,
-            styleHeight: style.height,
-            styleFlex: style.flex,
-            parentBox,
-            result
-        });
 
         return result;
     }

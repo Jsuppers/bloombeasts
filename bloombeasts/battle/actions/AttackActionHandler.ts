@@ -4,10 +4,11 @@
  * Handles the ATTACK action, allowing a beast to attack a target (player or another beast)
  */
 
-import type { IGameState } from '../../../turbo/src';
-import type { BloomBeastsState, BloomBeastsActionData, BeastFieldCard } from '../BloomBeastsGame';
-import { BloomBeastsActionType } from '../BloomBeastsGame';
-import { BaseActionHandler, ActionValidationResult } from './ActionHandler';
+import { Turbo } from '../../lib/Turbo-Standalone';
+
+import type { BloomBeastsState, BloomBeastsActionData, RuntimeBeast } from '../types';
+import { BloomBeastsActionType } from '../types';
+import { BaseActionHandler, ActionValidationResult, ActionHandlerContext } from './ActionHandler';
 
 export interface AttackActionData extends BloomBeastsActionData {
   type: BloomBeastsActionType.ATTACK;
@@ -20,7 +21,7 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
 
   validate(
     actionData: AttackActionData,
-    state: IGameState<BloomBeastsState>,
+    state: Turbo.IGameState<BloomBeastsState>,
     playerId: string
   ): ActionValidationResult {
     // Find the attacking beast
@@ -40,7 +41,7 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
     }
 
     // Check attack value
-    if (attacker.attack <= 0) {
+    if (attacker.currentAttack <= 0) {
       return { valid: false, reason: 'Beast has no attack power' };
     }
 
@@ -67,9 +68,10 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
 
   execute(
     actionData: AttackActionData,
-    state: IGameState<BloomBeastsState>,
-    playerId: string
-  ): IGameState<BloomBeastsState> {
+    state: Turbo.IGameState<BloomBeastsState>,
+    playerId: string,
+    context?: ActionHandlerContext
+  ): Turbo.IActionResult<BloomBeastsState> {
     const newState = this.cloneState(state);
 
     const attacker = this.findBeastOnField(actionData.cardId, newState);
@@ -83,7 +85,7 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
 
     if (!actionData.targetId || actionData.targetId === opponent.id) {
       // Direct attack on player
-      opponent.health -= attacker.attack;
+      opponent.health -= attacker.currentAttack;
     } else {
       // Attack on beast
       const target = this.findBeastOnField(actionData.targetId, newState);
@@ -92,14 +94,14 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
       }
 
       // Both creatures deal damage to each other
-      target.health -= attacker.attack;
-      attacker.health -= target.attack;
+      target.currentHealth -= attacker.currentAttack;
+      attacker.currentHealth -= target.currentAttack;
 
       // Check for defeats
-      if (target.health <= 0) {
+      if (target.currentHealth <= 0) {
         this.destroyBeast(target, newState);
       }
-      if (attacker.health <= 0) {
+      if (attacker.currentHealth <= 0) {
         this.destroyBeast(attacker, newState);
       }
     }
@@ -107,7 +109,19 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
     // Update turn tracking
     newState.gameData.currentTurnActions.hasAttacked.add(actionData.cardId);
 
-    return newState;
+    // Process OnAttack triggers
+    if (context?.processTriggers) {
+      context.processTriggers('on_action', newState, { action: 'attack' });
+    }
+
+    // Create event
+    const event = this.createEvent('attack', playerId);
+
+    return {
+      success: true,
+      newState,
+      sideEffects: [event],
+    };
   }
 
   /**
@@ -115,8 +129,8 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
    */
   private findBeastOnField(
     beastId: string,
-    state: IGameState<BloomBeastsState>
-  ): BeastFieldCard | null {
+    state: Turbo.IGameState<BloomBeastsState>
+  ): RuntimeBeast | null {
     for (const field of [state.gameData.field.player1, state.gameData.field.player2]) {
       for (const beast of field.beasts) {
         if (beast?.id === beastId) {
@@ -130,7 +144,7 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
   /**
    * Remove a defeated beast from the field and add to graveyard
    */
-  private destroyBeast(beast: BeastFieldCard, state: IGameState<BloomBeastsState>): void {
+  private destroyBeast(beast: RuntimeBeast, state: Turbo.IGameState<BloomBeastsState>): void {
     // Remove from field
     for (let playerIdx = 0; playerIdx < 2; playerIdx++) {
       const field = playerIdx === 0 ? state.gameData.field.player1 : state.gameData.field.player2;

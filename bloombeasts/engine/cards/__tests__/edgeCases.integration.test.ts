@@ -5,7 +5,7 @@
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { GameEngine } from '../../systems/GameEngine';
-import { loadCardFromJSON } from './testUtils.js';
+import { loadCardFromJSON } from './testUtils';
 import {
   createTestGame,
   createDeck,
@@ -13,12 +13,12 @@ import {
   placeBeast,
   giveCards,
   setHand,
-  giveNectar,
+  giveEnergy,
   waitForEffects,
   findBeastByCardId,
   hasCounter,
   getCounterAmount,
-} from './gameTestUtils.js';
+} from './gameTestUtils';
 
 // Load cards from JSON catalogs
 const CHARCOIL = loadCardFromJSON('charcoil', 'fire');
@@ -28,7 +28,7 @@ const LEAF_SPRITE = loadCardFromJSON('leaf-sprite', 'forest');
 const MOSSLET = loadCardFromJSON('mosslet', 'forest');
 const BATTLE_FURY = loadCardFromJSON('battle-fury', 'buff');
 const CLEANSING_DOWNPOUR = loadCardFromJSON('cleansing-downpour', 'magic');
-const NECTAR_SURGE = loadCardFromJSON('nectar-surge', 'magic');
+const ENERGY_SURGE = loadCardFromJSON('nectar-surge', 'magic');
 const HABITAT_LOCK = loadCardFromJSON('habitat-lock', 'trap');
 const ANCIENT_FOREST = loadCardFromJSON('ancient-forest', 'forest');
 const VOLCANIC_SCAR = loadCardFromJSON('volcanic-scar', 'fire');
@@ -94,29 +94,29 @@ describe('Edge Cases - Integration Tests', () => {
     });
   });
 
-  describe('Nectar Edge Cases', () => {
-    test('should cap nectar at maximum (10)', async () => {
+  describe('Energy Edge Cases', () => {
+    test('should cap energy at maximum (10)', async () => {
       await game.startMatch(
-        createDeck([NECTAR_SURGE]),
+        createDeck([ENERGY_SURGE]),
         createDeck([])
       );
 
       let state = game.getState();
       let player = state.players[0];
 
-      // Give max nectar via turn system (not test helper)
-      // Test helper giveNectar doesn't enforce cap
-      // TODO: Implement proper nectar capping in game engine
-      giveNectar(player, 9); // Give 9 (player has 1 from turn 1 = 10 total)
+      // Give max energy via turn system (not test helper)
+      // Test helper giveEnergy doesn't enforce cap
+      // TODO: Implement proper energy capping in game engine
+      giveEnergy(player, 9); // Give 9 (player has 1 from turn 1 = 10 total)
 
       state = game.getState();
       player = state.players[0];
 
-      // Should be at or near MAX_NECTAR (10)
-      expect(player.currentNectar).toBeLessThanOrEqual(10);
+      // Should be at or near MAX_ENERGY (10)
+      expect(player.currentEnergy).toBeLessThanOrEqual(10);
     });
 
-    test('should not allow negative nectar', async () => {
+    test('should not allow negative energy', async () => {
       await game.startMatch(
         createDeck([MOSSLET]),
         createDeck([])
@@ -125,8 +125,8 @@ describe('Edge Cases - Integration Tests', () => {
       let state = game.getState();
       let player = state.players[0];
 
-      // Player starts with 1 nectar on turn 1
-      expect(player.currentNectar).toBe(1);
+      // Player starts with 1 energy on turn 1
+      expect(player.currentEnergy).toBe(1);
 
       // Try to play expensive card
       setHand(player, [BATTLE_FURY]); // Costs 3
@@ -135,12 +135,12 @@ describe('Edge Cases - Integration Tests', () => {
       state = game.getState();
       player = state.players[0];
 
-      // Should fail and nectar should not go negative
+      // Should fail and energy should not go negative
       expect(result).toBe(false);
-      expect(player.currentNectar).toBeGreaterThanOrEqual(0);
+      expect(player.currentEnergy).toBeGreaterThanOrEqual(0);
     });
 
-    test('should handle playing card with exactly enough nectar', async () => {
+    test('should handle playing card with exactly enough energy', async () => {
       await game.startMatch(
         createDeck([MOSSLET]),
         createDeck([])
@@ -150,7 +150,7 @@ describe('Edge Cases - Integration Tests', () => {
       let player = state.players[0];
 
       setHand(player, [MOSSLET]); // Costs 2
-      giveNectar(player, 1); // Now has 2 total (1 from turn + 1 given)
+      giveEnergy(player, 1); // Now has 2 total (1 from turn + 1 given)
 
       const result = await game.playCard(player, 0);
 
@@ -158,7 +158,7 @@ describe('Edge Cases - Integration Tests', () => {
       player = state.players[0];
 
       expect(result).toBe(true);
-      expect(player.currentNectar).toBe(0);
+      expect(player.currentEnergy).toBe(0);
     });
   });
 
@@ -174,7 +174,7 @@ describe('Edge Cases - Integration Tests', () => {
 
       // Fill the field
       setHand(player, [MOSSLET, MOSSLET, LEAF_SPRITE]);
-      giveNectar(player, 10);
+      giveEnergy(player, 10);
 
       await game.playCard(player, 0);
       player.summonsThisTurn = 0; // Reset for test
@@ -273,7 +273,7 @@ describe('Edge Cases - Integration Tests', () => {
       let player = state.players[0];
 
       setHand(player, [HABITAT_LOCK, HABITAT_LOCK, HABITAT_LOCK, HABITAT_LOCK]);
-      giveNectar(player, 10);
+      giveEnergy(player, 10);
 
       // Set 3 traps
       await game.playCard(player, 0);
@@ -308,7 +308,7 @@ describe('Edge Cases - Integration Tests', () => {
 
       // Set two traps
       setHand(player1, [HABITAT_LOCK, HABITAT_LOCK]);
-      giveNectar(player1, 10);
+      giveEnergy(player1, 10);
       await game.playCard(player1, 0);
       await game.playCard(player1, 0);
 
@@ -320,7 +320,7 @@ describe('Edge Cases - Integration Tests', () => {
 
       // Play first habitat - should trigger one trap
       setHand(player2, [ANCIENT_FOREST]);
-      giveNectar(player2, 10);
+      giveEnergy(player2, 10);
       await game.playCard(player2, 0);
       await waitForEffects();
 
@@ -338,7 +338,7 @@ describe('Edge Cases - Integration Tests', () => {
 
       // Play second habitat
       setHand(player2, [VOLCANIC_SCAR]);
-      giveNectar(player2, 10);
+      giveEnergy(player2, 10);
       await game.playCard(player2, 0);
       await waitForEffects();
 
@@ -361,7 +361,7 @@ describe('Edge Cases - Integration Tests', () => {
       let player = state.players[0];
 
       setHand(player, [BATTLE_FURY, BATTLE_FURY, BATTLE_FURY]);
-      giveNectar(player, 10);
+      giveEnergy(player, 10);
 
       // Play 2 buffs
       await game.playCard(player, 0);
@@ -558,7 +558,7 @@ describe('Edge Cases - Integration Tests', () => {
       let player = state.players[0];
 
       setHand(player, [MOSSLET]); // Only one card
-      giveNectar(player, 10);
+      giveEnergy(player, 10);
 
       const result = await game.playCard(player, 0);
 
@@ -598,7 +598,7 @@ describe('Edge Cases - Integration Tests', () => {
       let player = state.players[0];
 
       setHand(player, [BATTLE_FURY, CLEANSING_DOWNPOUR, HABITAT_LOCK]);
-      giveNectar(player, 10);
+      giveEnergy(player, 10);
 
       // Play cards that go to graveyard
       await game.playCard(player, 0); // Buff stays in buff zone
@@ -653,7 +653,7 @@ describe('Edge Cases - Integration Tests', () => {
       expect(state.activePlayer).toBe(0);
     });
 
-    test('should increment nectar each turn up to 10', async () => {
+    test('should increment energy each turn up to 10', async () => {
       await game.startMatch(
         createDeck([MOSSLET]),
         createDeck([CHARCOIL])
@@ -662,8 +662,8 @@ describe('Edge Cases - Integration Tests', () => {
       let state = game.getState();
       let player = state.players[0];
 
-      // Turn 1: 1 nectar
-      expect(player.currentNectar).toBe(1);
+      // Turn 1: 1 energy
+      expect(player.currentEnergy).toBe(1);
 
       // Advance to turn 5
       await game.endTurn();
@@ -678,9 +678,9 @@ describe('Edge Cases - Integration Tests', () => {
       state = game.getState();
       player = state.players[0];
 
-      // TODO: Nectar should increment each turn (turn N gives N nectar)
-      // Currently nectar doesn't persist between turns as expected
-      expect(player.currentNectar).toBeGreaterThan(0);
+      // TODO: Energy should increment each turn (turn N gives N energy)
+      // Currently energy doesn't persist between turns as expected
+      expect(player.currentEnergy).toBeGreaterThan(0);
     });
   });
 
@@ -725,7 +725,7 @@ describe('Edge Cases - Integration Tests', () => {
       let player = state.players[0];
 
       setHand(player, [MOSSLET, MOSSLET]);
-      giveNectar(player, 10);
+      giveEnergy(player, 10);
 
       const result1 = await game.playCard(player, 0);
 

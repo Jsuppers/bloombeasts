@@ -10,6 +10,7 @@ import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 import { createPopup, type PopupButton } from '../../common/Popup';
 import { BindingType, type UIState } from '../../types/BindingManager';
 import { getCardDescription } from '../../../engine/utils/cardDescriptionGenerator';
+import { CardType } from '../../../engine/types/core';
 
 export interface CardDetailPopupProps {
   cardDetail: CardDetailDisplay;
@@ -133,9 +134,9 @@ export function createReactiveCardDetailPopupFromBinding(ui: UIMethodMappings): 
               if (!card) return null;
 
               let templateKey = '';
-              if (card.type === 'Bloom') {
+              if (card.type === CardType.Beast) {
                 templateKey = 'base-card';
-              } else if (card.type === 'Habitat' && card.affinity) {
+              } else if (card.type === CardType.Habitat && card.affinity) {
                 templateKey = `${card.affinity.toLowerCase()}-habitat`;
               } else {
                 templateKey = `${card.type.toLowerCase()}-card`;
@@ -268,7 +269,7 @@ export function createReactiveCardDetailPopupFromBinding(ui: UIMethodMappings): 
         const buttonId = `btn-card-${buttonText.toLowerCase().replace(/ /g, '-')}`;
         propsSnapshot?.onButtonClick?.(buttonId);
       },
-      color: (buttonText === 'Add' ? 'green' : buttonText === 'Remove' ? 'red' : 'default') as ButtonColor,
+      color: (buttonText === 'Add' ? 'green' : buttonText === 'Remove' ? 'red' : 'default') as any,
     }));
 
   return createPopup({

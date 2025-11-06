@@ -5,10 +5,10 @@
 import { AnyCard, BloomBeastCard, Affinity, CardType } from '../types/core';
 
 /**
- * Check if a card is a Bloom Beast
+ * Check if a card is a Beast
  */
 export function isBloomBeast(card: AnyCard): card is BloomBeastCard {
-  return card.type === 'Bloom';
+  return card.type === CardType.Beast;
 }
 
 /**
@@ -19,14 +19,14 @@ export function filterByType<T extends CardType>(cards: AnyCard[], type: T): Ext
 }
 
 /**
- * Filter Bloom Beasts by affinity
+ * Filter Beasts by affinity
  */
 export function filterByAffinity(cards: AnyCard[], affinity: Affinity): BloomBeastCard[] {
   return cards.filter((card): card is BloomBeastCard => isBloomBeast(card) && card.affinity === affinity);
 }
 
 /**
- * Get all Bloom Beasts from a card list
+ * Get all Beasts from a card list
  */
 export function getBloomBeasts(cards: AnyCard[]): BloomBeastCard[] {
   return cards.filter(isBloomBeast);

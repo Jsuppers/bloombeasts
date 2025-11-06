@@ -8,8 +8,8 @@ import {
   validateMagicCard,
   validateStructuredAbility,
   loadCardFromJSON,
-} from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+} from '../testUtils';
+import { StructuredAbility } from '../../../types/abilities';
 
 const CLEANSING_DOWNPOUR = loadCardFromJSON('cleansing-downpour', 'magic');
 

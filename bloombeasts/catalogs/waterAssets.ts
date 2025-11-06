@@ -150,7 +150,7 @@ export const waterAssets: AssetCatalog = {
             effects: [
               {
                 type: "PreventAttack",
-                target: AbilityTarget.Target,
+                target: AbilityTarget.AttackedEnemy,
                 duration: "StartOfNextTurn"
               }
             ]

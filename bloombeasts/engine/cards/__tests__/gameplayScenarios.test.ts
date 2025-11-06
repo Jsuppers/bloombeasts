@@ -5,21 +5,19 @@
 
 import { describe, test, expect, beforeEach } from '@jest/globals';
 import { GameEngine } from '../../systems/GameEngine';
-import { loadCardFromJSON } from './testUtils.js';
+import { loadCardFromJSON } from './testUtils';
 import {
   createTestGame,
   createDeck,
   createTestBeast,
   placeBeast,
   giveCards,
-  giveNectar,
-  hasCounter,
-  getCounterAmount,
+  giveEnergy,
   getTotalAttack,
   getTotalHealth,
   countAliveBeasts,
   waitForEffects,
-} from './gameTestUtils.js';
+} from './gameTestUtils';
 
 // Load cards from JSON catalogs
 const MOSSLET = loadCardFromJSON('mosslet', 'forest');
@@ -64,7 +62,7 @@ describe('Complex Gameplay Scenarios', () => {
       placeBeast(player2, blazefinch, 1);
 
       giveCards(player1, [BATTLE_FURY]);
-      giveNectar(player1, 10);
+      giveEnergy(player1, 10);
 
       // Without buff: Mosslet (2 ATK) can't kill Charcoil (2 HP) easily
       // Without buff: Leaf Sprite (3 ATK) equals Blazefinch (3 HP), both die
@@ -101,18 +99,18 @@ describe('Complex Gameplay Scenarios', () => {
       const player1 = state.players[0];
       const player2 = state.players[1];
 
-      // Player 1 sets cheap trap (1 nectar)
+      // Player 1 sets cheap trap (1 energy)
       giveCards(player1, [HABITAT_LOCK]);
-      giveNectar(player1, 10);
+      giveEnergy(player1, 10);
       await game.playCard(player1, 0);
 
       await game.endTurn();
 
       // Player 2 tries to play expensive habitat
       giveCards(player2, [ANCIENT_FOREST]);
-      giveNectar(player2, 10);
+      giveEnergy(player2, 10);
 
-      const nectarBefore = player2.currentNectar;
+      const energyBefore = player2.currentEnergy;
       await game.playCard(player2, 0);
       await waitForEffects();
 
@@ -121,7 +119,7 @@ describe('Complex Gameplay Scenarios', () => {
       // expect(state.habitatZone).toBe(null);
       expect(state.habitatZone).not.toBe(null);
       expect(state.habitatZone?.id).toBe('ancient-forest');
-      expect(player2.currentNectar).toBe(nectarBefore - ANCIENT_FOREST.cost);
+      expect(player2.currentEnergy).toBe(energyBefore - ANCIENT_FOREST.cost);
     });
 
     test.skip('Setting trap vs rushing with beasts trade-off', async () => {
@@ -135,16 +133,16 @@ describe('Complex Gameplay Scenarios', () => {
       const player2 = state.players[1];
 
       giveCards(player1, [HABITAT_LOCK, MOSSLET]);
-      player1.currentNectar = 0; // Reset to ensure consistent state
-      giveNectar(player1, 3);
+      player1.currentEnergy = 0; // Reset to ensure consistent state
+      giveEnergy(player1, 3);
 
-      // Decision: Set trap (1 nectar) + summon Mosslet (2 nectar)
-      // OR: Save nectar for future turn
+      // Decision: Set trap (1 energy) + summon Mosslet (2 energy)
+      // OR: Save energy for future turn
 
-      await game.playCard(player1, 0); // Set trap (1 nectar)
-      await game.playCard(player1, 0); // Summon Mosslet (2 nectar)
+      await game.playCard(player1, 0); // Set trap (1 energy)
+      await game.playCard(player1, 0); // Summon Mosslet (2 energy)
 
-      expect(player1.currentNectar).toBe(0);
+      expect(player1.currentEnergy).toBe(0);
       expect(countAliveBeasts(player1)).toBe(1);
       expect(player1.trapZone.filter(t => t !== null).length).toBe(1);
 
@@ -152,7 +150,7 @@ describe('Complex Gameplay Scenarios', () => {
 
       // Player 2 plays habitat
       giveCards(player2, [VOLCANIC_SCAR]);
-      giveNectar(player2, 10);
+      giveEnergy(player2, 10);
       await game.playCard(player2, 0);
       await waitForEffects();
 
@@ -181,18 +179,18 @@ describe('Complex Gameplay Scenarios', () => {
 
       // Turn starts
       giveCards(player1, [MOSSLET, BATTLE_FURY]);
-      player1.currentNectar = 0; // Reset to ensure consistent state
-      giveNectar(player1, 10);
+      player1.currentEnergy = 0; // Reset to ensure consistent state
+      giveEnergy(player1, 10);
 
       // 1. Summon beast
-      await game.playCard(player1, 0); // Summon Mosslet (2 nectar)
-      // Nectar after playing Mosslet
-      const nectarAfterMosslet = player1.currentNectar;
+      await game.playCard(player1, 0); // Summon Mosslet (2 energy)
+      // Energy after playing Mosslet
+      const energyAfterMosslet = player1.currentEnergy;
 
       // 2. Play buff
       await game.playCard(player1, 0); // Battle Fury
-      // Verify nectar was deducted
-      expect(player1.currentNectar).toBeLessThan(nectarAfterMosslet);
+      // Verify energy was deducted
+      expect(player1.currentEnergy).toBeLessThan(energyAfterMosslet);
 
       await waitForEffects();
 
@@ -217,30 +215,30 @@ describe('Complex Gameplay Scenarios', () => {
       const state = game.getState();
       const player = state.players[0];
 
-      // Turn 1: Limited nectar (1 nectar)
+      // Turn 1: Limited energy (1 energy)
       state.turn = 1;
-      player.currentNectar = 0; // Reset to ensure consistent state
-      giveNectar(player, 1);
+      player.currentEnergy = 0; // Reset to ensure consistent state
+      giveEnergy(player, 1);
       // Replace hand with specific cards in desired order
       player.hand = [MOSSLET, LEAF_SPRITE, MYSTIC_SHIELD];
 
       // Can't afford anything good yet
-      expect(player.currentNectar).toBe(1);
+      expect(player.currentEnergy).toBe(1);
 
       await game.endTurn();
       await game.endTurn();
 
-      // Turn 2: 2 nectar
-      giveNectar(player, 2);
-      await game.playCard(player, 0); // Play Mosslet (2 nectar)
+      // Turn 2: 2 energy
+      giveEnergy(player, 2);
+      await game.playCard(player, 0); // Play Mosslet (2 energy)
       expect(countAliveBeasts(player)).toBe(1);
 
       await game.endTurn();
       await game.endTurn();
 
-      // Turn 3: 3 nectar
-      giveNectar(player, 3);
-      await game.playCard(player, 1); // Play Mystic Shield (3 nectar) - it's at index 1 now
+      // Turn 3: 3 energy
+      giveEnergy(player, 3);
+      await game.playCard(player, 1); // Play Mystic Shield (3 energy) - it's at index 1 now
 
       await waitForEffects();
 
@@ -251,7 +249,8 @@ describe('Complex Gameplay Scenarios', () => {
   });
 
   describe('Ability Combos', () => {
-    test('Burn damage + Cleansing Downpour timing', async () => {
+    // Skip: Counters (including Burn) were removed to reduce game complexity
+    test.skip('Burn damage + Cleansing Downpour timing', async () => {
       await game.startMatch(
         createDeck([CLEANSING_DOWNPOUR]),
         createDeck([])
@@ -283,7 +282,7 @@ describe('Complex Gameplay Scenarios', () => {
 
       // Play Cleansing Downpour before burn triggers
       giveCards(player1, [CLEANSING_DOWNPOUR]);
-      giveNectar(player1, 10);
+      giveEnergy(player1, 10);
       await game.playCard(player1, 0);
       await waitForEffects();
 
@@ -374,7 +373,7 @@ describe('Complex Gameplay Scenarios', () => {
   });
 
   describe('Resource Management', () => {
-    test('Nectar efficiency: buff value increases with more beasts', async () => {
+    test('Energy efficiency: buff value increases with more beasts', async () => {
       await game.startMatch(
         createDeck([MOSSLET, LEAF_SPRITE, CHARCOIL, BATTLE_FURY]),
         createDeck([])
@@ -383,18 +382,18 @@ describe('Complex Gameplay Scenarios', () => {
       const state = game.getState();
       const player = state.players[0];
 
-      // Scenario 1: 1 beast, then buff (3 nectar for +2 ATK = ~1.5 nectar per +1 ATK)
+      // Scenario 1: 1 beast, then buff (3 energy for +2 ATK = ~1.5 energy per +1 ATK)
       placeBeast(player, createTestBeast(MOSSLET), 0);
 
       const attackBefore1 = getTotalAttack(player);
       giveCards(player, [BATTLE_FURY]);
-      giveNectar(player, 10);
+      giveEnergy(player, 10);
       await game.playCard(player, 0);
       await waitForEffects();
 
-      // TODO: +2 total attack for 3 nectar
+      // TODO: +2 total attack for 3 energy
       // const attackAfter1 = getTotalAttack(player);
-      // const valuePerNectar1 = (attackAfter1 - attackBefore1) / 3;
+      // const valuePerEnergy1 = (attackAfter1 - attackBefore1) / 3;
 
       // Reset
       game.reset();
@@ -406,21 +405,21 @@ describe('Complex Gameplay Scenarios', () => {
       const state2 = game.getState();
       const player2 = state2.players[0];
 
-      // Scenario 2: 3 beasts, then buff (3 nectar for +6 ATK = 0.5 nectar per +1 ATK)
+      // Scenario 2: 3 beasts, then buff (3 energy for +6 ATK = 0.5 energy per +1 ATK)
       placeBeast(player2, createTestBeast(MOSSLET), 0);
       placeBeast(player2, createTestBeast(LEAF_SPRITE), 1);
       placeBeast(player2, createTestBeast(CHARCOIL), 2);
 
       const attackBefore2 = getTotalAttack(player2);
       giveCards(player2, [BATTLE_FURY]);
-      giveNectar(player2, 10);
+      giveEnergy(player2, 10);
       await game.playCard(player2, 0);
       await waitForEffects();
 
-      // TODO: +6 total attack for 3 nectar - much better value!
+      // TODO: +6 total attack for 3 energy - much better value!
       // const attackAfter2 = getTotalAttack(player2);
-      // const valuePerNectar2 = (attackAfter2 - attackBefore2) / 3;
-      // expect(valuePerNectar2).toBeGreaterThan(valuePerNectar1);
+      // const valuePerEnergy2 = (attackAfter2 - attackBefore2) / 3;
+      // expect(valuePerEnergy2).toBeGreaterThan(valuePerEnergy1);
     });
 
     test('Opportunity cost: tempo vs value', async () => {
@@ -434,16 +433,16 @@ describe('Complex Gameplay Scenarios', () => {
 
       // Replace hand with specific cards in desired order
       player.hand = [MOSSLET, MYSTIC_SHIELD];
-      player.currentNectar = 0; // Reset to ensure consistent state
-      giveNectar(player, 3);
+      player.currentEnergy = 0; // Reset to ensure consistent state
+      giveEnergy(player, 3);
 
-      // Choice A: Play Mosslet (2/3 body for 2 nectar, 1 nectar left)
+      // Choice A: Play Mosslet (2/3 body for 2 energy, 1 energy left)
       // Choice B: Play Mystic Shield (+2 HP to all allies, but no body)
 
       // Playing beast gives immediate board presence (tempo)
       await game.playCard(player, 0); // Mosslet
       expect(countAliveBeasts(player)).toBe(1);
-      expect(player.currentNectar).toBe(1);
+      expect(player.currentEnergy).toBe(1);
 
       // Can't afford Mystic Shield anymore this turn
       const result = await game.playCard(player, 0); // Mystic Shield

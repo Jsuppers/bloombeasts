@@ -8,6 +8,7 @@ import { UINodeType } from '../ScreenUtils';
 import { BattleDisplay } from '../../../gameManager';
 import { BindingType, UIState } from '../../types/BindingManager';
 import { createReactiveCardComponent } from '../common/CardRenderer';
+import { CardType } from '../../../engine/types/core';
 
 export class PlayerHand {
   private ui: PlayerHandProps['ui'];
@@ -105,7 +106,7 @@ export class PlayerHand {
                   if (card) {
 
                     // Show card popup for magic/buff cards, then play
-                    if (card.type === 'Magic' || card.type === 'Buff') {
+                    if (card.type === CardType.Magic || card.type === CardType.Buff) {
                       this.showPlayedCard?.(card, () => {
                         this.onAction?.(`play-card-${actualIndex}`);
                       });
@@ -142,7 +143,7 @@ export class PlayerHand {
                   const actualIndex = scrollOffset * cardsPerPage + slotIndex;
                   const card = display.playerHand[actualIndex];
                   if (!card) return 'transparent';
-                  const canAfford = card.cost <= display.playerNectar;
+                  const canAfford = card.cost <= display.playerEnergy;
                   return canAfford ? 'transparent' : 'rgba(0, 0, 0, 0.5)';
                 }
               ),

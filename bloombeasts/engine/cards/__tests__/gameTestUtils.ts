@@ -45,7 +45,7 @@ export function createTestPlayer(name: string): Player {
   return {
     name,
     health: STARTING_HEALTH,
-    currentNectar: 0,
+    currentEnergy: 0,
     deck: [],
     hand: [],
     field: Array(FIELD_SIZE).fill(null),
@@ -125,10 +125,10 @@ export function setHand(player: Player, cards: AnyCard[]): void {
 }
 
 /**
- * Give a player nectar (adds to current amount)
+ * Give a player energy (adds to current amount)
  */
-export function giveNectar(player: Player, amount: number): void {
-  player.currentNectar += amount;
+export function giveEnergy(player: Player, amount: number): void {
+  player.currentEnergy += amount;
 }
 
 /**

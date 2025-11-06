@@ -5,16 +5,18 @@
 
 import { COLORS } from '../../styles/colors';
 import { DIMENSIONS } from '../../styles/dimensions';
-import type { CardInstance } from '../../../screens/cards/types';
-import { computeCardDisplay, type CardDisplayData } from '../../../utils/cardUtils';
+import type { CardInstance } from '../../../screens/common/types';
+import type { RuntimeCard } from '../../../engine/types/runtime';
 import { getCardDescription } from '../../../engine/utils/cardDescriptionGenerator';
+import { createBattleCard, getCardDefinition, extractBaseCardId, getXPThreshold } from '../../../utils/cardUtils';
 import { UINodeType } from '../ScreenUtils';
 import type { PlayerData, UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 import type { BattleDisplay } from '../../../../bloombeasts/gameManager';
 import { BindingType, UIState } from '../../types/BindingManager';
+import { CardType } from '../../../engine/types/core';
 
 export interface CardRendererProps {
-  card: CardDisplayData;
+  card: RuntimeCard;
   isInDeck?: boolean;
   onClick?: (cardId: string) => void;
   showDeckIndicator?: boolean;
@@ -23,10 +25,10 @@ export interface CardRendererProps {
 /**
  * Create a card UI component with proper multi-layer rendering
  * This follows the standard card format:
- * - Layer 1: Card artwork (185x185) - beast image for Bloom, card art for others
- * - Layer 2: Card frame (210x280) - base-card for Bloom, type-specific for others (buff-card, magic-card, etc.)
- * - Layer 3: Affinity icon (for Bloom cards)
- * - Layer 4: Experience bar (for Bloom cards with levels)
+ * - Layer 1: Card artwork (185x185) - beast image for Beast, card art for others
+ * - Layer 2: Card frame (210x280) - base-card for Beast, type-specific for others (buff-card, magic-card, etc.)
+ * - Layer 3: Affinity icon (for Beast cards)
+ * - Layer 4: Experience bar (for Beast cards with levels)
  * - Layer 5: Text overlays (name, cost, stats, level, ability)
  * - Layer 6: Deck indicator (if showDeckIndicator is true)
  */
@@ -71,33 +73,36 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
   const cardImageKey = baseId; // Card images use the base card ID
   const beastImageKey = baseId; // Beast images use the base card ID
 
-  // Card frame key: Bloom cards use base-card, others use type-specific frames
+  // Check if card has affinity property (Beast, Buff, Habitat cards)
+  const affinity = 'affinity' in card ? (card as any).affinity : undefined;
+
+  // Card frame key: Beast cards use base-card, others use type-specific frames
   let cardFrameKey = '';
-  if (card.type === 'Bloom') {
+  if (card.type === CardType.Beast) {
     cardFrameKey = 'base-card';
-  } else if (card.type === 'Habitat' && card.affinity) {
-    cardFrameKey = `${card.affinity.toLowerCase()}-habitat`;
+  } else if (card.type === CardType.Habitat && affinity) {
+    cardFrameKey = `${affinity.toLowerCase()}-habitat`;
   } else {
     cardFrameKey = `${card.type.toLowerCase()}-card`;
   }
 
   // Affinity icon key format: affinity-icon (e.g., 'forest-icon', 'fire-icon')
-  const affinityKey = card.affinity ? `${card.affinity.toLowerCase()}-icon` : '';
+  const affinityKey = affinity ? `${affinity.toLowerCase()}-icon` : '';
   const expBarKey = 'experience-bar';
 
   // Get card description for ability text using the official cardDescriptionGenerator
   const abilityText = getCardDescription(card);
 
   // Debug logging for cards without descriptions
-  if ((!abilityText || abilityText.trim() === '') && card.type !== 'Bloom') {
-  } else if (card.type !== 'Bloom') {
+  if ((!abilityText || abilityText.trim() === '') && card.type !== 'Beast') {
+  } else if (card.type !== 'Beast') {
   }
 
-  const imageSourceKey = card.type === 'Bloom' ? beastImageKey : cardImageKey;
+  const imageSourceKey = card.type === CardType.Beast ? beastImageKey : cardImageKey;
 
   const children = [
       // Layer 1: Card/Beast artwork image (185x185)
-      // For Bloom cards: use beast image
+      // For Beast cards: use beast image
       // For other cards (Magic/Trap/Buff/Habitat): use card artwork image
       ui.Image({
         source: ui.assetIdToImageSource?.(imageSourceKey) || null,
@@ -110,7 +115,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         },
       }),
 
-      // Layer 2: Card frame - Bloom cards use base-card, others use type-specific frames
+      // Layer 2: Card frame - Beast cards use base-card, others use type-specific frames
       ui.Image({
         source: ui.assetIdToImageSource?.(cardFrameKey) || null,
         style: {
@@ -122,8 +127,8 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         },
       }),
 
-      // Layer 3: Affinity icon (for Bloom cards)
-      ...(card.type === 'Bloom' && card.affinity && affinityKey ? [
+      // Layer 3: Affinity icon (for Beast cards)
+      ...(card.type === CardType.Beast && card.affinity && affinityKey ? [
         ui.Image({
           source: ui.assetIdToImageSource?.(affinityKey) || null,
           style: {
@@ -167,8 +172,8 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         })
       ] : []),
 
-      // Attack and Health (for Bloom cards)
-      ...(card.type === 'Bloom' && ((card as any).currentAttack !== undefined || (card as any).baseAttack !== undefined) ? [
+      // Attack and Health (for Beast cards)
+      ...(card.type === CardType.Beast && ((card as any).currentAttack !== undefined || (card as any).baseAttack !== undefined) ? [
         ui.Text({
           text: String((card as any).currentAttack ?? (card as any).baseAttack ?? 0),
           style: {
@@ -183,7 +188,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         })
       ] : []),
 
-      ...(card.type === 'Bloom' && ((card as any).currentHealth !== undefined || (card as any).baseHealth !== undefined) ? [
+      ...(card.type === CardType.Beast && ((card as any).currentHealth !== undefined || (card as any).baseHealth !== undefined) ? [
         ui.Text({
           text: String((card as any).currentHealth ?? (card as any).baseHealth ?? 0),
           style: {
@@ -201,7 +206,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Level and Experience (for all cards with level)
       ...(card.level !== undefined ? [
         ui.Text({
-          text: `lvl ${card.level}. ${card.experience || 0}/${card.experienceRequired || 0}`,
+          text: `lvl ${card.level}. ${card.currentXP || 0}/${getXPThreshold(card.level)}`,
           style: {
             position: 'absolute',
             top: positions.level.y,
@@ -343,13 +348,13 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
 
   // Helper to get card from combined data
   // Now accepts uiState, playerData, and battleDisplay to properly react to changes
-  const getCard = (uiState: UIState, playerData: PlayerData, battleDisplay: BattleDisplay | null): CardDisplayData | null => {
+  const getCard = (uiState: UIState, playerData: PlayerData, battleDisplay: BattleDisplay | null): RuntimeCard | null => {
     // Battle modes - get card directly from battleDisplay
     if (isBattleBeastMode && slotIndex !== undefined && player) {
       if (!battleDisplay) return null;
       const field = player === 'player' ? battleDisplay.playerField : battleDisplay.opponentField;
       const beast = field?.[slotIndex];
-      return beast || null; // BattleDisplay cards are already in CardDisplayData format
+      return beast || null; // BattleDisplay cards are already RuntimeCard
     }
 
     if (isBattleHandMode && slotIndex !== undefined && cardsPerPage !== undefined) {
@@ -357,12 +362,12 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
       const scrollOffset = uiState.battle?.handScrollOffset ?? 0;
       const actualIndex = scrollOffset * cardsPerPage + slotIndex;
       const card = battleDisplay.playerHand?.[actualIndex];
-      return card || null; // BattleDisplay cards are already in CardDisplayData format
+      return card || null; // BattleDisplay cards are already RuntimeCard
     }
 
     if (isBattleSelectedCardMode) {
       const card = uiState.battle?.selectedCardDetail;
-      return card || null; // BattleDisplay cards are already in CardDisplayData format
+      return card || null; // BattleDisplay cards are already RuntimeCard
     }
 
     // PlayerData modes - get card from collected cards
@@ -382,8 +387,11 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
       instance = cardIndex < cardInstances.length ? cardInstances[cardIndex] : null;
     }
 
-    // Compute display data from instance
-    return instance ? computeCardDisplay(instance) : null;
+    // Convert CardInstance to RuntimeCard
+    if (!instance) return null;
+    const baseCardId = extractBaseCardId(instance.cardId);
+    const cardDef = getCardDefinition(baseCardId);
+    return cardDef ? createBattleCard(instance, cardDef) : null;
   };
 
 
@@ -424,9 +432,9 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     const card = isBattleMode
       ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
       : getCard(uiState, data as PlayerData, null);
-    if (!card || card.type !== 'Bloom') return '';
-    const bloomCard = card as any;
-    return String(bloomCard.currentAttack ?? bloomCard.baseAttack ?? 0);
+    if (!card || card.type !== CardType.Beast) return '';
+    const beastCard = card as any;
+    return String(beastCard.currentAttack ?? beastCard.baseAttack ?? 0);
   });
 
   const cardHealthBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
@@ -434,9 +442,9 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     const card = isBattleMode
       ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
       : getCard(uiState, data as PlayerData, null);
-    if (!card || card.type !== 'Bloom') return '';
-    const bloomCard = card as any;
-    return String(bloomCard.currentHealth ?? bloomCard.baseHealth ?? 0);
+    if (!card || card.type !== CardType.Beast) return '';
+    const beastCard = card as any;
+    return String(beastCard.currentHealth ?? beastCard.baseHealth ?? 0);
   });
 
   const cardLevelBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
@@ -447,9 +455,8 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     if (!card || card.level === undefined) return '';
 
     // For all cards, show level and experience
-    const exp = card.experience || 0;
-    const expRequired = card.experienceRequired || 0;
-    return `lvl ${card.level}. ${exp}/${expRequired}`;
+    const exp = card.currentXP || 0;
+    return `lvl ${card.level}. ${exp}/${getXPThreshold(card.level)}`;
   });
 
   const abilityTextBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
@@ -466,10 +473,15 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     const card = isBattleMode
       ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
       : getCard(uiState, data as PlayerData, null);
-    if (!card) return null;
+    if (!card) {
+      return null;
+    }
     const baseId = extractBaseId(card.id, card.name);
-    if (!baseId) return null;
-    return ui.assetIdToImageSource?.(baseId) ?? null;
+    if (!baseId) {
+      return null;
+    }
+    const imageSource = ui.assetIdToImageSource?.(baseId) ?? null;
+    return imageSource;
   });
 
   const templateImageBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
@@ -480,9 +492,9 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     if (!card) return null;
 
     let templateAssetId = '';
-    if (card.type === 'Habitat' && card.affinity) {
+    if (card.type === CardType.Habitat && card.affinity) {
       templateAssetId = `${card.affinity.toLowerCase()}-habitat`;
-    } else if (card.type !== 'Bloom') {
+    } else if (card.type !== CardType.Beast) {
       templateAssetId = `${card.type.toLowerCase()}-card`;
     }
 
@@ -494,7 +506,7 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     const card = isBattleMode
       ? getCard(uiState, {} as PlayerData, data as BattleDisplay)
       : getCard(uiState, data as PlayerData, null);
-    if (!card || card.type !== 'Bloom' || !card.affinity) return null;
+    if (!card || card.type !== CardType.Beast || !card.affinity) return null;
     const affinityAssetId = `${card.affinity.toLowerCase()}-icon`;
     if (!affinityAssetId) return null;
     return ui.assetIdToImageSource?.(affinityAssetId) ?? null;
@@ -525,14 +537,14 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
           : getCard(uiState, data as PlayerData, null);
         if (!card) return null;
 
-        // Bloom cards use base-card
-        if (card.type === 'Bloom') {
+        // Beast cards use base-card
+        if (card.type === CardType.Beast) {
           return ui.assetIdToImageSource?.('base-card') ?? null;
         }
 
         // Other cards use their type-specific frame
         let frameAssetId = '';
-        if (card.type === 'Habitat' && card.affinity) {
+        if (card.type === CardType.Habitat && card.affinity) {
           frameAssetId = `${card.affinity.toLowerCase()}-habitat`;
         } else {
           frameAssetId = `${card.type.toLowerCase()}-card`;

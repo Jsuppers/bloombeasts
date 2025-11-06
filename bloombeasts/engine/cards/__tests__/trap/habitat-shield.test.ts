@@ -8,8 +8,8 @@ import {
   validateTrapCard,
   validateStructuredAbility,
   loadCardFromJSON,
-} from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+} from '../testUtils';
+import { StructuredAbility } from '../../../types/abilities';
 
 const HABITAT_SHIELD = loadCardFromJSON('habitat-shield', 'trap');
 

@@ -15,7 +15,7 @@ export function validateBaseCard(card: any): void {
   expect(card.name).toBeDefined();
   expect(typeof card.name).toBe('string');
   expect(card.type).toBeDefined();
-  expect(['Magic', 'Trap', 'Bloom', 'Habitat', 'Buff']).toContain(card.type);
+  expect(['Magic', 'Trap', 'Beast', 'Habitat', 'Buff']).toContain(card.type);
   expect(card.cost).toBeDefined();
   expect(typeof card.cost).toBe('number');
   expect(card.cost).toBeGreaterThanOrEqual(0);
@@ -26,7 +26,7 @@ export function validateBaseCard(card: any): void {
  */
 export function validateBloomBeastCard(card: BloomBeastCard): void {
   validateBaseCard(card);
-  expect(card.type).toBe('Bloom');
+  expect(card.type).toBe('Beast');
   expect(card.affinity).toBeDefined();
   expect(['Forest', 'Fire', 'Water', 'Sky', 'Generic']).toContain(card.affinity);
   expect(card.baseAttack).toBeDefined();

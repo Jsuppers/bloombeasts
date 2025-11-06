@@ -8,8 +8,8 @@ import {
   validateBuffCard,
   validateStructuredAbility,
   loadCardFromJSON,
-} from '../testUtils.js';
-import { StructuredAbility } from '../../types/abilities.js';
+} from '../testUtils';
+import { StructuredAbility } from '../../../types/abilities';
 
 const SWIFT_WIND = loadCardFromJSON('swift-wind', 'buff');
 

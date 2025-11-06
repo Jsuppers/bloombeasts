@@ -2,22 +2,11 @@
  * BloomBeasts game implementation using the TURBO library
  */
 
-import {
-  IGameRules,
-  IGameState,
-  IGameAction,
-  IActionResult,
-  IActionValidation,
-  IGameConfig,
-  IPlayer,
-  GameController,
-  GamePhase,
-} from '../../turbo/src';
+import { Turbo } from '../lib/Turbo-Standalone';
 
 // Import existing BloomBeasts types
 import { CardType } from '../engine/types/core';
 import {
-  AnyCard as Card,
   BloomBeastCard,
   MagicCard,
   TrapCard,
@@ -32,7 +21,20 @@ import {
   PlayCardActionHandler,
   AttackActionHandler,
   EndTurnActionHandler,
+  TimeoutActionHandler,
+  ForfeitActionHandler,
+  TriggerContext,
 } from './actions';
+// Import types from ./types to avoid circular dependencies with action handlers
+import type {
+  BloomBeastsState,
+  BloomBeastsActionData,
+  BloomBeastsPlayer,
+  RuntimeBeast,
+  RuntimeCard,
+} from './types';
+import { BloomBeastsActionType } from './types';
+import { WinConditionChecker } from './core/WinConditionChecker';
 
 /**
  * Trigger timing enum for effect processing
@@ -45,96 +47,211 @@ enum TriggerTiming {
 }
 
 /**
- * Simple effect system for processing game effects and triggers
- * This is a stub implementation that can be expanded as needed
+ * Effect system for processing game effects and triggers
  */
 class EffectSystem<TState extends Record<string, unknown>> {
   processEffects(
     timing: TriggerTiming,
-    state: IGameState<TState>,
-    context?: any
-  ): { success: boolean; newState?: IGameState<TState> } {
-    // Stub implementation - effects can be added here in the future
-    return { success: true, newState: state };
+    state: Turbo.IGameState<TState>,
+    context?: TriggerContext
+  ): { success: boolean; newState?: Turbo.IGameState<TState> } {
+    // Clone state to avoid mutating the original - use structuredClone to preserve Sets, Maps, etc.
+    const newState = structuredClone(state) as Turbo.IGameState<TState>;
+    const bloomState = newState.gameData as unknown as BloomBeastsState;
+
+    // Handle OnSummon triggers
+    if (timing === TriggerTiming.ON_ACTION && context?.action === 'summon' && context.card) {
+      const card = context.card;
+
+      // Check if this card has abilities
+      if (card.abilities && card.abilities.length > 0) {
+        for (const ability of card.abilities) {
+          // Type guard: check if this is a StructuredAbility with trigger and effects
+          if ('trigger' in ability && ability.trigger === 'OnSummon' && 'effects' in ability && ability.effects) {
+            // Process each effect
+            for (const effect of ability.effects) {
+              this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId);
+            }
+          }
+        }
+      }
+    }
+
+    // Handle WhileOnField effects when card enters field
+    if (timing === TriggerTiming.ON_ACTION && context?.action === 'enter_field' && context.card) {
+      const card = context.card;
+
+      // Check if this card has abilities
+      if (card.abilities && card.abilities.length > 0) {
+        for (const ability of card.abilities) {
+          // Type guard: check if this is a StructuredAbility with trigger and effects
+          if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+            // Process each effect
+            for (const effect of ability.effects) {
+              this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId);
+            }
+          }
+        }
+      }
+    }
+
+    // Handle start of turn triggers
+    if (timing === TriggerTiming.START_OF_TURN) {
+      // Process OnOwnStartOfTurn triggers
+      this.processStartOfTurnTriggers(bloomState, newState.turnInfo!.currentPlayerId);
+    }
+
+    // Handle end of turn triggers
+    if (timing === TriggerTiming.END_OF_TURN) {
+      this.processEndOfTurnTriggers(bloomState, newState.turnInfo!.currentPlayerId);
+    }
+
+    return { success: true, newState };
   }
 
-  clearExpiredEffects(state: IGameState<TState>): void {
+  private processEffect(effect: any, state: BloomBeastsState, currentPlayerId: string): void {
+    const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
+    const currentPlayer = state.players[currentPlayerIndex];
+
+    switch (effect.type) {
+      case 'draw-cards':
+        // Draw cards from deck
+        const cardsToDraw = effect.value || 1;
+        for (let i = 0; i < cardsToDraw; i++) {
+          if (currentPlayer.deck.length > 0 && currentPlayer.hand.length < currentPlayer.maxHandSize) {
+            const drawnCard = currentPlayer.deck.shift()!;
+            currentPlayer.hand.push(drawnCard);
+          }
+        }
+        break;
+
+      case 'modify-stats':
+        // Modify stats of target beasts
+        this.processStatModification(effect, state, currentPlayerIndex);
+        break;
+
+      case 'gain-resource':
+        // Gain resources (already handled in processMagicCard)
+        if (effect.resource === 'energy') {
+          const value = effect.value || 0;
+          currentPlayer.energy = Math.min(currentPlayer.energy + value, 10); // maxEnergy = 10
+        }
+        break;
+    }
+  }
+
+  private processStatModification(effect: any, state: BloomBeastsState, currentPlayerIndex: number): void {
+    const field = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
+    const targets = this.resolveTargets(effect.target, field, state);
+
+    for (const target of targets) {
+      if (effect.stat === 'attack' || effect.stat === 'both') {
+        target.currentAttack = Math.max(0, target.currentAttack + effect.value);
+      }
+      if (effect.stat === 'health' || effect.stat === 'both') {
+        target.currentHealth = Math.max(0, target.currentHealth + effect.value);
+        // Also increase maxHealth for permanent buffs
+        if (effect.duration === 'permanent' && effect.value > 0) {
+          target.maxHealth += effect.value;
+        }
+      }
+    }
+  }
+
+  private resolveTargets(targetType: string, field: any, state: BloomBeastsState): RuntimeBeast[] {
+    const targets: RuntimeBeast[] = [];
+
+    switch (targetType) {
+      case 'all-allies':
+        // Get all allied beasts on the field
+        for (const beast of field.beasts) {
+          if (beast !== null) {
+            targets.push(beast);
+          }
+        }
+        break;
+      case 'self':
+        // Would need context to know which beast is self
+        break;
+      // Add more target types as needed
+    }
+
+    return targets;
+  }
+
+  private processStartOfTurnTriggers(state: BloomBeastsState, currentPlayerId: string): void {
+    const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
+    const field = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
+
+    // Process OnOwnStartOfTurn triggers
+    for (const beast of field.beasts) {
+      if (beast && beast.abilities) {
+        for (const ability of beast.abilities) {
+          if ('trigger' in ability && ability.trigger === 'OnOwnStartOfTurn' && 'effects' in ability && ability.effects) {
+            for (const effect of ability.effects) {
+              this.processEffect(effect, state, currentPlayerId);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  private applyWhileOnFieldEffects(state: BloomBeastsState, currentPlayerId: string): void {
+    const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
+    const field = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
+
+    // Apply WhileOnField effects from beasts
+    for (const beast of field.beasts) {
+      if (beast && beast.abilities) {
+        for (const ability of beast.abilities) {
+          if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+            for (const effect of ability.effects) {
+              this.processEffect(effect, state, currentPlayerId);
+            }
+          }
+        }
+      }
+    }
+
+    // Apply WhileOnField effects from habitat
+    if (field.habitat && field.habitat.abilities) {
+      for (const ability of field.habitat.abilities) {
+        if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+          for (const effect of ability.effects) {
+            this.processEffect(effect, state, currentPlayerId);
+          }
+        }
+      }
+    }
+  }
+
+  private processEndOfTurnTriggers(state: BloomBeastsState, currentPlayerId: string): void {
+    const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
+    const field = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
+
+    // Process OnOwnEndOfTurn triggers
+    for (const beast of field.beasts) {
+      if (beast && beast.abilities) {
+        for (const ability of beast.abilities) {
+          if ('trigger' in ability && ability.trigger === 'OnOwnEndOfTurn' && 'effects' in ability && ability.effects) {
+            for (const effect of ability.effects) {
+              this.processEffect(effect, state, currentPlayerId);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  clearExpiredEffects(state: Turbo.IGameState<TState>): void {
     // Stub implementation - clear temporary effects here
   }
 }
 
-/**
- * BeastCard with runtime properties when on field
- */
-export interface BeastFieldCard extends BloomBeastCard {
-  attack: number;  // Current attack (can be modified from baseAttack)
-  health: number;  // Current health (can be modified from baseHealth)
-  summoningSickness?: boolean;
-  usedAbilityThisTurn?: boolean;
-}
-
-/**
- * BloomBeasts specific game state
- */
-export interface BloomBeastsState extends Record<string, unknown> {
-  players: BloomBeastsPlayer[];
-  field: {
-    player1: {
-      beasts: (BeastFieldCard | null)[];
-      buffs: (BuffCard | null)[];
-      habitat: HabitatCard | null;
-      traps: TrapCard[];
-    };
-    player2: {
-      beasts: (BeastFieldCard | null)[];
-      buffs: (BuffCard | null)[];
-      habitat: HabitatCard | null;
-      traps: TrapCard[];
-    };
-  };
-  currentTurnActions: {
-    hasDrawnCard: boolean;
-    cardsPlayed: number;
-    hasAttacked: Set<string>;
-  };
-}
-
-/**
- * BloomBeasts player data
- */
-export interface BloomBeastsPlayer {
-  id: string;
-  name: string;
-  health: number;
-  energy: number;
-  deck: Card[];
-  hand: Card[];
-  graveyard: Card[];
-  maxHandSize: number;
-  maxHealth: number;
-}
-
-/**
- * BloomBeasts action types
- */
-export enum BloomBeastsActionType {
-  DRAW_CARD = 'draw_card',
-  PLAY_CARD = 'play_card',
-  ATTACK = 'attack',
-  USE_ABILITY = 'use_ability',
-  END_TURN = 'end_turn',
-}
-
-/**
- * BloomBeasts action data
- */
-export interface BloomBeastsActionData extends Record<string, unknown> {
-  type: BloomBeastsActionType;
-  cardId?: string;
-  targetId?: string;
-  position?: number;
-  abilityId?: string;
-}
+// Types are defined in ./types.ts to avoid circular dependencies
+export type { BloomBeastsState, BloomBeastsActionData, BloomBeastsPlayer, RuntimeBeast, RuntimeCard } from './types';
+export { BloomBeastsActionType } from './types';
 
 /**
  * BloomBeasts game configuration
@@ -155,7 +272,7 @@ const DEFAULT_CONFIG: BloomBeastsConfig = {
   startingHandSize: 3,
   maxFieldBeasts: 3,
   maxFieldBuffs: 3,
-  maxFieldTraps: 5,
+  maxFieldTraps: 3,
   startingHealth: 30,
   maxEnergy: 10,
 };
@@ -163,15 +280,17 @@ const DEFAULT_CONFIG: BloomBeastsConfig = {
 /**
  * BloomBeasts game rules implementation
  */
-export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeastsActionData> {
+export class BloomBeastsRules implements Turbo.IGameRules<BloomBeastsState, BloomBeastsActionData> {
   private config: BloomBeastsConfig;
   private effectSystem: EffectSystem<BloomBeastsState>;
   private actionHandlers: ActionHandlerRegistry;
+  private winConditionChecker: WinConditionChecker;
 
   constructor(config: Partial<BloomBeastsConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.effectSystem = new EffectSystem<BloomBeastsState>();
     this.actionHandlers = new ActionHandlerRegistry();
+    this.winConditionChecker = new WinConditionChecker();
 
     // Register action handlers
     this.actionHandlers.registerAll([
@@ -179,6 +298,8 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
       new PlayCardActionHandler(),
       new AttackActionHandler(),
       new EndTurnActionHandler(),
+      new TimeoutActionHandler(),
+      new ForfeitActionHandler(),
     ]);
 
     this.registerEffectHandlers();
@@ -187,7 +308,7 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
   /**
    * Initialize the game state
    */
-  createInitialState(config: IGameConfig): IGameState<BloomBeastsState> {
+  createInitialState(config: Turbo.IGameConfig): Turbo.IGameState<BloomBeastsState> {
     const players = config.players.map(p => this.createPlayer(p));
 
     // Shuffle decks and draw starting hands
@@ -233,18 +354,22 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
         timeStarted: Date.now(),
       },
       players: config.players,
-      phase: GamePhase.PLAYING,
+      phase: Turbo.GamePhase.PLAYING,
       isComplete: false,
     };
   }
 
   /**
    * Validate if an action can be performed
+   *
+   * This now delegates to action handlers for validation.
+   * Handlers contain all the validation logic specific to each action type.
    */
   validateAction(
-    action: IGameAction<BloomBeastsActionData>,
-    state: IGameState<BloomBeastsState>
-  ): IActionValidation {
+    action: Turbo.IGameAction<BloomBeastsActionData>,
+    state: Turbo.IGameState<BloomBeastsState>
+  ): Turbo.IActionValidation {
+    // Check if it's the current player's turn
     const currentPlayerIndex = this.getCurrentPlayerIndex(state);
     const currentPlayer = state.gameData!.players[currentPlayerIndex];
 
@@ -252,64 +377,32 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
       return { isValid: false, reason: 'Not your turn' };
     }
 
-    switch (action.data.type) {
-      case BloomBeastsActionType.DRAW_CARD:
-        if (state.gameData!.currentTurnActions.hasDrawnCard) {
-          return { isValid: false, reason: 'Already drawn a card this turn' };
-        }
-        if (currentPlayer.deck.length === 0) {
-          return { isValid: false, reason: 'No cards left in deck' };
-        }
-        break;
-
-      case BloomBeastsActionType.PLAY_CARD:
-        const card = currentPlayer.hand.find(c => c.id === action.data.cardId);
-        if (!card) {
-          return { isValid: false, reason: 'Card not in hand' };
-        }
-        if (card.cost > currentPlayer.energy) {
-          return { isValid: false, reason: 'Not enough energy' };
-        }
-        // Additional validation based on card type
-        if (!this.validateCardPlacement(card, action.data.position, state)) {
-          return { isValid: false, reason: 'Invalid card placement' };
-        }
-        break;
-
-      case BloomBeastsActionType.ATTACK:
-        if (!action.data.cardId) {
-          return { isValid: false, reason: 'No attacker specified' };
-        }
-        if (state.gameData!.currentTurnActions.hasAttacked.has(action.data.cardId)) {
-          return { isValid: false, reason: 'This creature has already attacked' };
-        }
-        // Check if creature has summoning sickness
-        const attacker = this.findBeastOnField(action.data.cardId, state);
-        if (attacker && attacker.summoningSickness) {
-          return { isValid: false, reason: 'Creature has summoning sickness' };
-        }
-        break;
-
-      case BloomBeastsActionType.END_TURN:
-        // Always valid
-        break;
-
-      default:
-        return { isValid: false, reason: 'Unknown action type' };
+    // Get the appropriate handler
+    const handler = this.actionHandlers.get(action.data.type);
+    if (!handler) {
+      return { isValid: false, reason: 'Unknown action type' };
     }
 
-    return { isValid: true };
+    // Delegate validation to the handler
+    const validation = handler.validate(action.data, state, action.playerId);
+
+    return {
+      isValid: validation.valid,
+      reason: !validation.valid ? validation.reason : undefined,
+    };
   }
 
   /**
    * Execute an action and return the new state
+   *
+   * This is now a simple dispatcher that delegates to action handlers.
+   * All action-specific logic, event generation, and trigger processing
+   * is handled by the respective action handlers.
    */
   executeAction(
-    action: IGameAction<BloomBeastsActionData>,
-    state: IGameState<BloomBeastsState>
-  ): IActionResult<BloomBeastsState> {
-    const events = [];
-
+    action: Turbo.IGameAction<BloomBeastsActionData>,
+    state: Turbo.IGameState<BloomBeastsState>
+  ): Turbo.IActionResult<BloomBeastsState> {
     try {
       // Get the appropriate handler
       const handler = this.actionHandlers.get(action.data.type);
@@ -330,82 +423,20 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
         };
       }
 
-      // Execute the action to get new state
-      const newState = handler.execute(action.data, state, action.playerId);
-
-      const currentPlayerIndex = this.getCurrentPlayerIndex(newState);
-      const currentPlayer = newState.gameData.players[currentPlayerIndex];
-
-      // Post-process based on action type (events, triggers, etc.)
-      switch (action.data.type) {
-        case BloomBeastsActionType.DRAW_CARD:
-          events.push({
-            type: 'card_drawn',
-            playerId: currentPlayer.id,
-            data: {},
-            timestamp: Date.now(),
-          });
-          break;
-
-        case BloomBeastsActionType.PLAY_CARD:
-          const card = state.gameData!.players[currentPlayerIndex].hand.find(c => c.id === action.data.cardId);
-          if (card) {
-            events.push({
-              type: 'card_played',
-              playerId: currentPlayer.id,
-              data: { cardId: card.id, cardType: card.type },
-              timestamp: Date.now(),
-            });
-
-            // Process Magic card effects
-            if (card.type === 'Magic') {
-              this.processMagicCard(card as MagicCard, newState);
-            }
-
-            // Process OnSummon triggers for Beast cards
-            if (card.type === CardType.Beast) {
-              this.processTriggers(TriggerTiming.ON_ACTION, newState, { action: 'summon', card });
-            }
-          }
-          break;
-
-        case BloomBeastsActionType.ATTACK:
-          events.push({
-            type: 'attack',
-            playerId: currentPlayer.id,
-            data: {},
-            timestamp: Date.now(),
-          });
-
-          // Process OnAttack triggers
-          this.processTriggers(TriggerTiming.ON_ACTION, newState, { action: 'attack' });
-          break;
-
-        case BloomBeastsActionType.END_TURN:
-          // Process end of turn effects
-          this.processTriggers(TriggerTiming.END_OF_TURN, newState);
-
-          // Clear temporary effects
-          this.clearTemporaryEffects(newState);
-
-          events.push({
-            type: 'turn_ended',
-            playerId: currentPlayer.id,
-            data: {},
-            timestamp: Date.now(),
-          });
-          break;
-      }
-
-      return {
-        success: true,
-        newState,
-        sideEffects: events.map(e => ({
-          type: e.type,
-          description: `${e.type} for player ${e.playerId}`,
-          data: e
-        })),
+      // Create context with trigger and effect processing functions
+      const context = {
+        processTriggers: (timing: string, newState: Turbo.IGameState<BloomBeastsState>, ctx?: TriggerContext) => {
+          this.processTriggers(timing as TriggerTiming, newState, ctx);
+        },
+        processMagicCard: (card: MagicCard, newState: Turbo.IGameState<BloomBeastsState>) => {
+          this.processMagicCard(card, newState);
+        },
       };
+
+      // Execute the action - handler returns full result with events
+      const result = handler.execute(action.data, state, action.playerId, context);
+
+      return result;
     } catch (error) {
       console.error('[BloomBeastsGame] Action execution failed:', error);
       return {
@@ -416,150 +447,47 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
   }
 
   /**
-   * @deprecated Use executeAction instead - kept for backwards compatibility during migration
-   */
-  private executeActionLegacy(
-    action: IGameAction<BloomBeastsActionData>,
-    state: IGameState<BloomBeastsState>
-  ): IActionResult<BloomBeastsState> {
-    // Use structuredClone for proper deep cloning (handles Sets, Maps, Dates, etc.)
-    const newState = structuredClone(state) as IGameState<BloomBeastsState>;
-
-    const currentPlayerIndex = this.getCurrentPlayerIndex(newState);
-    const currentPlayer = newState.gameData!.players[currentPlayerIndex];
-    const events = [];
-
-    try {
-      switch (action.data.type) {
-        case BloomBeastsActionType.DRAW_CARD:
-          this.drawCard(currentPlayer);
-          newState.gameData!.currentTurnActions.hasDrawnCard = true;
-          events.push({
-            type: 'card_drawn',
-            playerId: currentPlayer.id,
-            data: {},
-            timestamp: Date.now(),
-          });
-          break;
-
-        case BloomBeastsActionType.PLAY_CARD:
-          const card = currentPlayer.hand.find(c => c.id === action.data.cardId)!;
-          this.playCard(card, currentPlayer, action.data.position, newState);
-          newState.gameData!.currentTurnActions.cardsPlayed++;
-          events.push({
-            type: 'card_played',
-            playerId: currentPlayer.id,
-            data: { cardId: card.id, cardType: card.type },
-            timestamp: Date.now(),
-          });
-
-          // Process OnSummon triggers for Beast cards
-          if (card.type === CardType.Beast) {
-            this.processTriggers(TriggerTiming.ON_ACTION, newState, { action: 'summon', card });
-          }
-          break;
-
-        case BloomBeastsActionType.ATTACK:
-          const attackResult = this.processAttack(
-            action.data.cardId!,
-            action.data.targetId,
-            newState
-          );
-          newState.gameData!.currentTurnActions.hasAttacked.add(action.data.cardId!);
-          events.push({
-            type: 'attack',
-            playerId: currentPlayer.id,
-            data: attackResult,
-            timestamp: Date.now(),
-          });
-
-          // Process OnAttack triggers
-          this.processTriggers(TriggerTiming.ON_ACTION, newState, { action: 'attack', ...attackResult });
-          break;
-
-        case BloomBeastsActionType.END_TURN:
-          // Process end of turn effects
-          this.processTriggers(TriggerTiming.END_OF_TURN, newState);
-
-          // Clear temporary effects
-          this.clearTemporaryEffects(newState);
-
-          // Switch to next player
-          const players = newState.gameData!.players;
-          const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
-          const nextPlayerId = players[nextPlayerIndex].id;
-
-          // Update turn info
-          newState.turnInfo = {
-            ...newState.turnInfo!,
-            currentPlayerId: nextPlayerId,
-            turnNumber: nextPlayerIndex === 0 ? newState.turnInfo!.turnNumber + 1 : newState.turnInfo!.turnNumber,
-            movesThisTurn: 0,
-            timeStarted: Date.now(),
-          };
-
-          console.log(`[BloomBeastsGame] END_TURN: Player ${currentPlayer.id} ended turn. Now ${nextPlayerId}'s turn (index: ${nextPlayerIndex})`);
-
-          // Start new turn (don't skip draw - we want to draw on each turn start)
-          this.startNewTurn(newState, false);
-
-          events.push({
-            type: 'turn_ended',
-            playerId: currentPlayer.id,
-            data: {},
-            timestamp: Date.now(),
-          });
-          break;
-      }
-
-      return {
-        success: true,
-        newState,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error : new Error(String(error)),
-      };
-    }
-  }
-
-  /**
    * Check if the game has ended
+   *
+   * Delegates to WinConditionChecker for all win condition logic
    */
-  checkEndCondition(state: IGameState<BloomBeastsState>): { isEnded: boolean; winnerId?: string; reason?: string } {
-    const players = state.gameData!.players;
-
-    // Count alive players by health
-    const aliveByHealth = players.filter(p => p.health > 0);
-
-    // Check for player death - handle ties first
-    if (aliveByHealth.length === 0) {
-      // Both players dead - tie
-      return { isEnded: true, winnerId: undefined, reason: 'Both players eliminated' };
-    } else if (aliveByHealth.length === 1) {
-      // One player alive - they win
-      return { isEnded: true, winnerId: aliveByHealth[0].id, reason: 'Opponent eliminated' };
+  checkEndCondition(state: Turbo.IGameState<BloomBeastsState>): { isEnded: boolean; winnerId?: string; reason?: string } {
+    // Check if game should end using WinConditionChecker
+    if (!this.winConditionChecker.shouldGameEnd(state)) {
+      return { isEnded: false };
     }
 
-    // Check for deck out
-    const aliveByDeck = players.filter(p => p.deck.length > 0 || p.hand.length > 0);
-    if (aliveByDeck.length === 0) {
-      // Both players decked out - tie
-      return { isEnded: true, winnerId: undefined, reason: 'Both players decked out' };
-    } else if (aliveByDeck.length === 1) {
-      // One player has cards - they win
-      return { isEnded: true, winnerId: aliveByDeck[0].id, reason: 'Opponent decked out' };
+    // Game should end - determine winner and reason
+    const winnerId = this.winConditionChecker.getWinnerId(state) ?? undefined;
+
+    // Determine reason based on state
+    let reason = 'Victory';
+
+    if (state.gameData.suddenEnd) {
+      const reasonMap = {
+        'timeout': 'Timeout',
+        'forfeit': 'Forfeit',
+        'disconnect': 'Disconnect'
+      };
+      reason = reasonMap[state.gameData.suddenEnd.reason] || 'Unknown';
+    } else {
+      const players = state.gameData!.players;
+      const aliveByHealth = players.filter(p => p.health > 0);
+      if (aliveByHealth.length < 2) {
+        reason = 'Opponent eliminated';
+      } else {
+        reason = 'Opponent decked out';
+      }
     }
 
-    return { isEnded: false };
+    return { isEnded: true, winnerId, reason };
   }
 
   /**
    * Get valid actions for the current player
    */
-  getValidActions(state: IGameState<BloomBeastsState>): IGameAction<BloomBeastsActionData>[] {
-    const actions: IGameAction<BloomBeastsActionData>[] = [];
+  getValidActions(state: Turbo.IGameState<BloomBeastsState>): Turbo.IGameAction<BloomBeastsActionData>[] {
+    const actions: Turbo.IGameAction<BloomBeastsActionData>[] = [];
     const currentPlayer = state.gameData!.players[this.getCurrentPlayerIndex(state)];
 
 
@@ -622,7 +550,7 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
   /**
    * Handle phase transitions
    */
-  getNextPhase(currentPhase: string, state: IGameState<BloomBeastsState>): string {
+  getNextPhase(currentPhase: string, state: Turbo.IGameState<BloomBeastsState>): string {
     // BloomBeasts has a simple phase structure
     return 'main';
   }
@@ -631,14 +559,14 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
    * Private helper methods
    */
 
-  private getCurrentPlayerIndex(state: IGameState<BloomBeastsState>): number {
+  private getCurrentPlayerIndex(state: Turbo.IGameState<BloomBeastsState>): number {
     const currentPlayerId = state.turnInfo!.currentPlayerId;
     return state.gameData!.players.findIndex(p => p.id === currentPlayerId);
   }
 
-  private createPlayer(config: IPlayer): BloomBeastsPlayer {
-    // Get deck from metadata
-    const deck = (config.metadata?.deck as Card[]) || [];
+  private createPlayer(config: Turbo.IPlayer): BloomBeastsPlayer {
+    // Get deck from metadata - should already be RuntimeCard[] from BattleController
+    const deck = (config.metadata?.deck as RuntimeCard[]) || [];
     return {
       id: config.id,
       name: config.name,
@@ -652,7 +580,7 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
     };
   }
 
-  private drawCard(player: BloomBeastsPlayer): Card | null {
+  private drawCard(player: BloomBeastsPlayer): RuntimeCard | null {
     if (player.deck.length === 0) {
       return null;
     }
@@ -662,94 +590,7 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
     return card;
   }
 
-  private playCard(
-    card: Card,
-    player: BloomBeastsPlayer,
-    position: number | undefined,
-    state: IGameState<BloomBeastsState>
-  ): void {
-    // Remove from hand
-    const cardIndex = player.hand.findIndex(c => c.id === card.id);
-    if (cardIndex !== -1) {
-      player.hand.splice(cardIndex, 1);
-    }
-
-    // Deduct energy cost
-    player.energy -= card.cost;
-
-    // Place card on field based on type
-    const field = this.getCurrentPlayerIndex(state) === 0 ? state.gameData!.field.player1 : state.gameData!.field.player2;
-
-    switch (card.type) {
-      case 'Beast':
-        const beastCard = card as BloomBeastCard;
-        const fieldCard: BeastFieldCard = {
-          ...beastCard,
-          attack: beastCard.baseAttack,
-          health: beastCard.baseHealth,
-          summoningSickness: true,
-          usedAbilityThisTurn: false
-        };
-        if (position !== undefined && position < field.beasts.length) {
-          field.beasts[position] = fieldCard;
-        }
-        break;
-
-      case 'Magic':
-        // Magic cards are instant and go to graveyard
-        this.processMagicCard(card as MagicCard, state);
-        player.graveyard.push(card);
-        break;
-
-      case 'Trap':
-        field.traps.push(card as TrapCard);
-        break;
-
-      case 'Buff':
-        if (position !== undefined && position < field.buffs.length) {
-          field.buffs[position] = card as BuffCard;
-        }
-        break;
-
-      case 'Habitat':
-        field.habitat = card as HabitatCard;
-        break;
-    }
-  }
-
-  private validateCardPlacement(
-    card: Card,
-    position: number | undefined,
-    state: IGameState<BloomBeastsState>
-  ): boolean {
-    const field = this.getCurrentPlayerIndex(state) === 0 ? state.gameData!.field.player1 : state.gameData!.field.player2;
-
-    switch (card.type) {
-      case 'Beast':
-        return position !== undefined &&
-               position < field.beasts.length &&
-               field.beasts[position] === null;
-
-      case 'Buff':
-        return position !== undefined &&
-               position < field.buffs.length &&
-               field.buffs[position] === null;
-
-      case 'Trap':
-        return field.traps.length < this.config.maxFieldTraps;
-
-      case 'Habitat':
-        return true; // Can always play, replaces existing
-
-      case 'Magic':
-        return true; // Instant cards always valid
-
-      default:
-        return false;
-    }
-  }
-
-  private getValidPositionsForCard(card: Card, state: IGameState<BloomBeastsState>): number[] {
+  private getValidPositionsForCard(card: RuntimeCard, state: Turbo.IGameState<BloomBeastsState>): number[] {
     const positions: number[] = [];
     const field = this.getCurrentPlayerIndex(state) === 0 ? state.gameData!.field.player1 : state.gameData!.field.player2;
 
@@ -780,7 +621,7 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
     return positions;
   }
 
-  private findBeastOnField(beastId: string, state: IGameState<BloomBeastsState>): BeastFieldCard | null {
+  private findBeastOnField(beastId: string, state: Turbo.IGameState<BloomBeastsState>): RuntimeBeast | null {
     for (const field of [state.gameData!.field.player1, state.gameData!.field.player2]) {
       for (const beast of field.beasts) {
         if (beast?.id === beastId) {
@@ -791,7 +632,7 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
     return null;
   }
 
-  private getValidAttackTargets(beast: BeastFieldCard, state: IGameState<BloomBeastsState>): string[] {
+  private getValidAttackTargets(beast: RuntimeBeast, state: Turbo.IGameState<BloomBeastsState>): string[] {
     const targets: string[] = [];
     const opponentField = this.getCurrentPlayerIndex(state) === 0 ?
                           state.gameData!.field.player2 :
@@ -813,85 +654,49 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
     return targets;
   }
 
-  private processAttack(
-    attackerId: string,
-    targetId: string | undefined,
-    state: IGameState<BloomBeastsState>
-  ): any {
-    const attacker = this.findBeastOnField(attackerId, state);
-    if (!attacker) return { error: 'Attacker not found' };
-
-    const opponentPlayer = state.gameData!.players[1 - this.getCurrentPlayerIndex(state)];
-
-    if (!targetId || targetId === opponentPlayer.id) {
-      // Direct attack on player
-      opponentPlayer.health -= attacker.attack;
-      return {
-        type: 'direct',
-        damage: attacker.attack,
-        targetHealth: opponentPlayer.health,
-      };
-    } else {
-      // Attack on beast
-      const target = this.findBeastOnField(targetId, state);
-      if (!target) return { error: 'Target not found' };
-
-      // Both creatures deal damage to each other
-      target.health -= attacker.attack;
-      attacker.health -= target.attack;
-
-      // Check for defeats
-      const defeated = [];
-      if (target.health <= 0) {
-        this.destroyBeast(target, state);
-        defeated.push(target.id);
-      }
-      if (attacker.health <= 0) {
-        this.destroyBeast(attacker, state);
-        defeated.push(attacker.id);
-      }
-
-      return {
-        type: 'creature',
-        attackerDamage: target.attack,
-        targetDamage: attacker.attack,
-        defeated,
-      };
-    }
-  }
-
-  private destroyBeast(beast: BeastFieldCard, state: IGameState<BloomBeastsState>): void {
-    // Remove from field
-    for (const field of [state.gameData!.field.player1, state.gameData!.field.player2]) {
-      const index = field.beasts.findIndex(b => b?.id === beast.id);
-      if (index !== -1) {
-        field.beasts[index] = null;
-
-        // Add to graveyard
-        const owner = state.gameData!.players.find(p =>
-          (p === state.gameData!.players[0] && field === state.gameData!.field.player1) ||
-          (p === state.gameData!.players[1] && field === state.gameData!.field.player2)
-        );
-        if (owner) {
-          owner.graveyard.push(beast);
-        }
-        break;
-      }
-    }
-
-    // Process OnDestroy triggers
-    this.processTriggers(TriggerTiming.ON_EVENT, state, { event: 'destroy', card: beast });
-  }
-
-  private processMagicCard(card: MagicCard, state: IGameState<BloomBeastsState>): void {
+  private processMagicCard(card: MagicCard, state: Turbo.IGameState<BloomBeastsState>): void {
     // Process magic card effects
-    // This would be implemented based on specific magic card effects
+    if (!card.abilities || card.abilities.length === 0) {
+      return;
+    }
+
+    // Get current player
+    const currentPlayerIndex = this.getCurrentPlayerIndex(state);
+    const currentPlayer = state.gameData.players[currentPlayerIndex];
+
+    // Process each ability
+    card.abilities.forEach(ability => {
+      // Type guard: check if this is a StructuredAbility with effects
+      if ('effects' in ability && ability.effects) {
+        ability.effects.forEach((effect: any) => {
+          // Handle GainResource effects (for Energy Block, Energy Surge, etc.)
+          if (effect.type === 'gain-resource' && effect.resource === 'energy') {
+            const value = effect.value || 0;
+            currentPlayer.energy = Math.min(
+              currentPlayer.energy + value,
+              this.config.maxEnergy
+            );
+          }
+          // Handle DrawCards effects
+          else if (effect.type === 'draw-cards') {
+            const cardsToDraw = effect.value || 1;
+            for (let i = 0; i < cardsToDraw; i++) {
+              if (currentPlayer.deck.length > 0 && currentPlayer.hand.length < currentPlayer.maxHandSize) {
+                const drawnCard = currentPlayer.deck.shift()!;
+                currentPlayer.hand.push(drawnCard);
+              }
+            }
+          }
+          // Add more effect handlers here as needed
+        });
+      }
+    });
   }
 
   private processTriggers(
     timing: TriggerTiming,
-    state: IGameState<BloomBeastsState>,
-    context?: any
+    state: Turbo.IGameState<BloomBeastsState>,
+    context?: TriggerContext
   ): void {
     // Process triggers using the effect system
     const result = this.effectSystem.processEffects(timing, state, context);
@@ -901,49 +706,7 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
     }
   }
 
-  private clearTemporaryEffects(state: IGameState<BloomBeastsState>): void {
-    // Clear effects that last until end of turn
-    this.effectSystem.clearExpiredEffects(state);
-
-    // Remove summoning sickness
-    for (const field of [state.gameData!.field.player1, state.gameData!.field.player2]) {
-      field.beasts.forEach(beast => {
-        if (beast) {
-          beast.summoningSickness = false;
-        }
-      });
-    }
-  }
-
-  private startNewTurn(state: IGameState<BloomBeastsState>, skipDraw: boolean = false): void {
-    const currentPlayer = state.gameData!.players[this.getCurrentPlayerIndex(state)];
-
-    console.log(`[BloomBeastsGame] startNewTurn for ${currentPlayer.id}, skipDraw: ${skipDraw}, deck size: ${currentPlayer.deck.length}, hand size: ${currentPlayer.hand.length}`);
-
-    // Reset turn actions
-    state.gameData!.currentTurnActions = {
-      hasDrawnCard: false,
-      cardsPlayed: 0,
-      hasAttacked: new Set(),
-    };
-
-    // Draw card at start of turn (unless this is the very first turn during initialization)
-    if (!skipDraw && currentPlayer.deck.length > 0) {
-      const drawnCard = this.drawCard(currentPlayer);
-      state.gameData!.currentTurnActions.hasDrawnCard = true;
-      console.log(`[BloomBeastsGame] ${currentPlayer.id} drew a card: ${drawnCard?.name}`);
-    }
-
-    // Restore energy - turn 1 = 1 energy, turn 2 = 2 energy, etc.
-    // turnNumber represents the round number (both players have played)
-    currentPlayer.energy = Math.min(state.turnInfo!.turnNumber, this.config.maxEnergy);
-    console.log(`[BloomBeastsGame] ${currentPlayer.id} energy set to ${currentPlayer.energy} (turn ${state.turnInfo!.turnNumber})`);
-
-    // Process start of turn triggers
-    this.processTriggers(TriggerTiming.START_OF_TURN, state);
-  }
-
-  private registerEffectHandlers(): void {
+  private registerEffectHandlers(): void{
     // Register effect handlers for BloomBeasts-specific effects
     // This would include handlers for abilities like:
     // - Stat modifications
@@ -957,7 +720,7 @@ export class BloomBeastsRules implements IGameRules<BloomBeastsState, BloomBeast
 /**
  * Factory function to create a BloomBeasts game instance
  */
-export function createBloomBeastsGame(config?: Partial<BloomBeastsConfig>): GameController<BloomBeastsState, BloomBeastsActionData> {
+export function createBloomBeastsGame(config?: Partial<BloomBeastsConfig>): Turbo.GameController<BloomBeastsState, BloomBeastsActionData> {
   const rules = new BloomBeastsRules(config);
-  return new GameController(rules);
+  return new Turbo.GameController(rules);
 }

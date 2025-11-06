@@ -162,7 +162,7 @@ export const commonAssets: AssetCatalog = {
         {
           type: AssetReferenceType.Image,
           horizonAssetId: "726833263789403",
-          path: "assets/images/ui_button_small.png"
+          path: "assets/images/ui_button_small_default.png"
         }
       ]
     },
@@ -217,7 +217,7 @@ export const commonAssets: AssetCatalog = {
       assets: [
         {
           type: AssetReferenceType.Image,
-          horizonAssetId: "1559448588566044",
+          horizonAssetId: "1549655239820199",
           path: "assets/images/cards_base-card.png"
         }
       ]
