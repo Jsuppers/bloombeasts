@@ -5,7 +5,7 @@
  * The actual game logic is in BloomBeastsGame.ts.
  */
 
-import type { RuntimeCard } from './engine/types/runtime';
+import type { RuntimeCard } from './common/engine/types/runtime';
 
 /**
  * Player statistics displayed in UI

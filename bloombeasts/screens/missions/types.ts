@@ -2,8 +2,8 @@
  * Mission System Type Definitions
  */
 
-import type { Affinity, AnyCard } from '../../engine/types/core';
-import type { DeckList } from '../../engine/utils/deckBuilder';
+import type { Affinity, AnyCard } from '../../common/engine/types/core';
+import type { DeckList } from '../../common/engine/utils/deckBuilder';
 
 export type MissionDifficulty = 'beginner' | 'easy' | 'normal' | 'hard' | 'expert';
 

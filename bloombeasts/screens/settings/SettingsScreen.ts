@@ -1,0 +1,314 @@
+/**
+ * Unified Settings Screen Component
+ * Works on both Horizon and Web platforms
+ * Matches the styling from settingsScreen.new.ts
+ */
+
+import { COLORS } from '../../common/ui/styles/styles/colors';
+import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
+import { DIMENSIONS } from '../../common/ui/styles/styles/dimensions';
+import { UINodeType } from '../../common/ui/ScreenUtils';
+import { createSideMenu } from '../../common/ui/screens/SideMenu';
+import { BindingType } from '../../common/ui/types/types/BindingManager';
+
+export interface SettingsScreenProps {
+  ui: UIMethodMappings;
+  onSettingChange?: (settingId: string, value: any) => void;
+  onNavigate?: (screen: string) => void;
+  onRenderNeeded?: () => void;
+  playSfx?: (sfxId: string) => void;
+}
+
+/**
+ * Unified Settings Screen
+ */
+export class SettingsScreen {
+  // UI methods (injected)
+  private ui: UIMethodMappings;
+  private settingsValue: any = {};
+
+  private onSettingChange?: (settingId: string, value: any) => void;
+  private onNavigate?: (screen: string) => void;
+  private onRenderNeeded?: () => void;
+  private playSfx?: (sfxId: string) => void;
+
+  constructor(props: SettingsScreenProps) {
+    this.ui = props.ui;
+    this.onSettingChange = props.onSettingChange;
+    this.onNavigate = props.onNavigate;
+    this.onRenderNeeded = props.onRenderNeeded;
+    this.playSfx = props.playSfx;
+  }
+
+  createUI(): UINodeType {
+    return this.ui.View({
+      style: {
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+      },
+      children: [
+        // Background
+        this.ui.Image({
+          source: this.ui.assetIdToImageSource?.('background') || null,
+          style: {
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+            top: 0,
+            left: 0,
+          },
+        }),
+        // Cards Container image as background
+        this.ui.Image({
+          source: this.ui.assetIdToImageSource?.('cards-container') || null,
+          style: {
+            position: 'absolute',
+            left: 40,
+            top: 40,
+            width: 980,
+            height: 640,
+          },
+        }),
+        // Main content - settings panel
+        // Pass playerDataBinding directly to controls to avoid nesting
+        this.ui.View({
+          style: {
+            position: 'absolute',
+            left: 70,
+            top: 70,
+            width: 920,
+            height: 580,
+            padding: 40,
+          },
+          children: [
+            // Music settings (pass playerDataBinding directly)
+            this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume'),
+            this.createToggleControl('Music', 'musicEnabled', 'musicEnabled'),
+
+            // SFX settings (pass playerDataBinding directly)
+            this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume'),
+            this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled'),
+          ],
+        }),
+        // Sidebar with common side menu
+        createSideMenu(this.ui, {
+          title: 'Settings',
+          bottomButton: {
+            label: 'Back',
+            onClick: () => {
+              if (this.onNavigate) this.onNavigate('menu');
+            },
+            disabled: false,
+          },
+          playSfx: this.playSfx,
+        }),
+      ],
+    });
+  }
+
+  /**
+   * Create volume control with +/- buttons
+   */
+  private createVolumeControl(
+    label: string,
+    settingKey: 'musicVolume' | 'sfxVolume',
+    settingId: string
+  ): UINodeType {
+    return this.ui.View({
+      style: {
+        marginBottom: 30,
+      },
+      children: [
+        // Label and value
+        this.ui.View({
+          style: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginBottom: 10,
+            alignItems: 'center',
+          },
+          children: [
+            this.ui.Text({
+              text: label,
+              style: {
+                fontSize: DIMENSIONS.fontSize.xl,
+                color: COLORS.textPrimary,
+              },
+            }),
+            // Volume control: - button, value, + button
+            this.ui.View({
+              style: {
+                flexDirection: 'row',
+                alignItems: 'center',
+              },
+              children: [
+                // Decrease button
+                this.ui.Pressable({
+                  onClick: () => {
+                    if (this.onSettingChange) {
+                      const currentSettings = this.settingsValue;
+                      const currentValue = currentSettings[settingKey] || 0;
+                      const newValue = Math.max(0, currentValue - 10);
+                      this.onSettingChange(settingId, newValue);
+                    }
+                  },
+                  style: {
+                    width: 40,
+                    height: 40,
+                    backgroundColor: COLORS.surface,
+                    borderRadius: 5,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: 15,
+                  },
+                  children: this.ui.Text({
+                    text: '-',
+                    style: {
+                      fontSize: DIMENSIONS.fontSize.xl,
+                      color: COLORS.textPrimary,
+                      textAlign: 'center',
+                      fontWeight: 'bold',
+                    },
+                  }),
+                }),
+                // Volume display
+                this.ui.Text({
+                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
+                    const settings = pd?.settings;
+                    this.settingsValue = settings;
+                    const volume = settings?.[settingKey];
+                    return `${volume !== undefined && volume !== null && typeof volume === 'number' ? Math.round(volume) : 0}%`;
+                  }),
+                  style: {
+                    fontSize: DIMENSIONS.fontSize.xl,
+                    color: COLORS.success,
+                    width: 70,
+                    textAlign: 'center',
+                  },
+                }),
+                // Increase button
+                this.ui.Pressable({
+                  onClick: () => {
+                    if (this.onSettingChange) {
+                      const currentSettings = this.settingsValue;
+                      const currentValue = currentSettings[settingKey] || 0;
+                      const newValue = Math.min(100, currentValue + 10);
+                      this.onSettingChange(settingId, newValue);
+                    }
+                  },
+                  style: {
+                    width: 40,
+                    height: 40,
+                    backgroundColor: COLORS.surface,
+                    borderRadius: 5,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginLeft: 15,
+                  },
+                  children: this.ui.Text({
+                    text: '+',
+                    style: {
+                      fontSize: DIMENSIONS.fontSize.xl,
+                      color: COLORS.textPrimary,
+                      textAlign: 'center',
+                      fontWeight: 'bold',
+                    },
+                  }),
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  /**
+   * Create toggle button control
+   */
+  private createToggleControl(
+    label: string,
+    settingKey: 'musicEnabled' | 'sfxEnabled',
+    settingId: string
+  ): UINodeType {
+    return this.ui.View({
+      style: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 30,
+      },
+      children: [
+        this.ui.Text({
+          text: label,
+          style: {
+            fontSize: DIMENSIONS.fontSize.xl,
+            color: COLORS.textPrimary,
+          },
+        }),
+
+        // Toggle button
+        this.ui.Pressable({
+          onClick: () => {
+            if (this.onSettingChange) {
+              const currentSettings = this.settingsValue;
+              const currentValue = currentSettings[settingKey];
+              const newValue = !currentValue;
+
+              // Just call the callback - let the parent handle updating the binding
+              // The binding update will trigger a re-render automatically
+              this.onSettingChange(settingId, newValue);
+            }
+          },
+          style: {
+            position: 'relative',
+            width: 120,
+            height: 40,
+          },
+          children: [
+            // Button background image (standard or green based on state)
+            this.ui.Image({
+              source: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
+                const settings = pd?.settings;
+                return this.ui.assetIdToImageSource?.(settings?.[settingKey] ? 'green-button' : 'standard-button') ?? null;
+              }),
+              style: {
+                position: 'absolute',
+                width: 120,
+                height: 40,
+              },
+            }),
+            // Button text centered
+            this.ui.View({
+              style: {
+                position: 'absolute',
+                width: 120,
+                height: 40,
+                justifyContent: 'center',
+                alignItems: 'center',
+              },
+              children: this.ui.Text({
+                text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
+                  const settings = pd?.settings;
+                  return settings?.[settingKey] ? 'ON' : 'OFF';
+                }),
+                style: {
+                  fontSize: DIMENSIONS.fontSize.md,
+                  color: COLORS.textPrimary,
+                  textAlign: 'center',
+                  fontWeight: 'bold',
+                  textAlignVertical: 'center',
+                },
+              }),
+            }),
+          ],
+        }),
+      ],
+    });
+  }
+
+  dispose(): void {
+    // Cleanup
+  }
+}

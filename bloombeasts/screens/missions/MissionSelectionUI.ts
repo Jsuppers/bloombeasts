@@ -5,7 +5,7 @@
 import { Mission } from './types';
 import { getAvailableMissions, getCompletedMissions } from './definitions';
 import { MissionManager } from './MissionManager';
-import { Logger } from '../../engine/utils/Logger';
+import { Logger } from '../../common/engine/utils/Logger';
 
 export interface MissionDisplayData {
   mission: Mission;

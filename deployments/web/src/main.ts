@@ -5,13 +5,13 @@
 
 import { BloomBeastsGame, PlatformConfig, type PlayerData } from '../../../bloombeasts/BloomBeastsGame';
 import { AssetCatalogManager, AssetReferenceType } from '../../../bloombeasts/AssetCatalogManager';
-import { allCatalogs } from '../../../bloombeasts/catalogs';
-import { createDefaultPlayerData } from '../../../bloombeasts/utils/createDefaultPlayerData';
+import { allCatalogs } from '../../../bloombeasts/common/catalogs';
+import { createDefaultPlayerData } from '../../../bloombeasts/common/utils/createDefaultPlayerData';
 import { UIRenderer } from './ui/UIRenderer';
 import { View, Text, Image, Pressable, Binding, DerivedBinding, ValueBindingBase, UINode } from './ui';
 import { AnimatedBinding, Animation, Easing } from './ui';
-import { AsyncMethods } from '../../../bloombeasts/ui/types/bindings';
-import { BindingManager } from '../../../bloombeasts/ui/types/BindingManager';
+import { AsyncMethods } from '../../../bloombeasts/common/ui/types/types/bindings';
+import { BindingManager } from '../../../bloombeasts/common/ui/types/types/BindingManager';
 
 /**
  * Initialize and load all asset catalogs

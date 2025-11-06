@@ -16,36 +16,32 @@ import type {
   AnyCard,
   Affinity,
   CardType
-} from './engine/types/core';
+} from './common/engine/types/core';
 
 import type {
   StructuredAbility,
   AbilityEffect,
   AbilityTarget,
   EffectType
-} from './engine/types/abilities';
+} from './common/engine/types/abilities';
 
 import type {
   Level,
   StatGain
-} from './engine/types/leveling';
+} from './common/engine/types/leveling';
 
 import type {
   RuntimeBeast,
   RuntimeCard
-} from './engine/types/runtime';
+} from './common/engine/types/runtime';
 
 import type {
   GameState,
   Player,
   Phase,
   GameAction
-} from './engine/types/game';
+} from './common/engine/types/game';
 
-// Import systems
-import { AbilityProcessor } from './engine/systems/AbilityProcessor';
-import { CombatSystem } from './engine/systems/CombatSystem';
-import { LevelingSystem } from './engine/systems/LevelingSystem';
 
 // Import utils
 import {
@@ -55,15 +51,15 @@ import {
   getBloomBeasts,
   findCardById,
   findCardByName
-} from './engine/utils/cardHelpers';
+} from './common/engine/utils/cardHelpers';
 import {
   buildForestDeck,
   buildFireDeck,
   buildWaterDeck,
   buildSkyDeck,
   getAllStarterDecks
-} from './engine/utils/deckBuilder';
-import * as CombatHelpers from './engine/utils/combatHelpers';
+} from './common/engine/utils/deckBuilder';
+import * as CombatHelpers from './common/engine/utils/combatHelpers';
 
 // Import UI components
 import { StartMenuUI } from './screens/startmenu/StartMenuUI';
@@ -76,7 +72,7 @@ import { BattleUI } from './screens/battle/BattleUI';
 import { missions, getMissionById, getAvailableMissions } from './screens/missions/definitions';
 
 // Import polyfills
-import { SimpleMap, arrayFrom } from './utils/polyfills';
+import { SimpleMap } from './common/utils/polyfills';
 
 /**
  * Main Bloombeasts module namespace
@@ -87,12 +83,6 @@ export namespace Bloombeasts {
   // individual files and will be available in the bundled namespace automatically.
   // No need to re-export them here.
 
-  // Export system classes
-  export const Systems = {
-    AbilityProcessor,
-    CombatSystem,
-    LevelingSystem
-  };
 
   // Export UI components
   export const UI = {
@@ -105,8 +95,7 @@ export namespace Bloombeasts {
 
   // Export utility functions
   export const Utils = {
-    SimpleMap,
-    arrayFrom
+    SimpleMap
   };
 
   // Export card helpers

@@ -7,8 +7,8 @@
  * NO platform-specific code should be in this file!
  */
 
-import type { AnyCard, BloomBeastCard } from './engine/types/core';
-import { CardType } from './engine/types/core';
+import type { AnyCard, BloomBeastCard } from './common/engine/types/core';
+import { CardType } from './common/engine/types/core';
 
 /**
  * Get all card IDs that need image assets

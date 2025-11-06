@@ -13,14 +13,14 @@
 
 import { Mission, resolveDeck } from '../missions/types';
 import { MissionManager, MissionRunProgress, RewardResult } from '../missions/MissionManager';
-import { AnyCard, CardType } from '../../engine/types/core';
-import { Logger } from '../../engine/utils/Logger';
-import type { AsyncMethods } from '../../ui/types/bindings';
-import { BattleController } from '../../battle/core/BattleController';
-import type { BattleConfig, BattleState, RuntimeCard } from '../../battle/types';
-import type { BattleAction } from '../../battle/types/actions';
-import type { BloomBeastsPlayer } from '../../battle/BloomBeastsGame';
-import { createBattleCard } from '../../utils/cardUtils';
+import { AnyCard, CardType } from '../../common/engine/types/core';
+import { Logger } from '../../common/engine/utils/Logger';
+import type { AsyncMethods } from '../../common/ui/types/types/bindings';
+import { BattleController } from './engine/core/BattleController';
+import type { BattleConfig, BattleState, RuntimeCard } from './engine/types';
+import type { BattleAction } from './engine/types/actions';
+import type { BloomBeastsPlayer } from './engine/BloomBeastsGame';
+import { createBattleCard } from '../../common/utils/cardUtils';
 import type { CardInstance } from '../common/types';
 
 export interface BattleUIState {

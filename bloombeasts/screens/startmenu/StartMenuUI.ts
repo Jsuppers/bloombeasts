@@ -2,7 +2,7 @@
  * Start Menu UI - Handles the visual presentation of the main menu
  */
 
-import { SimpleMap } from '../../utils/polyfills';
+import { SimpleMap } from '../../common/utils/polyfills';
 
 export interface MenuOption {
   id: string;

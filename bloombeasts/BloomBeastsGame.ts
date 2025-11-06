@@ -8,31 +8,31 @@
  * but receives them from the platform configuration.
  */
 
-import { MenuScreen } from './ui/screens/MenuScreen';
-import { CardsScreen } from './ui/screens/CardsScreen';
-import { UpgradeScreen } from './ui/screens/UpgradeScreen';
-import { MissionScreen } from './ui/screens/MissionScreen';
-import { BattleScreen } from './ui/screens/BattleScreen';
-import { SettingsScreen } from './ui/screens/SettingsScreen';
-import { LeaderboardScreen } from './ui/screens/LeaderboardScreen';
-import { UPGRADE_COSTS, COIN_BOOST, EXP_BOOST, LUCK_BOOST, ROOSTER } from './constants/upgrades';
-import { createMissionCompletePopup } from './ui/screens/common/MissionCompletePopup';
-import { createButtonPopup } from './ui/screens/common/ButtonPopup';
-import { createReactiveCardDetailPopupFromBinding } from './ui/screens/common/CardDetailPopup';
+import { MenuScreen } from './screens/menu/MenuScreen';
+import { CardsScreen } from './screens/cards/CardsScreen';
+import { UpgradeScreen } from './screens/upgrade/UpgradeScreen';
+import { MissionScreen } from './screens/missions/MissionScreen';
+import { BattleScreen } from './screens/battle/BattleScreen';
+import { SettingsScreen } from './screens/settings/SettingsScreen';
+import { LeaderboardScreen } from './screens/leaderboard/LeaderboardScreen';
+import { UPGRADE_COSTS, COIN_BOOST, EXP_BOOST, LUCK_BOOST, ROOSTER } from './common/constants/upgrades';
+import { createMissionCompletePopup } from './common/ui/screens/MissionCompletePopup';
+import { createButtonPopup } from './common/ui/screens/ButtonPopup';
+import { createReactiveCardDetailPopupFromBinding } from './common/ui/screens/CardDetailPopup';
 import { BattleDisplayManager } from './screens/battle/BattleDisplayManager';
-import { BindingManager, BindingType } from './ui/types/BindingManager';
+import { BindingManager, BindingType } from './common/ui/types/types/BindingManager';
 import { MissionManager } from './screens/missions/MissionManager';
 import { MissionSelectionUI } from './screens/missions/MissionSelectionUI';
 import { BattleUI } from './screens/battle/BattleUI';
 import { CardInstance } from './screens/common/types';
-import { setCatalogManagerForUtils, getPlayerDeckCards, awardDeckExperience, addCardReward } from './utils/cardUtils';
-import { setCatalogManagerForDeckBuilder, getStarterDeck } from './engine/utils/deckBuilder';
-import { DECK_SIZE } from './engine/constants/gameRules';
-import { Logger } from './engine/utils/Logger';
-import type { AsyncMethods } from './ui/types/bindings';
+import { setCatalogManagerForUtils, getPlayerDeckCards, awardDeckExperience, addCardReward } from './common/utils/cardUtils';
+import { setCatalogManagerForDeckBuilder, getStarterDeck } from './common/engine/utils/deckBuilder';
+import { DECK_SIZE } from './common/engine/constants/gameRules';
+import { Logger } from './common/engine/utils/Logger';
+import type { AsyncMethods } from './common/ui/types/types/bindings';
 import type { MissionDisplay, SoundSettings } from './gameManager';
-import { gameDimensions } from './ui/screens/battle';
-import { parseActionString, BattleActions } from './battle/types/actions';
+import { gameDimensions } from './screens/battle/ui';
+import { parseActionString, BattleActions } from './screens/battle/engine/types/actions';
 
 /**
  * XP thresholds for player leveling (cumulative)
@@ -917,6 +917,12 @@ export class BloomBeastsGame {
     // Process FORFEIT action through TURBO instead of manual state manipulation
     if (this.battleUI) {
       await this.battleUI.processTypedAction(BattleActions.forfeit('player'));
+
+      // Check if battle ended and handle completion
+      const updatedState = this.battleUI.getCurrentBattle();
+      if (updatedState && updatedState.isComplete) {
+        await this.handleBattleComplete(updatedState);
+      }
     }
   }
 
@@ -1176,6 +1182,13 @@ export class BloomBeastsGame {
             timedOutPlayerId,
             timestamp: Date.now()
           });
+
+          // Check if battle ended and handle completion
+          const updatedState = this.battleUI.getCurrentBattle();
+          if (updatedState && updatedState.isComplete) {
+            await this.handleBattleComplete(updatedState);
+            return;
+          }
         }
       }
       return;

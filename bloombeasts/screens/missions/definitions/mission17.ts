@@ -4,9 +4,9 @@
  */
 
 import { Mission } from '../types';
-import { DeckList } from '../../../engine/utils/deckBuilder';
-import { BloomBeastCard } from '../../../engine/types/core';
-import type { RuntimeBeast } from '../../../engine/types/runtime';
+import { DeckList } from '../../../common/engine/utils/deckBuilder';
+import { BloomBeastCard } from '../../../common/engine/types/core';
+import type { RuntimeBeast } from '../../../common/engine/types/runtime';
 
 // Get Cluck Norris deck - 3 level 9 Cluck Norris beasts
 const getCluckNorrisDeck = (): DeckList => {

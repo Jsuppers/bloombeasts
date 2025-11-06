@@ -4,7 +4,7 @@
  */
 
 import { Mission } from '../types';
-import { buildForestDeck } from '../../../engine/utils/deckBuilder';
+import { buildForestDeck } from '../../../common/engine/utils/deckBuilder';
 
 export const mission04: Mission = {
   id: 'mission-04',

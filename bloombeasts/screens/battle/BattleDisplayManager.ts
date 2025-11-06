@@ -3,10 +3,10 @@
  * Manages battle state visualization, animations, and card popups
  */
 
-import { BloomBeastCard, CardType } from '../../engine/types/core';
-import { STARTING_HEALTH, TURN_TIME_LIMIT } from '../../engine/constants/gameRules';
+import { BloomBeastCard, CardType } from '../../common/engine/types/core';
+import { STARTING_HEALTH, TURN_TIME_LIMIT } from '../../common/engine/constants/gameRules';
 import type { BattleDisplay, ObjectiveDisplay } from '../../gameManager';
-import type { RuntimeCard } from '../../engine/types/runtime';
+import type { RuntimeCard } from '../../common/engine/types/runtime';
 
 export class BattleDisplayManager {
   private catalogManager: any;
