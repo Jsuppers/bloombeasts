@@ -3,6 +3,7 @@
  */
 
 import { BloomBeastCard, HabitatCard, MagicCard, TrapCard, AnyCard } from '../types/core';
+import { Logger } from '../utils/Logger';
 
 export type DeckCardEntry<T = AnyCard> = {
   card: T;
@@ -110,7 +111,7 @@ const SHARED_CORE_CARD_IDS: DeckCardIdEntry[] = [
  */
 function resolveCardIds<T = AnyCard>(catalogManager: any, cardIdEntries: DeckCardIdEntry[]): DeckCardEntry<T>[] {
   if (!catalogManager) {
-    console.error('[deckConfig] catalogManager not provided');
+    Logger.error('[deckConfig] catalogManager not provided');
     return [];
   }
   return cardIdEntries.map(({ cardId, quantity }) => ({

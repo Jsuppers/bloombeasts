@@ -1,103 +1,96 @@
 /**
- * Upgrade Screen Component
- * Displays available upgrades for purchase
+ * Upgrade Screen - Refactored using BaseScreen
+ *
+ * Reduced by eliminating constructor boilerplate and layout duplication
  */
 
-import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
+import { COLORS } from '../../common/ui/styles/styles/colors';
 import { UINodeType } from '../../common/ui/ScreenUtils';
 import { createSideMenu } from '../../common/ui/screens/SideMenu';
 import { createPopup } from '../../common/ui/components/common/Popup';
 import { ALL_UPGRADES, type UpgradeDefinition } from '../../common/constants/upgrades';
 import { BindingType } from '../../common/ui/types/types/BindingManager';
+import { BaseScreen, BaseScreenProps } from '../common/BaseScreen';
+import { UIStateManager } from '../common/UIStateManager';
+import type { PlayerData } from '../../BloomBeastsGame';
 
-export interface UpgradeScreenProps {
-  ui: UIMethodMappings;
-  onNavigate?: (screen: string) => void;
+// UI constants
+const UPGRADE_CONTAINER_SIZE = 150;
+const UPGRADE_IMAGE_WIDTH = 142;
+const UPGRADE_IMAGE_HEIGHT = 120;
+const UPGRADE_IMAGE_OFFSET_TOP = 4;
+const UPGRADE_IMAGE_OFFSET_LEFT = 4;
+const UPGRADE_LEVEL_BOTTOM = 8;
+const UPGRADE_LEVEL_FONT_SIZE = 14;
+const UPGRADE_GRID_GAP = 40;
+
+export interface UpgradeScreenProps extends BaseScreenProps {
   onUpgrade?: (boostId: string) => void;
-  onRenderNeeded?: () => void;
-  playSfx?: (sfxId: string) => void;
 }
 
-export class UpgradeScreen {
-  private ui: UIMethodMappings;
-  private onNavigate?: (screen: string) => void;
+interface UpgradeState {
+  selectedUpgradeId?: string | null;
+}
+
+export class UpgradeScreen extends BaseScreen {
   private onUpgrade?: (boostId: string) => void;
-  private onRenderNeeded?: () => void;
-  private playSfx?: (sfxId: string) => void;
+  private stateManager: UIStateManager<UpgradeState>;
 
   constructor(props: UpgradeScreenProps) {
-    this.ui = props.ui;
-    this.onNavigate = props.onNavigate;
+    super(props);
     this.onUpgrade = props.onUpgrade;
-    this.onRenderNeeded = props.onRenderNeeded;
-    this.playSfx = props.playSfx;
+    this.stateManager = new UIStateManager<UpgradeState>(
+      this.ui.bindingManager,
+      'upgrade',
+      this.onRenderNeeded
+    );
   }
 
-  /**
-   * Create a single upgrade item
-   */
   private createUpgradeItem(upgrade: UpgradeDefinition): UINodeType {
-    const containerSize = 150;
-    const imageSize = { width: 142, height: 120 };
-    const imageOffset = { top: 4, left: 4 };
-    const upgradeBoxSize = { width: 25, height: 26 };
-
     return this.ui.Pressable({
       onClick: () => {
-        const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-        // Update UIState binding
-        this.ui.bindingManager.setBinding(BindingType.UIState, {
-          ...currentState,
-          upgrade: {
-            ...currentState.upgrade,
-            selectedUpgradeId: upgrade.id
-          }
-        });
-        this.onRenderNeeded?.();
+        this.stateManager.update({ selectedUpgradeId: upgrade.id });
       },
       style: {
-        width: containerSize,
-        height: containerSize,
+        width: UPGRADE_CONTAINER_SIZE,
+        height: UPGRADE_CONTAINER_SIZE,
         position: 'relative',
       },
       children: [
-        // Container background
         this.ui.Image({
           source: this.ui.assetIdToImageSource?.('upgrade-container-card') || null,
           style: {
             position: 'absolute',
-            width: containerSize,
-            height: containerSize,
+            width: UPGRADE_CONTAINER_SIZE,
+            height: UPGRADE_CONTAINER_SIZE,
             top: 0,
             left: 0,
             opacity: 1.0,
           },
         }),
-        // Upgrade image overlay
         this.ui.Image({
           source: this.ui.assetIdToImageSource?.(upgrade.assetId) || null,
           style: {
             position: 'absolute',
-            width: imageSize.width,
-            height: imageSize.height,
-            top: imageOffset.top,
-            left: imageOffset.left,
+            width: UPGRADE_IMAGE_WIDTH,
+            height: UPGRADE_IMAGE_HEIGHT,
+            top: UPGRADE_IMAGE_OFFSET_TOP,
+            left: UPGRADE_IMAGE_OFFSET_LEFT,
           },
         }),
-        // Upgrade level indicator (text at center bottom)
         this.ui.Text({
-          text: this.ui.bindingManager.playerDataBinding.binding.derive((pd: any) => {
+          text: this.ui.bindingManager.playerDataBinding.binding.derive((pd: PlayerData) => {
             const level = pd?.boosts?.[upgrade.id] || 0;
             return `Level ${level}`;
           }),
           style: {
             position: 'absolute',
-            bottom: 8,
+            bottom: UPGRADE_LEVEL_BOTTOM,
             left: 0,
-            width: containerSize,
-            fontSize: 14,
+            width: UPGRADE_CONTAINER_SIZE,
+            fontSize: UPGRADE_LEVEL_FONT_SIZE,
             fontWeight: 'bold',
-            color: '#fff',
+            color: COLORS.textPrimary,
             textAlign: 'center',
           },
         }),
@@ -105,176 +98,74 @@ export class UpgradeScreen {
     });
   }
 
-  /**
-   * Create the upgrade grid
-   */
   private createUpgradeGrid(): UINodeType {
-    return this.ui.View({
-      style: {
-        position: 'absolute',
-        left: 70,
-        top: 70,
-        width: 920,
-        height: 580,
-      },
-      children: [
-        this.ui.View({
-          style: {
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 40,
-          },
-          children: ALL_UPGRADES.map((upgrade) =>
-            this.createUpgradeItem(upgrade)
-          ),
-        }),
-      ],
-    });
+    return this.createContentArea([
+      this.ui.View({
+        style: {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: UPGRADE_GRID_GAP,
+        },
+        children: ALL_UPGRADES.map((upgrade) => this.createUpgradeItem(upgrade)),
+      }),
+    ]);
   }
 
   createUI(): UINodeType {
-    return this.ui.View({
-      style: {
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-      },
-      children: [
-        // Background
-        this.ui.Image({
-          source: this.ui.assetIdToImageSource?.('background') || null,
-          style: {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            top: 0,
-            left: 0,
-          },
-        }),
-        // Cards Container image as background
-        this.ui.Image({
-          source: this.ui.assetIdToImageSource?.('cards-container') || null,
-          style: {
-            position: 'absolute',
-            left: 40,
-            top: 40,
-            width: 980,
-            height: 640,
-          },
-        }),
-        // Upgrade grid
-        this.createUpgradeGrid(),
-        // Sidebar with common side menu
-        createSideMenu(this.ui, {
-          title: 'Upgrades',
-          customTextContent: [],
-          buttons: [],
-          bottomButton: {
-            label: 'Back',
-            onClick: () => {
-              if (this.onNavigate) this.onNavigate('menu');
-            },
-            disabled: false,
-          },
-          playSfx: this.playSfx,
-        }),
-        // Upgrade popup (conditionally rendered) - derive from UIState
-        ...(this.ui.UINode ? [this.ui.UINode.if(
-          this.ui.bindingManager.derive([BindingType.UIState], (state: any) => {
-            const shouldShow = (state.upgrade?.selectedUpgradeId ?? null) !== null;
-            return shouldShow;
-          }),
-          this.createUpgradePopup()
-        )] : []),
-      ],
-    });
-  }
+    return this.createRootContainer([
+      this.createFullScreenBackground(),
+      this.createContainerBackground(),
+      this.createUpgradeGrid(),
 
-  /**
-   * Create the upgrade popup
-   */
-  private createUpgradePopup(): UINodeType {
-
-    return createPopup({
-      ui: this.ui,
-      title: 'Upgrade',
-      description: this.ui.bindingManager.derive([BindingType.PlayerData, BindingType.UIState], (pd: any, state: any) => {
-        const upgradeId = state.upgrade?.selectedUpgradeId ?? null;
-        const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
-        if (!upgrade) return '';
-        const currentLevel = pd?.boosts?.[upgradeId] || 0;
-        const coins = pd?.coins ?? 0;
-
-        if (currentLevel >= 6) {
-          return `${upgrade.name}\n${upgrade.description}\n\nLevel: ${currentLevel}/6 (MAX)\nYour coins: ${coins}`;
-        }
-
-        const nextLevelCost = upgrade.costs[currentLevel];
-        return `${upgrade.name}\n${upgrade.description}\n\nLevel: ${currentLevel}/6\nNext upgrade cost: ${nextLevelCost} coins\nYour coins: ${coins}`;
+      createSideMenu(this.ui, {
+        title: 'Upgrades',
+        bottomButton: this.getBackButton(),
+        playSfx: this.playSfx,
       }),
-      buttons: [
-        {
-          label: 'Upgrade',
-          onClick: () => {
-            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-            const upgradeId = currentState.upgrade?.selectedUpgradeId ?? null;
-            if (!upgradeId) return;
-            if (this.onUpgrade) {
-              this.onUpgrade(upgradeId);
-            }
-            // Update UIState binding
-            this.ui.bindingManager.setBinding(BindingType.UIState, {
-              ...currentState,
-              upgrade: {
-                ...currentState.upgrade,
-                selectedUpgradeId: null
-              }
-            });
-            this.onRenderNeeded?.();
-          },
-          color: 'green',
-          disabled: this.ui.bindingManager.derive([BindingType.PlayerData, BindingType.UIState], (pd: any, state: any) => {
-            const upgradeId = state.upgrade?.selectedUpgradeId ?? null;
-            if (!upgradeId) {
-              return true;
-            }
+
+      // Upgrade popup
+      ...(this.ui.UINode ? [this.ui.UINode.if(
+        this.ui.bindingManager.derive([BindingType.UIState], () => {
+          return this.stateManager.getValue('selectedUpgradeId') !== null;
+        }),
+        createPopup({
+          ui: this.ui,
+          title: this.ui.bindingManager.derive([BindingType.UIState], () => {
+            const upgradeId = this.stateManager.getValue('selectedUpgradeId');
             const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
-            if (!upgrade) {
-              return true;
-            }
-            const currentLevel = pd?.boosts?.[upgradeId] || 0;
-            if (currentLevel >= 6) {
-              return true;
-            }
-
-            const nextLevelCost = upgrade.costs[currentLevel];
-            const coins = pd?.coins ?? 0;
-            const isDisabled = coins < nextLevelCost;
-            return isDisabled;
+            return upgrade?.name || '';
           }),
-        },
-        {
-          label: 'Close',
-          onClick: () => {
-            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-            // Update UIState binding
-            this.ui.bindingManager.setBinding(BindingType.UIState, {
-              ...currentState,
-              upgrade: {
-                ...currentState.upgrade,
-                selectedUpgradeId: null
-              }
-            });
-            this.onRenderNeeded?.();
-          },
-          color: 'default',
-        },
-      ],
-      playSfx: this.playSfx,
-    });
-  }
-
-  dispose(): void {
-    // Nothing to clean up
+          description: this.ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState, pd: PlayerData) => {
+            const upgradeId = this.stateManager.getValue('selectedUpgradeId');
+            const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
+            if (!upgrade) return '';
+            const currentLevel = pd?.boosts?.[upgrade.id] || 0;
+            const cost = upgrade.costs[currentLevel] || 0;
+            return `${upgrade.description}\n\nCurrent Level: ${currentLevel}\nCost: ${cost} coins`;
+          }),
+          buttons: [
+            {
+              label: 'Upgrade',
+              onClick: () => {
+                const upgradeId = this.stateManager.getValue('selectedUpgradeId');
+                if (upgradeId && this.onUpgrade) {
+                  this.onUpgrade(upgradeId);
+                }
+                this.stateManager.update({ selectedUpgradeId: null });
+              },
+              color: 'green',
+            },
+            {
+              label: 'Cancel',
+              onClick: () => {
+                this.stateManager.update({ selectedUpgradeId: null });
+              },
+              color: 'default',
+            },
+          ],
+          playSfx: this.playSfx,
+        })
+      )] : []),
+    ]);
   }
 }

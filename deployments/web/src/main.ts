@@ -182,7 +182,7 @@ class WebGameApp {
                     bindingManager: bindingManager,
                     // Web just returns the asset ID as-is (string path)
                     assetIdToImageSource: (assetId: string) => assetId,
-                };
+                } as any; // Type assertion to handle differences between web-specific and shared prop types
             },
 
             // Async methods: standard browser APIs

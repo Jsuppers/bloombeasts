@@ -1,34 +1,63 @@
 /**
- * Unified Menu Screen Component
- * Works on both Horizon and Web platforms
- * Matches the styling from menuScreen.new.ts
+ * Menu Screen
  */
 
 import { COLORS } from '../../common/ui/styles/styles/colors';
 import { DIMENSIONS, GAPS, sideMenuButtonDimensions } from '../../common/ui/styles/styles/dimensions';
-import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { UINodeType } from '../../common/ui/ScreenUtils';
 import { createSideMenu } from '../../common/ui/screens/SideMenu';
-import { BindingType } from '../../common/ui/types/types/BindingManager';
 import { createButton } from '../../common/ui/components/common/Button';
+import { BaseScreen, BaseScreenProps } from '../common/BaseScreen';
+import type { PlayerData, PlayerItem } from '../../BloomBeastsGame';
+import { getPlayerLevel, XP_THRESHOLDS, GAME_CONSTANTS } from '../../core/GameConstants';
 
-export interface MenuScreenProps {
-  ui: UIMethodMappings;
+// UI layout constants
+const LINE_HEIGHT_OFFSET = 5;
+const QUOTE_WIDTH = 150;
+const QUOTE_NUM_LINES = 2;
+
+// Character animation constants
+const CHARACTER_LEFT = 290;
+const CHARACTER_TOP = 40;
+const CHARACTER_WIDTH = 675;
+const CHARACTER_HEIGHT = 630;
+
+// Play button constants
+const PLAY_BUTTON_FONT_SIZE = 32;
+const PLAY_BUTTON_LEFT = 552;
+const PLAY_BUTTON_TOP = 400;
+
+// Player stats container constants
+const STATS_CONTAINER_WIDTH = 487;
+const STATS_CONTAINER_HEIGHT = 82;
+const SCREEN_WIDTH = 1280;
+const STATS_CONTAINER_Y = 20;
+const STATS_ICON_SIZE = 28;
+
+// Level display constants
+const LEVEL_TEXT_LEFT = 85;
+const LEVEL_TEXT_TOP = 29;
+
+// Coins display constants
+const COINS_LEFT = 250;
+const COINS_TOP = 28;
+const COINS_ICON_GAP = 8;
+const COINS_TEXT_MARGIN = 4;
+
+// Serums display constants
+const SERUMS_LEFT = 370;
+const SERUMS_TOP = 28;
+const SERUMS_ICON_GAP = 8;
+const SERUMS_TEXT_MARGIN = 4;
+
+export interface MenuScreenProps extends BaseScreenProps {
   onButtonClick?: (buttonId: string) => void;
-  onNavigate?: (screen: string) => void;
-  onRenderNeeded?: () => void;
-  playSfx?: (sfxId: string) => void;
 }
 
 /**
- * Unified Menu Screen that works on both platforms
+ * Menu Screen - Main navigation hub
  */
-export class MenuScreen {
-  // UI methods (injected)
-  private ui: UIMethodMappings;
-
-
-  // Menu frame IDs
+export class MenuScreen extends BaseScreen {
   private menuFrameIds: string[] = [
     'menu-frame-1', 'menu-frame-2', 'menu-frame-3', 'menu-frame-4', 'menu-frame-5',
     'menu-frame-6', 'menu-frame-7', 'menu-frame-8', 'menu-frame-9', 'menu-frame-10',
@@ -38,38 +67,22 @@ export class MenuScreen {
     'Welcome back, Trainer!',
   ];
 
-  // Callbacks
   private onButtonClick?: (buttonId: string) => void;
-  private onNavigate?: (screen: string) => void;
-  private onRenderNeeded?: () => void;
-  private playSfx?: (sfxId: string) => void;
 
   constructor(props: MenuScreenProps) {
-    this.ui = props.ui;
+    super(props);
     this.onButtonClick = props.onButtonClick;
-    this.onNavigate = props.onNavigate;
-    this.onRenderNeeded = props.onRenderNeeded;
-    this.playSfx = props.playSfx;
-
   }
 
-  /**
-   * Create the unified menu UI - uses common side menu
-   */
   createUI(): UINodeType {
-    const menuOptions = ['cards', 'upgrades', 'leaderboard', 'settings'];  // Removed 'missions'
-    const lineHeight = DIMENSIONS.fontSize.lg + 5;
+    const menuOptions = ['cards', 'upgrades', 'leaderboard', 'settings'];
+    const lineHeight = DIMENSIONS.fontSize.lg + LINE_HEIGHT_OFFSET;
 
-    // Create menu buttons for the side menu
     const menuButtons = menuOptions.map((option, index) => ({
       label: this.getMenuLabel(option),
       onClick: () => {
-        if (this.onButtonClick) {
-          this.onButtonClick(`btn-${option}`);
-        }
-        if (this.onNavigate) {
-          this.onNavigate(option);
-        }
+        this.onButtonClick?.(`btn-${option}`);
+        this.navigate(option);
       },
       disabled: false,
       yOffset: index * (sideMenuButtonDimensions.height + GAPS.buttons),
@@ -81,16 +94,15 @@ export class MenuScreen {
           position: 'relative',
         },
         children: [
-          // Quote text (lines 0-2)
           this.ui.View({
             style: {
               position: 'absolute',
               top: 0,
-              width: 150,
+              width: QUOTE_WIDTH,
             },
             children: this.ui.Text({
-              text: this.quotes[0], // TODO: listen on intervaled binding to change the quote
-              numberOfLines: 2,
+              text: this.quotes[0],
+              numberOfLines: QUOTE_NUM_LINES,
               style: {
                 fontSize: DIMENSIONS.fontSize.lg,
                 color: COLORS.textPrimary,
@@ -102,102 +114,70 @@ export class MenuScreen {
       }),
     ];
 
-    return this.ui.View({
-      style: {
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-      },
-      children: [
-        // Background image (full screen)
-        this.ui.Image({
-          source: this.ui.assetIdToImageSource?.('background') || null,
-          style: {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            top: 0,
-            left: 0,
-          },
-        }),
+    return this.createRootContainer([
+      this.createFullScreenBackground(),
 
-        // Main content area with animated character
-        this.ui.View({
-          style: {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-          },
-          children: [
-            // Animated character frame - derive directly from UIState
-            this.ui.Image({
-                source: this.ui.assetIdToImageSource?.(this.menuFrameIds[0]) || null,
-                // source: this.ui.bindingManager.derive([BindingType.IntervaledBinding], (counter: number) => {
-                //   const frameId = this.menuFrameIds[counter % this.menuFrameIds.length];
-                //   return this.ui.assetIdToImageSource?.(frameId) || null;
-                // }),
-                style: {
-                  position: 'absolute',
-                  left: 290,
-                  top: 40,
-                  width: 675,
-                  height: 630,
-                },
-              }),
-          ],
-        }),
+      // Main content area with animated character
+      this.ui.View({
+        style: {
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+        },
+        children: [
+          this.ui.Image({
+            source: this.ui.assetIdToImageSource?.(this.menuFrameIds[0]) || null,
+            style: {
+              position: 'absolute',
+              left: CHARACTER_LEFT,
+              top: CHARACTER_TOP,
+              width: CHARACTER_WIDTH,
+              height: CHARACTER_HEIGHT,
+            },
+          }),
+        ],
+      }),
 
-        // Player stats container at top middle
-        this.createPlayerStatsContainer(),
+      // Player stats container at top middle
+      this.createPlayerStatsContainer(),
 
-        // "Play" button in the middle of the page, slightly down
-        createButton({
-          ui: this.ui,
-          label: 'Play',
-          onClick: () => {
-            if (this.onButtonClick) {
-              this.onButtonClick('btn-missions');
-            }
-            if (this.onNavigate) {
-              this.onNavigate('missions');
-            }
-          },
-          imageSource: this.ui.assetIdToImageSource?.('yellow-button') || null,
-          playSfx: this.playSfx,
-          style: {
-            fontSize: 32,
-            fontWeight: 'bold',
-            textAlign: 'center',
-            // paddingTop: 4,
-            position: 'absolute',
-            left: 552,  // Centered horizontally (1280/2 - 175/2 ≈ 552)
-            top: 400,   // Slightly down from center
-          },
-        }),
+      // "Play" button
+      createButton({
+        ui: this.ui,
+        label: 'Play',
+        onClick: () => {
+          this.onButtonClick?.('btn-missions');
+          this.navigate('missions');
+        },
+        imageSource: this.ui.assetIdToImageSource?.('yellow-button') || null,
+        playSfx: this.playSfx,
+        style: {
+          fontSize: PLAY_BUTTON_FONT_SIZE,
+          fontWeight: 'bold',
+          textAlign: 'center',
+          position: 'absolute',
+          left: PLAY_BUTTON_LEFT,
+          top: PLAY_BUTTON_TOP,
+        },
+      }),
 
-        // Side menu (positioned absolutely on top)
-        createSideMenu(this.ui, {
-          customTextContent,
-          buttons: menuButtons,
-          bottomButton: {
-            label: 'Close',
-            onClick: () => {}, // Disabled button
-            disabled: true,
-          },
-          onXPBarClick: (title: string, message: string) => {
-            if (this.onButtonClick) {
-              this.onButtonClick(`show-counter-info:${title}:${message}`);
-            }
-          },
-          playSfx: this.playSfx,
-        }),
-      ],
-    });
+      // Side menu
+      createSideMenu(this.ui, {
+        customTextContent,
+        buttons: menuButtons,
+        bottomButton: {
+          label: 'Close',
+          onClick: () => {},
+          disabled: true,
+        },
+        onXPBarClick: (title: string, message: string) => {
+          this.onButtonClick?.(`show-counter-info:${title}:${message}`);
+        },
+        playSfx: this.playSfx,
+      }),
+    ]);
   }
 
-  /**
-   * Get menu label for option
-   */
   private getMenuLabel(option: string): string {
     const labels: Record<string, string> = {
       missions: 'Missions',
@@ -209,46 +189,31 @@ export class MenuScreen {
     return labels[option] || option;
   }
 
-  /**
-   * Create player stats container at top middle
-   */
   private createPlayerStatsContainer(): UINodeType {
-    const containerWidth = 487;
-    const containerHeight = 82;
-    const screenWidth = 1280;
-    const containerX = (screenWidth - containerWidth) / 2;
-    const containerY = 20;
+    const containerX = (SCREEN_WIDTH - STATS_CONTAINER_WIDTH) / 2;
 
-    // Icon dimensions
-    const iconSize = 28;
-
-    // Helper to get item quantity
-    const getItemQuantity = (items: any[], itemId: string) => {
-      const item = items?.find((i: any) => i.itemId === itemId);
+    const getItemQuantity = (items: PlayerItem[], itemId: string): number => {
+      const item = items?.find((i) => i.itemId === itemId);
       return item ? item.quantity : 0;
     };
 
-    // Binding for level text with XP
-    const levelTextBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+    const levelTextBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: PlayerData) => {
       if (!data) return 'Lvl 1. 0/100';
-      const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
-      const playerLevel = data.playerLevel || 1;
       const totalXP = data.totalXP || 0;
-      const xpForCurrentLevel = xpThresholds[playerLevel - 1];
-      const xpForNextLevel = playerLevel < 9 ? xpThresholds[playerLevel] : xpThresholds[8];
+      const playerLevel = getPlayerLevel(totalXP);
+      const xpForCurrentLevel = XP_THRESHOLDS[playerLevel - 1];
+      const xpForNextLevel = playerLevel < GAME_CONSTANTS.MAX_PLAYER_LEVEL ? XP_THRESHOLDS[playerLevel] : XP_THRESHOLDS[GAME_CONSTANTS.MAX_PLAYER_LEVEL - 1];
       const currentXP = totalXP - xpForCurrentLevel;
       const xpNeeded = xpForNextLevel - xpForCurrentLevel;
       return `Lvl ${playerLevel}. ${currentXP}/${xpNeeded}`;
     });
 
-    // Binding for coins
-    const coinsBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+    const coinsBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: PlayerData) => {
       if (!data) return '0';
       return String(data.coins || 0);
     });
 
-    // Binding for serums
-    const serumsBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+    const serumsBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: PlayerData) => {
       if (!data) return '0';
       const serums = getItemQuantity(data.items || [], 'serum');
       return String(serums);
@@ -258,29 +223,28 @@ export class MenuScreen {
       style: {
         position: 'absolute',
         left: containerX,
-        top: containerY,
-        width: containerWidth,
-        height: containerHeight,
+        top: STATS_CONTAINER_Y,
+        width: STATS_CONTAINER_WIDTH,
+        height: STATS_CONTAINER_HEIGHT,
       },
       children: [
-        // Background container image
         this.ui.Image({
           source: this.ui.assetIdToImageSource?.('player-stats-container') || null,
           style: {
             position: 'absolute',
-            width: containerWidth,
-            height: containerHeight,
+            width: STATS_CONTAINER_WIDTH,
+            height: STATS_CONTAINER_HEIGHT,
             top: 0,
             left: 0,
           },
         }),
 
-        // Level text - left aligned
+        // Level text
         this.ui.View({
           style: {
             position: 'absolute',
-            left: 85,
-            top: 29,
+            left: LEVEL_TEXT_LEFT,
+            top: LEVEL_TEXT_TOP,
           },
           children: this.ui.Text({
             text: levelTextBinding,
@@ -293,73 +257,66 @@ export class MenuScreen {
           }),
         }),
 
-        // Coins section (icon + text) - centered in middle section
+        // Coins section
         this.ui.View({
           style: {
             position: 'absolute',
-            left: 250,
-            top: 28,
+            left: COINS_LEFT,
+            top: COINS_TOP,
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 8,
+            gap: COINS_ICON_GAP,
           },
           children: [
-            // Coin icon
             this.ui.Image({
               source: this.ui.assetIdToImageSource?.('icon-coin') || null,
               style: {
-                width: iconSize,
-                height: iconSize,
+                width: STATS_ICON_SIZE,
+                height: STATS_ICON_SIZE,
               },
             }),
-            // Coin amount - black text
             this.ui.Text({
               text: coinsBinding,
               style: {
                 fontSize: DIMENSIONS.fontSize.lg,
-                color: '#000000',
+                color: COLORS.textPrimary,
                 fontWeight: 'bold',
-                marginLeft: 4,
+                marginLeft: COINS_TEXT_MARGIN,
               },
             }),
           ],
         }),
 
-        // Serums section (icon + text) - centered in right section
+        // Serums section
         this.ui.View({
           style: {
             position: 'absolute',
-            left: 370,
-            top: 28,
+            left: SERUMS_LEFT,
+            top: SERUMS_TOP,
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 8,
+            gap: SERUMS_ICON_GAP,
           },
           children: [
-            // Serum icon
             this.ui.Image({
               source: this.ui.assetIdToImageSource?.('icon-serum') || null,
               style: {
-                width: iconSize,
-                height: iconSize,
+                width: STATS_ICON_SIZE,
+                height: STATS_ICON_SIZE,
               },
             }),
-            // Serum amount - black text
             this.ui.Text({
               text: serumsBinding,
               style: {
                 fontSize: DIMENSIONS.fontSize.lg,
-                color: '#000000',
+                color: COLORS.textPrimary,
                 fontWeight: 'bold',
-                marginLeft: 4,
+                marginLeft: SERUMS_TEXT_MARGIN,
               },
             }),
           ],
         }),
       ],
     });
-  }
-
-  dispose() {
   }
 }

@@ -3,6 +3,7 @@
  */
 
 import type { UIMethodMappings } from '../../../BloomBeastsGame';
+import type { Card } from '../../../common/engine/types/core';
 
 // Re-export dimensions from consolidated dimensions file
 export { standardCardDimensions, trapCardDimensions, buffCardDimensions, habitatShiftCardDimensions } from '../../../common/ui/styles/styles/dimensions';
@@ -62,8 +63,8 @@ export interface BattleComponentProps {
  */
 export interface BattleComponentWithCallbacks extends BattleComponentProps {
   onAction?: (action: string) => void;
-  showPlayedCard?: (card: any, callback?: () => void) => void;
-  onCardDetailSelected?: (card: any) => void;
+  showPlayedCard?: (card: Card, callback?: () => void) => void;
+  onCardDetailSelected?: (card: Card) => void;
 }
 
 /**
@@ -75,7 +76,7 @@ export interface PlayerHandProps extends BattleComponentProps {
   onShowHandChange?: (newValue: boolean) => void;
   onScrollOffsetChange?: (newValue: number) => void;
   onRenderNeeded?: () => void;
-  showPlayedCard?: (card: any, callback?: () => void) => void;
+  showPlayedCard?: (card: Card, callback?: () => void) => void;
 }
 
 /**

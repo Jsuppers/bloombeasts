@@ -7,10 +7,13 @@ import { BattleDisplay } from '../../../gameManager';
 import { UINodeType } from '../../../common/ui/ScreenUtils';
 import type { BattleComponentWithCallbacks } from './types';
 import { habitatShiftCardDimensions, battleBoardAssetPositions } from './types';
+import type { Card } from '../../../common/engine/types/core';
+import { extractBaseCardId } from '../../../common/utils/cardUtils';
+import { COLOR_PALETTE } from '../../../core/ColorPalette';
 
 export class HabitatZone {
   private ui: BattleComponentWithCallbacks['ui'];
-  private onCardDetailSelected?: (card: any) => void;
+  private onCardDetailSelected?: (card: Card) => void;
 
   constructor(props: BattleComponentWithCallbacks) {
     this.ui = props.ui;
@@ -71,7 +74,8 @@ export class HabitatZone {
                 source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
                   if (!state?.habitatZone) return null;
                   const habitat = state?.habitatZone;
-                  return this.ui.assetIdToImageSource?.(habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-'));
+                  const baseCardId = extractBaseCardId(habitat.id) || habitat.name.toLowerCase().replace(/\s+/g, '-');
+                  return this.ui.assetIdToImageSource?.(baseCardId);
                 }),
                 style: {
                   width: 70,
@@ -89,9 +93,9 @@ export class HabitatZone {
                 right: -4,
                 bottom: -4,
                 borderWidth: 4,
-                borderColor: '#4caf50',
+                borderColor: COLOR_PALETTE.cardType.habitat,
                 borderRadius: 8,
-                shadowColor: '#4caf50',
+                shadowColor: COLOR_PALETTE.cardType.habitat,
                 shadowRadius: 10,
               },
             }),

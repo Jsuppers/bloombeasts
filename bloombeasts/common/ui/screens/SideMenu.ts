@@ -8,7 +8,7 @@ import { DIMENSIONS, GAPS } from '../styles/styles/dimensions';
 import { sideMenuPositions } from '../constants/positions';
 import type { MenuStats } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
-import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
+import type { UIMethodMappings, ReadonlyBindingInterface } from '../../../../bloombeasts/BloomBeastsGame';
 import type { ValueBindingBase } from '../types/types/bindings';
 import { createButton } from '../components/common/Button';
 import { BindingType } from '../types/types/BindingManager';
@@ -252,7 +252,11 @@ function createPlayerInfo(
 /**
  * Helper: Create a text row component
  */
-export function createTextRow(ui: UIMethodMappings, text: string | ValueBindingBase<string>, top: number = 0): UINodeType {
+export function createTextRow(
+    ui: UIMethodMappings,
+    text: string | ValueBindingBase<string> | ReadonlyBindingInterface<string>,
+    top: number = 0
+): UINodeType {
     return ui.View({
         style: {
             position: 'absolute',

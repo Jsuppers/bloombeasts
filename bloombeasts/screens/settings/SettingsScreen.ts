@@ -1,126 +1,94 @@
 /**
- * Unified Settings Screen Component
- * Works on both Horizon and Web platforms
- * Matches the styling from settingsScreen.new.ts
+ * Settings Screen - Refactored using BaseScreen
+ *
+ * Reduced by eliminating constructor boilerplate and layout duplication
  */
 
 import { COLORS } from '../../common/ui/styles/styles/colors';
-import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { DIMENSIONS } from '../../common/ui/styles/styles/dimensions';
 import { UINodeType } from '../../common/ui/ScreenUtils';
 import { createSideMenu } from '../../common/ui/screens/SideMenu';
 import { BindingType } from '../../common/ui/types/types/BindingManager';
+import { BaseScreen, BaseScreenProps } from '../common/BaseScreen';
 
-export interface SettingsScreenProps {
-  ui: UIMethodMappings;
-  onSettingChange?: (settingId: string, value: any) => void;
-  onNavigate?: (screen: string) => void;
-  onRenderNeeded?: () => void;
-  playSfx?: (sfxId: string) => void;
+// Settings constants
+const VOLUME_DEFAULT = 50;
+const VOLUME_MIN = 0;
+const VOLUME_MAX = 100;
+const VOLUME_STEP = 10;
+
+// UI constants
+const BUTTON_SIZE = 40;
+const TOGGLE_WIDTH = 80;
+const TOGGLE_HEIGHT = 40;
+const CONTROL_MARGIN_BOTTOM = 30;
+const BUTTON_MARGIN = 10;
+
+// Color constants (for controls not in COLORS)
+const CONTROL_BUTTON_BG = '#333';
+const TOGGLE_ON_COLOR = '#4CAF50';
+const TOGGLE_OFF_COLOR = '#888';
+
+/**
+ * Settings data structure
+ */
+export interface Settings {
+  musicVolume?: number;
+  sfxVolume?: number;
+  musicEnabled?: boolean;
+  sfxEnabled?: boolean;
 }
 
 /**
- * Unified Settings Screen
+ * Player data structure (subset for settings)
  */
-export class SettingsScreen {
-  // UI methods (injected)
-  private ui: UIMethodMappings;
-  private settingsValue: any = {};
+interface PlayerData {
+  settings?: Settings;
+}
 
-  private onSettingChange?: (settingId: string, value: any) => void;
-  private onNavigate?: (screen: string) => void;
-  private onRenderNeeded?: () => void;
-  private playSfx?: (sfxId: string) => void;
+export interface SettingsScreenProps extends BaseScreenProps {
+  onSettingChange?: (settingId: string, value: number | boolean) => void;
+}
+
+export class SettingsScreen extends BaseScreen {
+  private settingsValue: Settings = {};
+  private onSettingChange?: (settingId: string, value: number | boolean) => void;
 
   constructor(props: SettingsScreenProps) {
-    this.ui = props.ui;
+    super(props);
     this.onSettingChange = props.onSettingChange;
-    this.onNavigate = props.onNavigate;
-    this.onRenderNeeded = props.onRenderNeeded;
-    this.playSfx = props.playSfx;
   }
 
   createUI(): UINodeType {
-    return this.ui.View({
-      style: {
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-      },
-      children: [
-        // Background
-        this.ui.Image({
-          source: this.ui.assetIdToImageSource?.('background') || null,
-          style: {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            top: 0,
-            left: 0,
-          },
-        }),
-        // Cards Container image as background
-        this.ui.Image({
-          source: this.ui.assetIdToImageSource?.('cards-container') || null,
-          style: {
-            position: 'absolute',
-            left: 40,
-            top: 40,
-            width: 980,
-            height: 640,
-          },
-        }),
-        // Main content - settings panel
-        // Pass playerDataBinding directly to controls to avoid nesting
-        this.ui.View({
-          style: {
-            position: 'absolute',
-            left: 70,
-            top: 70,
-            width: 920,
-            height: 580,
-            padding: 40,
-          },
-          children: [
-            // Music settings (pass playerDataBinding directly)
-            this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume'),
-            this.createToggleControl('Music', 'musicEnabled', 'musicEnabled'),
+    return this.createRootContainer([
+      this.createFullScreenBackground(),
+      this.createContainerBackground(),
 
-            // SFX settings (pass playerDataBinding directly)
-            this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume'),
-            this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled'),
-          ],
-        }),
-        // Sidebar with common side menu
-        createSideMenu(this.ui, {
-          title: 'Settings',
-          bottomButton: {
-            label: 'Back',
-            onClick: () => {
-              if (this.onNavigate) this.onNavigate('menu');
-            },
-            disabled: false,
-          },
-          playSfx: this.playSfx,
-        }),
-      ],
-    });
+      // Settings controls
+      this.createContentArea([
+        this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume'),
+        this.createToggleControl('Music', 'musicEnabled', 'musicEnabled'),
+        this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume'),
+        this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled'),
+      ], { left: 70, top: 70, width: 920, height: 580 }),
+
+      // Side menu
+      createSideMenu(this.ui, {
+        title: 'Settings',
+        bottomButton: this.getBackButton(),
+        playSfx: this.playSfx,
+      }),
+    ]);
   }
 
-  /**
-   * Create volume control with +/- buttons
-   */
   private createVolumeControl(
     label: string,
     settingKey: 'musicVolume' | 'sfxVolume',
     settingId: string
   ): UINodeType {
     return this.ui.View({
-      style: {
-        marginBottom: 30,
-      },
+      style: { marginBottom: CONTROL_MARGIN_BOTTOM },
       children: [
-        // Label and value
         this.ui.View({
           style: {
             flexDirection: 'row',
@@ -136,82 +104,71 @@ export class SettingsScreen {
                 color: COLORS.textPrimary,
               },
             }),
-            // Volume control: - button, value, + button
             this.ui.View({
               style: {
                 flexDirection: 'row',
                 alignItems: 'center',
               },
               children: [
-                // Decrease button
                 this.ui.Pressable({
                   onClick: () => {
-                    if (this.onSettingChange) {
-                      const currentSettings = this.settingsValue;
-                      const currentValue = currentSettings[settingKey] || 0;
-                      const newValue = Math.max(0, currentValue - 10);
-                      this.onSettingChange(settingId, newValue);
-                    }
+                    const currentSettings = this.settingsValue;
+                    const currentValue = currentSettings[settingKey] || VOLUME_DEFAULT;
+                    const newValue = Math.max(VOLUME_MIN, currentValue - VOLUME_STEP);
+                    this.settingsValue[settingKey] = newValue;
+                    this.onSettingChange?.(settingId, newValue);
                   },
                   style: {
-                    width: 40,
-                    height: 40,
-                    backgroundColor: COLORS.surface,
-                    borderRadius: 5,
+                    width: BUTTON_SIZE,
+                    height: BUTTON_SIZE,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    marginRight: 15,
+                    backgroundColor: CONTROL_BUTTON_BG,
+                    borderRadius: 5,
+                    marginRight: BUTTON_MARGIN,
                   },
                   children: this.ui.Text({
                     text: '-',
                     style: {
-                      fontSize: DIMENSIONS.fontSize.xl,
-                      color: COLORS.textPrimary,
-                      textAlign: 'center',
+                      fontSize: 24,
+                      color: '#fff',
                       fontWeight: 'bold',
                     },
                   }),
                 }),
-                // Volume display
                 this.ui.Text({
-                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
-                    const settings = pd?.settings;
-                    this.settingsValue = settings;
-                    const volume = settings?.[settingKey];
-                    return `${volume !== undefined && volume !== null && typeof volume === 'number' ? Math.round(volume) : 0}%`;
+                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                    return String(pd?.settings?.[settingKey] || VOLUME_DEFAULT);
                   }),
                   style: {
-                    fontSize: DIMENSIONS.fontSize.xl,
-                    color: COLORS.success,
-                    width: 70,
+                    fontSize: DIMENSIONS.fontSize.lg,
+                    color: COLORS.textPrimary,
+                    width: 40,
                     textAlign: 'center',
                   },
                 }),
-                // Increase button
                 this.ui.Pressable({
                   onClick: () => {
-                    if (this.onSettingChange) {
-                      const currentSettings = this.settingsValue;
-                      const currentValue = currentSettings[settingKey] || 0;
-                      const newValue = Math.min(100, currentValue + 10);
-                      this.onSettingChange(settingId, newValue);
-                    }
+                    const currentSettings = this.settingsValue;
+                    const currentValue = currentSettings[settingKey] || VOLUME_DEFAULT;
+                    const newValue = Math.min(VOLUME_MAX, currentValue + VOLUME_STEP);
+                    this.settingsValue[settingKey] = newValue;
+                    this.onSettingChange?.(settingId, newValue);
                   },
                   style: {
-                    width: 40,
-                    height: 40,
-                    backgroundColor: COLORS.surface,
-                    borderRadius: 5,
+                    width: BUTTON_SIZE,
+                    height: BUTTON_SIZE,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    marginLeft: 15,
+                    backgroundColor: CONTROL_BUTTON_BG,
+                    borderRadius: 5,
+                    marginLeft: BUTTON_MARGIN,
                   },
                   children: this.ui.Text({
                     text: '+',
                     style: {
-                      fontSize: DIMENSIONS.fontSize.xl,
-                      color: COLORS.textPrimary,
-                      textAlign: 'center',
+                      fontSize: 24,
+                      color: '#fff',
                       fontWeight: 'bold',
                     },
                   }),
@@ -224,81 +181,53 @@ export class SettingsScreen {
     });
   }
 
-  /**
-   * Create toggle button control
-   */
   private createToggleControl(
     label: string,
     settingKey: 'musicEnabled' | 'sfxEnabled',
     settingId: string
   ): UINodeType {
     return this.ui.View({
-      style: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 30,
-      },
+      style: { marginBottom: CONTROL_MARGIN_BOTTOM },
       children: [
-        this.ui.Text({
-          text: label,
+        this.ui.View({
           style: {
-            fontSize: DIMENSIONS.fontSize.xl,
-            color: COLORS.textPrimary,
-          },
-        }),
-
-        // Toggle button
-        this.ui.Pressable({
-          onClick: () => {
-            if (this.onSettingChange) {
-              const currentSettings = this.settingsValue;
-              const currentValue = currentSettings[settingKey];
-              const newValue = !currentValue;
-
-              // Just call the callback - let the parent handle updating the binding
-              // The binding update will trigger a re-render automatically
-              this.onSettingChange(settingId, newValue);
-            }
-          },
-          style: {
-            position: 'relative',
-            width: 120,
-            height: 40,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           },
           children: [
-            // Button background image (standard or green based on state)
-            this.ui.Image({
-              source: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
-                const settings = pd?.settings;
-                return this.ui.assetIdToImageSource?.(settings?.[settingKey] ? 'green-button' : 'standard-button') ?? null;
-              }),
+            this.ui.Text({
+              text: label,
               style: {
-                position: 'absolute',
-                width: 120,
-                height: 40,
+                fontSize: DIMENSIONS.fontSize.xl,
+                color: COLORS.textPrimary,
               },
             }),
-            // Button text centered
-            this.ui.View({
+            this.ui.Pressable({
+              onClick: () => {
+                const currentSettings = this.settingsValue;
+                const newValue = !(currentSettings[settingKey] ?? true);
+                this.settingsValue[settingKey] = newValue;
+                this.onSettingChange?.(settingId, newValue);
+              },
               style: {
-                position: 'absolute',
-                width: 120,
-                height: 40,
+                width: TOGGLE_WIDTH,
+                height: TOGGLE_HEIGHT,
                 justifyContent: 'center',
                 alignItems: 'center',
+                backgroundColor: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                  return (pd?.settings?.[settingKey] ?? true) ? TOGGLE_ON_COLOR : TOGGLE_OFF_COLOR;
+                }),
+                borderRadius: 20,
               },
               children: this.ui.Text({
-                text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
-                  const settings = pd?.settings;
-                  return settings?.[settingKey] ? 'ON' : 'OFF';
+                text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                  return (pd?.settings?.[settingKey] ?? true) ? 'ON' : 'OFF';
                 }),
                 style: {
                   fontSize: DIMENSIONS.fontSize.md,
-                  color: COLORS.textPrimary,
-                  textAlign: 'center',
+                  color: '#fff',
                   fontWeight: 'bold',
-                  textAlignVertical: 'center',
                 },
               }),
             }),
@@ -306,9 +235,5 @@ export class SettingsScreen {
         }),
       ],
     });
-  }
-
-  dispose(): void {
-    // Cleanup
   }
 }

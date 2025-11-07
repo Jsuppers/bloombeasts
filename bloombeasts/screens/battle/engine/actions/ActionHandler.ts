@@ -13,6 +13,7 @@
  */
 
 import { Turbo } from '../../../../lib/Turbo-Standalone';
+import { Logger } from '../../../../common/engine/utils/Logger';
 
 import type { BloomBeastsState } from '../types';
 import type { MagicCard, AnyCard } from '../../../../common/engine/types/core';
@@ -105,7 +106,7 @@ export class ActionHandlerRegistry {
    */
   register(handler: IActionHandler): void {
     if (this.handlers.has(handler.actionType)) {
-      console.warn(`[ActionHandlerRegistry] Overwriting handler for action type: ${handler.actionType}`);
+      Logger.warn(`[ActionHandlerRegistry] Overwriting handler for action type: ${handler.actionType}`);
     }
     this.handlers.set(handler.actionType, handler);
   }

@@ -8,6 +8,7 @@ import type { CardInstance } from '../../screens/common/types';
 import type { RuntimeCard, RuntimeBeast } from '../engine/types/runtime';
 import { CardType as CardTypeEnum } from '../engine/types/core';
 import { CARD_XP_THRESHOLDS } from '../engine/constants/leveling';
+import { Logger } from '../engine/utils/Logger';
 
 // Module-level catalog manager reference for card utils
 // Set via setCatalogManagerForUtils() which is called by BloomBeastsGame
@@ -45,7 +46,7 @@ export function getXPThreshold(level: number): number {
  */
 export function getCardDefinition(cardId: string): AnyCard | undefined {
   if (!_cardUtilsCatalogManager) {
-    console.warn('[cardUtils] catalogManager not initialized');
+    Logger.warn('[cardUtils] catalogManager not initialized');
     return undefined;
   }
   const allCards = _cardUtilsCatalogManager.getAllCardData();
@@ -131,7 +132,7 @@ export function createBattleCard(instance: CardInstance, cardDef: AnyCard): Runt
  */
 export function getPlayerDeckCards(playerDeck: string[], cardInstances: CardInstance[]): RuntimeCard[] {
   if (!_cardUtilsCatalogManager) {
-    console.warn('[cardUtils] catalogManager not initialized');
+    Logger.warn('[cardUtils] catalogManager not initialized');
     return [];
   }
 
@@ -148,7 +149,7 @@ export function getPlayerDeckCards(playerDeck: string[], cardInstances: CardInst
       const cardDef = allCardDefs.find((card: any) => card && card.id === baseCardId);
 
       if (!cardDef) {
-        console.warn(`[cardUtils] Card definition not found for ${cardInstance.cardId}`);
+        Logger.warn(`[cardUtils] Card definition not found for ${cardInstance.cardId}`);
         continue;
       }
 

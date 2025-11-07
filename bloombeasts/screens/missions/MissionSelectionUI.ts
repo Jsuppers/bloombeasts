@@ -6,6 +6,8 @@ import { Mission } from './types';
 import { getAvailableMissions, getCompletedMissions } from './definitions';
 import { MissionManager } from './MissionManager';
 import { Logger } from '../../common/engine/utils/Logger';
+import type { IMissionSelectionUI } from '../../core/interfaces/IMissionSelectionUI';
+import { getDifficultyColor } from '../../core/ColorPalette';
 
 export interface MissionDisplayData {
   mission: Mission;
@@ -15,7 +17,7 @@ export interface MissionDisplayData {
   rewardPreview: string[];
 }
 
-export class MissionSelectionUI {
+export class MissionSelectionUI implements IMissionSelectionUI {
   private missionManager: MissionManager;
   private currentPlayerLevel: number = 1;
 
@@ -79,25 +81,10 @@ export class MissionSelectionUI {
   }
 
   /**
-   * Get difficulty color for UI
+   * Get difficulty color for UI (now uses centralized color palette)
    */
   private getDifficultyColor(difficulty: string): string {
-    switch (difficulty) {
-      case 'tutorial':
-        return '#90EE90'; // Light green
-      case 'easy':
-        return '#87CEEB'; // Sky blue
-      case 'normal':
-        return '#FFD700'; // Gold
-      case 'hard':
-        return '#FF6347'; // Tomato red
-      case 'expert':
-        return '#8B008B'; // Dark magenta
-      case 'legendary':
-        return '#FF1493'; // Deep pink
-      default:
-        return '#FFFFFF';
-    }
+    return getDifficultyColor(difficulty);
   }
 
   /**

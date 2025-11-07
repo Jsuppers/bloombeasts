@@ -105,6 +105,7 @@ export class BloomBeastsGreedyAI extends Turbo.GreedyAI<BloomBeastsState, BloomB
 
   /**
    * Evaluate an action's immediate value
+   * CRITICAL: Always derive from passed state parameter, never use this.currentState
    */
   evaluateAction(
     action: Turbo.IGameAction<BloomBeastsActionData>,
@@ -115,6 +116,10 @@ export class BloomBeastsGreedyAI extends Turbo.GreedyAI<BloomBeastsState, BloomB
     const opponent = state.gameData.players[1 - playerIndex];
     const playerField = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
     const opponentField = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
+
+    // Calculate beast counts from passed state (not cached this.currentState)
+    const playerBeasts = playerField.beasts.filter(b => b !== null).length;
+    const opponentBeasts = opponentField.beasts.filter(b => b !== null).length;
 
     switch (action.data.type) {
       case BloomBeastsActionType.DRAW_CARD:
@@ -144,7 +149,7 @@ export class BloomBeastsGreedyAI extends Turbo.GreedyAI<BloomBeastsState, BloomB
             }
 
             // Board control bonus
-            if (this.playerBeasts < this.opponentBeasts) {
+            if (playerBeasts < opponentBeasts) {
               value += 10; // Extra value when behind on board
             }
             break;
@@ -157,19 +162,19 @@ export class BloomBeastsGreedyAI extends Turbo.GreedyAI<BloomBeastsState, BloomB
           case 'Trap':
             // Traps are defensive
             value = 6;
-            if (this.opponentBeasts > this.playerBeasts) {
+            if (opponentBeasts > playerBeasts) {
               value += 4; // More valuable when opponent has board advantage
             }
             break;
 
           case 'Buff':
             // Buffs need creatures to be valuable
-            value = this.playerBeasts * 4;
+            value = playerBeasts * 4;
             break;
 
           case 'Habitat':
             // Habitat provides long-term value
-            value = 7 + this.playerBeasts * 2;
+            value = 7 + playerBeasts * 2;
             break;
         }
 
@@ -330,21 +335,9 @@ export class BloomBeastsGreedyAI extends Turbo.GreedyAI<BloomBeastsState, BloomB
     return null;
   }
 
-  private get playerBeasts(): number {
-    const state = this.currentState;
-    if (!state) return 0;
-    const playerIndex = state.gameData.players.findIndex(p => p.id === this.playerId);
-    const field = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
-    return field.beasts.filter(b => b !== null).length;
-  }
-
-  private get opponentBeasts(): number {
-    const state = this.currentState;
-    if (!state) return 0;
-    const playerIndex = state.gameData.players.findIndex(p => p.id === this.playerId);
-    const field = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
-    return field.beasts.filter(b => b !== null).length;
-  }
+  // Removed playerBeasts and opponentBeasts getters - they cached this.currentState
+  // which caused stale data bugs. Beast counts now calculated from passed state parameter
+  // in evaluateAction() method.
 }
 
 /**

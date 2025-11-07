@@ -17,11 +17,13 @@ import { AnyCard, CardType } from '../../common/engine/types/core';
 import { Logger } from '../../common/engine/utils/Logger';
 import type { AsyncMethods } from '../../common/ui/types/types/bindings';
 import { BattleController } from './engine/core/BattleController';
-import type { BattleConfig, BattleState, RuntimeCard } from './engine/types';
+import type { BattleConfig, BattleState, RuntimeCard, RuntimeBeast } from './engine/types';
+import { BloomBeastsActionType } from './engine/types';
 import type { BattleAction } from './engine/types/actions';
 import type { BloomBeastsPlayer } from './engine/BloomBeastsGame';
 import { createBattleCard } from '../../common/utils/cardUtils';
 import type { CardInstance } from '../common/types';
+import type { IBattleUI } from '../../core/interfaces/IBattleUI';
 
 export interface BattleUIState {
   mission: Mission;
@@ -29,6 +31,7 @@ export interface BattleUIState {
   progress: MissionRunProgress | null;
   isComplete: boolean;
   rewards: RewardResult | null;
+  winner: string | null;
 }
 
 /**
@@ -48,7 +51,27 @@ function convertDeckToRuntimeCards(cards: AnyCard[]): RuntimeCard[] {
   });
 }
 
-export class BattleUI {
+/**
+ * Helper: Extract a unique identifier from a RuntimeCard
+ * Tries instanceId first, then id, then falls back to provided fallback
+ */
+function getCardId(card: RuntimeCard, fallback: string): string {
+  if ('instanceId' in card && card.instanceId) return card.instanceId;
+  if (card.id) return card.id;
+  return fallback;
+}
+
+/**
+ * Helper: Extract a unique identifier from a RuntimeBeast on field
+ * Tries instanceId first, then id, then falls back to provided fallback
+ */
+function getBeastId(beast: RuntimeBeast, fallback: string): string {
+  if (beast.instanceId) return beast.instanceId;
+  if (beast.id) return beast.id;
+  return fallback;
+}
+
+export class BattleUI implements IBattleUI {
   private missionManager: MissionManager;
   // private gameEngine: GameEngine;
   private async: AsyncMethods;
@@ -153,6 +176,7 @@ export class BattleUI {
       progress: this.missionManager.getProgress(),
       isComplete: false,
       rewards: null,
+      winner: null,
     };
 
     return this.currentBattle;
@@ -219,8 +243,8 @@ export class BattleUI {
         // Get the card from player's hand
         const card = player.hand[action.cardIndex];
         if (card) {
-          // Use the card's id property
-          const cardId = action.cardId || (card as any).id || (card as any).name || action.cardIndex.toString();
+          // Use the actual card ID from the card object
+          const cardId = (card as any).id || (card as any).instanceId;
 
           // For Beast and Buff cards, find an empty position if not specified
           let position = action.position || action.targetIndex;
@@ -258,7 +282,7 @@ export class BattleUI {
           const playerField = this.getPlayerField();
           const beast = playerField?.beasts[beastIndex];
           if (beast) {
-            const beastId = action.beastId || (beast as any).id || (beast as any).instanceId || beastIndex.toString();
+            const beastId = action.beastId || getBeastId(beast, beastIndex.toString());
             result.success = this.battleController.useAbility(beastId, null, playerId);
           }
         }
@@ -270,33 +294,12 @@ export class BattleUI {
         break;
       }
 
-      case 'attack-beast': {
-        const attackerIndex = action.attackerIndex;
-        const targetIndex = action.targetIndex;
-        if (attackerIndex !== undefined && targetIndex !== undefined) {
-          const playerField = this.getPlayerField();
-          const opponentField = this.getOpponentField();
-          const attacker = playerField?.beasts[attackerIndex];
-          const target = opponentField?.beasts[targetIndex];
-          if (attacker && target) {
-            const attackerId = action.attackerId || (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
-            const targetId = action.targetId || (target as any).id || (target as any).instanceId || targetIndex.toString();
-            result.success = this.battleController.attackBeast(attackerId, targetId, playerId);
-          }
-        }
-        break;
-      }
-
+      // NOTE: attack-beast and attack-player are legacy - all attacks now use auto-attack-all
+      // which handles slot-based targeting. Keeping type definitions for backwards compatibility.
+      case 'attack-beast':
       case 'attack-player': {
-        const attackerIndex = action.attackerIndex;
-        if (attackerIndex !== undefined) {
-          const playerField = this.getPlayerField();
-          const attacker = playerField?.beasts[attackerIndex];
-          if (attacker) {
-            const attackerId = action.attackerId || (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
-            result.success = this.battleController.attackPlayer(attackerId, playerId);
-          }
-        }
+        Logger.warn('[BattleUI] Direct attack actions are deprecated - use auto-attack-all instead');
+        result.success = false;
         break;
       }
 
@@ -310,7 +313,7 @@ export class BattleUI {
         const turboResult = this.battleController.getGameController().performAction({
           type: 'game_action',
           playerId,
-          data: { type: 'forfeit' as any }, // BloomBeastsActionType.FORFEIT
+          data: { type: BloomBeastsActionType.FORFEIT },
         });
         result.success = turboResult.success;
         break;
@@ -323,7 +326,7 @@ export class BattleUI {
           type: 'game_action',
           playerId,
           data: {
-            type: 'timeout' as any, // BloomBeastsActionType.TIMEOUT
+            type: BloomBeastsActionType.TIMEOUT,
             timedOutPlayerId: action.timedOutPlayerId || playerId
           },
         });
@@ -332,7 +335,9 @@ export class BattleUI {
       }
 
       default: {
-        Logger.warn(`[BattleUI] Unknown action type: ${(action as any).type}`);
+        // TypeScript exhaustiveness check ensures this is unreachable
+        const exhaustiveCheck: never = action;
+        Logger.warn(`[BattleUI] Unknown action type: ${(exhaustiveCheck as BattleAction).type}`);
       }
     }
 
@@ -364,18 +369,16 @@ export class BattleUI {
     const results: any[] = [];
     const playerId = 'player';
 
-    const playerField = this.getPlayerField();
-    const opponentField = this.getOpponentField();
-
-    if (!playerField || !opponentField) {
-      return {
-        success: false,
-        results: [],
-        message: 'Field data not available'
-      };
-    }
-
     for (let i = 0; i < 3; i++) {
+      // CRITICAL: Refresh field state before each attack to reflect deaths from previous attacks
+      const playerField = this.getPlayerField();
+      const opponentField = this.getOpponentField();
+
+      if (!playerField || !opponentField) {
+        results.push({ success: false });
+        continue;
+      }
+
       const attackerBeast = playerField.beasts[i];
       if (!attackerBeast || attackerBeast.summoningSickness) continue;
 
@@ -384,12 +387,12 @@ export class BattleUI {
 
       if (opposingBeast) {
         if (onAttackAnimation) await onAttackAnimation(i, 'beast', i);
-        const attackerId = (attackerBeast as any).id || (attackerBeast as any).instanceId || i.toString();
-        const targetId = (opposingBeast as any).id || (opposingBeast as any).instanceId || i.toString();
+        const attackerId = getBeastId(attackerBeast, i.toString());
+        const targetId = getBeastId(opposingBeast, i.toString());
         success = this.battleController.attackBeast(attackerId, targetId, playerId);
       } else {
         if (onAttackAnimation) await onAttackAnimation(i, 'health');
-        const attackerId = (attackerBeast as any).id || (attackerBeast as any).instanceId || i.toString();
+        const attackerId = getBeastId(attackerBeast, i.toString());
         success = this.battleController.attackPlayer(attackerId, playerId);
       }
 
@@ -526,7 +529,7 @@ export class BattleUI {
 
     // Check if opponent is defeated
     if (opponent.health <= 0) {
-      console.log('[BattleUI] Opponent defeated! Updating mission progress.');
+      Logger.info('[BattleUI] Opponent defeated! Updating mission progress.');
       this.missionManager.updateProgress('opponent-defeated', {});
     }
 
@@ -541,50 +544,46 @@ export class BattleUI {
    */
   private endBattle(): void {
     if (!this.currentBattle) {
-      console.log('[BattleUI] endBattle called but no current battle');
+      Logger.info('[BattleUI] endBattle called but no current battle');
       return;
     }
 
     // Prevent multiple calls
     if (this.currentBattle.isComplete) {
-      console.log('[BattleUI] Battle already completed, ignoring duplicate endBattle call');
+      Logger.info('[BattleUI] Battle already completed, ignoring duplicate endBattle call');
       return;
     }
 
     const battleResult = this.battleController.checkBattleEnd();
     if (!battleResult) {
-      console.log('[BattleUI] endBattle called but battle not ended yet');
+      Logger.info('[BattleUI] endBattle called but battle not ended yet');
       return;
     }
 
-    console.log(`[BattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
     Logger.info(`[BattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
 
     this.shouldStopAI = true;
     this.currentBattle.isComplete = true;
+    this.currentBattle.winner = battleResult.winner;
 
     // Calculate rewards based on winner
     if (battleResult.winner === 'player1') {
       // Player won!
-      console.log('[BattleUI] Player 1 (YOU) won! Awarding rewards.');
       Logger.info('[BattleUI] Player 1 won! Awarding rewards.');
       this.currentBattle.rewards = this.missionManager.completeMission();
       this.battleController.completeBattle('player1');
     } else if (battleResult.winner === 'player2') {
       // Player lost
-      console.log('[BattleUI] Player 2 (OPPONENT) won! No rewards.');
       Logger.info('[BattleUI] Player 2 won! No rewards.');
       this.currentBattle.rewards = null;
       this.battleController.completeBattle('player2');
     } else {
       // Tie (both died) - treat as loss for now
-      console.log('[BattleUI] Tie (both died)! No rewards.');
       Logger.info('[BattleUI] Tie! No rewards.');
       this.currentBattle.rewards = null;
       this.battleController.completeBattle(null);
     }
 
-    console.log(`[BattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}, Rewards object:`, this.currentBattle.rewards);
     Logger.info(`[BattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}`);
   }
 

@@ -3,6 +3,7 @@
  */
 
 import { Turbo } from '../../../lib/Turbo-Standalone';
+import { Logger } from '../../../common/engine/utils/Logger';
 
 // Import existing BloomBeasts types
 import { CardType } from '../../../common/engine/types/core';
@@ -438,7 +439,7 @@ export class BloomBeastsRules implements Turbo.IGameRules<BloomBeastsState, Bloo
 
       return result;
     } catch (error) {
-      console.error('[BloomBeastsGame] Action execution failed:', error);
+      Logger.error('[BloomBeastsGame] Action execution failed:', error);
       return {
         success: false,
         error: error instanceof Error ? error : new Error(String(error)),

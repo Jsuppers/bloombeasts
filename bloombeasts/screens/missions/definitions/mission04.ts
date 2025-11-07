@@ -4,7 +4,7 @@
  */
 
 import { Mission } from '../types';
-import { buildForestDeck } from '../../../common/engine/utils/deckBuilder';
+import { createMissionDeck } from '../utils/deckBuilder';
 
 export const mission04: Mission = {
   id: 'mission-04',
@@ -15,51 +15,18 @@ export const mission04: Mission = {
   affinity: 'Forest',
   beastId: 'Leaf Sprite',
 
-  opponentDeck: () => {
-    // Get the catalog manager to access cards
-    const game = (globalThis as any).bloomBeastsGame;
-    if (!game?.catalogManager) {
-      console.error('[mission04] Catalog manager not available');
-      return { name: 'Leaf Sprite Deck', affinity: 'Forest', cards: [], totalCards: 0 };
-    }
-
-    // More advanced beginner deck with habitat
-    const leafSpriteCard = game.catalogManager.getCard('leaf-sprite');
-    const mushroomancerCard = game.catalogManager.getCard('mushroomancer');
-    const energyBlockCard = game.catalogManager.getCard('nectar-block');
-    const ancientForestCard = game.catalogManager.getCard('ancient-forest');
-    const powerUpCard = game.catalogManager.getCard('power-up');
-
-    const cards = [];
-
-    // Add 3 Leaf Sprites
-    for (let i = 1; i <= 6; i++) {
-      cards.push({ ...leafSpriteCard, instanceId: `leaf-sprite-${i}` });
-    }
-
-    // Add 2 Mushroomancers
-    for (let i = 1; i <= 6; i++) {
-      cards.push({ ...mushroomancerCard, instanceId: `mushroomancer-${i}` });
-    }
-
-    // Add 1 Ancient Forest habitat
-    cards.push({ ...ancientForestCard, instanceId: 'ancient-forest-1' });
-
-    // Add 5 Energy Blocks
-    for (let i = 1; i <= 6; i++) {
-      cards.push({ ...energyBlockCard, instanceId: `nectar-block-${i}` });
-    }
-
-    // Add 1 Power Up
-    cards.push({ ...powerUpCard, instanceId: 'power-up-1' });
-
-    return {
+  opponentDeck: () =>
+    createMissionDeck({
       name: 'Forest Advancement',
       affinity: 'Forest' as const,
-      cards,
-      totalCards: cards.length,
-    };
-  },
+      cards: [
+        { cardId: 'leaf-sprite', count: 6 },
+        { cardId: 'mushroomancer', count: 6 },
+        { cardId: 'ancient-forest', count: 1 },
+        { cardId: 'nectar-block', count: 6 },
+        { cardId: 'power-up', count: 1 },
+      ],
+    }),
 
   rewards: {
     guaranteedXP: 80,

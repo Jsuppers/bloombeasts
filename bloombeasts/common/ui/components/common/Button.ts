@@ -18,8 +18,8 @@ export interface ButtonProps {
   onClick: () => void;
   type?: ButtonType;
 
-  // Simple usage: just pass color string (static)
-  color?: ButtonColor;
+  // Simple usage: just pass color string (static or binding)
+  color?: ButtonColor | ValueBindingBase<ButtonColor> | ReadonlyBindingInterface<ButtonColor>;
   disabled?: boolean | ValueBindingBase<boolean> | ReadonlyBindingInterface<boolean>;
 
   // Advanced usage: pass complete bindings that return final computed values
@@ -93,8 +93,12 @@ export function createButton(props: ButtonProps): UINodeType {
 
   const dimensions = getButtonDimensions(type);
 
+  // Determine static color value for imageSource (only if color is static)
+  // If color is a binding, default to 'default' color (caller should use customImageSource for reactive backgrounds)
+  const staticColor = (typeof color === 'string' ? color : 'default') as ButtonColor;
+
   // Use custom bindings if provided, otherwise compute from color/disabled
-  const imageSource = customImageSource ?? (ui.assetIdToImageSource?.(getButtonAssetId(color, type)) || null);
+  const imageSource = customImageSource ?? (ui.assetIdToImageSource?.(getButtonAssetId(staticColor, type)) || null);
 
   // For opacity and textColor:
   // - If custom values provided, use them (supports reactive bindings)
@@ -156,3 +160,6 @@ export function createButton(props: ButtonProps): UINodeType {
     ],
   });
 }
+
+// Export alias for backwards compatibility
+export { createButton as Button };

@@ -9,6 +9,7 @@ import {
   type AffinityType,
   type DeckCardEntry
 } from '../cards';
+import { Logger } from './Logger';
 
 // Module-level catalog manager reference for deck builder
 // Set via setCatalogManagerForDeckBuilder() which is called by BloomBeastsGame
@@ -55,7 +56,7 @@ function expandCards<T extends AnyCard>(cardQuantities: DeckCardEntry<T>[]): T[]
  */
 function buildDeck(type: DeckType): DeckList {
   if (!_deckBuilderCatalogManager) {
-    console.error('[deckBuilder] catalogManager not initialized');
+    Logger.error('[deckBuilder] catalogManager not initialized');
     return { name: '', affinity: type, cards: [], totalCards: 0 };
   }
 
@@ -125,7 +126,7 @@ export function getStarterDeck(type: DeckType): DeckList {
  */
 export function quickWinDeck(type: DeckType): DeckList {
   if (!_deckBuilderCatalogManager) {
-    console.error('[deckBuilder] catalogManager not initialized');
+    Logger.error('[deckBuilder] catalogManager not initialized');
     return { name: '', affinity: type, cards: [], totalCards: 0 };
   }
 
@@ -168,7 +169,7 @@ export function quickWinDeck(type: DeckType): DeckList {
  */
 export function getTestingDeck(type: DeckType): DeckList {
   if (!_deckBuilderCatalogManager) {
-    console.error('[deckBuilder] catalogManager not initialized');
+    Logger.error('[deckBuilder] catalogManager not initialized');
     return { name: '', affinity: type, cards: [], totalCards: 0 };
   }
 

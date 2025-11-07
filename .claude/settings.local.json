@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(do sed -i \"s|from ''../../common/ui/ScreenUtils''|from ''../../../common/ui/ScreenUtils''|g\" \"$file\")"
+      "Bash(do sed -i \"s|from ''../../common/ui/ScreenUtils''|from ''../../../common/ui/ScreenUtils''|g\" \"$file\")",
+      "Bash(npm run build)",
+      "Bash(find:*)",
+      "Bash(npm run dev)",
+      "Bash(test:*)",
+      "Bash(tee:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []

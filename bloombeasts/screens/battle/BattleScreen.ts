@@ -7,13 +7,10 @@
 import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import type { AsyncMethods } from '../../common/ui/types/types/bindings';
 import type { BattleDisplay } from '../../../bloombeasts/gameManager';
+import type { Card } from '../../common/engine/types/core';
 import { UINodeType } from '../../common/ui/ScreenUtils';
-import { createCardDetailPopup } from '../../common/ui/screens/CardDetailPopup';
-import { createReactiveCardComponent } from '../../common/ui/screens/CardRenderer';
-import { createPopup, type PopupButton } from '../../common/ui/components/common/Popup';
-import { canAttack } from '../../common/engine/utils/combatHelpers';
-import { BindingType, UIState } from '../../common/ui/types/types/BindingManager';
-import type { ButtonColor } from '../../common/ui/components/common/Button';
+import { hasAttackableBeasts } from '../../common/engine/utils/combatHelpers';
+import { BindingType } from '../../common/ui/types/types/BindingManager';
 import {
   TURN_TIMER_SECONDS,
   AUTO_ATTACK_TOTAL_DELAY_MS
@@ -30,6 +27,18 @@ import {
   InfoDisplays,
   BattleSideMenu,
 } from './ui';
+import { BattleTimerManager } from './BattleTimerManager';
+import { CardPopupManager } from './CardPopupManager';
+
+interface BattleUIState {
+  battle: {
+    showHand: boolean;
+    handScrollOffset: number;
+    playerTimer: number;
+    opponentTimer: number;
+    selectedCardDetail: Card | null;
+  };
+}
 
 export interface BattleScreenProps {
   ui: UIMethodMappings;
@@ -37,7 +46,7 @@ export interface BattleScreenProps {
   onAction?: (action: string) => void;
   onNavigate?: (screen: string) => void;
   onRenderNeeded?: () => void;
-  onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
+  onShowCardDetail?: (card: Card, durationMs: number, callback?: () => void) => void;
   playSfx?: (sfxId: string) => void;
 }
 
@@ -49,27 +58,22 @@ export class BattleScreen {
   private ui: UIMethodMappings;
   private async: AsyncMethods;
 
-  // Temporary card display (for showing played cards)
-  private playedCardDisplay: any | null = null;
-  private playedCardTimeout: number | null = null;
-
-  // Timer management
-  private timerInterval: number | null = null;
+  // Manager instances
+  private timerManager: BattleTimerManager;
+  private cardPopupManager: CardPopupManager;
 
   // Track binding values separately (as per Horizon docs - no .get() method)
-  private playerTimerValue = TURN_TIMER_SECONDS;
-  private opponentTimerValue = TURN_TIMER_SECONDS;
   private isPlayerTurnValue = false;
-  private battleDisplayValue: any | null = null;
+  private battleDisplayValue: BattleDisplay | null = null;
   private hasAttackableBeasts = false;
 
   // Track current UIState value for updates
-  private currentUIState: any = {
+  private currentUIState: BattleUIState = {
     battle: {
       showHand: true,
       handScrollOffset: 0,
-      playerTimer: 300,
-      opponentTimer: 300,
+      playerTimer: TURN_TIMER_SECONDS,
+      opponentTimer: TURN_TIMER_SECONDS,
       selectedCardDetail: null,
     },
   };
@@ -82,7 +86,7 @@ export class BattleScreen {
   private onAction?: (action: string) => void;
   private onNavigate?: (screen: string) => void;
   private onRenderNeeded?: () => void;
-  private onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
+  private onShowCardDetail?: (card: Card, durationMs: number, callback?: () => void) => void;
   private playSfx?: (sfxId: string) => void;
 
   // Battle components (modular)
@@ -99,9 +103,21 @@ export class BattleScreen {
     this.ui = props.ui;
     this.async = props.async;
 
-    // Initialize local value trackers
-    this.playerTimerValue = TURN_TIMER_SECONDS;
-    this.opponentTimerValue = TURN_TIMER_SECONDS;
+    // Initialize managers
+    this.timerManager = new BattleTimerManager(this.async, {
+      onPlayerTimeout: () => this.onAction?.('timeout-player'),
+      onOpponentTimeout: () => this.onAction?.('timeout-opponent'),
+      onTimerTick: (playerTimer, opponentTimer) => {
+        this.updateUIState({ playerTimer, opponentTimer });
+      },
+    });
+
+    this.cardPopupManager = new CardPopupManager(this.ui, this.async, {
+      onCardDetailSelected: (card, cardType) => this.handleCardDetailSelected(card, cardType),
+      onUpdateUIState: (updates) => this.updateUIState(updates),
+      onShowCardDetail: props.onShowCardDetail,
+      onAction: props.onAction,
+    });
 
     // Wrap onAction to add logging
     this.onAction = props.onAction ? (action: string) => {
@@ -121,26 +137,17 @@ export class BattleScreen {
       // Cache battle display value for onClick handlers
       this.battleDisplayValue = state;
 
-      // Check if player has any beasts that can attack (using proper canAttack check)
-      this.hasAttackableBeasts = false;
-      if (state && state.playerField) {
-        for (const beast of state.playerField) {
-          if (beast && canAttack(beast)) {
-            this.hasAttackableBeasts = true;
-            break;
-          }
-        }
-      }
+      // Check if player has any beasts that can attack
+      this.hasAttackableBeasts = state?.playerField ? hasAttackableBeasts(state.playerField) : false;
 
       // Start/restart timer based on turn changes or if timer not running
       if (this.isPlayerTurnValue !== newIsPlayerTurn) {
         this.isPlayerTurnValue = newIsPlayerTurn;
         // Restart timer to ensure it's tracking the correct player
-        this.stopTurnTimer();
-        this.startTurnTimer();
-      } else if (state && this.timerInterval === null) {
+        this.timerManager.restart(newIsPlayerTurn);
+      } else if (state && !this.timerManager.isRunning()) {
         // Start timer if it's not running but we have a valid battle state
-        this.startTurnTimer();
+        this.timerManager.start(newIsPlayerTurn);
       }
 
       return newIsPlayerTurn;
@@ -154,29 +161,22 @@ export class BattleScreen {
     this.beastFieldComponent = new BeastField({
       ui: this.ui,
       onAction: this.onAction,
-      showPlayedCard: this.showPlayedCard.bind(this),
+      showPlayedCard: this.cardPopupManager.showPlayedCard.bind(this.cardPopupManager),
     });
 
     this.trapZoneComponent = new TrapZone({
       ui: this.ui,
-      onCardDetailSelected: (card) => {
-        this.updateUIState({ selectedCardDetail: card });
-      },
+      onCardDetailSelected: (card) => this.cardPopupManager.handleCardDetailSelected(card),
     });
 
     this.buffZoneComponent = new BuffZone({
       ui: this.ui,
-      onCardDetailSelected: (card) => {
-        this.updateUIState({ selectedCardDetail: card });
-      },
+      onCardDetailSelected: (card) => this.cardPopupManager.handleCardDetailSelected(card),
     });
 
     this.habitatZoneComponent = new HabitatZone({
       ui: this.ui,
-      onCardDetailSelected: (card) => {
-        const habitatWithType = { ...card, type: 'Habitat' };
-        this.updateUIState({ selectedCardDetail: habitatWithType });
-      },
+      onCardDetailSelected: (card) => this.cardPopupManager.handleCardDetailSelected(card, 'Habitat'),
     });
 
     this.playerHandComponent = new PlayerHand({
@@ -190,7 +190,7 @@ export class BattleScreen {
         this.updateUIState({ handScrollOffset: newValue });
       },
       onRenderNeeded: this.onRenderNeeded,
-      showPlayedCard: this.showPlayedCard.bind(this),
+      showPlayedCard: this.cardPopupManager.showPlayedCard.bind(this.cardPopupManager),
     });
 
     this.infoDisplaysComponent = new InfoDisplays({
@@ -213,7 +213,7 @@ export class BattleScreen {
           });
         }
       },
-      onStopTurnTimer: () => this.stopTurnTimer(),
+      onStopTurnTimer: () => this.timerManager.stop(),
       playSfx: this.playSfx,
     });
   }
@@ -231,6 +231,14 @@ export class BattleScreen {
     };
     this.ui.bindingManager.setBinding(BindingType.UIState, this.currentUIState);
     this.onRenderNeeded?.();
+  }
+
+  /**
+   * Handle card detail selection from trap/buff/habitat zones
+   * Delegates to CardPopupManager
+   */
+  private handleCardDetailSelected(card: any, cardType?: string): void {
+    this.cardPopupManager.handleCardDetailSelected(card, cardType);
   }
 
   /**
@@ -265,8 +273,7 @@ export class BattleScreen {
             left: 0,
           },
           children: [
-              // Layer 2: Playboard overlay
-              // TODO futre
+              // Layer 2: Playboard overlay (future enhancement)
               // this.backgroundComponent.createPlayboard(),
 
               // Layer 3: Battle zones (beasts, traps, buffs, habitat)
@@ -288,13 +295,10 @@ export class BattleScreen {
               this.playerHandComponent.createPlayerHand(),
 
               // Layer 7: Card detail popup (from battleDisplay) - conditionally visible
-              this.createCardPopupLayer(),
+              this.cardPopupManager.createCardPopupLayer(),
 
               // Layer 7.25: Selected card detail popup (from clicking buff/trap cards) - conditionally visible
-              this.createSelectedCardDetailLayer(),
-
-              // Layer 7.5: Played card popup (temporary 2-second display) - conditionally visible
-              this.createPlayedCardPopupLayer(),
+              this.cardPopupManager.createSelectedCardDetailLayer(),
 
               // Layer 8: Attack animation overlays
               this.createAttackAnimations(),
@@ -308,202 +312,12 @@ export class BattleScreen {
 
 
   /**
-   * Create card popup layer with conditional visibility
-   */
-  private createCardPopupLayer(): UINodeType {
-    // Use UINode.if for conditional rendering if available
-    if (this.ui.UINode?.if) {
-      return this.ui.UINode.if(
-        this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => !!state?.cardPopup),
-        this.ui.View({
-          style: {
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000,
-          },
-          children: this.ui.Text({
-            text: 'Card Popup - TODO: Implement with reactive data',
-            style: { color: '#fff', fontSize: 20 }
-          }),
-        })
-      );
-    }
-
-    // Fallback: empty View (popup won't work)
-    return this.ui.View({ style: { display: 'none' } });
-  }
-
-  /**
-   * Create selected card detail popup layer with conditional visibility
-   */
-  private createSelectedCardDetailLayer(): UINodeType {
-    // Use UINode.if for conditional rendering if available
-    if (this.ui.UINode?.if) {
-      return this.ui.UINode.if(
-        // Derive visibility from base UIState binding (not from derived selectedCardDetail)
-        this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) => !!(state.battle?.selectedCardDetail)),
-        this.ui.View({
-          style: {
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            top: 0,
-            left: 0,
-          },
-          children: [
-            // Black backdrop
-            this.ui.Pressable({
-              onClick: () => {
-                this.updateUIState({ selectedCardDetail: null });
-              },
-              style: {
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              },
-            }),
-            // Card display centered on screen with reactive rendering
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                justifyContent: 'center',
-                alignItems: 'center',
-              },
-              children: this.createBattleCardDisplay(),
-            }),
-          ],
-        })
-      );
-    }
-
-    // Fallback: empty View
-    return this.ui.View({ style: { display: 'none' } });
-  }
-
-  /**
-   * Create played card popup layer with conditional visibility
-   */
-  private createPlayedCardPopupLayer(): UINodeType {
-    // For now, return empty View since playedCardDisplay is not reactive yet
-    // TODO: Make playedCardDisplay reactive and implement properly
-    return this.ui.View({ style: { display: 'none' } });
-  }
-
-  /**
-   * Forfeit popup is now handled at the root level in BloomBeastsGame.ts
-   * This method has been removed to avoid duplicate popups
-   */
-
-  /**
-   * Create battle card display with reactive bindings for selectedCardDetail
-   * Now uses the shared reactive card component
-   */
-  private createBattleCardDisplay(): UINodeType {
-    return createReactiveCardComponent(this.ui, {
-      mode: 'battleSelectedCard',
-      showDeckIndicator: false,
-    });
-  }
-
-  /**
-   * Create card popup overlay
-   */
-  private createCardPopup(popup: any): UINodeType {
-    return this.ui.View({
-      style: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 1000,
-      },
-      children: [
-        // Card detail popup
-        createCardDetailPopup(this.ui, {
-          cardDetail: {
-            card: popup.card,
-            isInDeck: false,
-            buttons: popup.showCloseButton ? ['Close'] : []
-          },
-          onButtonClick: () => this.onAction?.('btn-card-close'),
-        }),
-      ],
-    });
-  }
-
-  /**
    * Create attack animation overlays
    */
   private createAttackAnimations(): UINodeType | null {
     // Attack animations are handled directly in the beast field rendering (reactive)
     // This is a placeholder for any additional animation effects
     return null;
-  }
-
-  /**
-   * Start the turn timer (chess-clock style)
-   */
-  private startTurnTimer(): void {
-    // Don't start if already running
-    if (this.timerInterval !== null) {
-      return;
-    }
-
-    this.onRenderNeeded?.(); // Trigger re-render
-
-    this.timerInterval = this.async.setInterval(() => {
-      // Count down the current player's timer
-      if (this.isPlayerTurnValue) {
-        this.playerTimerValue--;
-        this.updateUIState({ playerTimer: this.playerTimerValue });
-
-        if (this.playerTimerValue <= 0) {
-          this.stopTurnTimer();
-          // Player ran out of time - they lose immediately
-          this.onAction?.('timeout-player');
-        }
-      } else {
-        this.opponentTimerValue--;
-        this.updateUIState({ opponentTimer: this.opponentTimerValue });
-
-        if (this.opponentTimerValue <= 0) {
-          this.stopTurnTimer();
-          // Opponent ran out of time - they lose immediately
-          this.onAction?.('timeout-opponent');
-        }
-      }
-    }, 1000);
-  }
-
-  /**
-   * Stop the turn timer
-   */
-  private stopTurnTimer(): void {
-    if (this.timerInterval) {
-      this.async.clearInterval(this.timerInterval);
-      this.timerInterval = null;
-    }
-  }
-
-  /**
-   * Update the end turn button text based on turn and timer
-   */
-  private updateEndTurnButtonText(): void {
-    // endTurnButtonText is now a derived binding, so it updates automatically
-    // This method is kept for compatibility but doesn't need to do anything
   }
 
   /**
@@ -521,52 +335,16 @@ export class BattleScreen {
   /**
    * Cleanup resources
    */
-  /**
-   * Create played card popup (shows for 2 seconds when card is played)
-   */
-  private createPlayedCardPopup(card: any): UINodeType {
-    return createCardDetailPopup(this.ui, {
-      cardDetail: {
-        card: card,
-        isInDeck: false,
-        buttons: []
-      },
-      onButtonClick: (buttonId: string) => {
-        // User can close early by clicking
-        if (this.playedCardTimeout) {
-          this.async.clearTimeout(this.playedCardTimeout);
-          this.playedCardTimeout = null;
-        }
-        this.playedCardDisplay = null;
-        this.onRenderNeeded?.();
-      }
-    });
-  }
-
-  /**
-   * Show a played card popup for 2 seconds, then execute callback
-   */
-  private showPlayedCard(card: any, callback?: () => void): void {
-
-    // Use the onShowCardDetail callback if available
-    if (this.onShowCardDetail) {
-      this.onShowCardDetail(card, 2000, callback);
-    } else {
-      console.warn('[BattleScreen] onShowCardDetail not defined, executing callback immediately');
-      callback?.();
-    }
-  }
-
   public cleanup(): void {
-    this.stopTurnTimer();
-    // Reset all UI state
-    this.playerTimerValue = TURN_TIMER_SECONDS;
-    this.opponentTimerValue = TURN_TIMER_SECONDS;
+    // Reset managers
+    this.timerManager.reset();
+    this.cardPopupManager.cleanup();
 
     // Update UIState with reset values
+    const { playerTimer, opponentTimer } = this.timerManager.getTimerValues();
     this.updateUIState({
-      playerTimer: 300,
-      opponentTimer: 300,
+      playerTimer,
+      opponentTimer,
       showHand: true,
       handScrollOffset: 0,
       selectedCardDetail: null,
@@ -574,12 +352,5 @@ export class BattleScreen {
 
     // Trigger final re-render
     this.onRenderNeeded?.();
-
-    // Clear played card timeout
-    if (this.playedCardTimeout) {
-      this.async.clearTimeout(this.playedCardTimeout);
-      this.playedCardTimeout = null;
-    }
-    this.playedCardDisplay = null;
   }
 }

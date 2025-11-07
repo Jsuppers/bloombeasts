@@ -53,6 +53,21 @@ export function canAttack(beast: RuntimeBeast): boolean {
 }
 
 /**
+ * Check if any beasts in a field can attack
+ */
+export function hasAttackableBeasts(field: (RuntimeBeast | null)[]): boolean {
+  if (!field) return false;
+
+  for (const beast of field) {
+    if (beast && canAttack(beast)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Get valid attack targets for a beast
  */
 export function getValidTargets(

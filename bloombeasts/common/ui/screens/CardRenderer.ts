@@ -13,6 +13,7 @@ import { UINodeType } from '../ScreenUtils';
 import type { PlayerData, UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 import type { BattleDisplay } from '../../../../bloombeasts/gameManager';
 import { BindingType, UIState } from '../types/types/BindingManager';
+import { Logger } from '../../engine/utils/Logger';
 import { CardType } from '../../engine/types/core';
 
 export interface CardRendererProps {
@@ -59,7 +60,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
   // We need to extract the base ID (e.g., "nectar-block") to match catalog IDs
   const extractBaseId = (id: string | undefined): string => {
     if (!id) {
-      console.warn('[CardRenderer] Card missing id, using name fallback:', card);
+      Logger.warn('[CardRenderer] Card missing id, using name fallback:', card);
       // Fallback: use card name converted to kebab-case
       return card.name.toLowerCase().replace(/\s+/g, '-');
     }

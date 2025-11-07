@@ -7,10 +7,11 @@ import { BattleDisplay } from '../../../gameManager';
 import { UINodeType } from '../../../common/ui/ScreenUtils';
 import type { BattleComponentWithCallbacks } from './types';
 import { trapCardDimensions, battleBoardAssetPositions } from './types';
+import type { Card } from '../../../common/engine/types/core';
 
 export class TrapZone {
   private ui: BattleComponentWithCallbacks['ui'];
-  private onCardDetailSelected?: (card: any) => void;
+  private onCardDetailSelected?: (card: Card) => void;
 
   constructor(props: BattleComponentWithCallbacks) {
     this.ui = props.ui;

@@ -45,22 +45,34 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
       return { valid: false, reason: 'Beast has no attack power' };
     }
 
-    // If there's a target, validate it exists
-    if (actionData.targetId) {
-      const playerIndex = state.gameData.players.findIndex(p => p.id === playerId);
-      const opponentIndex = 1 - playerIndex;
-      const opponent = state.gameData.players[opponentIndex];
+    // Recalculate valid targets based on current field state (slot-based targeting)
+    const playerIndex = state.gameData.players.findIndex(p => p.id === playerId);
+    const opponentIndex = 1 - playerIndex;
+    const opponent = state.gameData.players[opponentIndex];
+    const currentField = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
+    const opponentField = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
 
-      // Check if targeting opponent player
-      if (actionData.targetId === opponent.id) {
-        return { valid: true };
-      }
+    // Find the slot index of the attacking beast
+    const slotIndex = currentField.beasts.findIndex(b => b?.id === actionData.cardId);
+    if (slotIndex === -1) {
+      return { valid: false, reason: 'Attacker not found on field' };
+    }
 
-      // Check if targeting a beast
-      const target = this.findBeastOnField(actionData.targetId, state);
-      if (!target) {
-        return { valid: false, reason: 'Target not found' };
-      }
+    // Determine the correct target based on current field state
+    const opponentBeast = opponentField.beasts[slotIndex];
+    let validTargetId: string;
+
+    if (opponentBeast) {
+      // Beast in opposite slot - must attack that beast
+      validTargetId = opponentBeast.id;
+    } else {
+      // No beast in opposite slot - must attack player
+      validTargetId = opponent.id;
+    }
+
+    // Validate that the provided target matches the calculated valid target
+    if (actionData.targetId !== validTargetId) {
+      return { valid: false, reason: 'Invalid target for slot position' };
     }
 
     return { valid: true };

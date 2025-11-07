@@ -13,7 +13,7 @@ import { createButton, type ButtonColor, type ButtonType } from './Button';
 export interface PopupButton {
   label: string | ValueBindingBase<string> | ReadonlyBindingInterface<string>;
   onClick: () => void;
-  color?: ButtonColor;
+  color?: ButtonColor | ValueBindingBase<ButtonColor> | ReadonlyBindingInterface<ButtonColor>;
   type?: ButtonType;
   disabled?: boolean | ValueBindingBase<boolean> | ReadonlyBindingInterface<boolean>;
 }

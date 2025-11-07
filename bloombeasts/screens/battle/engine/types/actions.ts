@@ -10,6 +10,8 @@
  *   action = { type: 'play-card', cardIndex: 0, targetIndex: 2 }
  */
 
+import { Logger } from '../../../../common/engine/utils/Logger';
+
 /**
  * Base action that all battle actions extend
  */
@@ -262,7 +264,7 @@ export function parseActionString(actionStr: string, playerId?: string): BattleA
   }
 
   // Unknown action
-  console.warn(`[ActionParser] Unknown action string: ${actionStr}`);
+  Logger.warn(`[ActionParser] Unknown action string: ${actionStr}`);
   return null;
 }
 

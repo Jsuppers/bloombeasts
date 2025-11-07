@@ -4,7 +4,7 @@
  */
 
 import { Mission } from '../types';
-import { buildForestDeck } from '../../../common/engine/utils/deckBuilder';
+import { createSimpleDeck } from '../utils/deckBuilder';
 
 export const mission02: Mission = {
   id: 'mission-02',
@@ -15,36 +15,7 @@ export const mission02: Mission = {
   affinity: 'Forest',
   beastId: 'Mushroomancer',
 
-  opponentDeck: () => {
-    // Get the catalog manager to access cards
-    const game = (globalThis as any).bloomBeastsGame;
-    if (!game?.catalogManager) {
-      console.error('[mission02] Catalog manager not available');
-      return { name: 'Mushroomancer Deck', affinity: 'Forest', cards: [], totalCards: 0 };
-    }
-
-    // Simple beginner deck: 3 Mushroomancers only
-    const mushroomancerCard = game.catalogManager.getCard('mushroomancer');
-    if (!mushroomancerCard) {
-      console.error('[mission02] Mushroomancer card not found');
-      return { name: 'Mushroomancer Deck', affinity: 'Forest', cards: [], totalCards: 0 };
-    }
-
-    const cards = [];
-    for (let i = 1; i <= 20; i++) {
-      cards.push({
-        ...mushroomancerCard,
-        instanceId: `mushroomancer-${i}`,
-      });
-    }
-
-    return {
-      name: 'Mushroomancer Pack',
-      affinity: 'Forest' as const,
-      cards,
-      totalCards: cards.length,
-    };
-  },
+  opponentDeck: () => createSimpleDeck('Mushroomancer Pack', 'Forest' as const, 'mushroomancer', 20),
 
   rewards: {
     guaranteedXP: 60,

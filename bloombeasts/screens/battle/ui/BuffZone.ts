@@ -7,10 +7,13 @@ import type { BattleComponentWithCallbacks } from './types';
 import { buffCardDimensions, battleBoardAssetPositions } from './types';
 import { UINodeType } from '../../../common/ui/ScreenUtils';
 import { BindingType } from '../../../common/ui/types/types/BindingManager';
+import type { Card } from '../../../common/engine/types/core';
+import { extractBaseCardId } from '../../../common/utils/cardUtils';
+import { COLOR_PALETTE } from '../../../core/ColorPalette';
 
 export class BuffZone {
   private ui: BattleComponentWithCallbacks['ui'];
-  private onCardDetailSelected?: (card: any) => void;
+  private onCardDetailSelected?: (card: Card) => void;
 
   constructor(props: BattleComponentWithCallbacks) {
     this.ui = props.ui;
@@ -93,7 +96,8 @@ export class BuffZone {
                     const buffZone = player === 'player' ? state?.playerBuffZone : state?.opponentBuffZone;
                     const buff = buffZone?.[index];
                     if (!buff) return null;
-                    return this.ui.assetIdToImageSource?.(buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-'));
+                    const baseCardId = extractBaseCardId(buff.id) || buff.name.toLowerCase().replace(/\s+/g, '-');
+                    return this.ui.assetIdToImageSource?.(baseCardId);
                   }),
                   style: {
                     width: 100,
@@ -111,9 +115,9 @@ export class BuffZone {
                   right: -3,
                   bottom: -3,
                   borderWidth: 3,
-                  borderColor: '#FFD700',
+                  borderColor: COLOR_PALETTE.cardType.buff,
                   borderRadius: 8,
-                  shadowColor: '#FFD700',
+                  shadowColor: COLOR_PALETTE.cardType.buff,
                   shadowRadius: 8,
                 },
               }),

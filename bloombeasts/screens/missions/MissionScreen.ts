@@ -1,146 +1,91 @@
 /**
- * Mission Screen - Refactored with UI Component System
+ * Mission Screen 
  */
 
-import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
 import { GAPS, sideMenuButtonDimensions, DIMENSIONS } from '../../common/ui/styles/styles/dimensions';
 import type { SimplePosition } from '../../common/ui/constants/positions';
 import { missionEmoji } from '../../common/ui/constants/emojis';
 import type { MissionDisplay } from '../../../bloombeasts/gameManager';
 import { UINodeType } from '../../common/ui/ScreenUtils';
-import { createSideMenu, createTextRow } from '../../common/ui/screens/SideMenu';
+import { createSideMenu, createTextRow, type SideMenuButton } from '../../common/ui/screens/SideMenu';
 import { createReactiveMissionComponent, MISSION_DIMENSIONS } from '../../common/ui/screens/MissionRenderer';
 import { COLORS } from '../../common/ui/styles/styles/colors';
 import { BindingType, UIState } from '../../common/ui/types/types/BindingManager';
+import { BaseScreen, BaseScreenProps } from '../common/BaseScreen';
+import { UIStateManager } from '../common/UIStateManager';
+import { ScrollButtonFactory } from '../common/ScrollButtonFactory';
 
-// MissionScreen-specific constants
-const cardsUIContainerDimensions = {
-  width: 950,
-  height: 640,
-};
+const CONTAINER_DIMENSIONS = { width: 950, height: 640 };
+const CONTAINER_POSITION: SimplePosition = { x: 103, y: 41 };
 
-const cardsUIContainerPosition: SimplePosition = {
-  x: 103,
-  y: 41,
-};
+// Mission grid constants
+const GRID_GAP_X = 12;
+const GRID_GAP_Y = 12;
+const GRID_START_X = 24;
+const GRID_START_Y = 24;
 
-export interface MissionScreenProps {
-  ui: UIMethodMappings;
+export interface MissionScreenProps extends BaseScreenProps {
   onMissionSelect?: (missionId: string) => void;
-  onNavigate?: (screen: string) => void;
-  onRenderNeeded?: () => void;
-  playSfx?: (sfxId: string) => void;
 }
 
-/**
- * Unified Mission Screen that works on both platforms
- */
-export class MissionScreen {
-  // UI methods (injected)
-  private ui: UIMethodMappings;
+interface MissionState {
+  scrollOffset?: number;
+}
 
-  // Configuration
-  private missionsPerRow: number = 3;
-  private rowsPerPage: number = 3;
-
-  // Callbacks
+export class MissionScreen extends BaseScreen {
+  private missionsPerRow = 3;
+  private rowsPerPage = 3;
   private onMissionSelect?: (missionId: string) => void;
-  private onNavigate?: (screen: string) => void;
-  private onRenderNeeded?: () => void;
-  private playSfx?: (sfxId: string) => void;
+  private stateManager: UIStateManager<MissionState>;
 
   constructor(props: MissionScreenProps) {
-    this.ui = props.ui;
+    super(props);
     this.onMissionSelect = props.onMissionSelect;
-    this.onNavigate = props.onNavigate;
-    this.onRenderNeeded = props.onRenderNeeded;
-    this.playSfx = props.playSfx;
+    this.stateManager = new UIStateManager<MissionState>(
+      this.ui.bindingManager,
+      'missions',
+      this.onRenderNeeded
+    );
   }
 
-  /**
-   * Create the missions UI
-   */
   createUI(): UINodeType {
-    return this.ui.View({
-      style: {
-        width: '100%',
-        height: '100%',
-        position: 'relative',
-      },
-      children: [
-        // Background image (full screen)
-        this.createBackground(),
-
-        // Main content area with mission grid
-        this.createMainContent(),
-
-        // Side menu with controls (absolutely positioned)
-        this.createSideMenu(),
-      ],
-    });
+    return this.createRootContainer([
+      this.createFullScreenBackground(),
+      this.createMainContent(),
+      this.createSideMenu(),
+    ]);
   }
 
-  /**
-   * Create full-screen background image
-   */
-  private createBackground(): UINodeType {
-    return this.ui.Image({
-      source: this.ui.assetIdToImageSource?.('background') || null,
-      style: {
-        position: 'absolute',
-        width: '100%',
-        height: '100%',
-        top: 0,
-        left: 0,
-      },
-    });
-  }
-
-  /**
-   * Create main content area with mission grid
-   */
   private createMainContent(): UINodeType {
     return this.ui.View({
       style: {
         position: 'absolute',
-        left: cardsUIContainerPosition.x,
-        top: cardsUIContainerPosition.y,
-        width: cardsUIContainerDimensions.width,
-        height: cardsUIContainerDimensions.height,
+        left: CONTAINER_POSITION.x,
+        top: CONTAINER_POSITION.y,
+        width: CONTAINER_DIMENSIONS.width,
+        height: CONTAINER_DIMENSIONS.height,
       },
       children: [
-        // Cards container background image
         this.ui.Image({
           source: this.ui.assetIdToImageSource?.('cards-container') || null,
           style: {
             position: 'absolute',
-            width: cardsUIContainerDimensions.width,
-            height: cardsUIContainerDimensions.height,
+            width: CONTAINER_DIMENSIONS.width,
+            height: CONTAINER_DIMENSIONS.height,
             top: 0,
             left: 0,
           },
         }),
-        // Content on top of container image
-        // Mission grid container with reactive missions
         this.createMissionGrid(),
       ],
     });
   }
 
-  /**
-   * Create a single mission slot using reactive mission component
-   */
   private createMissionSlot(slotIndex: number, missionsPerPage: number, row: number, col: number): UINodeType {
     const cardWidth = MISSION_DIMENSIONS.width;
     const cardHeight = MISSION_DIMENSIONS.height;
-    const gapX = 12;
-    const gapY = 12;
-    const startX = 24;
-    const startY = 24;
-    const spacingX = cardWidth + gapX;
-    const spacingY = cardHeight + gapY;
-    const x = startX + col * spacingX;
-    const y = startY + row * spacingY;
+    const x = GRID_START_X + col * (cardWidth + GRID_GAP_X);
+    const y = GRID_START_Y + row * (cardHeight + GRID_GAP_Y);
 
     return this.ui.View({
       style: {
@@ -151,19 +96,11 @@ export class MissionScreen {
       children: createReactiveMissionComponent(this.ui, {
         slotIndex,
         missionsPerPage,
-        onClick: (missionId: string) => {
-          if (this.onMissionSelect) {
-            this.onMissionSelect(missionId);
-          }
-        },
+        onClick: (missionId: string) => this.onMissionSelect?.(missionId),
       }),
     });
   }
 
-
-  /**
-   * Create the mission grid using single binding (Horizon-compatible)
-   */
   private createMissionGrid(): UINodeType {
     const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
 
@@ -172,11 +109,10 @@ export class MissionScreen {
         position: 'relative',
         paddingLeft: 4,
         paddingTop: 4,
-        width: cardsUIContainerDimensions.width,
-        height: cardsUIContainerDimensions.height,
+        width: CONTAINER_DIMENSIONS.width,
+        height: CONTAINER_DIMENSIONS.height,
       },
       children: [
-        // Mission grid - pre-create all slots
         this.ui.View({
           style: {
             position: 'relative',
@@ -191,10 +127,10 @@ export class MissionScreen {
           ).flat(),
         }),
 
-        // Empty state message (only show when no missions, render on top)
+        // Empty state
         ...(this.ui.UINode ? [this.ui.UINode.if(
           this.ui.bindingManager.derive([BindingType.Missions], (missions: MissionDisplay[]) => {
-            return missions.length === 0 ? true : false;
+            return missions.length === 0;
           }),
           this.ui.View({
             style: {
@@ -219,10 +155,26 @@ export class MissionScreen {
     });
   }
 
-
   /**
-   * Create side menu with controls
+   * Create scroll buttons using utility (eliminates 50+ lines of code)
    */
+  private createScrollButtons(): SideMenuButton[] {
+    const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+
+    const getTotalPages = () => {
+      const missions = this.ui.bindingManager.getSnapshot(BindingType.Missions) || [];
+      return Math.ceil(missions.length / missionsPerPage);
+    };
+
+    return ScrollButtonFactory.createSideMenuScrollButtons({
+      ui: this.ui,
+      stateManager: this.stateManager,
+      getTotalPages,
+      playSfx: this.playSfx,
+      playerDataBinding: false, // Mission screen watches Missions binding
+    });
+  }
+
   private createSideMenu(): UINodeType {
     const completionText = this.ui.bindingManager.derive([BindingType.Missions], (missions: MissionDisplay[]) => {
       const completedCount = missions.filter((m: MissionDisplay) => m.isCompleted).length;
@@ -231,90 +183,10 @@ export class MissionScreen {
 
     return createSideMenu(this.ui, {
       title: 'Missions',
-      customTextContent: [
-        createTextRow(this.ui, completionText as any, 0),
-      ],
-      buttons: [
-        {
-          label: 'Previous',
-          onClick: () => {
-            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-            // Reactive disabled state prevents invalid scrolling, so just decrement
-            this.ui.bindingManager.setBinding(BindingType.UIState, {
-              ...currentState,
-              missions: {
-                ...currentState.missions,
-                scrollOffset: (currentState.missions?.scrollOffset ?? 0) - 1
-              }
-            });
-            this.onRenderNeeded?.();
-          },
-          disabled: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-            const offset: number = uiState.missions?.scrollOffset ?? 0;
-            return offset <= 0 ? true : false;
-          }),
-          opacity: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-            const offset: number = uiState.missions?.scrollOffset ?? 0;
-            return offset <= 0 ? 0.5 : 1.0;
-          }),
-          textColor: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-            const offset: number = uiState.missions?.scrollOffset ?? 0;
-            return offset <= 0 ? '#888' : '#fff';
-          }),
-          yOffset: 0,
-        },
-        {
-          label: 'Next',
-          onClick: () => {
-            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-            // Reactive disabled state prevents invalid scrolling, so just increment
-            this.ui.bindingManager.setBinding(BindingType.UIState, {
-              ...currentState,
-              missions: {
-                ...currentState.missions,
-                scrollOffset: (currentState.missions?.scrollOffset ?? 0) + 1
-              }
-            });
-            this.onRenderNeeded?.();
-          },
-          disabled: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-            const offset: number = uiState.missions?.scrollOffset ?? 0;
-            const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-            const totalPages = Math.ceil(missions.length / missionsPerPage);
-            return offset >= totalPages - 1 ? true : false;
-          }),
-          opacity: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-            const offset: number = uiState.missions?.scrollOffset ?? 0;
-            const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-            const totalPages = Math.ceil(missions.length / missionsPerPage);
-            return offset >= totalPages - 1 ? 0.5 : 1.0;
-          }),
-          textColor: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-            const offset: number = uiState.missions?.scrollOffset ?? 0;
-            const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-            const totalPages = Math.ceil(missions.length / missionsPerPage);
-            return offset >= totalPages - 1 ? '#888' : '#fff';
-          }),
-          yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
-        },
-      ],
-      bottomButton: {
-        label: 'Back',
-        onClick: () => {
-          if (this.onNavigate) {
-            this.onNavigate('menu');
-          }
-        },
-        disabled: false,
-      },
+      customTextContent: [createTextRow(this.ui, completionText, 0)],
+      buttons: this.createScrollButtons(),
+      bottomButton: this.getBackButton(),
       playSfx: this.playSfx,
     });
-  }
-
-  /**
-   * Cleanup
-   */
-  dispose(): void {
-    // Nothing to clean up
   }
 }

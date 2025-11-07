@@ -7,8 +7,9 @@ import { BloomBeastCard, CardType } from '../../common/engine/types/core';
 import { STARTING_HEALTH, TURN_TIME_LIMIT } from '../../common/engine/constants/gameRules';
 import type { BattleDisplay, ObjectiveDisplay } from '../../gameManager';
 import type { RuntimeCard } from '../../common/engine/types/runtime';
+import type { IBattleDisplayManager, BattleDisplayOptions } from '../../core/interfaces/IBattleDisplayManager';
 
-export class BattleDisplayManager {
+export class BattleDisplayManager implements IBattleDisplayManager {
   private catalogManager: any;
 
   constructor(catalogManager: any) {
@@ -19,12 +20,7 @@ export class BattleDisplayManager {
    */
   createBattleDisplay(
     battleUIState: any,
-    attackAnimation?: {
-      attackerPlayer: 'player' | 'opponent';
-      attackerIndex: number;
-      targetPlayer: 'player' | 'opponent' | 'health';
-      targetIndex?: number;
-    } | null
+    options?: BattleDisplayOptions
   ): BattleDisplay | null {
     // Handle new TURBO-based battle state structure
     if (!battleUIState || !battleUIState.battleState || !battleUIState.battleState.turboState) {
@@ -67,7 +63,7 @@ export class BattleDisplayManager {
       turnTimeRemaining: TURN_TIME_LIMIT,
       objectives: this.getObjectiveDisplay(battleUIState),
       habitatZone: playerField.habitat || opponentField.habitat, // Use whichever has a habitat
-      attackAnimation: attackAnimation,
+      attackAnimation: options,
     };
 
     return display;
