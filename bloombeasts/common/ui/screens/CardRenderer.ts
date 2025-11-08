@@ -261,7 +261,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
   // Otherwise use View to avoid blocking parent click handlers
   if (onClick) {
     return ui.Pressable({
-      onClick: () => onClick(card.id),
+      onClick: () => onClick(card.instanceId || card.id),
       style: {
         width: cardWidth,
         height: cardHeight,
@@ -379,8 +379,14 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     if (isSelectedCardMode) {
       const cardId = uiState.cards?.selectedCardId;
       // ID-based mode: find card by ID
-      if (!cardId) return null;
+      if (!cardId) {
+        Logger.debug('[CardRenderer] selectedCard mode: no cardId in UIState');
+        return null;
+      }
       instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;
+      if (!instance) {
+        Logger.warn(`[CardRenderer] selectedCard mode: card not found for ID: ${cardId}. Available cards:`, cardInstances.map(c => c.id));
+      }
     } else if (isSlotMode && slotIndex !== undefined && cardsPerPage !== undefined) {
       // Slot-based mode: find card by slot index
       const pageStart = (uiState.cards?.scrollOffset ?? 0) * cardsPerPage;
@@ -691,8 +697,11 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
         const currentState = ui.bindingManager.getSnapshot(BindingType.UIState);
         const playerData = ui.bindingManager.getSnapshot(BindingType.PlayerData);
         const card = getCard(currentState, playerData, null);
-        if (card?.id) {
-          onClick(card.id);
+        Logger.debug('[CardRenderer] Card clicked:', { instanceId: card?.instanceId, cardId: card?.id, cardName: card?.name, mode });
+        if (card?.instanceId) {
+          onClick(card.instanceId);
+        } else {
+          Logger.warn('[CardRenderer] Clicked card has no instanceId:', card);
         }
       },
       style: {

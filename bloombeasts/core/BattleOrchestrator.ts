@@ -83,6 +83,8 @@ export class BattleOrchestrator {
    * Handle battle actions
    */
   async handleBattleAction(action: string): Promise<void> {
+    Logger.debug('[BattleOrchestrator] handleBattleAction called with action:', action);
+
     // Handle timeout losses - convert to TIMEOUT action
     if (action === 'timeout-player' || action === 'timeout-opponent') {
       await this.handleTimeout(action);

@@ -102,14 +102,19 @@ export class BattleSideMenu {
           ui: this.ui,
           label: 'Attack',
           onClick: async () => {
+            console.log('[BattleSideMenu] Attack button clicked!');
             const currentIsPlayerTurn = this.getIsPlayerTurn();
             const hasAttackable = this.getHasAttackableBeasts();
+            console.log('[BattleSideMenu] currentIsPlayerTurn:', currentIsPlayerTurn, 'hasAttackable:', hasAttackable);
 
             if (currentIsPlayerTurn && hasAttackable) {
+              console.log('[BattleSideMenu] Calling onActionAsync with auto-attack-all');
               // Attack and wait for it to complete, then auto end turn
               await this.onActionAsync?.('auto-attack-all');
               this.onStopTurnTimer?.();
               this.onAction?.('end-turn');
+            } else {
+              console.log('[BattleSideMenu] Attack button clicked but conditions not met');
             }
           },
           // Use complete bindings (avoids .derive() on derived bindings)

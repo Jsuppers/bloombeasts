@@ -17,7 +17,7 @@ import { createSideMenu, createTextRow } from '../../common/ui/screens/SideMenu'
 import { createReactiveCardComponent } from '../../common/ui/screens/CardRenderer';
 import { type PopupButton } from '../../common/ui/components/common/Popup';
 import type { ButtonColor } from '../../common/ui/components/common/Button';
-import { BindingType } from '../../common/ui/types/types/BindingManager';
+import { BindingType, type UIState } from '../../common/ui/types/types/BindingManager';
 import { createReactiveCardDetailPopup } from '../../common/ui/screens/CardDetailPopup';
 import { BaseScreen, BaseScreenProps } from '../common/BaseScreen';
 import { UIStateManager } from '../common/UIStateManager';
@@ -166,8 +166,8 @@ export class CardsScreen extends BaseScreen {
 
       // Card detail popup
       ...(this.ui.UINode ? [this.ui.UINode.if(
-        this.ui.bindingManager.derive([BindingType.UIState], () => {
-          return this.stateManager.getValue('selectedCardId') !== null;
+        this.ui.bindingManager.derive([BindingType.UIState], (uiState: UIState) => {
+          return uiState.cards?.selectedCardId !== null;
         }),
         this.ui.View({
           style: {
@@ -191,7 +191,12 @@ export class CardsScreen extends BaseScreen {
    * Handle card click - show popup
    */
   private handleCardClick(cardId: string): void {
+    console.log('[CardsScreen] Card clicked, setting selectedCardId:', cardId);
     this.stateManager.update({ selectedCardId: cardId });
+
+    // Verify it was set correctly
+    const selectedId = this.stateManager.getValue('selectedCardId');
+    console.log('[CardsScreen] selectedCardId after update:', selectedId);
   }
 
   /**
@@ -206,9 +211,9 @@ export class CardsScreen extends BaseScreen {
    */
   private createPopupButtons(): PopupButton[] {
     const buttonLabel = this.ui.bindingManager.derive(
-      [BindingType.PlayerData],
-      (pd: PlayerData) => {
-        const cardId = this.stateManager.getValue('selectedCardId');
+      [BindingType.UIState, BindingType.PlayerData],
+      (uiState: UIState, pd: PlayerData) => {
+        const cardId = uiState.cards?.selectedCardId;
         if (!cardId) return '';
         const deckCardIds: string[] = pd?.cards?.deck || [];
         return deckCardIds.includes(cardId) ? 'Remove' : 'Add';
@@ -216,9 +221,9 @@ export class CardsScreen extends BaseScreen {
     );
 
     const buttonColor = this.ui.bindingManager.derive(
-      [BindingType.PlayerData],
-      (pd: PlayerData) => {
-        const cardId = this.stateManager.getValue('selectedCardId');
+      [BindingType.UIState, BindingType.PlayerData],
+      (uiState: UIState, pd: PlayerData) => {
+        const cardId = uiState.cards?.selectedCardId;
         if (!cardId) return 'default' as ButtonColor;
         const deckCardIds: string[] = pd?.cards?.deck || [];
         const isInDeck = deckCardIds.includes(cardId);
@@ -230,9 +235,13 @@ export class CardsScreen extends BaseScreen {
       {
         label: buttonLabel,
         onClick: () => {
-          const cardId = this.stateManager.getValue('selectedCardId');
+          const uiState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+          const cardId = uiState.cards?.selectedCardId;
+          console.log('[CardsScreen] Button clicked, selectedCardId:', cardId, 'onCardSelect:', !!this.onCardSelect);
           if (cardId && this.onCardSelect) {
             this.onCardSelect(cardId);
+          } else {
+            console.warn('[CardsScreen] Cannot add/remove card:', { cardId, hasCallback: !!this.onCardSelect });
           }
         },
         color: buttonColor,

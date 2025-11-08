@@ -1,5 +1,5 @@
 /**
- * Buff zone rendering - 2 slots per player
+ * Buff zone rendering - 3 slots per player
  */
 
 import { BattleDisplay } from '../../../gameManager';
@@ -22,15 +22,15 @@ export class BuffZone {
 
   /**
    * Create buff zone for a player - REACTIVE
-   * Creates 2 slots, bindings determine what's shown
+   * Creates 3 slots, bindings determine what's shown
    */
   createBuffZone(player: 'player' | 'opponent'): UINodeType[] {
     const positions = player === 'player'
       ? battleBoardAssetPositions.playerTwo
       : battleBoardAssetPositions.playerOne;
-    const buffSlots = [positions.buffOne, positions.buffTwo];
+    const buffSlots = [positions.buffOne, positions.buffTwo, positions.buffThree];
 
-    // Create 2 buff slots
+    // Create 3 buff slots
     return buffSlots.map((pos, index) => {
       // Get buff card template source directly
       const buffCardSource = this.ui.assetIdToImageSource?.('buff-card-playboard') || null;

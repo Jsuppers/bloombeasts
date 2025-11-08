@@ -6,11 +6,12 @@
 import type { CardDetailDisplay } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
 import { createCardComponent, createReactiveCardComponent } from './CardRenderer';
-import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
+import type { UIMethodMappings, PlayerData } from '../../../../bloombeasts/BloomBeastsGame';
 import { createPopup, type PopupButton } from '../components/common/Popup';
 import { BindingType, type UIState } from '../types/types/BindingManager';
 import { getCardDescription } from '../../engine/utils/cardDescriptionGenerator';
 import { CardType } from '../../engine/types/core';
+import { extractBaseCardId, getCardDefinition } from '../../utils/cardUtils';
 
 export interface CardDetailPopupProps {
   cardDetail: CardDetailDisplay;
@@ -31,11 +32,13 @@ export interface ReactiveCardDetailPopupProps {
 export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: ReactiveCardDetailPopupProps): UINodeType {
   const { onClose, buttons = [], playSfx } = props;
 
-  // Derive card name using instance method (no new binding)
-  const cardNameBinding = ui.bindingManager.derive([BindingType.UIState], (uiState: UIState) => {
-    const pd = ui.bindingManager.getSnapshot(BindingType.PlayerData);
-    const card = pd?.cards?.collected?.find((c: any) => c.id === uiState.cards?.selectedCardId);
-    return card?.name || 'Card Details';
+  // Derive card name watching both UIState and PlayerData for full reactivity
+  const cardNameBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, pd: PlayerData) => {
+    const cardInstance = pd?.cards?.collected?.find((c: any) => c.id === uiState.cards?.selectedCardId);
+    if (!cardInstance) return 'Card Details';
+    const baseCardId = extractBaseCardId(cardInstance.cardId);
+    const cardDef = getCardDefinition(baseCardId);
+    return cardDef?.name || 'Card Details';
   });
 
   // Create content with card display (centered)
