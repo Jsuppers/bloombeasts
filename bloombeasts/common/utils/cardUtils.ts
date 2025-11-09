@@ -42,6 +42,31 @@ export function getXPThreshold(level: number): number {
 }
 
 /**
+ * Get XP threshold for progression display
+ * Returns the XP needed to reach the NEXT level
+ * For max level, returns the current level threshold
+ *
+ * @param currentLevel - Current card level (1-9)
+ * @returns XP threshold for next level progression
+ *
+ * @example
+ * // Level 2 card needs 300 XP to reach level 3
+ * getXPProgressionThreshold(2) // returns 300
+ *
+ * // Level 9 card is at max, show max threshold
+ * getXPProgressionThreshold(9) // returns 25500
+ */
+export function getXPProgressionThreshold(currentLevel: number): number {
+  // For max level (9), show the threshold for level 9
+  if (currentLevel >= 9) {
+    return CARD_XP_THRESHOLDS[8]; // Level 9 threshold
+  }
+
+  // For levels 1-8, show the threshold for the NEXT level
+  return CARD_XP_THRESHOLDS[currentLevel]; // Next level threshold (current level index in array)
+}
+
+/**
  * Get card definition by ID
  */
 export function getCardDefinition(cardId: string): AnyCard | undefined {

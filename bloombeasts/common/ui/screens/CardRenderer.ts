@@ -8,7 +8,7 @@ import { DIMENSIONS } from '../styles/styles/dimensions';
 import type { CardInstance } from '../../../screens/common/types';
 import type { RuntimeCard, RuntimeBeast } from '../../engine/types/runtime';
 import { getCardDescription } from '../../engine/utils/cardDescriptionGenerator';
-import { createBattleCard, getCardDefinition, extractBaseCardId, getXPThreshold } from '../../utils/cardUtils';
+import { createBattleCard, getCardDefinition, extractBaseCardId, getXPProgressionThreshold } from '../../utils/cardUtils';
 import { UINodeType } from '../ScreenUtils';
 import type { PlayerData, UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
 import type { BattleDisplay } from '../../../../bloombeasts/gameManager';
@@ -217,7 +217,7 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       // Level and Experience (for all cards with level)
       ...(card.level !== undefined ? [
         ui.Text({
-          text: `lvl ${card.level}. ${card.currentXP || 0}/${getXPThreshold(card.level)}`,
+          text: `lvl ${card.level}. ${card.currentXP || 0}/${getXPProgressionThreshold(card.level)}`,
           style: {
             position: 'absolute',
             top: positions.level.y,
@@ -473,7 +473,7 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
 
     // For all cards, show level and experience
     const exp = card.currentXP || 0;
-    return `lvl ${card.level}. ${exp}/${getXPThreshold(card.level)}`;
+    return `lvl ${card.level}. ${exp}/${getXPProgressionThreshold(card.level)}`;
   });
 
   const abilityTextBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
