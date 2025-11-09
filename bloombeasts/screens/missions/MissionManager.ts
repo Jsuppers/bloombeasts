@@ -4,10 +4,10 @@
 
 import { Mission, MissionObjective, MissionRewards, CardPool } from './types';
 import { missions, getMissionById } from './definitions';
-import { BloomBeastCard, HabitatCard, TrapCard, MagicCard } from '../../engine/types/core';
-import { GameState } from '../../engine/types/game';
-import { SimpleMap } from '../../utils/polyfills';
-import { Logger } from '../../engine/utils/Logger';
+import { BloomBeastCard, HabitatCard, TrapCard, MagicCard } from '../../common/engine/types/core';
+import { GameState } from '../../common/engine/types/game';
+import { SimpleMap } from '../../common/utils/polyfills';
+import { Logger } from '../../common/engine/utils/Logger';
 
 export interface MissionRunProgress {
   missionId: string;

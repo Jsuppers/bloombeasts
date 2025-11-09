@@ -4,14 +4,14 @@
  */
 
 import { BloomBeastsGame, PlatformConfig, type PlayerData } from '../../../bloombeasts/BloomBeastsGame';
-import { AssetCatalogManager } from '../../../bloombeasts/AssetCatalogManager';
-import { allCatalogs } from '../../../bloombeasts/catalogs';
-import { createDefaultPlayerData } from '../../../bloombeasts/utils/createDefaultPlayerData';
+import { AssetCatalogManager, AssetReferenceType } from '../../../bloombeasts/AssetCatalogManager';
+import { allCatalogs } from '../../../bloombeasts/common/catalogs';
+import { createDefaultPlayerData } from '../../../bloombeasts/common/utils/createDefaultPlayerData';
 import { UIRenderer } from './ui/UIRenderer';
 import { View, Text, Image, Pressable, Binding, DerivedBinding, ValueBindingBase, UINode } from './ui';
 import { AnimatedBinding, Animation, Easing } from './ui';
-import { AsyncMethods } from '../../../bloombeasts/ui/types/bindings';
-import { BindingManager } from '../../../bloombeasts/ui/types/BindingManager';
+import { AsyncMethods } from '../../../bloombeasts/common/ui/types/types/bindings';
+import { BindingManager } from '../../../bloombeasts/common/ui/types/types/BindingManager';
 
 /**
  * Initialize and load all asset catalogs
@@ -90,6 +90,10 @@ class WebGameApp {
         this.renderer = new UIRenderer(this.canvas, ctx);
         console.log('✅ UIRenderer created');
 
+        // Enable continuous rendering for smooth gameplay
+        this.renderer.setContinuousRender(true);
+        console.log('✅ Continuous rendering enabled');
+
         // Initialize audio system
         this.initializeAudio();
         console.log('✅ Audio system initialized');
@@ -158,7 +162,7 @@ class WebGameApp {
 
             // Image assets: getter function that queries catalog manager
             getImageAsset: (assetId: string) => {
-                const path = manager.getAssetPath(assetId, 'image');
+                const path = manager.getAssetPath(assetId, AssetReferenceType.Image);
                 if (!path) return undefined;
                 // Add leading slash for web server absolute paths
                 return path.startsWith('/') ? path : `/${path}`;
@@ -178,7 +182,7 @@ class WebGameApp {
                     bindingManager: bindingManager,
                     // Web just returns the asset ID as-is (string path)
                     assetIdToImageSource: (assetId: string) => assetId,
-                };
+                } as any; // Type assertion to handle differences between web-specific and shared prop types
             },
 
             // Async methods: standard browser APIs
@@ -211,7 +215,7 @@ class WebGameApp {
 
                 try {
                     // Convert asset ID to path using catalog manager
-                    const path = manager.getAssetPath(assetId, 'audio');
+                    const path = manager.getAssetPath(assetId, AssetReferenceType.Audio);
                     if (!path) {
                         console.warn(`[Web Audio] Asset not found: ${assetId}`);
                         return;

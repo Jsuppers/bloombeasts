@@ -4,8 +4,10 @@
  */
 
 import { Mission } from '../types';
-import { DeckList } from '../../../engine/utils/deckBuilder';
-import { BloomBeastCard } from '../../../engine/types/core';
+import { DeckList } from '../../../common/engine/utils/deckBuilder';
+import { BloomBeastCard } from '../../../common/engine/types/core';
+import type { RuntimeBeast } from '../../../common/engine/types/runtime';
+import { Logger } from '../../../common/engine/utils/Logger';
 
 // Get Cluck Norris deck - 3 level 9 Cluck Norris beasts
 const getCluckNorrisDeck = (): DeckList => {
@@ -13,7 +15,7 @@ const getCluckNorrisDeck = (): DeckList => {
   // Access the catalog manager through the global game instance
   const game = (globalThis as any).bloomBeastsGame;
   if (!game?.catalogManager) {
-    console.error('[mission17] Catalog manager not available');
+    Logger.error('[mission17] Catalog manager not available');
     return {
       name: 'Cluck Norris Deck',
       affinity: 'Forest',
@@ -26,7 +28,7 @@ const getCluckNorrisDeck = (): DeckList => {
   const cluckNorrisCard = game.catalogManager.getCard('cluck-norris') as BloomBeastCard;
 
   if (!cluckNorrisCard) {
-    console.error('[mission17] Cluck Norris card not found in catalog');
+    Logger.error('[mission17] Cluck Norris card not found in catalog');
     return {
       name: 'Cluck Norris Deck',
       affinity: 'Forest',
@@ -35,13 +37,21 @@ const getCluckNorrisDeck = (): DeckList => {
     };
   }
 
-  // Create 3 instances of Cluck Norris at level 9
-  const cluckNorrisCards: BloomBeastCard[] = [];
+  // Create 3 instances of Cluck Norris at level 9 as RuntimeBeast cards
+  const cluckNorrisCards: RuntimeBeast[] = [];
   for (let i = 1; i <= 3; i++) {
     cluckNorrisCards.push({
       ...cluckNorrisCard,
       instanceId: `cluck-norris-${i}`,
-      // Keep base stats at 99/99 as defined in the catalog
+      cardId: cluckNorrisCard.id,
+      currentXP: 25500, // Level 9 XP
+      level: 9,
+      currentLevel: 9 as any,
+      statusEffects: [],
+      // Keep base stats at 99/99 as defined in the catalog (already scaled for level 9)
+      currentAttack: cluckNorrisCard.baseAttack || 99,
+      currentHealth: cluckNorrisCard.baseHealth || 99,
+      maxHealth: cluckNorrisCard.baseHealth || 99,
     });
   }
 

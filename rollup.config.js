@@ -28,6 +28,11 @@ export default {
       declaration: false,
       declarationMap: false,
       outputToFilesystem: true,
+      exclude: [
+        '**/__tests__/**',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+      ]
     })
   ],
   external: []

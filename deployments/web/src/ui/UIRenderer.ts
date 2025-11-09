@@ -50,6 +50,7 @@ export class UIRenderer {
     private lastRenderTime: number = 0;
     private currentRoot: UINode | null = null;
     private hasActiveAnimations: boolean = false;
+    private continuousRender: boolean = false; // Add continuous render mode
 
     // Debug flag - set to false to disable all debug logging
     private static DEBUG_ENABLED = false;
@@ -72,6 +73,17 @@ export class UIRenderer {
      */
     setImages(images: Map<string, HTMLImageElement>): void {
         this.imageCache = images;
+    }
+
+    /**
+     * Enable or disable continuous rendering mode
+     */
+    setContinuousRender(enabled: boolean): void {
+        this.continuousRender = enabled;
+        // If enabling continuous render and we have a root, start the loop
+        if (enabled && this.currentRoot && !this.animationFrameId) {
+            this.startAnimationLoop();
+        }
     }
 
     /**
@@ -151,8 +163,6 @@ export class UIRenderer {
     private renderView(node: UINode<ViewProps>, parentBox: LayoutBox): LayoutBox {
         const style = this.resolveStyle(node.props.style || {});
         const box = this.calculateLayout(style, parentBox);
-
-        UIRenderer.DEBUG_ENABLED && console.log('renderView - box:', box, 'style.backgroundColor:', style.backgroundColor);
 
         // Handle opacity
         const opacity = style.opacity !== undefined ? Number(this.resolveAndTrack(style.opacity)) : 1;
@@ -662,14 +672,6 @@ export class UIRenderer {
             height: finalHeight,
         };
 
-        UIRenderer.DEBUG_ENABLED && console.log('calculateLayout:', {
-            styleWidth: style.width,
-            styleHeight: style.height,
-            styleFlex: style.flex,
-            parentBox,
-            result
-        });
-
         return result;
     }
 
@@ -825,19 +827,20 @@ export class UIRenderer {
      */
     private startAnimationLoop(): void {
         const animate = (currentTime: number) => {
-            // Re-render if enough time has passed (target: ~30 FPS for smooth animation)
-            if (!this.lastRenderTime || currentTime - this.lastRenderTime >= 33) {
+            // In continuous mode, render at 60 FPS for smoothness. Otherwise, 30 FPS.
+            const targetFrameTime = this.continuousRender ? 16 : 33; // 16ms = ~60FPS, 33ms = ~30FPS
+            if (!this.lastRenderTime || currentTime - this.lastRenderTime >= targetFrameTime) {
                 this.lastRenderTime = currentTime;
                 if (this.currentRoot) {
                     this.performRender(this.currentRoot);
                 }
             }
 
-            // Only continue the loop if we have active animations
-            if (this.hasActiveAnimations) {
+            // Continue the loop if we have active animations or continuous render is enabled
+            if (this.hasActiveAnimations || this.continuousRender) {
                 this.animationFrameId = requestAnimationFrame(animate);
             } else {
-                // Stop the loop - no animations active
+                // Stop the loop - no animations active and not in continuous mode
                 this.animationFrameId = null;
             }
         };

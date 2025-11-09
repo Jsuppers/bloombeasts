@@ -4,7 +4,8 @@
  */
 
 import { Mission } from '../types';
-import { buildForestDeck, DeckList } from '../../../engine/utils/deckBuilder';
+import { buildForestDeck, DeckList } from '../../../common/engine/utils/deckBuilder';
+import { Logger } from '../../../common/engine/utils/Logger';
 
 export const mission01: Mission = {
   id: 'mission-01',
@@ -22,7 +23,7 @@ export const mission01: Mission = {
 
     // Safety check - return empty deck if builder failed
     if (!deck || deck.cards.length === 0) {
-      console.error('[mission01] Failed to build Forest deck');
+      Logger.error('[mission01] Failed to build Forest deck');
       return { name: 'Rootling Deck', affinity: 'Forest' as const, cards: [], totalCards: 0 };
     }
 

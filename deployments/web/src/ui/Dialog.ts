@@ -5,8 +5,8 @@
 
 import { View, Text, Pressable, UINode } from './components';
 import { Binding } from './Binding';
-import { COLORS } from '../../../../bloombeasts/ui/styles/colors';
-import { DIMENSIONS } from '../../../../bloombeasts/ui/styles/dimensions';
+import { COLORS } from '../../../../bloombeasts/common/ui/styles/styles/colors';
+import { DIMENSIONS } from '../../../../bloombeasts/common/ui/styles/styles/dimensions';
 
 export type DialogButton = {
     label: string;

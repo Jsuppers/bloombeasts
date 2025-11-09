@@ -3,7 +3,7 @@
     "allowJs": false,
     "strict": true,
     "module": "CommonJS",
-    "lib": ["ES2020"],
+    "lib": ["ES2020", "DOM"],
     "baseUrl": ".",
     "esModuleInterop": true,
     "target": "ES2020",

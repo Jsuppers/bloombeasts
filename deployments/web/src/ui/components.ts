@@ -18,10 +18,10 @@ export type BaseProps = {
  */
 export class UINode<TProps extends BaseProps = BaseProps> {
     public readonly type: string;
-    public readonly props: Readonly<TProps>;
+    public readonly props: TProps;
     public children: any; // Can be UINode[], DerivedBinding, or other reactive values
 
-    constructor(type: string, props: Readonly<TProps>, children: any = []) {
+    constructor(type: string, props: TProps, children: any = []) {
         this.type = type;
         this.props = props;
         this.children = children;
@@ -64,19 +64,19 @@ export type ViewProps = {
     style?: ViewStyle;
 };
 
-export function View(props: Readonly<ViewProps>): UINode<ViewProps> {
+export function View(props: ViewProps): UINode<ViewProps> {
     return new UINode('view', props, normalizeChildren(props.children));
 }
 
 // ============= Text Component =============
 
 export type TextProps = {
-    text: Bindable<string>;
+    text?: Bindable<string>; // Optional to match shared TextProps interface
     numberOfLines?: number;
     style?: TextStyle;
 };
 
-export function Text(props: Readonly<TextProps>): UINode<TextProps> {
+export function Text(props: TextProps): UINode<TextProps> {
     return new UINode('text', props);
 }
 
@@ -93,7 +93,7 @@ export type ImageProps = {
     style?: ImageStyle;
 };
 
-export function Image(props: Readonly<ImageProps>): UINode<ImageProps> {
+export function Image(props: ImageProps): UINode<ImageProps> {
     return new UINode('image', props);
 }
 
@@ -111,7 +111,7 @@ export type PressableProps = {
     style?: ViewStyle;
 };
 
-export function Pressable(props: Readonly<PressableProps>): UINode<PressableProps> {
+export function Pressable(props: PressableProps): UINode<PressableProps> {
     return new UINode('pressable', props, normalizeChildren(props.children));
 }
 
@@ -122,7 +122,7 @@ export type ScrollViewProps = ViewProps & {
     horizontal?: boolean;
 };
 
-export function ScrollView(props: Readonly<ScrollViewProps>): UINode<ScrollViewProps> {
+export function ScrollView(props: ScrollViewProps): UINode<ScrollViewProps> {
     return new UINode('scrollview', props, normalizeChildren(props.children));
 }
 
