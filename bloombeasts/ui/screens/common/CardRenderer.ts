@@ -648,24 +648,26 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     }),
 
     // Layer 7: Deck indicator border (only if showDeckIndicator is true and not in battle mode)
-    ...(showDeckIndicator && !isBattleMode ? [ui.View({
-      style: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+    // Use conditional rendering to show/hide the border view based on whether card is in deck
+    ...(showDeckIndicator && !isBattleMode && ui.UINode ? [ui.UINode.if(
+      ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
         const card = getCard(uiState, playerData, null);
-        const inDeck = isCardInDeck(playerData, card?.id);
-
-        return {
+        return isCardInDeck(playerData, card?.id);
+      }),
+      ui.View({
+        style: {
           position: 'absolute',
           top: 0,
           left: 0,
           width: cardWidth,
           height: cardHeight,
-          borderWidth: inDeck ? 4 : 0,
+          borderWidth: 4,
           borderColor: COLORS.success,
           borderRadius: 8,
           pointerEvents: 'none' as const, // Allow clicks to pass through
-        };
-      }),
-    })] : []),
+        },
+      })
+    )] : []),
   ];
 
   const filteredChildren = children.filter(child => child !== undefined && child !== null);

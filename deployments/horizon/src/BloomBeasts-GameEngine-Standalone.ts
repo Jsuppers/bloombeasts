@@ -10,7 +10,7 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-10-31T23:45:12.234Z
+ * Generated: 2025-11-09T08:09:06.372Z
  * Files: 104
  *
  * @version 1.0.0
@@ -30,7 +30,7 @@ namespace BloomBeasts {
   // All type declarations and implementations are included from source files below.
   // UI implementations are provided by the platform via UIMethodMappings interface.
 
-  // ==================== bloombeasts\engine\types\abilities.ts ====================
+  // ==================== bloombeasts/engine/types/abilities.ts ====================
 
   /**
    * Comprehensive ability system types for Bloom Beasts
@@ -448,7 +448,7 @@ namespace BloomBeasts {
     maxUsesPerGame?: number;  // For once per game abilities
   }
 
-  // ==================== bloombeasts\engine\types\core.ts ====================
+  // ==================== bloombeasts/engine/types/core.ts ====================
 
   /**
    * Core type definitions for Bloom Beasts card game
@@ -585,7 +585,7 @@ namespace BloomBeasts {
    */
   export type AnyCard = MagicCard | TrapCard | HabitatCard | BloomBeastCard | BuffCard;
 
-  // ==================== bloombeasts\engine\types\leveling.ts ====================
+  // ==================== bloombeasts/engine/types/leveling.ts ====================
 
   /**
    * Type definitions for the leveling and progression system
@@ -701,7 +701,7 @@ namespace BloomBeasts {
     preventions?: PreventionEffect[];
   }
 
-  // ==================== bloombeasts\utils\polyfills.ts ====================
+  // ==================== bloombeasts/utils/polyfills.ts ====================
 
   /**
    * Polyfills and type definitions for ES2020 compatibility
@@ -821,7 +821,7 @@ namespace BloomBeasts {
   // Export as global Map replacement if needed
   export type MapPolyfill<K extends string | number, V> = SimpleMap<K, V>;
 
-  // ==================== bloombeasts\engine\types\game.ts ====================
+  // ==================== bloombeasts/engine/types/game.ts ====================
 
   /**
    * Game state and player types
@@ -926,7 +926,7 @@ namespace BloomBeasts {
     habitatCardId: string;
   }
 
-  // ==================== bloombeasts\engine\constants\leveling.ts ====================
+  // ==================== bloombeasts/engine/constants/leveling.ts ====================
 
   /**
    * Constants for the leveling and progression system
@@ -1002,7 +1002,7 @@ namespace BloomBeasts {
 
   export const NECTAR_XP_COST = 1;
 
-  // ==================== bloombeasts\engine\utils\fieldUtils.ts ====================
+  // ==================== bloombeasts/engine/utils/fieldUtils.ts ====================
 
   /**
    * Field Utilities
@@ -1235,7 +1235,7 @@ namespace BloomBeasts {
     return getAliveBeasts(field).reduce((total, beast) => total + beast.currentHealth, 0);
   }
 
-  // ==================== bloombeasts\engine\utils\random.ts ====================
+  // ==================== bloombeasts/engine/utils/random.ts ====================
 
   /**
    * Random Utilities
@@ -1390,7 +1390,7 @@ namespace BloomBeasts {
     return randomInt(1, sides);
   }
 
-  // ==================== bloombeasts\engine\systems\AbilityProcessor.ts ====================
+  // ==================== bloombeasts/engine/systems/AbilityProcessor.ts ====================
 
   /**
    * Ability Processor - Executes ability effects in the game
@@ -2013,7 +2013,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\engine\utils\Logger.ts ====================
+  // ==================== bloombeasts/engine/utils/Logger.ts ====================
 
   /**
    * Logger
@@ -2287,7 +2287,7 @@ namespace BloomBeasts {
   //   }
   // }
 
-  // ==================== bloombeasts\engine\constants\gameRules.ts ====================
+  // ==================== bloombeasts/engine/constants/gameRules.ts ====================
 
   /**
    * Game Rules Constants
@@ -2346,7 +2346,7 @@ namespace BloomBeasts {
   // Battle Configuration
   export const FIRST_PLAYER_DRAWS_ON_FIRST_TURN = false;
 
-  // ==================== bloombeasts\engine\systems\CombatSystem.ts ====================
+  // ==================== bloombeasts/engine/systems/CombatSystem.ts ====================
 
   /**
    * Combat System - Handles battle mechanics and turn flow
@@ -2517,7 +2517,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\engine\systems\interfaces.ts ====================
+  // ==================== bloombeasts/engine/systems/interfaces.ts ====================
 
   /**
    * Interfaces for dependency injection and testability
@@ -2666,7 +2666,7 @@ namespace BloomBeasts {
     hasAbilityUpgrade(card: BloomBeastCard, level: Level): boolean;
   }
 
-  // ==================== bloombeasts\engine\systems\LevelingSystem.ts ====================
+  // ==================== bloombeasts/engine/systems/LevelingSystem.ts ====================
 
   /**
    * Leveling System - Handles XP gain, level ups, and stat progression
@@ -2860,7 +2860,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\engine\cards\deckConfig.ts ====================
+  // ==================== bloombeasts/engine/cards/deckConfig.ts ====================
 
   /**
    * Deck Configuration - Simplified deck building using card utilities
@@ -3015,7 +3015,7 @@ namespace BloomBeasts {
     }));
   }
 
-  // ==================== bloombeasts\engine\cards\index.ts ====================
+  // ==================== bloombeasts/engine/cards/index.ts ====================
 
   /**
    * Central card registry
@@ -3023,7 +3023,7 @@ namespace BloomBeasts {
 
   // Re-export everything from config
 
-  // ==================== bloombeasts\engine\utils\deckBuilder.ts ====================
+  // ==================== bloombeasts/engine/utils/deckBuilder.ts ====================
 
   /**
    * Deck Builder Utilities - Construct and manage decks
@@ -3272,7 +3272,7 @@ namespace BloomBeasts {
     };
   }
 
-  // ==================== bloombeasts\engine\utils\cardHelpers.ts ====================
+  // ==================== bloombeasts/engine/utils/cardHelpers.ts ====================
 
   /**
    * Card Helper Utilities - Query and filter cards
@@ -3372,7 +3372,7 @@ namespace BloomBeasts {
     return distribution;
   }
 
-  // ==================== bloombeasts\engine\index.ts ====================
+  // ==================== bloombeasts/engine/index.ts ====================
 
   /**
    * Bloom Beasts Card Game - Main Export Index
@@ -3390,7 +3390,7 @@ namespace BloomBeasts {
 
   // Utilities
 
-  // ==================== bloombeasts\screens\cards\types.ts ====================
+  // ==================== bloombeasts/screens/cards/types.ts ====================
 
   /**
    * Type definitions for the card collection system
@@ -3445,7 +3445,7 @@ namespace BloomBeasts {
     achievements?: string[];
   }
 
-  // ==================== bloombeasts\engine\utils\abilityDescriptionGenerator.ts ====================
+  // ==================== bloombeasts/engine/utils/abilityDescriptionGenerator.ts ====================
 
   /**
    * Generates human-readable descriptions from ability effects
@@ -3765,7 +3765,7 @@ namespace BloomBeasts {
     return `${allButLast}, and ${last}`;
   }
 
-  // ==================== bloombeasts\engine\utils\getAbilityDescription.ts ====================
+  // ==================== bloombeasts/engine/utils/getAbilityDescription.ts ====================
 
   /**
    * Helper function to get ability description
@@ -3782,7 +3782,7 @@ namespace BloomBeasts {
     return generateAbilityDescription(ability);
   }
 
-  // ==================== bloombeasts\engine\utils\cardDescriptionGenerator.ts ====================
+  // ==================== bloombeasts/engine/utils/cardDescriptionGenerator.ts ====================
 
   /**
    * Generates human-readable descriptions for all card types
@@ -3819,7 +3819,7 @@ namespace BloomBeasts {
     return card.description || '';
   }
 
-  // ==================== bloombeasts\utils\cardUtils.ts ====================
+  // ==================== bloombeasts/utils/cardUtils.ts ====================
 
   /**
    * Card utility functions for level/XP calculations and stat computation
@@ -4008,7 +4008,7 @@ namespace BloomBeasts {
     return displayData;
   }
 
-  // ==================== bloombeasts\gameManager.ts ====================
+  // ==================== bloombeasts/gameManager.ts ====================
 
   /**
    * Type Definitions for BloomBeasts Game
@@ -4109,7 +4109,7 @@ namespace BloomBeasts {
     isComplete: boolean;
   }
 
-  // ==================== bloombeasts\ui\styles\colors.ts ====================
+  // ==================== bloombeasts/ui/styles/colors.ts ====================
 
   /**
    * Shared color palette for BloomBeasts
@@ -4174,7 +4174,7 @@ namespace BloomBeasts {
     },
   } as const;
 
-  // ==================== bloombeasts\ui\styles\dimensions.ts ====================
+  // ==================== bloombeasts/ui/styles/dimensions.ts ====================
 
   /**
    * Shared dimensions and spacing for BloomBeasts
@@ -4276,7 +4276,7 @@ namespace BloomBeasts {
     sections: 30,
   } as const;
 
-  // ==================== bloombeasts\ui\constants\dimensions.ts ====================
+  // ==================== bloombeasts/ui/constants/dimensions.ts ====================
 
   // Multi-use card dimensions
   export const standardCardDimensions = {
@@ -4310,7 +4310,7 @@ namespace BloomBeasts {
     height: 89,
   };
 
-  // ==================== bloombeasts\ui\screens\ScreenUtils.ts ====================
+  // ==================== bloombeasts/ui/screens/ScreenUtils.ts ====================
 
   /**
    * Utilities for screen components
@@ -4404,7 +4404,7 @@ namespace BloomBeasts {
     };
   }
 
-  // ==================== bloombeasts\ui\constants\positions.ts ====================
+  // ==================== bloombeasts/ui/constants/positions.ts ====================
 
   // Type definitions
   export interface SimplePosition {
@@ -4530,7 +4530,7 @@ namespace BloomBeasts {
     claimRewardButton: { x: 175, y: 271 },
   };
 
-  // ==================== bloombeasts\ui\types\bindings.ts ====================
+  // ==================== bloombeasts/ui/types/bindings.ts ====================
 
   /**
    * Binding Type Declarations
@@ -4590,7 +4590,7 @@ namespace BloomBeasts {
     clearInterval: (id: number) => void;
   }
 
-  // ==================== bloombeasts\ui\common\Button.ts ====================
+  // ==================== bloombeasts/ui/common/Button.ts ====================
 
   /**
    * Common Button Component
@@ -4746,7 +4746,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts\ui\types\BindingManager.ts ====================
+  // ==================== bloombeasts/ui/types/BindingManager.ts ====================
 
   /**
    * Centralized Binding Manager
@@ -4974,7 +4974,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\common\SideMenu.ts ====================
+  // ==================== bloombeasts/ui/screens/common/SideMenu.ts ====================
 
   /**
    * Common Side Menu Component
@@ -5264,7 +5264,7 @@ namespace BloomBeasts {
       });
   }
 
-  // ==================== bloombeasts\ui\screens\MenuScreen.ts ====================
+  // ==================== bloombeasts/ui/screens/MenuScreen.ts ====================
 
   /**
    * Unified Menu Screen Component
@@ -5625,7 +5625,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\constants\emojis.ts ====================
+  // ==================== bloombeasts/ui/constants/emojis.ts ====================
 
   export const nectarEmoji = '🏵️';
   export const missionEmoji = '🎯';
@@ -5633,7 +5633,7 @@ namespace BloomBeasts {
   export const playerLevelEmoji = '💪';
   export const playerExperienceEmoji = '🧪';
 
-  // ==================== bloombeasts\ui\screens\common\CardRenderer.ts ====================
+  // ==================== bloombeasts/ui/screens/common/CardRenderer.ts ====================
 
   /**
    * Common Card Rendering Component
@@ -6276,24 +6276,26 @@ namespace BloomBeasts {
       }),
 
       // Layer 7: Deck indicator border (only if showDeckIndicator is true and not in battle mode)
-      ...(showDeckIndicator && !isBattleMode ? [ui.View({
-        style: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      // Use conditional rendering to show/hide the border view based on whether card is in deck
+      ...(showDeckIndicator && !isBattleMode && ui.UINode ? [ui.UINode.if(
+        ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
           const card = getCard(uiState, playerData, null);
-          const inDeck = isCardInDeck(playerData, card?.id);
-
-          return {
+          return isCardInDeck(playerData, card?.id);
+        }),
+        ui.View({
+          style: {
             position: 'absolute',
             top: 0,
             left: 0,
             width: cardWidth,
             height: cardHeight,
-            borderWidth: inDeck ? 4 : 0,
+            borderWidth: 4,
             borderColor: COLORS.success,
             borderRadius: 8,
             pointerEvents: 'none' as const, // Allow clicks to pass through
-          };
-        }),
-      })] : []),
+          },
+        })
+      )] : []),
     ];
 
     const filteredChildren = children.filter(child => child !== undefined && child !== null);
@@ -6339,7 +6341,7 @@ namespace BloomBeasts {
     imageHeight: 185,
   };
 
-  // ==================== bloombeasts\ui\common\Popup.ts ====================
+  // ==================== bloombeasts/ui/common/Popup.ts ====================
 
   /**
    * Common Popup Component
@@ -6546,7 +6548,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts\ui\screens\common\CardDetailPopup.ts ====================
+  // ==================== bloombeasts/ui/screens/common/CardDetailPopup.ts ====================
 
   /**
    * Card Detail Popup Component
@@ -6875,7 +6877,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts\ui\screens\CardsScreen.ts ====================
+  // ==================== bloombeasts/ui/screens/CardsScreen.ts ====================
 
   /**
    * Unified Cards Screen Component
@@ -7273,7 +7275,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\constants\upgrades.ts ====================
+  // ==================== bloombeasts/constants/upgrades.ts ====================
 
   /**
    * Upgrade Constants
@@ -7340,7 +7342,7 @@ namespace BloomBeasts {
     [ROOSTER.id]: ROOSTER.costs
   };
 
-  // ==================== bloombeasts\ui\screens\UpgradeScreen.ts ====================
+  // ==================== bloombeasts/ui/screens/UpgradeScreen.ts ====================
 
   /**
    * Upgrade Screen Component
@@ -7617,7 +7619,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\common\MissionRenderer.ts ====================
+  // ==================== bloombeasts/ui/screens/common/MissionRenderer.ts ====================
 
   /**
    * Mission Renderer Component
@@ -7823,7 +7825,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts\ui\screens\MissionScreen.ts ====================
+  // ==================== bloombeasts/ui/screens/MissionScreen.ts ====================
 
   /**
    * Mission Screen - Refactored with UI Component System
@@ -8136,7 +8138,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\engine\utils\combatHelpers.ts ====================
+  // ==================== bloombeasts/engine/utils/combatHelpers.ts ====================
 
   /**
    * Combat Helper Utilities
@@ -8322,7 +8324,7 @@ namespace BloomBeasts {
     return !hasFieldBeasts && !hasPlayableCards;
   }
 
-  // ==================== bloombeasts\ui\screens\battle\types.ts ====================
+  // ==================== bloombeasts/ui/screens/battle/types.ts ====================
 
   /**
    * Shared types and constants for Battle Screen components
@@ -8439,7 +8441,7 @@ namespace BloomBeasts {
   export interface InfoDisplaysProps extends BattleComponentProps {
   }
 
-  // ==================== bloombeasts\ui\screens\battle\BattleBackground.ts ====================
+  // ==================== bloombeasts/ui/screens/battle/BattleBackground.ts ====================
 
   /**
    * Battle background and playboard rendering
@@ -8486,7 +8488,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\battle\BeastField.ts ====================
+  // ==================== bloombeasts/ui/screens/battle/BeastField.ts ====================
 
   /**
    * Beast field rendering - 3 slots per player
@@ -8620,7 +8622,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\battle\TrapZone.ts ====================
+  // ==================== bloombeasts/ui/screens/battle/TrapZone.ts ====================
 
   /**
    * Trap zone rendering - 3 slots per player
@@ -8707,7 +8709,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\battle\BuffZone.ts ====================
+  // ==================== bloombeasts/ui/screens/battle/BuffZone.ts ====================
 
   /**
    * Buff zone rendering - 2 slots per player
@@ -8831,7 +8833,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\battle\HabitatZone.ts ====================
+  // ==================== bloombeasts/ui/screens/battle/HabitatZone.ts ====================
 
   /**
    * Habitat zone rendering (center of board)
@@ -8932,7 +8934,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\battle\PlayerHand.ts ====================
+  // ==================== bloombeasts/ui/screens/battle/PlayerHand.ts ====================
 
   /**
    * Player hand overlay - 5 card slots with scroll and toggle
@@ -9281,7 +9283,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\battle\InfoDisplays.ts ====================
+  // ==================== bloombeasts/ui/screens/battle/InfoDisplays.ts ====================
 
   /**
    * Player and opponent info displays (health, nectar, deck count, timer)
@@ -9458,7 +9460,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\battle\BattleSideMenu.ts ====================
+  // ==================== bloombeasts/ui/screens/battle/BattleSideMenu.ts ====================
 
   /**
    * Battle side menu - Turn counter, end turn button, forfeit
@@ -9649,7 +9651,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\battle\index.ts ====================
+  // ==================== bloombeasts/ui/screens/battle/index.ts ====================
 
   /**
    * Battle screen components - Modular, reactive battle UI
@@ -9663,7 +9665,7 @@ namespace BloomBeasts {
   // but not re-exported here to avoid namespace bundling issues.
   // Import them directly from './types' if needed externally.
 
-  // ==================== bloombeasts\ui\screens\BattleScreen.ts ====================
+  // ==================== bloombeasts/ui/screens/BattleScreen.ts ====================
 
   /**
    * Unified Battle Screen Component
@@ -10260,7 +10262,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\SettingsScreen.ts ====================
+  // ==================== bloombeasts/ui/screens/SettingsScreen.ts ====================
 
   /**
    * Unified Settings Screen Component
@@ -10571,7 +10573,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\LeaderboardScreen.ts ====================
+  // ==================== bloombeasts/ui/screens/LeaderboardScreen.ts ====================
 
   /**
    * Leaderboard Screen Component
@@ -10806,7 +10808,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\ui\screens\common\MissionCompletePopup.ts ====================
+  // ==================== bloombeasts/ui/screens/common/MissionCompletePopup.ts ====================
 
   /**
    * Unified Mission Complete Popup Component
@@ -11178,7 +11180,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts\ui\screens\common\ButtonPopup.ts ====================
+  // ==================== bloombeasts/ui/screens/common/ButtonPopup.ts ====================
 
   /**
    * Button Popup Component
@@ -11259,7 +11261,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts\engine\systems\GameEngine.ts ====================
+  // ==================== bloombeasts/engine/systems/GameEngine.ts ====================
 
   /**
    * Game Engine - Main game controller and state manager
@@ -12641,7 +12643,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\systems\CardCollectionManager.ts ====================
+  // ==================== bloombeasts/systems/CardCollectionManager.ts ====================
 
   /**
    * CardCollectionManager - Manages card operations and transformations
@@ -12816,7 +12818,7 @@ namespace BloomBeasts {
 
   }
 
-  // ==================== bloombeasts\systems\BattleDisplayManager.ts ====================
+  // ==================== bloombeasts/systems/BattleDisplayManager.ts ====================
 
   /**
    * BattleDisplayManager - Handles battle UI rendering and display enrichment
@@ -12948,7 +12950,7 @@ namespace BloomBeasts {
 
   }
 
-  // ==================== bloombeasts\screens\missions\types.ts ====================
+  // ==================== bloombeasts/screens/missions/types.ts ====================
 
   /**
    * Mission System Type Definitions
@@ -13081,7 +13083,7 @@ namespace BloomBeasts {
     return deckOrFactory;
   }
 
-  // ==================== bloombeasts\screens\missions\definitions\mission01.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission01.ts ====================
 
   /**
    * Mission 01: Rootling
@@ -13139,7 +13141,7 @@ namespace BloomBeasts {
     unlocked: true, // First mission is always unlocked
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission02.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission02.ts ====================
 
   /**
    * Mission 02: Mosslet
@@ -13210,7 +13212,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission03.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission03.ts ====================
 
   /**
    * Mission 03: Mosslet
@@ -13288,7 +13290,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission04.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission04.ts ====================
 
   /**
    * Mission 04: Leaf Sprite
@@ -13374,7 +13376,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission05.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission05.ts ====================
 
   /**
    * Mission 05: Bubblefin
@@ -13416,7 +13418,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission06.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission06.ts ====================
 
   /**
    * Mission 06: Dewdrop Drake
@@ -13458,7 +13460,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission07.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission07.ts ====================
 
   /**
    * Mission 07: Kelp Cub
@@ -13500,7 +13502,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission08.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission08.ts ====================
 
   /**
    * Mission 08: Aqua Pebble
@@ -13548,7 +13550,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission09.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission09.ts ====================
 
   /**
    * Mission 09: Magmite
@@ -13596,7 +13598,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission10.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission10.ts ====================
 
   /**
    * Mission 10: Cinder Pup
@@ -13644,7 +13646,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission11.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission11.ts ====================
 
   /**
    * Mission 11: Charcoil
@@ -13686,7 +13688,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission12.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission12.ts ====================
 
   /**
    * Mission 12: Blazefinch
@@ -13734,7 +13736,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission13.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission13.ts ====================
 
   /**
    * Mission 13: Cirrus Floof
@@ -13782,7 +13784,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission14.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission14.ts ====================
 
   /**
    * Mission 14: Gale Glider
@@ -13830,7 +13832,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission15.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission15.ts ====================
 
   /**
    * Mission 15: Star Bloom
@@ -13878,7 +13880,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission16.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission16.ts ====================
 
   /**
    * Mission 16: Aero Moth
@@ -13926,7 +13928,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\mission17.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission17.ts ====================
 
   /**
    * Mission 17: Cluck Norris
@@ -14020,7 +14022,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\index.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/index.ts ====================
 
   /**
    * Central export for all mission definitions
@@ -14061,7 +14063,7 @@ namespace BloomBeasts {
     return missions.filter(mission => mission.timesCompleted > 0);
   };
 
-  // ==================== bloombeasts\screens\missions\MissionManager.ts ====================
+  // ==================== bloombeasts/screens/missions/MissionManager.ts ====================
 
   /**
    * Mission Manager - Handles mission progress, rewards, and completion
@@ -14470,7 +14472,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\missions\MissionSelectionUI.ts ====================
+  // ==================== bloombeasts/screens/missions/MissionSelectionUI.ts ====================
 
   /**
    * Mission Selection UI - Display available missions and let players choose
@@ -14711,7 +14713,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\battle\types.ts ====================
+  // ==================== bloombeasts/battle/types.ts ====================
 
   /**
    * Battle System Types
@@ -14783,7 +14785,7 @@ namespace BloomBeasts {
     player2Health: number;
   }
 
-  // ==================== bloombeasts\battle\core\BattleController.ts ====================
+  // ==================== bloombeasts/battle/core/BattleController.ts ====================
 
   /**
    * BattleController - Core battle orchestrator
@@ -15054,7 +15056,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\engine\utils\StatModifierManager.ts ====================
+  // ==================== bloombeasts/engine/utils/StatModifierManager.ts ====================
 
   /**
    * StatModifierManager - Centralized stat modification management
@@ -15258,7 +15260,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\battle\core\BattleRules.ts ====================
+  // ==================== bloombeasts/battle/core/BattleRules.ts ====================
 
   /**
    * BattleStateManager - Handles battle state and game rules
@@ -16355,7 +16357,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\battle\ai\OpponentAI.ts ====================
+  // ==================== bloombeasts/battle/ai/OpponentAI.ts ====================
 
   /**
    * OpponentAI - Handles AI decision making for opponent players
@@ -16725,7 +16727,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\missions\MissionBattleUI.ts ====================
+  // ==================== bloombeasts/screens/missions/MissionBattleUI.ts ====================
 
   /**
    * Mission Battle UI - Mission-specific wrapper around the generic battle system
@@ -17189,7 +17191,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\AssetCatalog.ts ====================
+  // ==================== bloombeasts/AssetCatalog.ts ====================
 
   /**
    * Asset Catalog - Dynamically Generated Asset IDs
@@ -17387,7 +17389,7 @@ namespace BloomBeasts {
     return LEGACY_SOUND_ID_MAP[soundId] || soundId;
   }
 
-  // ==================== bloombeasts\BloomBeastsGame.ts ====================
+  // ==================== bloombeasts/BloomBeastsGame.ts ====================
 
   /**
    * BloomBeastsGame - Unified Game Controller
@@ -19041,7 +19043,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\utils\createDefaultPlayerData.ts ====================
+  // ==================== bloombeasts/utils/createDefaultPlayerData.ts ====================
 
   /**
    * Utility to create default PlayerData structure
@@ -19082,7 +19084,7 @@ namespace BloomBeasts {
     };
   }
 
-  // ==================== bloombeasts\AssetCatalogManager.ts ====================
+  // ==================== bloombeasts/AssetCatalogManager.ts ====================
 
   /**
    * Asset Catalog Manager - Centralized Asset Management System
@@ -19393,7 +19395,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\catalogs\bossAssets.ts ====================
+  // ==================== bloombeasts/catalogs/bossAssets.ts ====================
 
   /**
    * Boss Assets Catalog
@@ -19481,7 +19483,7 @@ namespace BloomBeasts {
     ]
   };
 
-  // ==================== bloombeasts\catalogs\buffAssets.ts ====================
+  // ==================== bloombeasts/catalogs/buffAssets.ts ====================
 
   /**
    * Buff Assets Catalog
@@ -19631,7 +19633,7 @@ namespace BloomBeasts {
     ]
   };
 
-  // ==================== bloombeasts\catalogs\commonAssets.ts ====================
+  // ==================== bloombeasts/catalogs/commonAssets.ts ====================
 
   /**
    * Common Assets Catalog
@@ -20377,7 +20379,7 @@ namespace BloomBeasts {
     ]
   };
 
-  // ==================== bloombeasts\catalogs\fireAssets.ts ====================
+  // ==================== bloombeasts/catalogs/fireAssets.ts ====================
 
   /**
    * Edit this file directly to add/modify assets
@@ -20645,7 +20647,7 @@ namespace BloomBeasts {
     ]
   };
 
-  // ==================== bloombeasts\catalogs\forestAssets.ts ====================
+  // ==================== bloombeasts/catalogs/forestAssets.ts ====================
 
   /**
    * Edit this file directly to add/modify assets
@@ -20931,7 +20933,7 @@ namespace BloomBeasts {
     ]
   };
 
-  // ==================== bloombeasts\catalogs\magicAssets.ts ====================
+  // ==================== bloombeasts/catalogs/magicAssets.ts ====================
 
   /**
    * Edit this file directly to add/modify assets
@@ -21286,7 +21288,7 @@ namespace BloomBeasts {
     ]
   };
 
-  // ==================== bloombeasts\catalogs\skyAssets.ts ====================
+  // ==================== bloombeasts/catalogs/skyAssets.ts ====================
 
   /**
    * Edit this file directly to add/modify assets
@@ -21556,7 +21558,7 @@ namespace BloomBeasts {
     ]
   };
 
-  // ==================== bloombeasts\catalogs\trapAssets.ts ====================
+  // ==================== bloombeasts/catalogs/trapAssets.ts ====================
 
   /**
    * Edit this file directly to add/modify assets
@@ -21853,7 +21855,7 @@ namespace BloomBeasts {
     ]
   };
 
-  // ==================== bloombeasts\catalogs\waterAssets.ts ====================
+  // ==================== bloombeasts/catalogs/waterAssets.ts ====================
 
   /**
    * Edit this file directly to add/modify assets
@@ -22136,7 +22138,7 @@ namespace BloomBeasts {
     ]
   };
 
-  // ==================== bloombeasts\catalogs\index.ts ====================
+  // ==================== bloombeasts/catalogs/index.ts ====================
 
   /**
    * Asset Catalog Index
