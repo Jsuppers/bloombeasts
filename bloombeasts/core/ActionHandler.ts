@@ -296,6 +296,12 @@ export class ActionHandler {
       const updatedBattle = this.systems.battleUI.getCurrentBattle();
       if (!wasComplete && updatedBattle?.isComplete) {
         battleScreen.cleanup();
+
+        // Save game data and refresh bindings when battle completes
+        // This ensures mission list shows newly unlocked missions
+        await this.saveGameData();
+        await this.updateBindingsFromGameState();
+        return;
       }
     } else {
       await this.systems.battleOrchestrator.handleBattleAction(action);
