@@ -48,6 +48,11 @@ export interface ActionHandlerContext {
    * Process magic card effects
    */
   processMagicCard?: (card: MagicCard, state: Turbo.IGameState<BloomBeastsState>) => void;
+
+  /**
+   * Check and trigger traps based on action type
+   */
+  checkTraps?: (state: BloomBeastsState, playerId: string, triggerType: string, trapContext?: any) => void;
 }
 
 /**

@@ -45,6 +45,9 @@ export class EndTurnActionHandler extends BaseActionHandler<EndTurnActionData> {
     // Clear temporary effects
     this.clearTemporaryEffects(newState);
 
+    // Reposition beasts (remove dead beasts and shift remaining beasts left)
+    this.repositionFields(newState);
+
     // Switch to next player
     const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
     const nextPlayerId = players[nextPlayerIndex].id;
@@ -119,6 +122,25 @@ export class EndTurnActionHandler extends BaseActionHandler<EndTurnActionData> {
     for (const beast of field.beasts) {
       if (beast) {
         beast.usedAbilityThisTurn = false;
+      }
+    }
+  }
+
+  /**
+   * Reposition beasts on both fields
+   * Removes null entries (dead beasts) and shifts remaining beasts left
+   */
+  private repositionFields(state: Turbo.IGameState<BloomBeastsState>): void {
+    for (const field of [state.gameData.field.player1, state.gameData.field.player2]) {
+      // Filter out nulls and collect living beasts
+      const livingBeasts = field.beasts.filter(beast => beast !== null);
+
+      // Clear the array
+      field.beasts = [null, null, null];
+
+      // Place living beasts starting from left
+      for (let i = 0; i < livingBeasts.length; i++) {
+        field.beasts[i] = livingBeasts[i];
       }
     }
   }

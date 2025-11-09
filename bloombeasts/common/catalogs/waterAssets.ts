@@ -7,7 +7,7 @@
 
 import type { AssetCatalog } from '../../AssetCatalogManager';
 import { AssetReferenceType, AssetEntryType, UICategory, AffinityLowercase } from '../../AssetCatalogManager';
-import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType } from '../engine/types/abilities';
+import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType, ConditionType, Comparison } from '../engine/types/abilities';
 import { CardType, Affinity } from '../engine/types/core';
 import { createCatalog, defineCard } from './catalogBuilder';
 import type { BloomBeastCard, HabitatCard } from '../engine/types/core';
@@ -38,7 +38,7 @@ const waterCards = [
               value: 1,
               duration: EffectDuration.EndOfTurn,
               condition: {
-                type: "AffinityMatches" as any,
+                type: ConditionType.AffinityMatches,
                 value: "Water"
               }
             }
@@ -98,11 +98,11 @@ const waterCards = [
             {
               type: EffectType.AttackModification,
               target: AbilityTarget.Self,
-              modification: "attack-first" as any,
+              modification: "attack-first",
               condition: {
-                type: "UnitsOnField" as any,
+                type: ConditionType.UnitsOnField,
                 value: 1,
-                comparison: "Equal" as any
+                comparison: Comparison.Equal
               }
             }
           ]
@@ -180,7 +180,7 @@ export const waterAssets: AssetCatalog = {
                 value: 1,
                 duration: EffectDuration.WhileOnField,
                 condition: {
-                  type: "AffinityMatches" as any,
+                  type: ConditionType.AffinityMatches,
                   value: "Water"
                 }
               }

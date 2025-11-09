@@ -148,6 +148,29 @@ export class BattleController {
   }
 
   /**
+   * Setup a test scenario by modifying the game state
+   * This is only for testing purposes and bypasses normal game rules
+   *
+   * @internal Use only in tests
+   */
+  setupTestScenario(modifier: (state: Turbo.IGameState<BloomBeastsState>) => void): void {
+    const gameController = this.orchestrator.getGameController();
+    const currentState = gameController.getState();
+
+    // Apply the modifier function to the state
+    modifier(currentState);
+
+    // Use the internal state manager to set the modified state
+    // This is the proper way for testing as it goes through TURBO's state management
+    const stateManager = (gameController as any).stateManager;
+    if (stateManager && typeof stateManager.setState === 'function') {
+      stateManager.setState(currentState);
+    } else {
+      throw new Error('Unable to set test state - stateManager not available');
+    }
+  }
+
+  /**
    * Dispose battle resources
    */
   dispose(): void {

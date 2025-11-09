@@ -8,7 +8,7 @@
 import type { AssetCatalog } from '../../AssetCatalogManager';
 import { CatalogCategory, AssetEntryType, AssetReferenceType } from '../../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration } from '../engine/types/abilities';
-import { TrapTrigger, CardType } from '../engine/types/core';
+import { TrapTrigger, CardType, TrapConditionType } from '../engine/types/core';
 import { defineCard } from './catalogBuilder';
 import type { TrapCard } from '../engine/types/core';
 
@@ -66,7 +66,7 @@ const trapCards = [
 
   defineCard("vaporize", {
     id: "vaporize", name: "Vaporize", type: CardType.Trap, cost: 2,
-    activation: { trigger: TrapTrigger.OnBeastPlay, condition: { type: "CostBelow" as any, value: 4 } },
+    activation: { trigger: TrapTrigger.OnBeastPlay, condition: { type: TrapConditionType.CostBelow, value: 4 } },
     abilities: [{ name: "Vaporize", trigger: AbilityTrigger.OnSummon,
       effects: [{ type: EffectType.Destroy, target: AbilityTarget.PlayedCard }] }]
   } as TrapCard, "assets/images/cards_trap_vaporize.png", "1903759173890506"),

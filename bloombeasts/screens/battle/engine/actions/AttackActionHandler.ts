@@ -9,6 +9,8 @@ import { Turbo } from '../../../../lib/Turbo-Standalone';
 import type { BloomBeastsState, BloomBeastsActionData, RuntimeBeast } from '../types';
 import { BloomBeastsActionType } from '../types';
 import { BaseActionHandler, ActionValidationResult, ActionHandlerContext } from './ActionHandler';
+import { calculateDamage } from '../../../../common/engine/utils/combatHelpers';
+import { cardMatchesId, getCardIdentifier } from '../utils/cardIdentifiers';
 
 export interface AttackActionData extends BloomBeastsActionData {
   type: BloomBeastsActionType.ATTACK;
@@ -53,7 +55,7 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
     const opponentField = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
 
     // Find the slot index of the attacking beast
-    const slotIndex = currentField.beasts.findIndex(b => b?.id === actionData.cardId);
+    const slotIndex = currentField.beasts.findIndex(b => b && cardMatchesId(b, actionData.cardId));
     if (slotIndex === -1) {
       return { valid: false, reason: 'Attacker not found on field' };
     }
@@ -64,7 +66,7 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
 
     if (opponentBeast) {
       // Beast in opposite slot - must attack that beast
-      validTargetId = opponentBeast.id;
+      validTargetId = getCardIdentifier(opponentBeast);
     } else {
       // No beast in opposite slot - must attack player
       validTargetId = opponent.id;
@@ -105,9 +107,12 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
         throw new Error('Target not found');
       }
 
-      // Both creatures deal damage to each other
-      target.currentHealth -= attacker.currentAttack;
-      attacker.currentHealth -= target.currentAttack;
+      // Both creatures deal damage to each other (with damage modifiers applied)
+      const damageToTarget = calculateDamage(attacker.currentAttack, attacker, target);
+      const damageToAttacker = calculateDamage(target.currentAttack, target, attacker);
+
+      target.currentHealth -= damageToTarget;
+      attacker.currentHealth -= damageToAttacker;
 
       // Check for defeats
       if (target.currentHealth <= 0) {
@@ -145,7 +150,7 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
   ): RuntimeBeast | null {
     for (const field of [state.gameData.field.player1, state.gameData.field.player2]) {
       for (const beast of field.beasts) {
-        if (beast?.id === beastId) {
+        if (beast && cardMatchesId(beast, beastId)) {
           return beast;
         }
       }
@@ -155,18 +160,22 @@ export class AttackActionHandler extends BaseActionHandler<AttackActionData> {
 
   /**
    * Remove a defeated beast from the field and add to graveyard
+   * NOTE: Does NOT reposition beasts - that happens at end of turn
    */
   private destroyBeast(beast: RuntimeBeast, state: Turbo.IGameState<BloomBeastsState>): void {
     // Remove from field
     for (let playerIdx = 0; playerIdx < 2; playerIdx++) {
       const field = playerIdx === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
-      const index = field.beasts.findIndex(b => b?.id === beast.id);
+      const beastId = getCardIdentifier(beast);
+      const index = field.beasts.findIndex(b => b && cardMatchesId(b, beastId));
       if (index !== -1) {
-        field.beasts[index] = null;
-
-        // Add to graveyard
+        // Add to graveyard before removing
         const owner = state.gameData.players[playerIdx];
         owner.graveyard.push(beast);
+
+        // Set to null in place - repositioning happens at end of turn
+        field.beasts[index] = null;
+
         break;
       }
     }

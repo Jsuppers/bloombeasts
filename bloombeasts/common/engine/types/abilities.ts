@@ -80,6 +80,7 @@ export enum ConditionType {
   CostAbove = 'cost-above',
   CostBelow = 'cost-below',
   AffinityMatches = 'affinity-matches',
+  AffinityNotMatches = 'affinity-not-matches',
   IsDamaged = 'is-damaged',
   IsWilting = 'is-wilting',
   TurnCount = 'turn-count',

@@ -17,16 +17,67 @@ export function calculateDamage(
 ): number {
   let damage = baseDamage;
 
-  // Check for damage amplification on attacker
+  // Check for damage amplification on attacker (from statusEffects)
   const ampEffect = attacker.statusEffects?.find(e => e.type === 'damage-amp');
   if (ampEffect) {
     damage = Math.floor(damage * (ampEffect.value || 1));
   }
 
-  // Check for damage reduction on defender
+  // Check for attack modification abilities on attacker
+  if (attacker.abilities) {
+    for (const ability of attacker.abilities) {
+      if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+        for (const effect of ability.effects) {
+          if (effect.type === 'attack-modification' && 'modification' in effect) {
+            const mod = effect.modification;
+            if (mod === 'double-damage') {
+              damage *= 2;
+            } else if (mod === 'triple-damage') {
+              damage *= 3;
+            } else if (mod === 'piercing') {
+              // Piercing damage ignores damage reduction (handled below)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Check for damage reduction on defender (from statusEffects)
   const reduction = defender.statusEffects?.find(e => e.type === 'damage-reduction');
   if (reduction) {
     damage = Math.max(0, damage - (reduction.value || 0));
+  }
+
+  // Check for damage reduction from WhileOnField abilities
+  let totalReduction = 0;
+  let isPiercing = false;
+
+  // Check if attacker has piercing
+  if (attacker.abilities) {
+    for (const ability of attacker.abilities) {
+      if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+        for (const effect of ability.effects) {
+          if (effect.type === 'attack-modification' && 'modification' in effect && effect.modification === 'piercing') {
+            isPiercing = true;
+          }
+        }
+      }
+    }
+  }
+
+  // Only apply damage reduction if not piercing
+  if (!isPiercing && defender.abilities) {
+    for (const ability of defender.abilities) {
+      if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+        for (const effect of ability.effects) {
+          if (effect.type === 'damage-reduction' && 'value' in effect) {
+            totalReduction += effect.value || 0;
+          }
+        }
+      }
+    }
+    damage = Math.max(0, damage - totalReduction);
   }
 
   return damage;
@@ -36,17 +87,38 @@ export function calculateDamage(
  * Check if a beast can attack
  */
 export function canAttack(beast: RuntimeBeast): boolean {
-  // Check summoning sickness
-  if (beast.summoningSickness) {
+  // Check summoning sickness (unless removed by ability)
+  let hasSummoningSickness = beast.summoningSickness;
+
+  // Check for RemoveSummoningSickness abilities
+  if (beast.abilities && hasSummoningSickness) {
+    for (const ability of beast.abilities) {
+      if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+        for (const effect of ability.effects) {
+          if (effect.type === 'remove-summoning-sickness') {
+            hasSummoningSickness = false;
+          }
+        }
+      }
+    }
+  }
+
+  if (hasSummoningSickness) {
     return false;
   }
 
-  // Counter checks removed
-
-  // Check attack prevention effects
+  // Check attack prevention effects from statusEffects
   const preventAttack = beast.statusEffects?.find(e => e.type === 'prevent-attack');
   if (preventAttack) {
     return false;
+  }
+
+  // Check for preventions from abilities
+  if (beast.preventions) {
+    const hasAttackPrevention = beast.preventions.some(p => p.type === 'prevent-attack');
+    if (hasAttackPrevention) {
+      return false;
+    }
   }
 
   return true;
@@ -117,15 +189,15 @@ export function applyStatusEffect(
 
   // Check for immunity
   if (hasAbilityEffect(beast, 'immunity')) {
-    Logger.debug(`${beast.cardId} is immune to status effects`);
+    Logger.debug(`${beast.id} is immune to status effects`);
     return;
   }
 
   beast.statusEffects.push({
     type: effect.type,
-    value: (effect as any).value,
-    duration: (effect as any).duration,
-    turnsRemaining: getEffectDuration((effect as any).duration),
+    value: 'value' in effect ? effect.value : undefined,
+    duration: 'duration' in effect ? effect.duration : undefined,
+    turnsRemaining: 'duration' in effect && effect.duration ? getEffectDuration(effect.duration) : undefined,
   });
 }
 

@@ -43,7 +43,6 @@ const getCluckNorrisDeck = (): DeckList => {
     cluckNorrisCards.push({
       ...cluckNorrisCard,
       instanceId: `cluck-norris-${i}`,
-      cardId: cluckNorrisCard.id,
       currentXP: 25500, // Level 9 XP
       level: 9,
       currentLevel: 9 as any,

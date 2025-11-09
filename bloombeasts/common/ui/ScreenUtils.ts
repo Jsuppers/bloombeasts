@@ -47,7 +47,7 @@ export function toUICard(card: RuntimeCard): UICardDisplay {
  */
 function getCardEmoji(card: RuntimeCard): string {
   // Check if card has affinity property (Beast, Buff, Habitat cards)
-  const affinity = 'affinity' in card ? (card as any).affinity : undefined;
+  const affinity = 'affinity' in card && card.affinity ? card.affinity : undefined;
   switch (affinity?.toLowerCase()) {
     case 'fire':
       return '🔥';

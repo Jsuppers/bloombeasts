@@ -9,7 +9,7 @@ import { sideMenuPositions } from '../constants/positions';
 import type { MenuStats } from '../../../../bloombeasts/gameManager';
 import { UINodeType } from '../ScreenUtils';
 import type { UIMethodMappings, ReadonlyBindingInterface } from '../../../../bloombeasts/BloomBeastsGame';
-import type { ValueBindingBase } from '../types/types/bindings';
+import type { ValueBindingBase, Binding } from '../types/types/bindings';
 import { createButton } from '../components/common/Button';
 import { BindingType } from '../types/types/BindingManager';
 
@@ -225,7 +225,7 @@ function createPlayerInfo(
                     style: {
                         fontSize: sideMenuPositions.playerName.size,
                         color: COLORS.textPrimary,
-                        textAlign: sideMenuPositions.playerName.textAlign as any,
+                        textAlign: sideMenuPositions.playerName.textAlign as 'left' | 'center' | 'right' | undefined,
                     },
                 }),
             }),
@@ -282,7 +282,7 @@ export function createResourceRow(ui: UIMethodMappings,
 ): UINodeType {
     const amountText = typeof amount === 'number'
         ? `${emoji} ${amount}`
-        : (amount as any).derive((a: number) => `${emoji} ${a}`);
+        : (amount as Binding<number>).derive((a: number) => `${emoji} ${a}`);
 
     return ui.View({
         style: {

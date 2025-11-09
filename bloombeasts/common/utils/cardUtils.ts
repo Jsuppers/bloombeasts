@@ -102,7 +102,6 @@ export function createBattleCard(instance: CardInstance, cardDef: AnyCard): Runt
     const runtimeBeast: RuntimeBeast = {
       ...beastCard,
       instanceId: instance.id,
-      cardId: beastCard.id,      // Base card ID (required by RuntimeBeast)
       currentXP: instance.currentXP,
       level,
       currentLevel: level as Level,  // Strongly-typed level (required by RuntimeBeast)

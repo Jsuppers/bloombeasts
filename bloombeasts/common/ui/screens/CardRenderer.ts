@@ -6,7 +6,7 @@
 import { COLORS } from '../styles/styles/colors';
 import { DIMENSIONS } from '../styles/styles/dimensions';
 import type { CardInstance } from '../../../screens/common/types';
-import type { RuntimeCard } from '../../engine/types/runtime';
+import type { RuntimeCard, RuntimeBeast } from '../../engine/types/runtime';
 import { getCardDescription } from '../../engine/utils/cardDescriptionGenerator';
 import { createBattleCard, getCardDefinition, extractBaseCardId, getXPThreshold } from '../../utils/cardUtils';
 import { UINodeType } from '../ScreenUtils';
@@ -75,7 +75,16 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
   const beastImageKey = baseId; // Beast images use the base card ID
 
   // Check if card has affinity property (Beast, Buff, Habitat cards)
-  const affinity = 'affinity' in card ? (card as any).affinity : undefined;
+  const affinity = 'affinity' in card && card.affinity ? card.affinity : undefined;
+
+  // Extract attack/health for Beast cards (with proper type narrowing)
+  let beastAttack: number | undefined;
+  let beastHealth: number | undefined;
+  if (card.type === CardType.Beast) {
+    const beastCard = card as RuntimeBeast;
+    beastAttack = beastCard.currentAttack ?? beastCard.baseAttack;
+    beastHealth = beastCard.currentHealth ?? beastCard.baseHealth;
+  }
 
   // Card frame key: Beast cards use base-card, others use type-specific frames
   let cardFrameKey = '';
@@ -174,9 +183,9 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
       ] : []),
 
       // Attack and Health (for Beast cards)
-      ...(card.type === CardType.Beast && ((card as any).currentAttack !== undefined || (card as any).baseAttack !== undefined) ? [
+      ...(beastAttack !== undefined ? [
         ui.Text({
-          text: String((card as any).currentAttack ?? (card as any).baseAttack ?? 0),
+          text: String(beastAttack ?? 0),
           style: {
             position: 'absolute',
             top: positions.attack.y,
@@ -189,9 +198,9 @@ export function createCardComponent(ui: UIMethodMappings, props: CardRendererPro
         })
       ] : []),
 
-      ...(card.type === CardType.Beast && ((card as any).currentHealth !== undefined || (card as any).baseHealth !== undefined) ? [
+      ...(beastHealth !== undefined ? [
         ui.Text({
-          text: String((card as any).currentHealth ?? (card as any).baseHealth ?? 0),
+          text: String(beastHealth ?? 0),
           style: {
             position: 'absolute',
             top: positions.health.y,

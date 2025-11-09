@@ -6,7 +6,7 @@
  */
 
 import type { AssetCatalog } from '../../AssetCatalogManager';
-import { CatalogCategory, AffinityLowercase } from '../../AssetCatalogManager';
+import { CatalogCategory, AffinityLowercase, AssetEntryType, AssetReferenceType } from '../../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType, ResourceType } from '../engine/types/abilities';
 import { CardType, Affinity } from '../engine/types/core';
 import { defineCard } from './catalogBuilder';
@@ -149,13 +149,13 @@ export const buffAssets: AssetCatalog = {
 
     return {
       id: card.id,
-      type: "buff" as any,
+      type: AssetEntryType.Buff,
       cardType: "Buff",
       ...(affinity ? { affinity } : {}),
       data: cardData,
       assets: [
         {
-          type: "image" as any,
+          type: AssetReferenceType.Image,
           ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
           path: card.imagePath,
         }

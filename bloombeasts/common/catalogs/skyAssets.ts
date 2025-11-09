@@ -93,7 +93,7 @@ const skyCards = [
             {
               type: EffectType.AttackModification,
               target: AbilityTarget.Self,
-              modification: "attack-first" as any
+              modification: "attack-first"
             }
           ]
         }

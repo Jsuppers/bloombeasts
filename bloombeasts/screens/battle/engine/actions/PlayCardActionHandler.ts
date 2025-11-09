@@ -10,6 +10,7 @@ import type { BloomBeastsState, BloomBeastsActionData, BloomBeastsPlayer } from 
 import { BloomBeastsActionType } from '../types';
 import { CardType } from '../../../../common/engine/types/core';
 import { BaseActionHandler, ActionValidationResult, ActionHandlerContext } from './ActionHandler';
+import { cardMatchesId } from '../utils/cardIdentifiers';
 import type {
   BloomBeastCard,
   MagicCard,
@@ -37,7 +38,7 @@ export class PlayCardActionHandler extends BaseActionHandler<PlayCardActionData>
     const player = state.gameData.players[playerIndex];
 
     // Find the card in hand
-    const card = player.hand.find(c => c.id === actionData.cardId);
+    const card = player.hand.find(c => cardMatchesId(c, actionData.cardId));
     if (!card) {
       return { valid: false, reason: 'Card not in hand' };
     }
@@ -106,7 +107,7 @@ export class PlayCardActionHandler extends BaseActionHandler<PlayCardActionData>
     const player = newState.gameData.players[playerIndex];
 
     // Find and remove card from hand
-    const cardIndex = player.hand.findIndex(c => c.id === actionData.cardId);
+    const cardIndex = player.hand.findIndex(c => cardMatchesId(c, actionData.cardId));
     if (cardIndex === -1) {
       throw new Error('Card not found in hand');
     }
@@ -164,9 +165,24 @@ export class PlayCardActionHandler extends BaseActionHandler<PlayCardActionData>
     // Update turn tracking
     newState.gameData.currentTurnActions.cardsPlayed++;
 
+    // Check for traps BEFORE processing card effects
+    if (context?.checkTraps) {
+      let trapTriggerType = '';
+      if (card.type === CardType.Beast) trapTriggerType = 'beast_play';
+      else if (card.type === 'Magic') trapTriggerType = 'magic_play';
+      else if (card.type === 'Habitat') trapTriggerType = 'habitat_play';
+
+      if (trapTriggerType) {
+        context.checkTraps(newState.gameData, playerId, trapTriggerType, { card });
+      }
+    }
+
     // Process OnSummon triggers for Beast cards
     if (card.type === CardType.Beast && context?.processTriggers) {
       context.processTriggers('on_action', newState, { action: 'summon', card });
+
+      // Notify other allies about this summon (for OnAllySummon triggers)
+      context.processTriggers('on_action', newState, { action: 'ally_summon', summonedCard: card });
     }
 
     // Process WhileOnField effects for cards that have them

@@ -12,6 +12,7 @@ import { Turbo } from '../../../../lib/Turbo-Standalone';
 import { Logger } from '../../../../common/engine/utils/Logger';
 import { MAX_AI_ACTIONS_PER_TURN } from '../../../../common/engine/constants/battleConstants';
 import type { BloomBeastsState, BloomBeastsActionData } from '../BloomBeastsGame';
+import { BloomBeastsActionType } from '../types';
 import { BloomBeastsGreedyAI } from '../BloomBeastsAI';
 import type { BattleConfig } from '../types';
 
@@ -113,7 +114,18 @@ export class AIManager {
       }
 
       if (actionCount >= maxActions) {
-        Logger.warn('[AIManager] AI reached maximum action limit');
+        Logger.warn('[AIManager] AI reached maximum action limit, forcing END_TURN');
+
+        // Force end turn when max actions reached
+        const finalState = this.game.getState();
+        if (finalState.turnInfo.currentPlayerId === currentPlayerId) {
+          this.game.performAction({
+            type: 'game_action',
+            playerId: currentPlayerId,
+            data: { type: BloomBeastsActionType.END_TURN }
+          });
+          Logger.info('[AIManager] Forced turn end after max actions');
+        }
       }
 
       Logger.info('[AIManager] AI turn execution completed');

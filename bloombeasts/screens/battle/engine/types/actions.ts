@@ -57,8 +57,7 @@ export interface AttackPlayerAction extends BaseBattleAction {
  */
 export interface UseAbilityAction extends BaseBattleAction {
   type: 'use-ability';
-  beastId: string;
-  beastIndex?: number;
+  beastIndex: number;      // Slot index (0-2) - always reliable
   abilityIndex: number;
   targetId?: string;
   targetIndex?: number;
@@ -144,14 +143,13 @@ export const BattleActions = {
     timestamp: Date.now(),
   }),
 
-  useAbility: (beastId: string, abilityIndex: number, options?: {
-    beastIndex?: number;
+  useAbility: (beastIndex: number, abilityIndex: number, options?: {
     targetId?: string;
     targetIndex?: number;
     playerId?: string;
   }): UseAbilityAction => ({
     type: 'use-ability',
-    beastId,
+    beastIndex,
     abilityIndex,
     ...options,
     timestamp: Date.now(),
@@ -256,8 +254,7 @@ export function parseActionString(actionStr: string, playerId?: string): BattleA
 
     if (isNaN(beastIndex)) return null;
 
-    return BattleActions.useAbility(beastIndex.toString(), 0, {
-      beastIndex,
+    return BattleActions.useAbility(beastIndex, 0, {
       targetIndex,
       playerId,
     });
@@ -288,9 +285,9 @@ export function actionToString(action: BattleAction): string {
 
     case 'use-ability':
       if (action.targetIndex !== undefined) {
-        return `use-ability-${action.beastIndex ?? action.beastId}-target-${action.targetIndex}`;
+        return `use-ability-${action.beastIndex}-target-${action.targetIndex}`;
       }
-      return `use-ability-${action.beastIndex ?? action.beastId}`;
+      return `use-ability-${action.beastIndex}`;
 
     case 'end-turn':
       return 'end-turn';

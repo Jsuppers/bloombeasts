@@ -24,6 +24,7 @@ import type { BloomBeastsPlayer } from './engine/BloomBeastsGame';
 import { createBattleCard } from '../../common/utils/cardUtils';
 import type { CardInstance } from '../common/types';
 import type { IBattleUI } from '../../core/interfaces/IBattleUI';
+import { getCardIdentifier } from './engine/utils/cardIdentifiers';
 
 export interface BattleUIState {
   mission: Mission;
@@ -65,11 +66,7 @@ function getCardId(card: RuntimeCard, fallback: string): string {
  * Helper: Extract a unique identifier from a RuntimeBeast on field
  * Tries instanceId first, then id, then falls back to provided fallback
  */
-function getBeastId(beast: RuntimeBeast, fallback: string): string {
-  if (beast.instanceId) return beast.instanceId;
-  if (beast.id) return beast.id;
-  return fallback;
-}
+// Removed: getBeastId - now using getCardIdentifier from cardIdentifiers utility
 
 export class BattleUI implements IBattleUI {
   private missionManager: MissionManager;
@@ -243,8 +240,8 @@ export class BattleUI implements IBattleUI {
         // Get the card from player's hand
         const card = player.hand[action.cardIndex];
         if (card) {
-          // Use the actual card ID from the card object
-          const cardId = (card as any).id || (card as any).instanceId;
+          // Use the canonical card identifier (prefers instanceId)
+          const cardId = getCardIdentifier(card);
 
           // For Beast and Buff cards, find an empty position if not specified
           let position = action.position || action.targetIndex;
@@ -277,12 +274,13 @@ export class BattleUI implements IBattleUI {
       }
 
       case 'use-ability': {
+        // Use beastIndex to find the beast on the field
         const beastIndex = action.beastIndex;
         if (beastIndex !== undefined) {
           const playerField = this.getPlayerField();
           const beast = playerField?.beasts[beastIndex];
           if (beast) {
-            const beastId = action.beastId || getBeastId(beast, beastIndex.toString());
+            const beastId = getCardIdentifier(beast);
             result.success = this.battleController.useAbility(beastId, null, playerId);
           }
         }
@@ -387,12 +385,12 @@ export class BattleUI implements IBattleUI {
 
       if (opposingBeast) {
         if (onAttackAnimation) await onAttackAnimation(i, 'beast', i);
-        const attackerId = getBeastId(attackerBeast, i.toString());
-        const targetId = getBeastId(opposingBeast, i.toString());
+        const attackerId = getCardIdentifier(attackerBeast);
+        const targetId = getCardIdentifier(opposingBeast);
         success = this.battleController.attackBeast(attackerId, targetId, playerId);
       } else {
         if (onAttackAnimation) await onAttackAnimation(i, 'health');
-        const attackerId = getBeastId(attackerBeast, i.toString());
+        const attackerId = getCardIdentifier(attackerBeast);
         success = this.battleController.attackPlayer(attackerId, playerId);
       }
 

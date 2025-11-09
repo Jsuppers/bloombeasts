@@ -7,7 +7,7 @@
 
 import type { AssetCatalog } from '../../AssetCatalogManager';
 import { AssetReferenceType, AssetEntryType, UICategory, AffinityLowercase } from '../../AssetCatalogManager';
-import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration } from '../engine/types/abilities';
+import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, ConditionType } from '../engine/types/abilities';
 import { CardType, Affinity } from '../engine/types/core';
 import { createCatalog, defineCard } from './catalogBuilder';
 import type { BloomBeastCard, HabitatCard } from '../engine/types/core';
@@ -87,7 +87,7 @@ const fireCards = [
           trigger: AbilityTrigger.OnDamage,
           effects: [
             {
-              type: "Retaliation" as any,
+              type: EffectType.Retaliation,
               target: AbilityTarget.Attacker,
               value: 1
             }
@@ -165,7 +165,7 @@ export const fireAssets: AssetCatalog = {
                 target: AbilityTarget.AllUnits,
                 value: 1,
                 condition: {
-                  type: "affinity-not-matches" as any,
+                  type: ConditionType.AffinityNotMatches,
                   value: "Fire"
                 }
               }

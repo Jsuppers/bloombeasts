@@ -14,6 +14,7 @@ import {
   createTestBeast,
   setupBattleScenario,
   executeAutoAttackAll,
+  endTurnAndReposition,
   type BattleScenario
 } from './testHarness';
 
@@ -21,7 +22,7 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
   let controller: BattleController;
 
   beforeEach(() => {
-    controller = new BattleController(mockAsync as any);
+    controller = new BattleController(mockAsync);
   });
 
   describe('REGRESSION TEST: State Refresh Bug', () => {
@@ -49,6 +50,9 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
       // Execute auto-attack-all
       await executeAutoAttackAll(controller, 'player');
 
+      // End turn to trigger repositioning
+      endTurnAndReposition(controller, 'player');
+
       // Verify final state
       const finalOpponentField = battle.getOpponentField();
       const finalOpponentHealth = battle.getOpponentHealth();
@@ -63,8 +67,12 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
     });
 
     test('should handle cascading deaths (3v1 with multiple weak opponents)', async () => {
-      // More complex scenario: opponent has 3 weak beasts
-      // All should die, attacks should switch to hitting health as beasts die
+      // With DEFERRED repositioning: Beasts stay in slots until end of turn
+      // i=0: p0 (slot 0) attacks o0 (slot 0) → o0 dies, p0 takes 2 damage → Player:[p0(1hp),p1,p2], Opponent:[null,o1,o2]
+      // i=1: p1 (slot 1) attacks o1 (slot 1) → o1 dies, p1 takes 2 damage → Player:[p0(1hp),p1(1hp),p2], Opponent:[null,null,o2]
+      // i=2: p2 (slot 2) attacks o2 (slot 2) → o2 dies, p2 takes 2 damage → Player:[p0(1hp),p1(1hp),p2(1hp)], Opponent:[null,null,null]
+      // End turn: Reposition → All opponent beasts are dead
+      // Result: All player beasts survive with 1hp, all opponent beasts die
 
       const scenario: BattleScenario = {
         playerBeasts: [
@@ -73,9 +81,9 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
           createTestBeast('p2', 'Strong 2', 3, 3, false),
         ],
         opponentBeasts: [
-          createTestBeast('o0', 'Weak 0', 2, 2, false), // Dies from first attack (3 damage)
-          createTestBeast('o1', 'Weak 1', 2, 2, false), // Dies from second attack
-          createTestBeast('o2', 'Weak 2', 2, 2, false), // Dies from third attack
+          createTestBeast('o0', 'Weak 0', 2, 2, false),
+          createTestBeast('o1', 'Weak 1', 2, 2, false),
+          createTestBeast('o2', 'Weak 2', 2, 2, false),
         ],
       };
 
@@ -83,15 +91,25 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
 
       await executeAutoAttackAll(controller, 'player');
 
+      // End turn to trigger repositioning
+      endTurnAndReposition(controller, 'player');
+
       const finalOpponentField = battle.getOpponentField();
 
-      // All opponent beasts should be dead
+      // All opponent beasts are dead with deferred repositioning
       expect(finalOpponentField.beasts[0]).toBeNull();
       expect(finalOpponentField.beasts[1]).toBeNull();
       expect(finalOpponentField.beasts[2]).toBeNull();
     });
 
     test('should handle partial deaths (first beast dies, others survive)', async () => {
+      // With DEFERRED repositioning: Beasts stay in slots until end of turn
+      // i=0: p0 (slot 0) attacks o0 (slot 0) → o0 dies → Opponent:[null,o1,o2]
+      // i=1: p1 (slot 1) attacks o1 (slot 1) → o1 takes 3 damage → Opponent:[null,o1(7hp),o2]
+      // i=2: p2 (slot 2) attacks o2 (slot 2) → o2 takes 3 damage → Opponent:[null,o1(7hp),o2(7hp)]
+      // End turn: Reposition → [o1(7hp), o2(7hp), null]
+      // Result: o1 and o2 both have 7hp after repositioning
+
       const scenario: BattleScenario = {
         playerBeasts: [
           createTestBeast('p0', 'Attacker 0', 3, 3, false),
@@ -100,8 +118,8 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
         ],
         opponentBeasts: [
           createTestBeast('o0', 'Weak', 2, 2, false), // Dies (3 damage)
-          createTestBeast('o1', 'Strong', 10, 10, false), // Survives (3 damage)
-          createTestBeast('o2', 'Strong', 10, 10, false), // Survives (3 damage)
+          createTestBeast('o1', 'Strong', 10, 10, false), // Survives with 7hp
+          createTestBeast('o2', 'Strong', 10, 10, false), // Survives with 7hp
         ],
       };
 
@@ -109,14 +127,17 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
 
       await executeAutoAttackAll(controller, 'player');
 
+      // End turn to trigger repositioning
+      endTurnAndReposition(controller, 'player');
+
       const finalOpponentField = battle.getOpponentField();
 
-      // First beast dead, others damaged
-      expect(finalOpponentField.beasts[0]).toBeNull();
-      expect(finalOpponentField.beasts[1]).not.toBeNull();
-      expect(finalOpponentField.beasts[1]?.currentHealth).toBe(7); // 10 - 3
-      expect(finalOpponentField.beasts[2]).not.toBeNull();
-      expect(finalOpponentField.beasts[2]?.currentHealth).toBe(7);
+      // After repositioning: o1 in slot 0 (damaged), o2 in slot 1 (damaged)
+      expect(finalOpponentField.beasts[0]?.name).toBe('Strong');
+      expect(finalOpponentField.beasts[0]?.currentHealth).toBe(7); // o1 damaged: 10 - 3
+      expect(finalOpponentField.beasts[1]?.name).toBe('Strong');
+      expect(finalOpponentField.beasts[1]?.currentHealth).toBe(7); // o2 damaged: 10 - 3
+      expect(finalOpponentField.beasts[2]).toBeNull();
     });
   });
 
@@ -180,6 +201,9 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
 
       await executeAutoAttackAll(controller, 'player');
 
+      // End turn to trigger repositioning
+      endTurnAndReposition(controller, 'player');
+
       const finalOpponentField = battle.getOpponentField();
       const finalHealth = battle.getOpponentHealth();
 
@@ -202,6 +226,9 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
 
       await executeAutoAttackAll(controller, 'player');
 
+      // End turn to trigger repositioning
+      endTurnAndReposition(controller, 'player');
+
       const finalPlayerField = battle.getPlayerField();
       const finalOpponentField = battle.getOpponentField();
 
@@ -211,6 +238,13 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
     });
 
     test('3v3 cascade - all 6 beasts die', async () => {
+      // With DEFERRED repositioning (at end of turn):
+      // i=0: p0(slot 0) vs o0(slot 0) → mutual kill → Player:[null,p1,p2], Opponent:[null,o1,o2] (not shifted yet)
+      // i=1: p1(slot 1) vs o1(slot 1) → mutual kill → Player:[null,null,p2], Opponent:[null,null,o2]
+      // i=2: p2(slot 2) vs o2(slot 2) → mutual kill → Player:[null,null,null], Opponent:[null,null,null]
+      // End turn: Reposition → Player:[null,null,null], Opponent:[null,null,null]
+      // Result: All beasts die!
+
       const scenario: BattleScenario = {
         playerBeasts: [
           createTestBeast('p0', 'P0', 1, 1, false),
@@ -228,10 +262,13 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
 
       await executeAutoAttackAll(controller, 'player');
 
+      // End turn to trigger repositioning
+      endTurnAndReposition(controller, 'player');
+
       const finalPlayerField = battle.getPlayerField();
       const finalOpponentField = battle.getOpponentField();
 
-      // All 6 beasts dead
+      // With deferred repositioning, all beasts die (each slot attacks its opposite slot)
       expect(finalPlayerField.beasts[0]).toBeNull();
       expect(finalPlayerField.beasts[1]).toBeNull();
       expect(finalPlayerField.beasts[2]).toBeNull();
@@ -241,6 +278,13 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
     });
 
     test('2v2 asymmetric - strong vs weak', async () => {
+      // With DEFERRED repositioning:
+      // i=0: p0(10/10) vs o0(1/1) → o0 dies, p0 takes 1 damage → Player:[p0(9hp),p1,null], Opponent:[null,o1,null] (NOT shifted yet)
+      // i=1: p1(10/10) vs o1(slot 1) → o1 dies, p1 takes 1 damage → Player:[p0(9hp),p1(9hp),null], Opponent:[null,null,null]
+      // i=2: null vs null → skip
+      // End turn: Reposition → Player:[p0(9hp),p1(9hp),null], Opponent:[null,null,null]
+      // Result: Both player beasts survive with 9hp each, both opponent beasts die
+
       const scenario: BattleScenario = {
         playerBeasts: [
           createTestBeast('p0', 'Strong', 10, 10, false),
@@ -256,16 +300,19 @@ describe('autoAttackAll - State Refresh Integration Tests', () => {
 
       await executeAutoAttackAll(controller, 'player');
 
+      // End turn to trigger repositioning
+      endTurnAndReposition(controller, 'player');
+
       const finalPlayerField = battle.getPlayerField();
       const finalOpponentField = battle.getOpponentField();
 
-      // Player beasts survive (10 HP - 1 damage = 9 HP each)
+      // Player beasts survive, both took 1 damage
       expect(finalPlayerField.beasts[0]).not.toBeNull();
-      expect(finalPlayerField.beasts[0]?.currentHealth).toBe(9);
+      expect(finalPlayerField.beasts[0]?.currentHealth).toBe(9); // p0 took 1 damage from o0
       expect(finalPlayerField.beasts[1]).not.toBeNull();
-      expect(finalPlayerField.beasts[1]?.currentHealth).toBe(9);
+      expect(finalPlayerField.beasts[1]?.currentHealth).toBe(9); // p1 took 1 damage from o1
 
-      // Opponent beasts die
+      // Both opponent beasts are dead
       expect(finalOpponentField.beasts[0]).toBeNull();
       expect(finalOpponentField.beasts[1]).toBeNull();
     });

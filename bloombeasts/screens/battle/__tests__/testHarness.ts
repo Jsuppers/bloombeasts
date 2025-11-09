@@ -7,6 +7,7 @@
 import { BattleController } from '../engine/core/BattleController';
 import { CardType, Affinity, type AnyCard } from '../../../common/engine/types/core';
 import type { RuntimeCard, RuntimeBeast, BattleConfig } from '../engine/types';
+import { getCardIdentifier } from '../engine/utils/cardIdentifiers';
 
 // Mock async methods for testing
 export const mockAsync = {
@@ -73,14 +74,14 @@ export function setupBattleScenario(
     player1: {
       id: 'player',
       name: 'Test Player',
-      deck: scenario.playerBeasts.length > 0 ? [scenario.playerBeasts[0] as any] : [],
+      deck: scenario.playerBeasts.length > 0 ? [scenario.playerBeasts[0]] : [],
       health: scenario.playerHealth ?? 30,
       maxHealth: 30,
     },
     player2: {
       id: 'opponent',
       name: 'Test Opponent',
-      deck: scenario.opponentBeasts.length > 0 ? [scenario.opponentBeasts[0] as any] : [],
+      deck: scenario.opponentBeasts.length > 0 ? [scenario.opponentBeasts[0]] : [],
       health: scenario.opponentHealth ?? 30,
       maxHealth: 30,
       isAI: false, // Disable AI for controlled testing
@@ -89,30 +90,35 @@ export function setupBattleScenario(
 
   // Initialize battle
   const battleState = controller.initializeBattle(config);
-  const turboState = battleState.turboState;
 
-  // Place beasts on field
-  const playerField = turboState.gameData.field.player1;
-  const opponentField = turboState.gameData.field.player2;
+  // Get the game controller to access and modify state
+  const gameController = controller.getGameController();
+  const currentState = gameController.getState();
 
-  for (let i = 0; i < 3; i++) {
-    playerField.beasts[i] = i < scenario.playerBeasts.length
-      ? scenario.playerBeasts[i]
-      : null;
+  // Place beasts on field using the proper testing API
+  controller.setupTestScenario((state) => {
+    const playerField = state.gameData.field.player1;
+    const opponentField = state.gameData.field.player2;
 
-    opponentField.beasts[i] = i < scenario.opponentBeasts.length
-      ? scenario.opponentBeasts[i]
-      : null;
-  }
+    for (let i = 0; i < 3; i++) {
+      playerField.beasts[i] = i < scenario.playerBeasts.length
+        ? scenario.playerBeasts[i]
+        : null;
+
+      opponentField.beasts[i] = i < scenario.opponentBeasts.length
+        ? scenario.opponentBeasts[i]
+        : null;
+    }
+  });
 
   return {
     controller,
     battleState,
-    turboState,
-    getPlayerField: () => turboState.gameData.field.player1,
-    getOpponentField: () => turboState.gameData.field.player2,
-    getPlayerHealth: () => turboState.gameData.players[0].health,
-    getOpponentHealth: () => turboState.gameData.players[1].health,
+    turboState: currentState,
+    getPlayerField: () => gameController.getState().gameData.field.player1,
+    getOpponentField: () => gameController.getState().gameData.field.player2,
+    getPlayerHealth: () => gameController.getState().gameData.players[0].health,
+    getOpponentHealth: () => gameController.getState().gameData.players[1].health,
   };
 }
 
@@ -155,10 +161,23 @@ export async function executeAutoAttackAll(
 
     if (opposingBeast) {
       // Attack opposing beast
-      controller.attackBeast(attackerBeast.instanceId || attackerBeast.id, opposingBeast.instanceId || opposingBeast.id, playerId);
+      const attackerId = getCardIdentifier(attackerBeast);
+      const targetId = getCardIdentifier(opposingBeast);
+      controller.attackBeast(attackerId, targetId, playerId);
     } else {
       // Attack player health directly
-      controller.attackPlayer(attackerBeast.instanceId || attackerBeast.id, playerId);
+      const attackerId = getCardIdentifier(attackerBeast);
+      controller.attackPlayer(attackerId, playerId);
     }
   }
+}
+
+/**
+ * Helper to end turn and trigger beast repositioning
+ */
+export function endTurnAndReposition(
+  controller: BattleController,
+  playerId: string = 'player'
+): void {
+  controller.endTurn(playerId);
 }

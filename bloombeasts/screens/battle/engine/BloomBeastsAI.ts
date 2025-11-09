@@ -10,6 +10,7 @@ import {
   BloomBeastsActionType,
   BloomBeastsPlayer,
 } from './types';
+import { cardMatchesId } from './utils/cardIdentifiers';
 import { RuntimeBeast, RuntimeBuff, RuntimeHabitat, RuntimeTrap } from '../../../common/engine/types/runtime';
 import {
   BloomBeastCard,
@@ -328,7 +329,7 @@ export class BloomBeastsGreedyAI extends Turbo.GreedyAI<BloomBeastsState, BloomB
 
   private findBeast(id: string, field: PlayerField): RuntimeBeast | null {
     for (const beast of field.beasts) {
-      if (beast?.id === id) {
+      if (beast && cardMatchesId(beast, id)) {
         return beast;
       }
     }

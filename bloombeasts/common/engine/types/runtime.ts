@@ -63,9 +63,6 @@ export interface RuntimeBeast extends BloomBeastCard, RuntimeCardBase {
   // - abilities: Ability[]
   // - titleColor?: string
 
-  // Additional tracking (from BloomBeastInstance)
-  cardId: string;          // Base card ID (same as id, kept for compatibility)
-
   // Runtime combat stats (includes level scaling and modifiers)
   currentAttack: number;   // Current attack (base + level + modifiers)
   currentHealth: number;   // Current health (decreases with damage)
