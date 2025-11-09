@@ -15,6 +15,7 @@ import type { BattleDisplay } from '../../../../bloombeasts/gameManager';
 import { BindingType, UIState } from '../types/types/BindingManager';
 import { Logger } from '../../engine/utils/Logger';
 import { CardType } from '../../engine/types/core';
+import { getCardIdentifier } from '../../../screens/battle/engine/utils/cardIdentifiers';
 
 export interface CardRendererProps {
   card: RuntimeCard;
@@ -680,19 +681,20 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
     ...(showDeckIndicator && !isBattleMode && ui.UINode ? [ui.UINode.if(
       ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
         const card = getCard(uiState, playerData, null);
-        return isCardInDeck(playerData, card?.id);
+        if (!card) return false;
+        return isCardInDeck(playerData, getCardIdentifier(card!));
       }),
       ui.View({
         style: {
           position: 'absolute',
-          top: 0,
+          top: -4,
           left: 0,
           width: cardWidth,
           height: cardHeight,
           borderWidth: 4,
           borderColor: COLORS.success,
           borderRadius: 8,
-          pointerEvents: 'none' as const, // Allow clicks to pass through
+          // pointerEvents: 'none' as const, // Allow clicks to pass through
         },
       })
     )] : []),
