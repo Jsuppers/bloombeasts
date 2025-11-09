@@ -3,7 +3,8 @@
  * Breaks circular dependency between core and screens
  */
 
-import type { BattleState } from './IBattleUI';
+import type { BattleUIState } from './IBattleUI';
+import type { BattleDisplay } from '../../types/game/DisplayTypes';
 
 /**
  * Options for creating battle display
@@ -23,7 +24,7 @@ export interface IBattleDisplayManager {
    * Create a battle display from current state
    */
   createBattleDisplay(
-    battleState: BattleState | null,
+    battleState: BattleUIState | null,
     options?: BattleDisplayOptions
-  ): any;  // TODO: Type this as BattleDisplay when we have the type
+  ): BattleDisplay;
 }

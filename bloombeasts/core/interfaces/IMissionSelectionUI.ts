@@ -3,11 +3,13 @@
  * Breaks circular dependency between core and screens
  */
 
+import type { Mission } from '../../screens/missions/types';
+
 /**
  * Mission display data returned by the UI
  */
 export interface MissionDisplayData {
-  mission: any;  // TODO: Import Mission type when refactoring
+  mission: Mission;
   isAvailable: boolean;
   completionCount: number;
   difficultyColor: string;
