@@ -10,8 +10,8 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-11-06T02:32:04.616Z
- * Files: 99
+ * Generated: 2025-11-09T08:32:55.147Z
+ * Files: 136
  *
  * @version 1.0.0
  * @license MIT
@@ -30,7 +30,26 @@ namespace BloomBeasts {
   // All type declarations and implementations are included from source files below.
   // UI implementations are provided by the platform via UIMethodMappings interface.
 
-  // ==================== bloombeasts\common\engine\types\abilities.ts ====================
+  // ==================== bloombeasts/gameManager.ts ====================
+
+  /**
+   * Type Definitions for BloomBeasts Game
+   *
+   * NOTE: This file now re-exports types from the centralized types/ directory.
+   * The actual game logic is in BloomBeastsGame.ts.
+   */
+
+  // Re-export all display types from centralized location
+  export type {
+    MenuStats,
+    SoundSettings,
+    MissionDisplay,
+    CardDetailDisplay,
+    BattleDisplay,
+    ObjectiveDisplay,
+  } from './types/game/DisplayTypes';
+
+  // ==================== bloombeasts/common/engine/types/abilities.ts ====================
 
   /**
    * Comprehensive ability system types for BloomBeasts
@@ -449,7 +468,7 @@ namespace BloomBeasts {
     maxUsesPerGame?: number;  // For once per game abilities
   }
 
-  // ==================== bloombeasts\common\engine\types\core.ts ====================
+  // ==================== bloombeasts/common/engine/types/core.ts ====================
 
   /**
    * Core type definitions for BloomBeasts card game
@@ -597,7 +616,1523 @@ namespace BloomBeasts {
    */
   export type AnyCard = MagicCard | TrapCard | HabitatCard | BloomBeastCard | BuffCard;
 
-  // ==================== bloombeasts\common\engine\types\leveling.ts ====================
+  // ==================== bloombeasts/common/engine/utils/Logger.ts ====================
+
+  /**
+   * Logger
+   *
+   * Simple logging system with configurable log levels.
+   */
+
+  export enum LogLevel {
+    DEBUG = 0,
+    INFO = 1,
+    WARN = 2,
+    ERROR = 3,
+    NONE = 4,
+  }
+
+  export interface LoggerConfig {
+    level: LogLevel;
+    prefix?: string;
+    timestamps?: boolean;
+  }
+
+  class LoggerClass {
+    private config: LoggerConfig = {
+      level: LogLevel.INFO,
+      timestamps: true,
+    };
+
+    /**
+     * Configure the logger
+     */
+    configure(config: Partial<LoggerConfig>): void {
+      this.config = { ...this.config, ...config };
+    }
+
+    /**
+     * Set log level
+     */
+    setLevel(level: LogLevel): void {
+      this.config.level = level;
+    }
+
+    /**
+     * Get current log level
+     */
+    getLevel(): LogLevel {
+      return this.config.level;
+    }
+
+    /**
+     * Format log message with timestamp and prefix
+     */
+    private format(level: string, message: string): string {
+      const parts: string[] = [];
+
+      if (this.config.timestamps) {
+        const timestamp = new Date().toISOString();
+        parts.push(`[${timestamp}]`);
+      }
+
+      parts.push(`[${level}]`);
+
+      if (this.config.prefix) {
+        parts.push(`[${this.config.prefix}]`);
+      }
+
+      parts.push(message);
+
+      return parts.join(' ');
+    }
+
+    /**
+     * Log debug message
+     */
+    debug(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.DEBUG) {
+        const formatted = this.format('DEBUG', message);
+        console.log(formatted, ...data);
+      }
+    }
+
+    /**
+     * Log info message
+     */
+    info(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.INFO) {
+        const formatted = this.format('INFO', message);
+        console.log(formatted, ...data);
+      }
+    }
+
+    /**
+     * Log warning message
+     */
+    warn(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.WARN) {
+        const formatted = this.format('WARN', message);
+        console.warn(formatted, ...data);
+      }
+    }
+
+    /**
+     * Log error message
+     */
+    error(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.ERROR) {
+        const formatted = this.format('ERROR', message);
+        console.error(formatted, ...data);
+      }
+    }
+  }
+
+  // Export singleton instance
+  export const Logger = new LoggerClass();
+
+  // Set default log level
+  Logger.setLevel(LogLevel.DEBUG);
+
+  // ==================== bloombeasts/common/engine/cards/deckConfig.ts ====================
+
+  /**
+   * Deck Configuration - Simplified deck building using card utilities
+   */
+
+
+  export type DeckCardEntry<T = AnyCard> = {
+    card: T;
+    quantity: number;
+  };
+
+  // Deck config that stores card IDs instead of card objects (for lazy loading)
+  export type DeckCardIdEntry = {
+    cardId: string;
+    quantity: number;
+  };
+
+  export type AffinityType = 'Forest' | 'Fire' | 'Water' | 'Sky';
+
+  /**
+   * Deck configuration for each affinity (with card IDs)
+   */
+  export interface AffinityDeckConfigIds {
+    name: string;
+    affinity: AffinityType;
+    beasts: DeckCardIdEntry[];
+    habitats: DeckCardIdEntry[];
+  }
+
+  /**
+   * Deck configuration for each affinity (with resolved cards)
+   */
+  export interface AffinityDeckConfig {
+    name: string;
+    affinity: AffinityType;
+    beasts: DeckCardEntry<BloomBeastCard>[];
+    habitats: DeckCardEntry<HabitatCard>[];
+  }
+
+  /**
+   * Static deck configurations using card IDs (no catalog dependency)
+   * These can be loaded at module initialization time
+   */
+  const AFFINITY_DECK_CONFIG_IDS: Record<AffinityType, AffinityDeckConfigIds> = {
+    Forest: {
+      name: 'Forest Starter: The Growth Deck',
+      affinity: 'Forest',
+      beasts: [
+        { cardId: 'mosslet', quantity: 4 },
+        { cardId: 'rootling', quantity: 4 },
+        { cardId: 'mushroomancer', quantity: 2 },
+        { cardId: 'leaf-sprite', quantity: 3 },
+      ],
+      habitats: [
+        { cardId: 'ancient-forest', quantity: 3 },
+      ],
+    },
+    Fire: {
+      name: 'Fire Starter: The Aggro Deck',
+      affinity: 'Fire',
+      beasts: [
+        { cardId: 'cinder-pup', quantity: 4 },
+        { cardId: 'blazefinch', quantity: 4 },
+        { cardId: 'magmite', quantity: 2 },
+        { cardId: 'charcoil', quantity: 3 },
+      ],
+      habitats: [
+        { cardId: 'volcanic-scar', quantity: 3 },
+      ],
+    },
+    Water: {
+      name: 'Water Starter: The Control Deck',
+      affinity: 'Water',
+      beasts: [
+        { cardId: 'bubblefin', quantity: 4 },
+        { cardId: 'aqua-pebble', quantity: 4 },
+        { cardId: 'dewdrop-drake', quantity: 2 },
+        { cardId: 'kelp-cub', quantity: 3 },
+      ],
+      habitats: [
+        { cardId: 'deep-sea-grotto', quantity: 3 },
+      ],
+    },
+    Sky: {
+      name: 'Sky Starter: The Utility Deck',
+      affinity: 'Sky',
+      beasts: [
+        { cardId: 'cirrus-floof', quantity: 4 },
+        { cardId: 'gale-glider', quantity: 4 },
+        { cardId: 'star-bloom', quantity: 2 },
+        { cardId: 'aero-moth', quantity: 3 },
+      ],
+      habitats: [
+        { cardId: 'clear-zenith', quantity: 3 },
+      ],
+    },
+  };
+
+  /**
+   * Shared core cards (card IDs) - Simplified for Forest starter deck
+   */
+  const SHARED_CORE_CARD_IDS: DeckCardIdEntry[] = [
+    // Basic resource generation
+    { cardId: 'nectar-block', quantity: 10 },
+    { cardId: 'nectar-surge', quantity: 2 },
+  ];
+
+  /**
+   * Resolve card IDs to card objects
+   */
+  function resolveCardIds<T = AnyCard>(catalogManager: any, cardIdEntries: DeckCardIdEntry[]): DeckCardEntry<T>[] {
+    if (!catalogManager) {
+      Logger.error('[deckConfig] catalogManager not provided');
+      return [];
+    }
+    return cardIdEntries.map(({ cardId, quantity }) => ({
+      card: catalogManager.getCard(cardId) as T,
+      quantity,
+    }));
+  }
+
+  /**
+   * Get shared core cards configuration (resolved from IDs)
+   */
+  export function getSharedCoreCards(catalogManager: any): DeckCardEntry<MagicCard | TrapCard>[] {
+    return resolveCardIds<MagicCard | TrapCard>(catalogManager, SHARED_CORE_CARD_IDS);
+  }
+
+  /**
+   * Get deck configuration for a specific affinity (resolves card IDs to cards)
+   */
+  export function getDeckConfig(catalogManager: any, affinity: AffinityType): AffinityDeckConfig {
+    const configIds = AFFINITY_DECK_CONFIG_IDS[affinity];
+
+    return {
+      name: configIds.name,
+      affinity: configIds.affinity,
+      beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
+      habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
+    };
+  }
+
+  /**
+   * Get all deck configurations (resolves card IDs to cards)
+   */
+  export function getAllDeckConfigs(catalogManager: any): AffinityDeckConfig[] {
+    return Object.values(AFFINITY_DECK_CONFIG_IDS).map(configIds => ({
+      name: configIds.name,
+      affinity: configIds.affinity,
+      beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
+      habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
+    }));
+  }
+
+  // ==================== bloombeasts/common/engine/cards/index.ts ====================
+
+  /**
+   * Central card registry
+   */
+
+  // Re-export everything from config
+
+  // ==================== bloombeasts/common/engine/utils/deckBuilder.ts ====================
+
+  /**
+   * Deck Builder Utilities - Construct and manage decks
+   */
+
+
+  // Module-level catalog manager reference for deck builder
+  // Set via setCatalogManagerForDeckBuilder() which is called by BloomBeastsGame
+  let _deckBuilderCatalogManager: any = null;
+
+  /**
+   * Set the catalog manager instance for deck builder functions
+   * Called by BloomBeastsGame during construction
+   */
+  export function setCatalogManagerForDeckBuilder(catalogManager: any): void {
+    _deckBuilderCatalogManager = catalogManager;
+  }
+
+  export type DeckType = AffinityType;
+
+  export interface DeckList {
+    name: string;
+    affinity: DeckType;
+    cards: AnyCard[];
+    totalCards: number;
+  }
+
+  /**
+   * Expand cards based on quantity
+   */
+  function expandCards<T extends AnyCard>(cardQuantities: DeckCardEntry<T>[]): T[] {
+    const result: T[] = [];
+
+    for (const { card, quantity } of cardQuantities) {
+      for (let i = 0; i < quantity; i++) {
+        // Create a unique copy with an instance ID
+        result.push({
+          ...card,
+          instanceId: `${card.id}-${i + 1}`,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Build a complete deck with shared cards and affinity-specific cards
+   */
+  function buildDeck(type: DeckType): DeckList {
+    if (!_deckBuilderCatalogManager) {
+      Logger.error('[deckBuilder] catalogManager not initialized');
+      return { name: '', affinity: type, cards: [], totalCards: 0 };
+    }
+
+    // Get deck configuration from centralized config
+    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
+
+    const sharedCards = expandCards(getSharedCoreCards(_deckBuilderCatalogManager));
+    const beasts = expandCards(deckConfig.beasts);
+    const habitats = expandCards(deckConfig.habitats);
+
+    const allCards = [...sharedCards, ...beasts, ...habitats];
+
+    return {
+      name: deckConfig.name,
+      affinity: type,
+      cards: allCards,
+      totalCards: allCards.length,
+    };
+  }
+
+  /**
+   * Build Forest starter deck
+   */
+  export function buildForestDeck(): DeckList {
+    return buildDeck('Forest');
+  }
+
+  /**
+   * Build Fire starter deck
+   */
+  export function buildFireDeck(): DeckList {
+    return buildDeck('Fire');
+  }
+
+  /**
+   * Build Water starter deck
+   */
+  export function buildWaterDeck(): DeckList {
+    return buildDeck('Water');
+  }
+
+  /**
+   * Build Sky starter deck
+   */
+  export function buildSkyDeck(): DeckList {
+    return buildDeck('Sky');
+  }
+
+  /**
+   * Get all starter decks
+   */
+  export function getAllStarterDecks(): DeckList[] {
+    return (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).map(buildDeck);
+  }
+
+  /**
+   * Get a specific starter deck by type
+   */
+  export function getStarterDeck(type: DeckType): DeckList {
+    // Use simple Forest starter deck
+    return buildDeck('Forest');
+  }
+
+  /**
+   * Get a quick win deck with just a few low-level beasts for fast testing
+   * This creates a minimal deck for quick victories in testing
+   */
+  export function quickWinDeck(type: DeckType): DeckList {
+    if (!_deckBuilderCatalogManager) {
+      Logger.error('[deckBuilder] catalogManager not initialized');
+      return { name: '', affinity: type, cards: [], totalCards: 0 };
+    }
+
+    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
+    const allCards: AnyCard[] = [];
+
+    // Add just a few level 1 beasts (3 total - easy to draw and summon quickly)
+    const beastEntry = deckConfig.beasts[0]; // Get the first beast type
+    if (beastEntry) {
+      for (let i = 1; i <= 3; i++) {
+        allCards.push({
+          ...beastEntry.card,
+          instanceId: `${beastEntry.card.id}-${i}`,
+        } as unknown as AnyCard);
+      }
+    }
+
+    // Add 27 Energy Blocks for fast summoning
+    const energyBlock = _deckBuilderCatalogManager.getCard('nectar-block');
+    if (energyBlock) {
+      for (let i = 1; i <= 27; i++) {
+        allCards.push({
+          ...energyBlock,
+          instanceId: `nectar-block-${i}`,
+        } as unknown as AnyCard);
+      }
+    }
+
+    return {
+      name: `${deckConfig.name} (Quick Win)`,
+      affinity: type,
+      cards: allCards,
+      totalCards: allCards.length,
+    };
+  }
+
+  /**
+   * Get a testing deck with 1 of each card (for easy testing)
+   * This includes 1 of every card in the game across all affinities
+   */
+  export function getTestingDeck(type: DeckType): DeckList {
+    if (!_deckBuilderCatalogManager) {
+      Logger.error('[deckBuilder] catalogManager not initialized');
+      return { name: '', affinity: type, cards: [], totalCards: 0 };
+    }
+
+    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
+
+    // Get 1 of each card from all affinities
+    const allCards: AnyCard[] = [];
+
+    // Add shared cards (Magic, Trap) - 1 of each
+    const sharedCards = getSharedCoreCards(_deckBuilderCatalogManager);
+    sharedCards.forEach(({ card }) => {
+      allCards.push({
+        ...card,
+        instanceId: `${card.id}-1`,
+      } as unknown as AnyCard);
+    });
+
+    // Add buff cards - 1 of each
+    const buffCards = _deckBuilderCatalogManager.getAllBuffCards();
+    buffCards.forEach((card: any) => {
+      allCards.push({
+        ...card,
+        instanceId: `${card.id}-1`,
+      } as unknown as AnyCard);
+    });
+
+    // Add all beasts from all affinities - 1 of each
+    (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).forEach(affinity => {
+      const affinityConfig = getDeckConfig(_deckBuilderCatalogManager, affinity);
+
+      // Add beasts
+      affinityConfig.beasts.forEach(({ card }) => {
+        allCards.push({
+          ...card,
+          instanceId: `${card.id}-1`,
+        } as unknown as AnyCard);
+      });
+
+      // Add habitats
+      affinityConfig.habitats.forEach(({ card }) => {
+        allCards.push({
+          ...card,
+          instanceId: `${card.id}-1`,
+        } as unknown as AnyCard);
+      });
+    });
+
+    return {
+      name: `${deckConfig.name} (Testing)`,
+      affinity: type,
+      cards: allCards,
+      totalCards: allCards.length,
+    };
+  }
+
+  /**
+   * Shuffle a deck
+   */
+  export function shuffleDeck(cards: AnyCard[]): AnyCard[] {
+    const shuffled = [...cards];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  /**
+   * Validate deck (30 cards required)
+   */
+  export function validateDeck(cards: AnyCard[]): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (cards.length !== 30) {
+      errors.push(`Deck must contain exactly 30 cards. Current: ${cards.length}`);
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
+  }
+
+  // ==================== bloombeasts/screens/missions/types.ts ====================
+
+  /**
+   * Mission System Type Definitions
+   */
+
+
+  export type MissionDifficulty = 'beginner' | 'easy' | 'normal' | 'hard' | 'expert';
+
+  export type CardPool = 'common' | 'uncommon' | 'rare' | 'affinity' | 'any';
+
+  export interface ItemReward {
+    itemId: string;               // Item ID from items.ts
+    minAmount: number;            // Minimum items to receive
+    maxAmount: number;            // Maximum items to receive
+    dropChance: number;           // Chance to receive (0-1)
+  }
+
+  export interface MissionRewards {
+    guaranteedXP: number;        // Minimum XP earned
+    bonusXPChance: number;        // Chance for bonus XP (0-1)
+    bonusXPAmount: number;        // Amount of bonus XP if triggered
+    cardRewards: CardReward[];    // Possible card rewards
+    coinRewards?: {               // Coin rewards
+      minAmount: number;
+      maxAmount: number;
+      dropChance: number;
+    };
+    itemRewards?: ItemReward[];   // Possible item rewards (serums, etc)
+  }
+
+  export interface CardReward {
+    cardPool: CardPool;
+    affinity?: Affinity;         // If cardPool is 'affinity'
+    minAmount: number;            // Minimum cards to receive
+    maxAmount: number;            // Maximum cards to receive
+    dropChance: number;           // Chance to receive (0-1)
+  }
+
+  export interface MissionObjective {
+    type: 'defeat-opponent' | 'survive-turns' | 'deal-damage' |
+          'summon-beasts' | 'use-abilities' | 'maintain-health';
+    target?: number;              // Target value for objective
+    description: string;
+  }
+
+  export interface Mission {
+    id: string;
+    name: string;
+    description: string;
+    storyText?: string;           // Lore/flavor text
+    difficulty: MissionDifficulty;
+    level: number;                // Mission level (1-10)
+    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss'; // Mission affinity for visuals
+    beastId: string;              // Beast card ID for mission image (e.g., 'Rootling')
+
+    // Battle configuration
+    playerDeck?: DeckList | (() => DeckList);        // Optional fixed deck for player (or factory function)
+    opponentDeck: DeckList | (() => DeckList);       // AI opponent's deck (or factory function)
+    opponentAI?: AIProfile;        // AI behavior profile (optional)
+
+    // Mission specifics (all optional now)
+    objectives?: MissionObjective[];
+    turnLimit?: number;           // Optional turn limit
+
+    // Rewards
+    rewards: MissionRewards;
+    firstTimeBonus?: MissionRewards; // Extra rewards for first completion
+
+    // Progress tracking
+    timesCompleted: number;
+    bestScore?: number;
+    lastPlayed?: Date;
+    unlocked: boolean;
+  }
+
+  export interface AIProfile {
+    name: string;
+    difficulty: MissionDifficulty;
+    personality: 'aggressive' | 'defensive' | 'balanced' | 'strategic' | 'chaotic';
+
+    // AI behavior weights (0-1)
+    aggressiveness: number;       // Likelihood to attack
+    resourceManagement: number;   // How well it manages energy
+    targetPriority: 'strongest' | 'weakest' | 'random' | 'strategic';
+    abilityUsage: number;        // Likelihood to use abilities
+
+    // Special AI behaviors
+    behaviors?: AIBehavior[];
+  }
+
+  export interface AIBehavior {
+    trigger: 'low-health' | 'high-energy' | 'empty-field' | 'turn-count';
+    condition?: number;
+    action: 'play-defensive' | 'all-out-attack' | 'summon-rush' | 'ability-spam';
+  }
+
+  export interface MissionResult {
+    missionId: string;
+    completed: boolean;
+    objectivesCompleted: string[];
+    turnsUsed: number;
+    damageDealt: number;
+    beastsDefeated: number;
+    score: number;
+
+    // Rewards earned
+    xpEarned: number;
+    cardsEarned: AnyCard[];
+    energyEarned: number;
+  }
+
+  export interface MissionProgress {
+    missionId: string;
+    attempts: number;
+    completions: number;
+    bestScore: number;
+    totalXPEarned: number;
+    totalCardsEarned: number;
+    averageCompletion: number;   // Average turns to complete
+    currentStreak: number;        // Consecutive completions
+  }
+
+  /**
+   * Helper to resolve a deck (handles both direct DeckList and factory functions)
+   */
+  export function resolveDeck(deckOrFactory: DeckList | (() => DeckList)): DeckList {
+    if (typeof deckOrFactory === 'function') {
+      return deckOrFactory();
+    }
+    return deckOrFactory;
+  }
+
+  // ==================== bloombeasts/screens/missions/definitions/mission01.ts ====================
+
+  /**
+   * Mission 01: Rootling
+   * Forest Affinity Mission
+   */
+
+
+  export const mission01: Mission = {
+    id: 'mission-01',
+    name: 'Rootling',
+    description: 'Battle the Rootling in the forest depths.',
+    difficulty: 'beginner',
+    level: 1,
+    affinity: 'Forest',
+    beastId: 'Rootling',
+
+    // Use a function to build the deck on demand (after catalogs are loaded)
+    opponentDeck: () => {
+      // Use the proper Forest starter deck builder for a balanced deck
+      const deck = buildForestDeck();
+
+      // Safety check - return empty deck if builder failed
+      if (!deck || deck.cards.length === 0) {
+        Logger.error('[mission01] Failed to build Forest deck');
+        return { name: 'Rootling Deck', affinity: 'Forest' as const, cards: [], totalCards: 0 };
+      }
+
+      // Override the name for tutorial context
+      return {
+        ...deck,
+        name: 'Rootling (Tutorial Deck)',
+      };
+    },
+
+    rewards: {
+      guaranteedXP: 50,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 25,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 1.0,
+        },
+      ],
+      coinRewards: {
+        minAmount: 50,
+        maxAmount: 150,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: true, // First mission is always unlocked
+  };
+
+  // ==================== bloombeasts/screens/missions/utils/deckBuilder.ts ====================
+
+  /**
+   * Mission Deck Builder Utilities
+   * Centralized deck construction for mission definitions
+   */
+
+
+  /**
+   * Card specification for deck building
+   */
+  export interface CardSpec {
+    cardId: string;
+    count: number;
+  }
+
+  /**
+   * Get catalog manager from global game instance
+   */
+  function getCatalogManager(): any {
+    const game = (globalThis as any).bloomBeastsGame;
+    if (!game?.catalogManager) {
+      Logger.error('[MissionDeckBuilder] Catalog manager not available');
+      return null;
+    }
+    return game.catalogManager;
+  }
+
+  /**
+   * Create a mission deck with specified cards
+   *
+   * @example
+   * createMissionDeck({
+   *   name: 'Mushroomancer Pack',
+   *   affinity: 'Forest',
+   *   cards: [{ cardId: 'mushroomancer', count: 20 }]
+   * })
+   */
+  export function createMissionDeck(config: {
+    name: string;
+    affinity: DeckType;
+    cards: CardSpec[];
+  }): DeckList {
+    const catalogManager = getCatalogManager();
+
+    if (!catalogManager) {
+      return {
+        name: config.name,
+        affinity: config.affinity,
+        cards: [],
+        totalCards: 0,
+      };
+    }
+
+    const deckCards: any[] = [];
+
+    for (const spec of config.cards) {
+      const cardDef = catalogManager.getCard(spec.cardId);
+
+      if (!cardDef) {
+        Logger.error(`[MissionDeckBuilder] Card not found: ${spec.cardId}`);
+        continue;
+      }
+
+      // Create multiple instances of this card
+      for (let i = 1; i <= spec.count; i++) {
+        deckCards.push({
+          ...cardDef,
+          instanceId: `${spec.cardId}-${i}`,
+        });
+      }
+    }
+
+    return {
+      name: config.name,
+      affinity: config.affinity,
+      cards: deckCards,
+      totalCards: deckCards.length,
+    };
+  }
+
+  /**
+   * Create a simple deck with just one card type (common for early missions)
+   */
+  export function createSimpleDeck(
+    deckName: string,
+    affinity: DeckType,
+    cardId: string,
+    count: number
+  ): DeckList {
+    return createMissionDeck({
+      name: deckName,
+      affinity,
+      cards: [{ cardId, count }],
+    });
+  }
+
+  // ==================== bloombeasts/screens/missions/definitions/mission02.ts ====================
+
+  /**
+   * Mission 02: Mosslet
+   * Forest Affinity Mission
+   */
+
+
+  export const mission02: Mission = {
+    id: 'mission-02',
+    name: 'Mushroomancer',
+    description: 'Face the mystical Mushroomancer among the trees.',
+    difficulty: 'beginner',
+    level: 2,
+    affinity: 'Forest',
+    beastId: 'Mushroomancer',
+
+    opponentDeck: () => createSimpleDeck('Mushroomancer Pack', 'Forest' as const, 'mushroomancer', 20),
+
+    rewards: {
+      guaranteedXP: 60,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 30,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.9,
+        },
+      ],
+      coinRewards: {
+        minAmount: 75,
+        maxAmount: 175,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission03.ts ====================
+
+  /**
+   * Mission 03: Mosslet
+   * Forest Affinity Mission
+   */
+
+
+  export const mission03: Mission = {
+    id: 'mission-03',
+    name: 'Mosslet',
+    description: 'Challenge the sturdy Mosslet in the mossy glen.',
+    difficulty: 'easy',
+    level: 3,
+    affinity: 'Forest',
+    beastId: 'Mosslet',
+
+    opponentDeck: () =>
+      createMissionDeck({
+        name: 'Forest Basics',
+        affinity: 'Forest' as const,
+        cards: [
+          { cardId: 'mosslet', count: 5 },
+          { cardId: 'rootling', count: 5 },
+          { cardId: 'nectar-block', count: 5 },
+        ],
+      }),
+
+    rewards: {
+      guaranteedXP: 70,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 35,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.8,
+        },
+      ],
+      coinRewards: {
+        minAmount: 100,
+        maxAmount: 200,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission04.ts ====================
+
+  /**
+   * Mission 04: Leaf Sprite
+   * Forest Affinity Mission
+   */
+
+
+  export const mission04: Mission = {
+    id: 'mission-04',
+    name: 'Leaf Sprite',
+    description: 'Test your skills against the agile Leaf Sprite.',
+    difficulty: 'easy',
+    level: 4,
+    affinity: 'Forest',
+    beastId: 'Leaf Sprite',
+
+    opponentDeck: () =>
+      createMissionDeck({
+        name: 'Forest Advancement',
+        affinity: 'Forest' as const,
+        cards: [
+          { cardId: 'leaf-sprite', count: 6 },
+          { cardId: 'mushroomancer', count: 6 },
+          { cardId: 'ancient-forest', count: 1 },
+          { cardId: 'nectar-block', count: 6 },
+          { cardId: 'power-up', count: 1 },
+        ],
+      }),
+
+    rewards: {
+      guaranteedXP: 80,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 40,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.8,
+        },
+      ],
+      coinRewards: {
+        minAmount: 125,
+        maxAmount: 225,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission05.ts ====================
+
+  /**
+   * Mission 05: Bubblefin
+   * Water Affinity Mission
+   */
+
+
+  export const mission05: Mission = {
+    id: 'mission-05',
+    name: 'Bubblefin',
+    description: 'Dive deep to battle the nimble Bubblefin.',
+    difficulty: 'normal',
+    level: 5,
+    affinity: 'Water',
+    beastId: 'Bubblefin',
+
+    opponentDeck: () => buildWaterDeck(),
+
+    rewards: {
+      guaranteedXP: 90,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 45,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+      ],
+      coinRewards: {
+        minAmount: 150,
+        maxAmount: 250,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission06.ts ====================
+
+  /**
+   * Mission 06: Dewdrop Drake
+   * Water Affinity Mission
+   */
+
+
+  export const mission06: Mission = {
+    id: 'mission-06',
+    name: 'Dewdrop Drake',
+    description: 'Confront the serene Dewdrop Drake by the waterfall.',
+    difficulty: 'normal',
+    level: 6,
+    affinity: 'Water',
+    beastId: 'Dewdrop Drake',
+
+    opponentDeck: () => buildWaterDeck(),
+
+    rewards: {
+      guaranteedXP: 100,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 50,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+      ],
+      coinRewards: {
+        minAmount: 175,
+        maxAmount: 275,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission07.ts ====================
+
+  /**
+   * Mission 07: Kelp Cub
+   * Water Affinity Mission
+   */
+
+
+  export const mission07: Mission = {
+    id: 'mission-07',
+    name: 'Kelp Cub',
+    description: 'Navigate the kelp forest to face the Kelp Cub.',
+    difficulty: 'normal',
+    level: 7,
+    affinity: 'Water',
+    beastId: 'Kelp Cub',
+
+    opponentDeck: () => buildWaterDeck(),
+
+    rewards: {
+      guaranteedXP: 110,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 55,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+      ],
+      coinRewards: {
+        minAmount: 200,
+        maxAmount: 300,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission08.ts ====================
+
+  /**
+   * Mission 08: Aqua Pebble
+   * Water Affinity Mission
+   */
+
+
+  export const mission08: Mission = {
+    id: 'mission-08',
+    name: 'Aqua Pebble',
+    description: 'Test your might against the resilient Aqua Pebble.',
+    difficulty: 'hard',
+    level: 8,
+    affinity: 'Water',
+    beastId: 'Aqua Pebble',
+
+    opponentDeck: () => buildWaterDeck(),
+
+    rewards: {
+      guaranteedXP: 120,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 60,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.4,
+        },
+      ],
+      coinRewards: {
+        minAmount: 225,
+        maxAmount: 325,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission09.ts ====================
+
+  /**
+   * Mission 09: Magmite
+   * Fire Affinity Mission
+   */
+
+
+  export const mission09: Mission = {
+    id: 'mission-09',
+    name: 'Magmite',
+    description: 'Brave the flames to challenge the fierce Magmite.',
+    difficulty: 'hard',
+    level: 9,
+    affinity: 'Fire',
+    beastId: 'Magmite',
+
+    opponentDeck: () => buildFireDeck(),
+
+    rewards: {
+      guaranteedXP: 130,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 65,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.5,
+        },
+      ],
+      coinRewards: {
+        minAmount: 250,
+        maxAmount: 350,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission10.ts ====================
+
+  /**
+   * Mission 10: Cinder Pup
+   * Fire Affinity Mission
+   */
+
+
+  export const mission10: Mission = {
+    id: 'mission-10',
+    name: 'Cinder Pup',
+    description: 'Face the energetic Cinder Pup in volcanic fields.',
+    difficulty: 'hard',
+    level: 10,
+    affinity: 'Fire',
+    beastId: 'Cinder Pup',
+
+    opponentDeck: () => buildFireDeck(),
+
+    rewards: {
+      guaranteedXP: 140,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 70,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.5,
+        },
+      ],
+      coinRewards: {
+        minAmount: 275,
+        maxAmount: 375,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission11.ts ====================
+
+  /**
+   * Mission 11: Charcoil
+   * Fire Affinity Mission
+   */
+
+
+  export const mission11: Mission = {
+    id: 'mission-11',
+    name: 'Charcoil',
+    description: 'Battle the smoldering Charcoil in the ember wastes.',
+    difficulty: 'hard',
+    level: 11,
+    affinity: 'Fire',
+    beastId: 'Charcoil',
+
+    opponentDeck: () => buildFireDeck(),
+
+    rewards: {
+      guaranteedXP: 150,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 75,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+      ],
+      coinRewards: {
+        minAmount: 300,
+        maxAmount: 400,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission12.ts ====================
+
+  /**
+   * Mission 12: Blazefinch
+   * Fire Affinity Mission
+   */
+
+
+  export const mission12: Mission = {
+    id: 'mission-12',
+    name: 'Blazefinch',
+    description: 'Soar through the flames to face the swift Blazefinch.',
+    difficulty: 'expert',
+    level: 12,
+    affinity: 'Fire',
+    beastId: 'Blazefinch',
+
+    opponentDeck: () => buildFireDeck(),
+
+    rewards: {
+      guaranteedXP: 160,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 80,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.4,
+        },
+      ],
+      coinRewards: {
+        minAmount: 325,
+        maxAmount: 425,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission13.ts ====================
+
+  /**
+   * Mission 13: Cirrus Floof
+   * Sky Affinity Mission
+   */
+
+
+  export const mission13: Mission = {
+    id: 'mission-13',
+    name: 'Cirrus Floof',
+    description: 'Ascend to the clouds to meet the gentle Cirrus Floof.',
+    difficulty: 'expert',
+    level: 13,
+    affinity: 'Sky',
+    beastId: 'Cirrus Floof',
+
+    opponentDeck: () => buildSkyDeck(),
+
+    rewards: {
+      guaranteedXP: 170,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 85,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.4,
+        },
+      ],
+      coinRewards: {
+        minAmount: 350,
+        maxAmount: 450,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission14.ts ====================
+
+  /**
+   * Mission 14: Gale Glider
+   * Sky Affinity Mission
+   */
+
+
+  export const mission14: Mission = {
+    id: 'mission-14',
+    name: 'Gale Glider',
+    description: 'Race through the windstorm against the agile Gale Glider.',
+    difficulty: 'expert',
+    level: 14,
+    affinity: 'Sky',
+    beastId: 'Gale Glider',
+
+    opponentDeck: () => buildSkyDeck(),
+
+    rewards: {
+      guaranteedXP: 180,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 90,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.4,
+        },
+      ],
+      coinRewards: {
+        minAmount: 375,
+        maxAmount: 475,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission15.ts ====================
+
+  /**
+   * Mission 15: Star Bloom
+   * Sky Affinity Mission
+   */
+
+
+  export const mission15: Mission = {
+    id: 'mission-15',
+    name: 'Star Bloom',
+    description: 'Reach for the stars to challenge the mystical Star Bloom.',
+    difficulty: 'expert',
+    level: 15,
+    affinity: 'Sky',
+    beastId: 'Star Bloom',
+
+    opponentDeck: () => buildSkyDeck(),
+
+    rewards: {
+      guaranteedXP: 190,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 95,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.5,
+        },
+      ],
+      coinRewards: {
+        minAmount: 400,
+        maxAmount: 500,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/screens/missions/definitions/mission16.ts ====================
+
+  /**
+   * Mission 16: Aero Moth
+   * Sky Affinity Mission
+   */
+
+
+  export const mission16: Mission = {
+    id: 'mission-16',
+    name: 'Aero Moth',
+    description: 'Dance among the high winds with the elusive Aero Moth.',
+    difficulty: 'expert',
+    level: 16,
+    affinity: 'Sky',
+    beastId: 'Aero Moth',
+
+    opponentDeck: () => buildSkyDeck(),
+
+    rewards: {
+      guaranteedXP: 200,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 100,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 2,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.5,
+        },
+      ],
+      coinRewards: {
+        minAmount: 425,
+        maxAmount: 525,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts/common/engine/types/leveling.ts ====================
 
   /**
    * Type definitions for the leveling and progression system
@@ -605,14 +2140,6 @@ namespace BloomBeasts {
 
 
   export type Level = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
-
-  /**
-   * Stat progression by level
-   */
-  export interface StatGain {
-    cumulativeHP: number;
-    cumulativeATK: number;
-  }
 
   /**
    * XP source tracking
@@ -649,22 +2176,10 @@ namespace BloomBeasts {
   }
 
   /**
-   * Source of a stat modification
-   */
-  export enum StatModifierSource {
-    Base = 'base',              // Base stats from card + level
-    BuffZone = 'buff-zone',     // From buff cards in buff zone
-    Ability = 'ability',        // From triggered abilities (temporary)
-    Magic = 'magic',            // From magic card effects
-    Habitat = 'habitat',        // From habitat cards
-    Equipment = 'equipment'     // Future: From equipment
-  }
-
-  /**
    * A single stat modifier
    */
   export interface StatModifier {
-    source: StatModifierSource;
+    source: string;
     sourceId: string;           // ID of the card/ability that applied this
     stat: 'attack' | 'health' | 'maxHealth';
     value: number;              // Amount of modification (can be negative)
@@ -672,9 +2187,7 @@ namespace BloomBeasts {
     turnsRemaining?: number;    // For temporary effects
   }
 
-  // BloomBeastInstance has been removed. Use RuntimeBeast from engine/types/runtime.ts instead.
-
-  // ==================== bloombeasts\common\engine\types\runtime.ts ====================
+  // ==================== bloombeasts/common/engine/types/runtime.ts ====================
 
   /**
    * Runtime Card Types
@@ -851,1498 +2364,7 @@ namespace BloomBeasts {
     return card.type === CardType.Habitat;
   }
 
-  // ==================== bloombeasts\gameManager.ts ====================
-
-  /**
-   * Type Definitions for BloomBeasts Game
-   *
-   * NOTE: This file only contains type exports used by the UI layer.
-   * The actual game logic is in BloomBeastsGame.ts.
-   */
-
-
-  /**
-   * Player statistics displayed in UI
-   */
-  export interface MenuStats {
-    playerLevel: number;
-    totalXP: number;
-    coins: number;
-    serums: number;
-  }
-
-  /**
-   * Sound settings for audio playback
-   */
-  export interface SoundSettings {
-    musicVolume: number; // 0-100
-    sfxVolume: number; // 0-100
-    musicEnabled: boolean;
-    sfxEnabled: boolean;
-  }
-
-  /**
-   * Mission information for display in mission selection
-   */
-  export interface MissionDisplay {
-    id: string;
-    name: string;
-    level: number;
-    difficulty: string;
-    isAvailable: boolean;
-    isCompleted: boolean;
-    description: string;
-    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
-    beastId?: string;
-  }
-
-  /**
-   * Card detail popup information
-   */
-  export interface CardDetailDisplay {
-    card: RuntimeCard;
-    buttons: string[];
-    isInDeck: boolean;
-  }
-
-  /**
-   * Complete battle state for display in battle screen
-   */
-  export interface BattleDisplay {
-    playerHealth: number;
-    playerMaxHealth: number;
-    playerDeckCount: number;
-    playerEnergy: number;
-    playerHand: any[];
-    playerTrapZone: any[]; // Player's trap cards (face-down)
-    playerBuffZone: any[]; // Player's active buff cards
-    opponentHealth: number;
-    opponentMaxHealth: number;
-    opponentDeckCount: number;
-    opponentEnergy: number;
-    opponentField: any[];
-    opponentTrapZone: any[]; // Opponent's trap cards (face-down)
-    opponentBuffZone: any[]; // Opponent's active buff cards
-    playerField: any[];
-    currentTurn: number;
-    turnPlayer: string;
-    turnTimeRemaining: number;
-    objectives: ObjectiveDisplay[];
-    habitatZone: any | null; // Current habitat card
-    attackAnimation?: { // Attack animation state
-      attackerPlayer: 'player' | 'opponent';
-      attackerIndex: number;
-      targetPlayer: 'player' | 'opponent' | 'health';
-      targetIndex?: number; // undefined if targeting health
-    } | null;
-    cardPopup?: { // Card popup display (for magic/trap/buff cards)
-      card: any;
-      player: 'player' | 'opponent';
-      showCloseButton?: boolean; // Show close button for manual popups
-    } | null;
-  }
-
-  /**
-   * Mission objective progress for display
-   */
-  export interface ObjectiveDisplay {
-    description: string;
-    progress: number;
-    target: number;
-    isComplete: boolean;
-  }
-
-  // ==================== bloombeasts\common\engine\cards\deckConfig.ts ====================
-
-  /**
-   * Deck Configuration - Simplified deck building using card utilities
-   */
-
-
-  export type DeckCardEntry<T = AnyCard> = {
-    card: T;
-    quantity: number;
-  };
-
-  // Deck config that stores card IDs instead of card objects (for lazy loading)
-  export type DeckCardIdEntry = {
-    cardId: string;
-    quantity: number;
-  };
-
-  export type AffinityType = 'Forest' | 'Fire' | 'Water' | 'Sky';
-
-  /**
-   * Deck configuration for each affinity (with card IDs)
-   */
-  export interface AffinityDeckConfigIds {
-    name: string;
-    affinity: AffinityType;
-    beasts: DeckCardIdEntry[];
-    habitats: DeckCardIdEntry[];
-  }
-
-  /**
-   * Deck configuration for each affinity (with resolved cards)
-   */
-  export interface AffinityDeckConfig {
-    name: string;
-    affinity: AffinityType;
-    beasts: DeckCardEntry<BloomBeastCard>[];
-    habitats: DeckCardEntry<HabitatCard>[];
-  }
-
-  /**
-   * Static deck configurations using card IDs (no catalog dependency)
-   * These can be loaded at module initialization time
-   */
-  const AFFINITY_DECK_CONFIG_IDS: Record<AffinityType, AffinityDeckConfigIds> = {
-    Forest: {
-      name: 'Forest Starter: The Growth Deck',
-      affinity: 'Forest',
-      beasts: [
-        { cardId: 'mosslet', quantity: 4 },
-        { cardId: 'rootling', quantity: 4 },
-        { cardId: 'mushroomancer', quantity: 2 },
-        { cardId: 'leaf-sprite', quantity: 3 },
-      ],
-      habitats: [
-        { cardId: 'ancient-forest', quantity: 3 },
-      ],
-    },
-    Fire: {
-      name: 'Fire Starter: The Aggro Deck',
-      affinity: 'Fire',
-      beasts: [
-        { cardId: 'cinder-pup', quantity: 4 },
-        { cardId: 'blazefinch', quantity: 4 },
-        { cardId: 'magmite', quantity: 2 },
-        { cardId: 'charcoil', quantity: 3 },
-      ],
-      habitats: [
-        { cardId: 'volcanic-scar', quantity: 3 },
-      ],
-    },
-    Water: {
-      name: 'Water Starter: The Control Deck',
-      affinity: 'Water',
-      beasts: [
-        { cardId: 'bubblefin', quantity: 4 },
-        { cardId: 'aqua-pebble', quantity: 4 },
-        { cardId: 'dewdrop-drake', quantity: 2 },
-        { cardId: 'kelp-cub', quantity: 3 },
-      ],
-      habitats: [
-        { cardId: 'deep-sea-grotto', quantity: 3 },
-      ],
-    },
-    Sky: {
-      name: 'Sky Starter: The Utility Deck',
-      affinity: 'Sky',
-      beasts: [
-        { cardId: 'cirrus-floof', quantity: 4 },
-        { cardId: 'gale-glider', quantity: 4 },
-        { cardId: 'star-bloom', quantity: 2 },
-        { cardId: 'aero-moth', quantity: 3 },
-      ],
-      habitats: [
-        { cardId: 'clear-zenith', quantity: 3 },
-      ],
-    },
-  };
-
-  /**
-   * Shared core cards (card IDs) - Simplified for Forest starter deck
-   */
-  const SHARED_CORE_CARD_IDS: DeckCardIdEntry[] = [
-    // Basic resource generation
-    { cardId: 'nectar-block', quantity: 10 },
-    { cardId: 'nectar-surge', quantity: 2 },
-  ];
-
-  /**
-   * Resolve card IDs to card objects
-   */
-  function resolveCardIds<T = AnyCard>(catalogManager: any, cardIdEntries: DeckCardIdEntry[]): DeckCardEntry<T>[] {
-    if (!catalogManager) {
-      console.error('[deckConfig] catalogManager not provided');
-      return [];
-    }
-    return cardIdEntries.map(({ cardId, quantity }) => ({
-      card: catalogManager.getCard(cardId) as T,
-      quantity,
-    }));
-  }
-
-  /**
-   * Get shared core cards configuration (resolved from IDs)
-   */
-  export function getSharedCoreCards(catalogManager: any): DeckCardEntry<MagicCard | TrapCard>[] {
-    return resolveCardIds<MagicCard | TrapCard>(catalogManager, SHARED_CORE_CARD_IDS);
-  }
-
-  /**
-   * Get deck configuration for a specific affinity (resolves card IDs to cards)
-   */
-  export function getDeckConfig(catalogManager: any, affinity: AffinityType): AffinityDeckConfig {
-    const configIds = AFFINITY_DECK_CONFIG_IDS[affinity];
-
-    return {
-      name: configIds.name,
-      affinity: configIds.affinity,
-      beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
-      habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
-    };
-  }
-
-  /**
-   * Get all deck configurations (resolves card IDs to cards)
-   */
-  export function getAllDeckConfigs(catalogManager: any): AffinityDeckConfig[] {
-    return Object.values(AFFINITY_DECK_CONFIG_IDS).map(configIds => ({
-      name: configIds.name,
-      affinity: configIds.affinity,
-      beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
-      habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
-    }));
-  }
-
-  // ==================== bloombeasts\common\engine\cards\index.ts ====================
-
-  /**
-   * Central card registry
-   */
-
-  // Re-export everything from config
-
-  // ==================== bloombeasts\common\engine\utils\deckBuilder.ts ====================
-
-  /**
-   * Deck Builder Utilities - Construct and manage decks
-   */
-
-
-  // Module-level catalog manager reference for deck builder
-  // Set via setCatalogManagerForDeckBuilder() which is called by BloomBeastsGame
-  let _deckBuilderCatalogManager: any = null;
-
-  /**
-   * Set the catalog manager instance for deck builder functions
-   * Called by BloomBeastsGame during construction
-   */
-  export function setCatalogManagerForDeckBuilder(catalogManager: any): void {
-    _deckBuilderCatalogManager = catalogManager;
-  }
-
-  export type DeckType = AffinityType;
-
-  export interface DeckList {
-    name: string;
-    affinity: DeckType;
-    cards: AnyCard[];
-    totalCards: number;
-  }
-
-  /**
-   * Expand cards based on quantity
-   */
-  function expandCards<T extends AnyCard>(cardQuantities: DeckCardEntry<T>[]): T[] {
-    const result: T[] = [];
-
-    for (const { card, quantity } of cardQuantities) {
-      for (let i = 0; i < quantity; i++) {
-        // Create a unique copy with an instance ID
-        result.push({
-          ...card,
-          instanceId: `${card.id}-${i + 1}`,
-        });
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Build a complete deck with shared cards and affinity-specific cards
-   */
-  function buildDeck(type: DeckType): DeckList {
-    if (!_deckBuilderCatalogManager) {
-      console.error('[deckBuilder] catalogManager not initialized');
-      return { name: '', affinity: type, cards: [], totalCards: 0 };
-    }
-
-    // Get deck configuration from centralized config
-    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
-
-    const sharedCards = expandCards(getSharedCoreCards(_deckBuilderCatalogManager));
-    const beasts = expandCards(deckConfig.beasts);
-    const habitats = expandCards(deckConfig.habitats);
-
-    const allCards = [...sharedCards, ...beasts, ...habitats];
-
-    return {
-      name: deckConfig.name,
-      affinity: type,
-      cards: allCards,
-      totalCards: allCards.length,
-    };
-  }
-
-  /**
-   * Build Forest starter deck
-   */
-  export function buildForestDeck(): DeckList {
-    return buildDeck('Forest');
-  }
-
-  /**
-   * Build Fire starter deck
-   */
-  export function buildFireDeck(): DeckList {
-    return buildDeck('Fire');
-  }
-
-  /**
-   * Build Water starter deck
-   */
-  export function buildWaterDeck(): DeckList {
-    return buildDeck('Water');
-  }
-
-  /**
-   * Build Sky starter deck
-   */
-  export function buildSkyDeck(): DeckList {
-    return buildDeck('Sky');
-  }
-
-  /**
-   * Get all starter decks
-   */
-  export function getAllStarterDecks(): DeckList[] {
-    return (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).map(buildDeck);
-  }
-
-  /**
-   * Get a specific starter deck by type
-   */
-  export function getStarterDeck(type: DeckType): DeckList {
-    // Use simple Forest starter deck
-    return buildDeck('Forest');
-  }
-
-  /**
-   * Get a quick win deck with just a few low-level beasts for fast testing
-   * This creates a minimal deck for quick victories in testing
-   */
-  export function quickWinDeck(type: DeckType): DeckList {
-    if (!_deckBuilderCatalogManager) {
-      console.error('[deckBuilder] catalogManager not initialized');
-      return { name: '', affinity: type, cards: [], totalCards: 0 };
-    }
-
-    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
-    const allCards: AnyCard[] = [];
-
-    // Add just a few level 1 beasts (3 total - easy to draw and summon quickly)
-    const beastEntry = deckConfig.beasts[0]; // Get the first beast type
-    if (beastEntry) {
-      for (let i = 1; i <= 3; i++) {
-        allCards.push({
-          ...beastEntry.card,
-          instanceId: `${beastEntry.card.id}-${i}`,
-        } as unknown as AnyCard);
-      }
-    }
-
-    // Add 27 Energy Blocks for fast summoning
-    const energyBlock = _deckBuilderCatalogManager.getCard('nectar-block');
-    if (energyBlock) {
-      for (let i = 1; i <= 27; i++) {
-        allCards.push({
-          ...energyBlock,
-          instanceId: `nectar-block-${i}`,
-        } as unknown as AnyCard);
-      }
-    }
-
-    return {
-      name: `${deckConfig.name} (Quick Win)`,
-      affinity: type,
-      cards: allCards,
-      totalCards: allCards.length,
-    };
-  }
-
-  /**
-   * Get a testing deck with 1 of each card (for easy testing)
-   * This includes 1 of every card in the game across all affinities
-   */
-  export function getTestingDeck(type: DeckType): DeckList {
-    if (!_deckBuilderCatalogManager) {
-      console.error('[deckBuilder] catalogManager not initialized');
-      return { name: '', affinity: type, cards: [], totalCards: 0 };
-    }
-
-    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
-
-    // Get 1 of each card from all affinities
-    const allCards: AnyCard[] = [];
-
-    // Add shared cards (Magic, Trap) - 1 of each
-    const sharedCards = getSharedCoreCards(_deckBuilderCatalogManager);
-    sharedCards.forEach(({ card }) => {
-      allCards.push({
-        ...card,
-        instanceId: `${card.id}-1`,
-      } as unknown as AnyCard);
-    });
-
-    // Add buff cards - 1 of each
-    const buffCards = _deckBuilderCatalogManager.getAllBuffCards();
-    buffCards.forEach((card: any) => {
-      allCards.push({
-        ...card,
-        instanceId: `${card.id}-1`,
-      } as unknown as AnyCard);
-    });
-
-    // Add all beasts from all affinities - 1 of each
-    (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).forEach(affinity => {
-      const affinityConfig = getDeckConfig(_deckBuilderCatalogManager, affinity);
-
-      // Add beasts
-      affinityConfig.beasts.forEach(({ card }) => {
-        allCards.push({
-          ...card,
-          instanceId: `${card.id}-1`,
-        } as unknown as AnyCard);
-      });
-
-      // Add habitats
-      affinityConfig.habitats.forEach(({ card }) => {
-        allCards.push({
-          ...card,
-          instanceId: `${card.id}-1`,
-        } as unknown as AnyCard);
-      });
-    });
-
-    return {
-      name: `${deckConfig.name} (Testing)`,
-      affinity: type,
-      cards: allCards,
-      totalCards: allCards.length,
-    };
-  }
-
-  /**
-   * Shuffle a deck
-   */
-  export function shuffleDeck(cards: AnyCard[]): AnyCard[] {
-    const shuffled = [...cards];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }
-
-  /**
-   * Validate deck (30 cards required)
-   */
-  export function validateDeck(cards: AnyCard[]): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    if (cards.length !== 30) {
-      errors.push(`Deck must contain exactly 30 cards. Current: ${cards.length}`);
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-    };
-  }
-
-  // ==================== bloombeasts\screens\missions\types.ts ====================
-
-  /**
-   * Mission System Type Definitions
-   */
-
-
-  export type MissionDifficulty = 'beginner' | 'easy' | 'normal' | 'hard' | 'expert';
-
-  export type CardPool = 'common' | 'uncommon' | 'rare' | 'affinity' | 'any';
-
-  export interface ItemReward {
-    itemId: string;               // Item ID from items.ts
-    minAmount: number;            // Minimum items to receive
-    maxAmount: number;            // Maximum items to receive
-    dropChance: number;           // Chance to receive (0-1)
-  }
-
-  export interface MissionRewards {
-    guaranteedXP: number;        // Minimum XP earned
-    bonusXPChance: number;        // Chance for bonus XP (0-1)
-    bonusXPAmount: number;        // Amount of bonus XP if triggered
-    cardRewards: CardReward[];    // Possible card rewards
-    coinRewards?: {               // Coin rewards
-      minAmount: number;
-      maxAmount: number;
-      dropChance: number;
-    };
-    itemRewards?: ItemReward[];   // Possible item rewards (serums, etc)
-  }
-
-  export interface CardReward {
-    cardPool: CardPool;
-    affinity?: Affinity;         // If cardPool is 'affinity'
-    minAmount: number;            // Minimum cards to receive
-    maxAmount: number;            // Maximum cards to receive
-    dropChance: number;           // Chance to receive (0-1)
-  }
-
-  export interface MissionObjective {
-    type: 'defeat-opponent' | 'survive-turns' | 'deal-damage' |
-          'summon-beasts' | 'use-abilities' | 'maintain-health';
-    target?: number;              // Target value for objective
-    description: string;
-  }
-
-  export interface Mission {
-    id: string;
-    name: string;
-    description: string;
-    storyText?: string;           // Lore/flavor text
-    difficulty: MissionDifficulty;
-    level: number;                // Mission level (1-10)
-    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss'; // Mission affinity for visuals
-    beastId: string;              // Beast card ID for mission image (e.g., 'Rootling')
-
-    // Battle configuration
-    playerDeck?: DeckList | (() => DeckList);        // Optional fixed deck for player (or factory function)
-    opponentDeck: DeckList | (() => DeckList);       // AI opponent's deck (or factory function)
-    opponentAI?: AIProfile;        // AI behavior profile (optional)
-
-    // Mission specifics (all optional now)
-    objectives?: MissionObjective[];
-    turnLimit?: number;           // Optional turn limit
-
-    // Rewards
-    rewards: MissionRewards;
-    firstTimeBonus?: MissionRewards; // Extra rewards for first completion
-
-    // Progress tracking
-    timesCompleted: number;
-    bestScore?: number;
-    lastPlayed?: Date;
-    unlocked: boolean;
-  }
-
-  export interface AIProfile {
-    name: string;
-    difficulty: MissionDifficulty;
-    personality: 'aggressive' | 'defensive' | 'balanced' | 'strategic' | 'chaotic';
-
-    // AI behavior weights (0-1)
-    aggressiveness: number;       // Likelihood to attack
-    resourceManagement: number;   // How well it manages energy
-    targetPriority: 'strongest' | 'weakest' | 'random' | 'strategic';
-    abilityUsage: number;        // Likelihood to use abilities
-
-    // Special AI behaviors
-    behaviors?: AIBehavior[];
-  }
-
-  export interface AIBehavior {
-    trigger: 'low-health' | 'high-energy' | 'empty-field' | 'turn-count';
-    condition?: number;
-    action: 'play-defensive' | 'all-out-attack' | 'summon-rush' | 'ability-spam';
-  }
-
-  export interface MissionResult {
-    missionId: string;
-    completed: boolean;
-    objectivesCompleted: string[];
-    turnsUsed: number;
-    damageDealt: number;
-    beastsDefeated: number;
-    score: number;
-
-    // Rewards earned
-    xpEarned: number;
-    cardsEarned: AnyCard[];
-    energyEarned: number;
-  }
-
-  export interface MissionProgress {
-    missionId: string;
-    attempts: number;
-    completions: number;
-    bestScore: number;
-    totalXPEarned: number;
-    totalCardsEarned: number;
-    averageCompletion: number;   // Average turns to complete
-    currentStreak: number;        // Consecutive completions
-  }
-
-  /**
-   * Helper to resolve a deck (handles both direct DeckList and factory functions)
-   */
-  export function resolveDeck(deckOrFactory: DeckList | (() => DeckList)): DeckList {
-    if (typeof deckOrFactory === 'function') {
-      return deckOrFactory();
-    }
-    return deckOrFactory;
-  }
-
-  // ==================== bloombeasts\screens\missions\definitions\mission01.ts ====================
-
-  /**
-   * Mission 01: Rootling
-   * Forest Affinity Mission
-   */
-
-
-  export const mission01: Mission = {
-    id: 'mission-01',
-    name: 'Rootling',
-    description: 'Battle the Rootling in the forest depths.',
-    difficulty: 'beginner',
-    level: 1,
-    affinity: 'Forest',
-    beastId: 'Rootling',
-
-    // Use a function to build the deck on demand (after catalogs are loaded)
-    opponentDeck: () => {
-      // Use the proper Forest starter deck builder for a balanced deck
-      const deck = buildForestDeck();
-
-      // Safety check - return empty deck if builder failed
-      if (!deck || deck.cards.length === 0) {
-        console.error('[mission01] Failed to build Forest deck');
-        return { name: 'Rootling Deck', affinity: 'Forest' as const, cards: [], totalCards: 0 };
-      }
-
-      // Override the name for tutorial context
-      return {
-        ...deck,
-        name: 'Rootling (Tutorial Deck)',
-      };
-    },
-
-    rewards: {
-      guaranteedXP: 50,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 25,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 1.0,
-        },
-      ],
-      coinRewards: {
-        minAmount: 50,
-        maxAmount: 150,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: true, // First mission is always unlocked
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission02.ts ====================
-
-  /**
-   * Mission 02: Mosslet
-   * Forest Affinity Mission
-   */
-
-
-  export const mission02: Mission = {
-    id: 'mission-02',
-    name: 'Mushroomancer',
-    description: 'Face the mystical Mushroomancer among the trees.',
-    difficulty: 'beginner',
-    level: 2,
-    affinity: 'Forest',
-    beastId: 'Mushroomancer',
-
-    opponentDeck: () => {
-      // Get the catalog manager to access cards
-      const game = (globalThis as any).bloomBeastsGame;
-      if (!game?.catalogManager) {
-        console.error('[mission02] Catalog manager not available');
-        return { name: 'Mushroomancer Deck', affinity: 'Forest', cards: [], totalCards: 0 };
-      }
-
-      // Simple beginner deck: 3 Mushroomancers only
-      const mushroomancerCard = game.catalogManager.getCard('mushroomancer');
-      if (!mushroomancerCard) {
-        console.error('[mission02] Mushroomancer card not found');
-        return { name: 'Mushroomancer Deck', affinity: 'Forest', cards: [], totalCards: 0 };
-      }
-
-      const cards = [];
-      for (let i = 1; i <= 20; i++) {
-        cards.push({
-          ...mushroomancerCard,
-          instanceId: `mushroomancer-${i}`,
-        });
-      }
-
-      return {
-        name: 'Mushroomancer Pack',
-        affinity: 'Forest' as const,
-        cards,
-        totalCards: cards.length,
-      };
-    },
-
-    rewards: {
-      guaranteedXP: 60,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 30,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.9,
-        },
-      ],
-      coinRewards: {
-        minAmount: 75,
-        maxAmount: 175,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission03.ts ====================
-
-  /**
-   * Mission 03: Mosslet
-   * Forest Affinity Mission
-   */
-
-
-  export const mission03: Mission = {
-    id: 'mission-03',
-    name: 'Mosslet',
-    description: 'Challenge the sturdy Mosslet in the mossy glen.',
-    difficulty: 'easy',
-    level: 3,
-    affinity: 'Forest',
-    beastId: 'Mosslet',
-
-    opponentDeck: () => {
-      // Get the catalog manager to access cards
-      const game = (globalThis as any).bloomBeastsGame;
-      if (!game?.catalogManager) {
-        console.error('[mission03] Catalog manager not available');
-        return { name: 'Mosslet Deck', affinity: 'Forest', cards: [], totalCards: 0 };
-      }
-
-      // Beginner deck: 2 Mosslets + 2 Rootlings + 3 Energy Blocks
-      const mossletCard = game.catalogManager.getCard('mosslet');
-      const rootlingCard = game.catalogManager.getCard('rootling');
-      const energyBlockCard = game.catalogManager.getCard('nectar-block');
-
-      const cards = [];
-
-      // Add 2 Mosslets
-      for (let i = 1; i <= 5; i++) {
-        cards.push({ ...mossletCard, instanceId: `mosslet-${i}` });
-      }
-
-      // Add 2 Rootlings
-      for (let i = 1; i <= 5; i++) {
-        cards.push({ ...rootlingCard, instanceId: `rootling-${i}` });
-      }
-
-      // Add 3 Energy Blocks
-      for (let i = 1; i <= 5; i++) {
-        cards.push({ ...energyBlockCard, instanceId: `nectar-block-${i}` });
-      }
-
-      return {
-        name: 'Forest Basics',
-        affinity: 'Forest' as const,
-        cards,
-        totalCards: cards.length,
-      };
-    },
-
-    rewards: {
-      guaranteedXP: 70,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 35,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.8,
-        },
-      ],
-      coinRewards: {
-        minAmount: 100,
-        maxAmount: 200,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission04.ts ====================
-
-  /**
-   * Mission 04: Leaf Sprite
-   * Forest Affinity Mission
-   */
-
-
-  export const mission04: Mission = {
-    id: 'mission-04',
-    name: 'Leaf Sprite',
-    description: 'Test your skills against the agile Leaf Sprite.',
-    difficulty: 'easy',
-    level: 4,
-    affinity: 'Forest',
-    beastId: 'Leaf Sprite',
-
-    opponentDeck: () => {
-      // Get the catalog manager to access cards
-      const game = (globalThis as any).bloomBeastsGame;
-      if (!game?.catalogManager) {
-        console.error('[mission04] Catalog manager not available');
-        return { name: 'Leaf Sprite Deck', affinity: 'Forest', cards: [], totalCards: 0 };
-      }
-
-      // More advanced beginner deck with habitat
-      const leafSpriteCard = game.catalogManager.getCard('leaf-sprite');
-      const mushroomancerCard = game.catalogManager.getCard('mushroomancer');
-      const energyBlockCard = game.catalogManager.getCard('nectar-block');
-      const ancientForestCard = game.catalogManager.getCard('ancient-forest');
-      const powerUpCard = game.catalogManager.getCard('power-up');
-
-      const cards = [];
-
-      // Add 3 Leaf Sprites
-      for (let i = 1; i <= 6; i++) {
-        cards.push({ ...leafSpriteCard, instanceId: `leaf-sprite-${i}` });
-      }
-
-      // Add 2 Mushroomancers
-      for (let i = 1; i <= 6; i++) {
-        cards.push({ ...mushroomancerCard, instanceId: `mushroomancer-${i}` });
-      }
-
-      // Add 1 Ancient Forest habitat
-      cards.push({ ...ancientForestCard, instanceId: 'ancient-forest-1' });
-
-      // Add 5 Energy Blocks
-      for (let i = 1; i <= 6; i++) {
-        cards.push({ ...energyBlockCard, instanceId: `nectar-block-${i}` });
-      }
-
-      // Add 1 Power Up
-      cards.push({ ...powerUpCard, instanceId: 'power-up-1' });
-
-      return {
-        name: 'Forest Advancement',
-        affinity: 'Forest' as const,
-        cards,
-        totalCards: cards.length,
-      };
-    },
-
-    rewards: {
-      guaranteedXP: 80,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 40,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.8,
-        },
-      ],
-      coinRewards: {
-        minAmount: 125,
-        maxAmount: 225,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission05.ts ====================
-
-  /**
-   * Mission 05: Bubblefin
-   * Water Affinity Mission
-   */
-
-
-  export const mission05: Mission = {
-    id: 'mission-05',
-    name: 'Bubblefin',
-    description: 'Dive deep to battle the nimble Bubblefin.',
-    difficulty: 'normal',
-    level: 5,
-    affinity: 'Water',
-    beastId: 'Bubblefin',
-
-    opponentDeck: () => buildWaterDeck(),
-
-    rewards: {
-      guaranteedXP: 90,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 45,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-      ],
-      coinRewards: {
-        minAmount: 150,
-        maxAmount: 250,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission06.ts ====================
-
-  /**
-   * Mission 06: Dewdrop Drake
-   * Water Affinity Mission
-   */
-
-
-  export const mission06: Mission = {
-    id: 'mission-06',
-    name: 'Dewdrop Drake',
-    description: 'Confront the serene Dewdrop Drake by the waterfall.',
-    difficulty: 'normal',
-    level: 6,
-    affinity: 'Water',
-    beastId: 'Dewdrop Drake',
-
-    opponentDeck: () => buildWaterDeck(),
-
-    rewards: {
-      guaranteedXP: 100,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 50,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-      ],
-      coinRewards: {
-        minAmount: 175,
-        maxAmount: 275,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission07.ts ====================
-
-  /**
-   * Mission 07: Kelp Cub
-   * Water Affinity Mission
-   */
-
-
-  export const mission07: Mission = {
-    id: 'mission-07',
-    name: 'Kelp Cub',
-    description: 'Navigate the kelp forest to face the Kelp Cub.',
-    difficulty: 'normal',
-    level: 7,
-    affinity: 'Water',
-    beastId: 'Kelp Cub',
-
-    opponentDeck: () => buildWaterDeck(),
-
-    rewards: {
-      guaranteedXP: 110,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 55,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-      ],
-      coinRewards: {
-        minAmount: 200,
-        maxAmount: 300,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission08.ts ====================
-
-  /**
-   * Mission 08: Aqua Pebble
-   * Water Affinity Mission
-   */
-
-
-  export const mission08: Mission = {
-    id: 'mission-08',
-    name: 'Aqua Pebble',
-    description: 'Test your might against the resilient Aqua Pebble.',
-    difficulty: 'hard',
-    level: 8,
-    affinity: 'Water',
-    beastId: 'Aqua Pebble',
-
-    opponentDeck: () => buildWaterDeck(),
-
-    rewards: {
-      guaranteedXP: 120,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 60,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.4,
-        },
-      ],
-      coinRewards: {
-        minAmount: 225,
-        maxAmount: 325,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission09.ts ====================
-
-  /**
-   * Mission 09: Magmite
-   * Fire Affinity Mission
-   */
-
-
-  export const mission09: Mission = {
-    id: 'mission-09',
-    name: 'Magmite',
-    description: 'Brave the flames to challenge the fierce Magmite.',
-    difficulty: 'hard',
-    level: 9,
-    affinity: 'Fire',
-    beastId: 'Magmite',
-
-    opponentDeck: () => buildFireDeck(),
-
-    rewards: {
-      guaranteedXP: 130,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 65,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.5,
-        },
-      ],
-      coinRewards: {
-        minAmount: 250,
-        maxAmount: 350,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission10.ts ====================
-
-  /**
-   * Mission 10: Cinder Pup
-   * Fire Affinity Mission
-   */
-
-
-  export const mission10: Mission = {
-    id: 'mission-10',
-    name: 'Cinder Pup',
-    description: 'Face the energetic Cinder Pup in volcanic fields.',
-    difficulty: 'hard',
-    level: 10,
-    affinity: 'Fire',
-    beastId: 'Cinder Pup',
-
-    opponentDeck: () => buildFireDeck(),
-
-    rewards: {
-      guaranteedXP: 140,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 70,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.5,
-        },
-      ],
-      coinRewards: {
-        minAmount: 275,
-        maxAmount: 375,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission11.ts ====================
-
-  /**
-   * Mission 11: Charcoil
-   * Fire Affinity Mission
-   */
-
-
-  export const mission11: Mission = {
-    id: 'mission-11',
-    name: 'Charcoil',
-    description: 'Battle the smoldering Charcoil in the ember wastes.',
-    difficulty: 'hard',
-    level: 11,
-    affinity: 'Fire',
-    beastId: 'Charcoil',
-
-    opponentDeck: () => buildFireDeck(),
-
-    rewards: {
-      guaranteedXP: 150,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 75,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-      ],
-      coinRewards: {
-        minAmount: 300,
-        maxAmount: 400,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission12.ts ====================
-
-  /**
-   * Mission 12: Blazefinch
-   * Fire Affinity Mission
-   */
-
-
-  export const mission12: Mission = {
-    id: 'mission-12',
-    name: 'Blazefinch',
-    description: 'Soar through the flames to face the swift Blazefinch.',
-    difficulty: 'expert',
-    level: 12,
-    affinity: 'Fire',
-    beastId: 'Blazefinch',
-
-    opponentDeck: () => buildFireDeck(),
-
-    rewards: {
-      guaranteedXP: 160,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 80,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.4,
-        },
-      ],
-      coinRewards: {
-        minAmount: 325,
-        maxAmount: 425,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission13.ts ====================
-
-  /**
-   * Mission 13: Cirrus Floof
-   * Sky Affinity Mission
-   */
-
-
-  export const mission13: Mission = {
-    id: 'mission-13',
-    name: 'Cirrus Floof',
-    description: 'Ascend to the clouds to meet the gentle Cirrus Floof.',
-    difficulty: 'expert',
-    level: 13,
-    affinity: 'Sky',
-    beastId: 'Cirrus Floof',
-
-    opponentDeck: () => buildSkyDeck(),
-
-    rewards: {
-      guaranteedXP: 170,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 85,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.4,
-        },
-      ],
-      coinRewards: {
-        minAmount: 350,
-        maxAmount: 450,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission14.ts ====================
-
-  /**
-   * Mission 14: Gale Glider
-   * Sky Affinity Mission
-   */
-
-
-  export const mission14: Mission = {
-    id: 'mission-14',
-    name: 'Gale Glider',
-    description: 'Race through the windstorm against the agile Gale Glider.',
-    difficulty: 'expert',
-    level: 14,
-    affinity: 'Sky',
-    beastId: 'Gale Glider',
-
-    opponentDeck: () => buildSkyDeck(),
-
-    rewards: {
-      guaranteedXP: 180,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 90,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.4,
-        },
-      ],
-      coinRewards: {
-        minAmount: 375,
-        maxAmount: 475,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission15.ts ====================
-
-  /**
-   * Mission 15: Star Bloom
-   * Sky Affinity Mission
-   */
-
-
-  export const mission15: Mission = {
-    id: 'mission-15',
-    name: 'Star Bloom',
-    description: 'Reach for the stars to challenge the mystical Star Bloom.',
-    difficulty: 'expert',
-    level: 15,
-    affinity: 'Sky',
-    beastId: 'Star Bloom',
-
-    opponentDeck: () => buildSkyDeck(),
-
-    rewards: {
-      guaranteedXP: 190,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 95,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.5,
-        },
-      ],
-      coinRewards: {
-        minAmount: 400,
-        maxAmount: 500,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission16.ts ====================
-
-  /**
-   * Mission 16: Aero Moth
-   * Sky Affinity Mission
-   */
-
-
-  export const mission16: Mission = {
-    id: 'mission-16',
-    name: 'Aero Moth',
-    description: 'Dance among the high winds with the elusive Aero Moth.',
-    difficulty: 'expert',
-    level: 16,
-    affinity: 'Sky',
-    beastId: 'Aero Moth',
-
-    opponentDeck: () => buildSkyDeck(),
-
-    rewards: {
-      guaranteedXP: 200,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 100,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 2,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.5,
-        },
-      ],
-      coinRewards: {
-        minAmount: 425,
-        maxAmount: 525,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts\screens\missions\definitions\mission17.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/mission17.ts ====================
 
   /**
    * Mission 17: Cluck Norris
@@ -2356,7 +2378,7 @@ namespace BloomBeasts {
     // Access the catalog manager through the global game instance
     const game = (globalThis as any).bloomBeastsGame;
     if (!game?.catalogManager) {
-      console.error('[mission17] Catalog manager not available');
+      Logger.error('[mission17] Catalog manager not available');
       return {
         name: 'Cluck Norris Deck',
         affinity: 'Forest',
@@ -2369,7 +2391,7 @@ namespace BloomBeasts {
     const cluckNorrisCard = game.catalogManager.getCard('cluck-norris') as BloomBeastCard;
 
     if (!cluckNorrisCard) {
-      console.error('[mission17] Cluck Norris card not found in catalog');
+      Logger.error('[mission17] Cluck Norris card not found in catalog');
       return {
         name: 'Cluck Norris Deck',
         affinity: 'Forest',
@@ -2444,7 +2466,7 @@ namespace BloomBeasts {
     unlocked: false,
   };
 
-  // ==================== bloombeasts\screens\missions\definitions\index.ts ====================
+  // ==================== bloombeasts/screens/missions/definitions/index.ts ====================
 
   /**
    * Central export for all mission definitions
@@ -2485,7 +2507,7 @@ namespace BloomBeasts {
     return missions.filter(mission => mission.timesCompleted > 0);
   };
 
-  // ==================== bloombeasts\common\utils\polyfills.ts ====================
+  // ==================== bloombeasts/common/utils/polyfills.ts ====================
 
   /**
    * Polyfills and type definitions for ES2020 compatibility
@@ -2565,47 +2587,10 @@ namespace BloomBeasts {
     }
   }
 
-  /**
-   * Array.from polyfill
-   */
-  export function arrayFrom<T>(iterable: ArrayLike<T> | Iterable<T>): T[] {
-    const result: T[] = [];
-    if ('length' in iterable) {
-      // ArrayLike
-      for (let i = 0; i < iterable.length; i++) {
-        result.push(iterable[i]);
-      }
-    } else if (Symbol.iterator in iterable) {
-      // Iterable - manual iteration to avoid downlevelIteration requirement
-      const iterator = (iterable as Iterable<T>)[Symbol.iterator]();
-      let iterResult = iterator.next();
-      while (!iterResult.done) {
-        result.push(iterResult.value);
-        iterResult = iterator.next();
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Array.find polyfill
-   */
-  export function arrayFind<T>(
-    array: T[],
-    predicate: (value: T, index: number, array: T[]) => boolean
-  ): T | undefined {
-    for (let i = 0; i < array.length; i++) {
-      if (predicate(array[i], i, array)) {
-        return array[i];
-      }
-    }
-    return undefined;
-  }
-
   // Export as global Map replacement if needed
   export type MapPolyfill<K extends string | number, V> = SimpleMap<K, V>;
 
-  // ==================== bloombeasts\common\engine\types\game.ts ====================
+  // ==================== bloombeasts/common/engine/types/game.ts ====================
 
   /**
    * Game state and player types
@@ -2624,15 +2609,6 @@ namespace BloomBeasts {
     Player2Playing = 'Player2Playing',
     Player2EndOfTurn = 'Player2EndOfTurn',
     Finished = 'Finished'
-  }
-
-  // Phase type for game flow (kept for backward compatibility)
-  export enum Phase {
-    Setup = 'Setup',
-    Draw = 'Draw',
-    Main = 'Main',
-    Combat = 'Combat',
-    End = 'End'
   }
 
   export interface Player {
@@ -2660,8 +2636,7 @@ namespace BloomBeasts {
     activePlayer: 0 | 1;  // Current player's turn
     habitatZone: HabitatCard | null;
     turn: number;
-    phase: Phase;  // Kept for backward compatibility
-    battleState: BattlePhase;  // New state-based battle flow
+    battleState: BattlePhase;  // State-based battle flow
     turnHistory: any[];  // History of actions taken
     // Pending actions that need to be resolved
     drawCardsQueued?: number;
@@ -2676,9 +2651,6 @@ namespace BloomBeasts {
       affinity?: string;
     };
   }
-
-  // Alias for Phase from core
-  export type GamePhase = Phase;
 
   export interface GameAction {
     type: string;
@@ -2716,281 +2688,7 @@ namespace BloomBeasts {
     habitatCardId: string;
   }
 
-  // ==================== bloombeasts\common\engine\utils\Logger.ts ====================
-
-  /**
-   * Logger
-   *
-   * Professional logging system with configurable log levels.
-   * Replaces console.log statements throughout the codebase.
-   */
-
-  export enum LogLevel {
-    DEBUG = 0,
-    INFO = 1,
-    WARN = 2,
-    ERROR = 3,
-    NONE = 4,
-  }
-
-  export interface LoggerConfig {
-    level: LogLevel;
-    prefix?: string;
-    timestamps?: boolean;
-    colors?: boolean;
-  }
-
-  class LoggerClass {
-    private config: LoggerConfig = {
-      level: LogLevel.INFO,
-      timestamps: true,
-      colors: true,
-    };
-
-    /**
-     * Configure the logger
-     * @param config Logger configuration
-     */
-    configure(config: Partial<LoggerConfig>): void {
-      this.config = { ...this.config, ...config };
-    }
-
-    /**
-     * Set log level
-     * @param level The minimum log level to display
-     */
-    setLevel(level: LogLevel): void {
-      this.config.level = level;
-    }
-
-    /**
-     * Get current log level
-     * @returns Current log level
-     */
-    getLevel(): LogLevel {
-      return this.config.level;
-    }
-
-    /**
-     * Format log message with timestamp and prefix
-     */
-    private format(level: string, message: string, prefix?: string): string {
-      const parts: string[] = [];
-
-      if (this.config.timestamps) {
-        const timestamp = new Date().toISOString();
-        parts.push(`[${timestamp}]`);
-      }
-
-      parts.push(`[${level}]`);
-
-      if (prefix || this.config.prefix) {
-        parts.push(`[${prefix || this.config.prefix}]`);
-      }
-
-      parts.push(message);
-
-      return parts.join(' ');
-    }
-
-    /**
-     * Log debug message
-     * @param message Message to log
-     * @param data Optional data to log
-     */
-    debug(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.DEBUG) {
-        const formatted = this.format('DEBUG', message);
-        console.log(formatted, ...data);
-      }
-    }
-
-    /**
-     * Log info message
-     * @param message Message to log
-     * @param data Optional data to log
-     */
-    info(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.INFO) {
-        const formatted = this.format('INFO', message);
-        console.log(formatted, ...data);
-      }
-    }
-
-    /**
-     * Log warning message
-     * @param message Message to log
-     * @param data Optional data to log
-     */
-    warn(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.WARN) {
-        const formatted = this.format('WARN', message);
-        console.warn(formatted, ...data);
-      }
-    }
-
-    /**
-     * Log error message
-     * @param message Message to log
-     * @param data Optional data to log
-     */
-    error(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.ERROR) {
-        const formatted = this.format('ERROR', message);
-        console.error(formatted, ...data);
-      }
-    }
-
-    /**
-     * Create a child logger with a specific prefix
-     * @param prefix Prefix for all logs from this logger
-     * @returns New logger instance with prefix
-     */
-    child(prefix: string): ChildLogger {
-      return new ChildLogger(this, prefix);
-    }
-
-    private timers: Map<string, number> = new Map();
-
-    /**
-     * Group related logs together (simplified for basic console support)
-     * @param label Group label
-     * @param collapsed Whether group should be collapsed by default (ignored)
-     */
-    group(label: string, collapsed: boolean = false): void {
-      if (this.config.level <= LogLevel.INFO) {
-        const formatted = this.format('GROUP', `>>> ${label}`);
-        console.log(formatted);
-      }
-    }
-
-    /**
-     * End a log group (simplified for basic console support)
-     */
-    groupEnd(): void {
-      if (this.config.level <= LogLevel.INFO) {
-        const formatted = this.format('GROUP', `<<<`);
-        console.log(formatted);
-      }
-    }
-
-    /**
-     * Log a table (simplified for basic console support)
-     * @param data Data to display as table
-     */
-    table(data: any): void {
-      if (this.config.level <= LogLevel.INFO) {
-        const formatted = this.format('TABLE', JSON.stringify(data, null, 2));
-        console.log(formatted);
-      }
-    }
-
-    /**
-     * Start a performance timer
-     * @param label Timer label
-     */
-    time(label: string): void {
-      if (this.config.level <= LogLevel.DEBUG) {
-        this.timers.set(label, Date.now());
-        const formatted = this.format('TIMER', `${label}: started`);
-        console.log(formatted);
-      }
-    }
-
-    /**
-     * End a performance timer and log the result
-     * @param label Timer label
-     */
-    timeEnd(label: string): void {
-      if (this.config.level <= LogLevel.DEBUG) {
-        const startTime = this.timers.get(label);
-        if (startTime) {
-          const duration = Date.now() - startTime;
-          this.timers.delete(label);
-          const formatted = this.format('TIMER', `${label}: ${duration}ms`);
-          console.log(formatted);
-        }
-      }
-    }
-
-    /**
-     * Assert a condition and log error if false
-     * @param condition Condition to check
-     * @param message Error message if condition is false
-     */
-    assert(condition: boolean, message: string): void {
-      if (this.config.level <= LogLevel.ERROR) {
-        if (!condition) {
-          const formatted = this.format('ASSERT', message);
-          console.error(formatted);
-        }
-      }
-    }
-  }
-
-  /**
-   * Child logger with a specific prefix
-   */
-  class ChildLogger {
-    constructor(
-      private parent: LoggerClass,
-      private prefix: string
-    ) {}
-
-    debug(message: string, ...data: any[]): void {
-      this.parent.debug(`[${this.prefix}] ${message}`, ...data);
-    }
-
-    info(message: string, ...data: any[]): void {
-      this.parent.info(`[${this.prefix}] ${message}`, ...data);
-    }
-
-    warn(message: string, ...data: any[]): void {
-      this.parent.warn(`[${this.prefix}] ${message}`, ...data);
-    }
-
-    error(message: string, ...data: any[]): void {
-      this.parent.error(`[${this.prefix}] ${message}`, ...data);
-    }
-
-    group(label: string, collapsed?: boolean): void {
-      this.parent.group(`[${this.prefix}] ${label}`, collapsed);
-    }
-
-    groupEnd(): void {
-      this.parent.groupEnd();
-    }
-
-    table(data: any): void {
-      this.parent.table(data);
-    }
-
-    time(label: string): void {
-      this.parent.time(`[${this.prefix}] ${label}`);
-    }
-
-    timeEnd(label: string): void {
-      this.parent.timeEnd(`[${this.prefix}] ${label}`);
-    }
-  }
-
-  // Export singleton instance
-  export const Logger = new LoggerClass();
-
-  // Configure based on environment
-  // if (typeof process !== 'undefined' && process.env) {
-  //   const env = 'development';
-
-  //   if (env === 'production') {
-  //     Logger.setLevel(LogLevel.WARN);
-  //   } else if (env === 'test') {
-  //     Logger.setLevel(LogLevel.ERROR);
-  //   } else {
-      Logger.setLevel(LogLevel.DEBUG);
-  //   }
-  // }
-
-  // ==================== bloombeasts\screens\missions\MissionManager.ts ====================
+  // ==================== bloombeasts/screens/missions/MissionManager.ts ====================
 
   /**
    * Mission Manager - Handles mission progress, rewards, and completion
@@ -3399,7 +3097,129 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\missions\MissionSelectionUI.ts ====================
+  // ==================== bloombeasts/core/interfaces/IMissionSelectionUI.ts ====================
+
+  /**
+   * IMissionSelectionUI - Interface for mission selection UI
+   * Breaks circular dependency between core and screens
+   */
+
+  /**
+   * Mission display data returned by the UI
+   */
+  export interface MissionDisplayData {
+    mission: any;  // TODO: Import Mission type when refactoring
+    isAvailable: boolean;
+    completionCount: number;
+    difficultyColor: string;
+    rewardPreview: string[];
+  }
+
+  /**
+   * Interface for mission selection UI operations
+   */
+  export interface IMissionSelectionUI {
+    /**
+     * Set the player's current level for mission filtering
+     */
+    setPlayerLevel(level: number): void;
+
+    /**
+     * Get all missions formatted for display
+     */
+    getMissionList(): MissionDisplayData[];
+  }
+
+  // ==================== bloombeasts/core/ColorPalette.ts ====================
+
+  /**
+   * Color Palette - Centralized color constants
+   * Eliminates hardcoded color values throughout the codebase
+   */
+
+  export const COLOR_PALETTE = {
+    /**
+     * Player-related colors
+     */
+    player: {
+      accent: '#4a8ec2',      // Player UI accent color
+      primary: '#fff',        // Primary text/elements
+    },
+
+    /**
+     * Opponent/danger colors
+     */
+    opponent: {
+      danger: '#ff6b6b',      // Opponent/danger indicators
+    },
+
+    /**
+     * Mission difficulty colors
+     */
+    difficulty: {
+      tutorial: '#90EE90',    // Light green
+      easy: '#87CEEB',        // Sky blue
+      normal: '#FFD700',      // Gold
+      hard: '#FF6347',        // Tomato red
+      expert: '#8B008B',      // Dark magenta
+      legendary: '#FF1493',   // Deep pink
+    },
+
+    /**
+     * Card type colors
+     */
+    cardType: {
+      habitat: '#4caf50',     // Habitat green
+      buff: '#FFD700',        // Buff gold
+      trap: '#ff6b6b',        // Trap red
+      magic: '#9c27b0',       // Magic purple
+    },
+
+    /**
+     * UI state colors
+     */
+    ui: {
+      disabled: '#666',       // Disabled elements
+      muted: '#888',          // Muted/inactive elements
+      background: '#333',     // Dark background
+      white: '#fff',          // White text
+      default: '#FFFFFF',     // Default color
+    },
+
+    /**
+     * Toggle/button state colors
+     */
+    toggle: {
+      on: '#4CAF50',          // Toggle on (green)
+      off: '#888',            // Toggle off (gray)
+    },
+
+    /**
+     * Button colors
+     */
+    button: {
+      green: '#4CAF50',
+      red: '#f44336',
+      default: '#666',
+    },
+  } as const;
+
+  /**
+   * Helper function to get difficulty color
+   */
+  export function getDifficultyColor(difficulty: string): string {
+    const difficultyMap: Record<string, string> = {
+      'tutorial': COLOR_PALETTE.difficulty.tutorial,
+      'easy': COLOR_PALETTE.difficulty.easy,
+      'normal': COLOR_PALETTE.difficulty.normal,
+      'hard': COLOR_PALETTE.difficulty.hard,
+      'expert': COLOR_PALETTE.difficulty.expert,
+      'legendary': COLOR_PALETTE.difficulty.legendary,
+    };
+    return difficultyMap[difficulty] || COLOR_PALETTE.ui.default;
+  }
+
+  // ==================== bloombeasts/screens/missions/MissionSelectionUI.ts ====================
 
   /**
    * Mission Selection UI - Display available missions and let players choose
@@ -3414,7 +3234,7 @@ namespace BloomBeasts {
     rewardPreview: string[];
   }
 
-  export class MissionSelectionUI {
+  export class MissionSelectionUI implements IMissionSelectionUI {
     private missionManager: MissionManager;
     private currentPlayerLevel: number = 1;
 
@@ -3478,25 +3298,10 @@ namespace BloomBeasts {
     }
 
     /**
-     * Get difficulty color for UI
+     * Get difficulty color for UI (now uses centralized color palette)
      */
     private getDifficultyColor(difficulty: string): string {
-      switch (difficulty) {
-        case 'tutorial':
-          return '#90EE90'; // Light green
-        case 'easy':
-          return '#87CEEB'; // Sky blue
-        case 'normal':
-          return '#FFD700'; // Gold
-        case 'hard':
-          return '#FF6347'; // Tomato red
-        case 'expert':
-          return '#8B008B'; // Dark magenta
-        case 'legendary':
-          return '#FF1493'; // Deep pink
-        default:
-          return '#FFFFFF';
-      }
+      return getDifficultyColor(difficulty);
     }
 
     /**
@@ -3640,7 +3445,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\AssetCatalog.ts ====================
+  // ==================== bloombeasts/AssetCatalog.ts ====================
 
   /**
    * Asset Catalog - Dynamically Generated Asset IDs
@@ -3838,7 +3643,7 @@ namespace BloomBeasts {
     return LEGACY_SOUND_ID_MAP[soundId] || soundId;
   }
 
-  // ==================== bloombeasts\AssetCatalogManager.ts ====================
+  // ==================== bloombeasts/AssetCatalogManager.ts ====================
 
   /**
    * Asset Catalog Manager - Centralized Asset Management System
@@ -4219,432 +4024,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\common\ui\styles\styles\colors.ts ====================
-
-  /**
-   * Shared color palette for BloomBeasts
-   * Used across both Web and Horizon platforms
-   */
-
-  export const COLORS = {
-    // Primary colors
-    background: '#1a1a2e',
-    backgroundDark: '#0f0f1e',
-    primary: '#00d9ff',
-    primaryLight: '#3498db',
-
-    // Text colors
-    textPrimary: '#ffffff',
-    textSecondary: '#aaaaaa',
-    textMuted: '#666666',
-
-    // UI element colors
-    buttonPrimary: '#3498db',
-    buttonDanger: '#e74c3c',
-    buttonSuccess: '#27ae60',
-    buttonDisabled: '#555555',
-    surface: '#2c3e50',
-    disabled: '#555555',
-    error: '#e74c3c',
-
-    // Card/Panel colors
-    cardBackground: '#2c3e50',
-    panelBackground: '#1a1a1a',
-    overlayBackground: 'rgba(0, 0, 0, 0.8)',
-    overlayBackgroundDark: 'rgba(0, 0, 0, 0.9)',
-
-    // Borders
-    borderPrimary: '#00d9ff',
-    borderSuccess: '#27ae60',
-    borderDefault: '#3498db',
-    border: '#3a3a4a',
-
-    // Affinity colors
-    affinity: {
-      fire: '#e74c3c',
-      water: '#3498db',
-      forest: '#27ae60',
-      sky: '#9b59b6',
-      neutral: '#95a5a6',
-    },
-
-    // Status colors
-    success: '#27ae60',
-    warning: '#f39c12',
-    danger: '#e74c3c',
-    info: '#3498db',
-
-    // Rarity colors (for cards)
-    rarity: {
-      common: '#95a5a6',
-      uncommon: '#27ae60',
-      rare: '#3498db',
-      epic: '#9b59b6',
-      legendary: '#f39c12',
-    },
-  } as const;
-
-  // ==================== bloombeasts\common\ui\styles\styles\dimensions.ts ====================
-
-  /**
-   * Shared dimensions and spacing for BloomBeasts
-   * Used across both Web and Horizon platforms
-   */
-
-  export const DIMENSIONS = {
-    // Panel/Screen dimensions
-    panel: {
-      width: 1280,
-      height: 720,
-    },
-
-    // Button dimensions
-    button: {
-      height: 50,
-      minWidth: 200,
-      padding: 15,
-      borderRadius: 10,
-    },
-
-    buttonSmall: {
-      height: 40,
-      minWidth: 100,
-      padding: 10,
-      borderRadius: 8,
-    },
-
-    // Card dimensions
-    card: {
-      width: 150,
-      height: 200,
-      borderRadius: 10,
-      borderWidth: 2,
-      padding: 10,
-    },
-
-    // Mission card dimensions
-    missionCard: {
-      padding: 15,
-      borderRadius: 10,
-      borderWidth: 2,
-      minHeight: 80,
-    },
-
-    // Dialog/Modal dimensions
-    dialog: {
-      minWidth: 400,
-      maxWidth: 600,
-      padding: 30,
-      borderRadius: 15,
-    },
-
-    // Spacing scale
-    spacing: {
-      xs: 5,
-      sm: 10,
-      md: 15,
-      lg: 20,
-      xl: 30,
-      xxl: 40,
-    },
-
-    // Font sizes
-    fontSize: {
-      xs: 12,
-      sm: 14,
-      md: 18,
-      lg: 20,
-      xl: 24,
-      xxl: 28,
-      title: 36,
-      hero: 72,
-    },
-
-    // Border widths
-    borderWidth: {
-      thin: 1,
-      normal: 2,
-      thick: 3,
-    },
-
-    // Stat badge dimensions
-    statBadge: {
-      padding: 10,
-      borderRadius: 8,
-      borderWidth: 2,
-    },
-  } as const;
-
-  /**
-   * Common gaps for flexbox layouts
-   */
-  export const GAPS = {
-    cards: 15,
-    buttons: 3,
-    missions: 10,
-    stats: 20,
-    sections: 30,
-  } as const;
-
-  // ==================== bloombeasts\common\ui\constants\dimensions.ts ====================
-
-  // Multi-use card dimensions
-  export const standardCardDimensions = {
-    width: 210,
-    height: 280,
-  };
-
-  export const missionCompleteCardDimensions = {
-    width: 550,
-    height: 330,
-  };
-
-  export const chestImageMissionCompleteDimensions = {
-    width: 160,
-    height: 180,
-  };
-
-  // Multi-use button dimensions
-  export const sideMenuButtonDimensions = {
-    width: 175,
-    height: 72,
-  };
-
-  export const longButtonDimensions = {
-    width: 201,
-    height: 35,
-  };
-
-  export const smallButtonDimensions = {
-    width: 89,
-    height: 89,
-  };
-
-  // ==================== bloombeasts\common\ui\ScreenUtils.ts ====================
-
-  /**
-   * Utilities for screen components
-   * Provides type-safe ways to work with dynamic UI components
-   */
-
-
-  /**
-   * Type annotation for UINode - since UINode is dynamically loaded, we use 'any' type
-   */
-  export type UINodeType<T = any> = any;
-
-  /**
-   * UI wrapper for RuntimeCard with additional UI properties
-   * These are properties used in the UI but not in the core game model
-   */
-  export interface UICardDisplay {
-    // The runtime card data
-    card: RuntimeCard;
-    // Add emoji based on affinity
-    emoji?: string;
-    // Use level as rarity indicator
-    rarityLevel?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-    // Map attack/defense/health for display
-    attack?: number;
-    defense?: number;
-    health?: number;
-  }
-
-  /**
-   * Convert RuntimeCard to UICardDisplay with additional UI properties
-   */
-  export function toUICard(card: RuntimeCard): UICardDisplay {
-    const uiCard: UICardDisplay = {
-      card: card,
-      attack: 'baseAttack' in card ? card.baseAttack : undefined,
-      defense: 0, // Not in RuntimeCard - using 0 as default
-      health: 'baseHealth' in card ? card.baseHealth : undefined,
-      emoji: getCardEmoji(card),
-      rarityLevel: getCardRarity(card)
-    };
-    return uiCard;
-  }
-
-  /**
-   * Get emoji based on card affinity
-   */
-  function getCardEmoji(card: RuntimeCard): string {
-    // Check if card has affinity property (Beast, Buff, Habitat cards)
-    const affinity = 'affinity' in card ? (card as any).affinity : undefined;
-    switch (affinity?.toLowerCase()) {
-      case 'fire':
-        return '🔥';
-      case 'water':
-        return '💧';
-      case 'forest':
-        return '🌿';
-      case 'sky':
-        return '☁️';
-      default:
-        return '✨';
-    }
-  }
-
-  /**
-   * Determine rarity based on card level
-   */
-  function getCardRarity(card: RuntimeCard): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
-    const level = card.level || 1;
-    if (level >= 10) return 'legendary';
-    if (level >= 7) return 'epic';
-    if (level >= 5) return 'rare';
-    if (level >= 3) return 'uncommon';
-    return 'common';
-  }
-
-  /**
-   * Extend MissionDisplay with UI properties
-   */
-  export interface UIMissionDisplay {
-    id: string;
-    name: string;
-    level: number;
-    difficulty: string;
-    isAvailable: boolean;
-    isCompleted: boolean;
-    description: string;
-    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
-    beastId?: string;
-    // Additional UI properties
-    progress?: number;
-    requirement?: number;
-    rewards?: {
-      coins?: number;
-    };
-  }
-
-  // ==================== bloombeasts\common\ui\constants\positions.ts ====================
-
-  // Type definitions
-  export interface SimplePosition {
-    x: number;
-    y: number;
-  }
-
-  interface PlayerCardPositions {
-    beastOne: SimplePosition;
-    beastTwo: SimplePosition;
-    beastThree: SimplePosition;
-    buffOne: SimplePosition;
-    buffTwo: SimplePosition;
-    trapOne: SimplePosition;
-    trapTwo: SimplePosition;
-    trapThree: SimplePosition;
-    health: SimplePosition;
-    energy: SimplePosition;
-    deckCount: SimplePosition;
-  }
-
-  interface CardTextInfo extends SimplePosition {
-    size: number;
-    textAlign?: 'left' | 'right' | 'center' | 'start' | 'end';
-    textBaseline?: 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom';
-  }
-
-  export interface CardTextPositions {
-    cost: CardTextInfo;
-    affinity: SimplePosition;
-    level: CardTextInfo;
-    experienceBar: SimplePosition;
-    name: CardTextInfo;
-    ability: CardTextInfo;
-    attack: CardTextInfo;
-    health: CardTextInfo;
-    beastImage: SimplePosition;
-    icons: {
-      attack: CardTextInfo;
-      ability: CardTextInfo;
-    };
-  }
-
-  export interface UIButtonPositions {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    spacing: number;
-  }
-
-  export interface UITextSafeZone {
-    x: number;
-    y: number;
-    lineHeight: number;
-  }
-
-  export interface SideMenuPositions {
-    x: number;
-    y: number;
-    headerStartPosition: SimplePosition;
-    textStartPosition: SimplePosition;
-    buttonStartPosition: SimplePosition;
-    playerName: CardTextInfo;
-    playerLevel: CardTextInfo;
-    playerExperienceBar: SimplePosition & { maxWidth: number };
-  }
-
-  export interface BattleBoardAssetPositions {
-    playerOne: PlayerCardPositions;
-    playOneInfoPosition: SimplePosition;
-    playerTwo: PlayerCardPositions;
-    playerTwoInfoPosition: SimplePosition;
-    habitatZone: SimplePosition;
-    cardTextPositions: CardTextPositions;
-  }
-
-
-  /**
-   * Safe zone for UI buttons and interactive elements
-   * This position ensures elements won't be covered by platform-specific UI (status bars, navigation, etc.)
-   */
-  export const uiSafeZoneButtons: UIButtonPositions = {
-    x: 1149,
-    y: 131,
-    width: DIMENSIONS.button.minWidth,
-    height: DIMENSIONS.button.height,
-    spacing: DIMENSIONS.spacing.xxl * 2, // Vertical spacing between stacked buttons
-  };
-
-  /**
-   * Safe zone for text display (titles, counters, etc.)
-   * This area is safe for displaying informational text
-   */
-  export const uiSafeZoneText: UITextSafeZone = {
-    x: 1152,
-    y: 407,
-    lineHeight: DIMENSIONS.spacing.xl, // Vertical spacing between lines of text
-  };
-
-  /**
-   * Side menu positions
-   * The side menu contains player info, text, and buttons
-   */
-  export const sideMenuPositions: SideMenuPositions = {
-    x: 1045,  // Moved 100px left
-    y: 128,
-    headerStartPosition: { x: 1070, y: 152 },  // Moved 100px left
-    textStartPosition: { x: 1082, y: 240 },  // Moved 100px left
-    buttonStartPosition: { x: 1070, y: 304 },  // Moved 100px left and up (text area now half size)
-    playerName: { x: 10, y: 426, textAlign: 'left', textBaseline: 'top', size: DIMENSIONS.fontSize.sm },
-    playerLevel: { x: 64, y: 445, textAlign: 'center', textBaseline: 'top', size: DIMENSIONS.fontSize.xs },
-    playerExperienceBar: { x: 9, y: 445, maxWidth: 109 },
-  };
-
-  /**
-   * Mission complete popup card positions
-   */
-  export const missionCompleteCardPositions = {
-    title: { x: 275, y: 24, size: DIMENSIONS.fontSize.title, textAlign: 'center', textBaseline: 'top' },
-    chestImage: { x: 73, y: 76 },
-    infoText: { x: 245, y: 98, size: DIMENSIONS.fontSize.sm, textAlign: 'left', textBaseline: 'top' },
-    claimRewardButton: { x: 175, y: 271 },
-  };
-
-  // ==================== bloombeasts\common\ui\types\types\bindings.ts ====================
+  // ==================== bloombeasts/common/ui/types/types/bindings.ts ====================
 
   /**
    * Binding Type Declarations
@@ -4704,163 +4084,7 @@ namespace BloomBeasts {
     clearInterval: (id: number) => void;
   }
 
-  // ==================== bloombeasts\common\ui\components\common\Button.ts ====================
-
-  /**
-   * Common Button Component
-   * Reusable button with hover effects and sound
-   */
-
-
-  export type ButtonType = 'default' | 'short' | 'long';
-  export type ButtonColor = 'default' | 'red' | 'green';
-
-  export interface ButtonProps {
-    ui: UIMethodMappings;
-    label: string | ValueBindingBase<string> | ReadonlyBindingInterface<string>;
-    onClick: () => void;
-    type?: ButtonType;
-
-    // Simple usage: just pass color string (static)
-    color?: ButtonColor;
-    disabled?: boolean | ValueBindingBase<boolean> | ReadonlyBindingInterface<boolean>;
-
-    // Advanced usage: pass complete bindings that return final computed values
-    // Use these when you need reactive bindings (avoids .derive() on derived bindings)
-    imageSource?: any; // Binding or static image source for button background
-    opacity?: any; // Binding or static opacity value (0-1)
-    textColor?: any; // Binding or static text color string
-
-    playSfx?: (sfxId: string) => void;
-    style?: any; // Additional style overrides
-  }
-
-  /**
-   * Get button dimensions based on type
-   */
-  function getButtonDimensions(type: ButtonType): { width: number; height: number } {
-    switch (type) {
-      case 'short':
-        return { width: 80, height: 36 };
-      case 'long':
-        return longButtonDimensions;
-      case 'default':
-      default:
-        return sideMenuButtonDimensions;
-    }
-  }
-
-  /**
-   * Get button asset ID based on color and type
-   */
-  function getButtonAssetId(color: ButtonColor, type: ButtonType): string {
-    // Long buttons have their own green variant
-    if (type === 'long' && color === 'green') {
-      return 'long-green-button';
-    }
-
-    // Standard color mapping
-    switch (color) {
-      case 'red':
-        return 'red-button';
-      case 'green':
-        return 'green-button';
-      case 'default':
-      default:
-        return 'standard-button';
-    }
-  }
-
-  /**
-   * Create a common button with hover effects and sound
-   *
-   * Two usage patterns:
-   * 1. Simple: Pass static `color` and `disabled` props (for static buttons)
-   * 2. Advanced: Pass complete `imageSource`, `opacity`, `textColor` bindings
-   *    (for reactive buttons - avoids calling .derive() on derived bindings)
-   */
-  export function createButton(props: ButtonProps): UINodeType {
-    const {
-      ui,
-      label,
-      onClick,
-      type = 'default',
-      color = 'default',
-      disabled = false,
-      imageSource: customImageSource,
-      opacity: customOpacity,
-      textColor: customTextColor,
-      playSfx,
-      style = {},
-    } = props;
-
-    const dimensions = getButtonDimensions(type);
-
-    // Use custom bindings if provided, otherwise compute from color/disabled
-    const imageSource = customImageSource ?? (ui.assetIdToImageSource?.(getButtonAssetId(color, type)) || null);
-
-    // For opacity and textColor:
-    // - If custom values provided, use them (supports reactive bindings)
-    // - If disabled is a static boolean, use it to determine appearance
-    // - If disabled is a binding, use enabled appearance by default
-    //   (caller should provide customOpacity/customTextColor for reactive appearance)
-    const opacity = customOpacity ?? (
-      (typeof disabled === 'boolean' && disabled) ? 0.5 : 1.0
-    );
-    const textColor = customTextColor ?? (
-      (typeof disabled === 'boolean' && disabled) ? '#888' : COLORS.textPrimary
-    );
-
-    return ui.Pressable({
-      onClick: () => {
-        if (playSfx) {
-          playSfx('sfx-menu-button-select');
-        }
-        onClick();
-      },
-      disabled: disabled,
-      style: {
-        width: dimensions.width,
-        height: dimensions.height,
-        ...style,
-      },
-      children: [
-        // Button background image
-        ui.Image({
-          source: imageSource,
-          style: {
-            position: 'absolute',
-            width: dimensions.width,
-            height: dimensions.height,
-            opacity: opacity,
-          },
-        }),
-        // Button text centered
-        ui.View({
-          style: {
-            position: 'absolute',
-            width: dimensions.width,
-            height: dimensions.height,
-            justifyContent: 'center',
-            alignItems: 'center',
-          },
-          children: ui.Text({
-            text: label,
-            style: {
-              fontSize: style.fontSize ?? DIMENSIONS.fontSize.md,
-              color: textColor,
-              textAlign: style.textAlign ?? 'center',
-              fontWeight: style.fontWeight ?? 'bold',
-              textAlignVertical: 'center',
-              marginTop: style.paddingTop ?? 0,
-            },
-          }),
-        }),
-      ],
-    });
-  }
-
-  // ==================== bloombeasts\common\ui\types\types\BindingManager.ts ====================
+  // ==================== bloombeasts/common/ui/types/types/BindingManager.ts ====================
 
   /**
    * Centralized Binding Manager
@@ -5088,7 +4312,735 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\common\ui\screens\SideMenu.ts ====================
+  // ==================== bloombeasts/core/GameConstants.ts ====================
+
+  /**
+   * Game Constants - Centralized configuration values
+   * Eliminates magic numbers and hardcoded values throughout the codebase
+   */
+
+  /**
+   * XP thresholds for player leveling (cumulative)
+   * Formula: XP = 100 * (2.0 ^ (level - 1))
+   */
+  export const XP_THRESHOLDS = [
+    0,      // Level 1
+    100,    // Level 2: 100 XP
+    300,    // Level 3: 300 XP total
+    700,    // Level 4: 700 XP total
+    1500,   // Level 5: 1500 XP total
+    3100,   // Level 6: 3100 XP total
+    6300,   // Level 7: 6300 XP total
+    12700,  // Level 8: 12700 XP total
+    25500,  // Level 9: 25500 XP total
+  ] as const;
+
+  /**
+   * Game balance constants
+   */
+  export const GAME_CONSTANTS = {
+    /** Maximum player level */
+    MAX_PLAYER_LEVEL: 9,
+
+    /** Maximum boost upgrade level */
+    MAX_BOOST_LEVEL: 6,
+
+    /** Starting player health */
+    STARTING_HEALTH: 30,
+
+    /** Maximum energy */
+    MAX_ENERGY: 10,
+
+    /** Turn timer in seconds */
+    TURN_TIMER_SECONDS: 300,
+
+    /** Starting hand size */
+    STARTING_HAND_SIZE: 3,
+
+    /** Mission ID for Cluck Norris (used in leaderboard) */
+    MISSION_CLUCK_NORRIS_ID: 'mission17',
+
+    /** Attack animation duration in milliseconds */
+    ATTACK_ANIMATION_DURATION_MS: 500,
+
+    /** Card detail popup display duration in milliseconds */
+    CARD_DETAIL_POPUP_DURATION_MS: 2000,
+
+    /** Deck size (maximum cards in deck) */
+    DECK_SIZE: 30,
+
+    /** Minimum deck size required to start a battle */
+    MIN_DECK_SIZE: 1,
+
+    /** Energy blocks per deck */
+    ENERGY_BLOCKS_PER_DECK: 27,
+
+    /** Stat increase per level (10% per level) */
+    STAT_INCREASE_PER_LEVEL: 0.1,
+
+    /** Max priority value for combat helpers */
+    MAX_PRIORITY_VALUE: 999,
+
+    /** Leaderboard max entries to display */
+    LEADERBOARD_MAX_ENTRIES: 10,
+
+    /** Percentage to decimal conversion divisor */
+    PERCENTAGE_TO_DECIMAL: 100,
+
+    /** Milliseconds per second */
+    MILLISECONDS_PER_SECOND: 1000,
+
+    /** Seconds per minute */
+    SECONDS_PER_MINUTE: 60,
+
+    /** Volume max value */
+    VOLUME_MAX: 100,
+  } as const;
+
+  /**
+   * Sound asset IDs - Type-safe references to all sound effects
+   */
+  export const SOUND_EFFECTS = {
+    MENU_BUTTON_SELECT: 'sfx-menu-button-select',
+    ATTACK: 'sfx-attack',
+    PLAY_CARD: 'sfx-play-card',
+    TRAP_ACTIVATED: 'sfx-trap-card-activated',
+    WIN: 'sfx-win',
+    LOSE: 'sfx-lose',
+    UPGRADE: 'sfx-upgrade',
+    UPGRADE_ROOSTER: 'sfx-upgrade-rooster',
+  } as const;
+
+  /**
+   * Music asset IDs - Type-safe references to all music tracks
+   */
+  export const MUSIC_TRACKS = {
+    BACKGROUND: 'music-background',
+    BATTLE: 'music-battle',
+  } as const;
+
+  /**
+   * Calculate player level from total XP (derived data)
+   */
+  export function getPlayerLevel(totalXP: number): number {
+    for (let level = GAME_CONSTANTS.MAX_PLAYER_LEVEL; level >= 1; level--) {
+      if (totalXP >= XP_THRESHOLDS[level - 1]) {
+        return level;
+      }
+    }
+    return 1;
+  }
+
+  // ==================== bloombeasts/common/ui/styles/styles/colors.ts ====================
+
+  /**
+   * Shared color palette for BloomBeasts
+   * Used across both Web and Horizon platforms
+   */
+
+  export const COLORS = {
+    // Primary colors
+    background: '#1a1a2e',
+    backgroundDark: '#0f0f1e',
+    primary: '#00d9ff',
+    primaryLight: '#3498db',
+
+    // Text colors
+    textPrimary: '#ffffff',
+    textSecondary: '#aaaaaa',
+    textMuted: '#666666',
+
+    // UI element colors
+    buttonPrimary: '#3498db',
+    buttonDanger: '#e74c3c',
+    buttonSuccess: '#27ae60',
+    buttonDisabled: '#555555',
+    surface: '#2c3e50',
+    disabled: '#555555',
+    error: '#e74c3c',
+
+    // Card/Panel colors
+    cardBackground: '#2c3e50',
+    panelBackground: '#1a1a1a',
+    overlayBackground: 'rgba(0, 0, 0, 0.8)',
+    overlayBackgroundDark: 'rgba(0, 0, 0, 0.9)',
+
+    // Borders
+    borderPrimary: '#00d9ff',
+    borderSuccess: '#27ae60',
+    borderDefault: '#3498db',
+    border: '#3a3a4a',
+
+    // Affinity colors
+    affinity: {
+      fire: '#e74c3c',
+      water: '#3498db',
+      forest: '#27ae60',
+      sky: '#9b59b6',
+      neutral: '#95a5a6',
+    },
+
+    // Status colors
+    success: '#27ae60',
+    warning: '#f39c12',
+    danger: '#e74c3c',
+    info: '#3498db',
+
+    // Rarity colors (for cards)
+    rarity: {
+      common: '#95a5a6',
+      uncommon: '#27ae60',
+      rare: '#3498db',
+      epic: '#9b59b6',
+      legendary: '#f39c12',
+    },
+  } as const;
+
+  // ==================== bloombeasts/common/ui/styles/styles/dimensions.ts ====================
+
+  /**
+   * Shared dimensions and spacing for BloomBeasts
+   * Used across both Web and Horizon platforms
+   */
+
+  export const DIMENSIONS = {
+    // Panel/Screen dimensions
+    panel: {
+      width: 1280,
+      height: 720,
+    },
+
+    // Button dimensions
+    button: {
+      height: 50,
+      minWidth: 200,
+      padding: 15,
+      borderRadius: 10,
+    },
+
+    buttonSmall: {
+      height: 40,
+      minWidth: 100,
+      padding: 10,
+      borderRadius: 8,
+    },
+
+    // Card dimensions
+    card: {
+      width: 150,
+      height: 200,
+      borderRadius: 10,
+      borderWidth: 2,
+      padding: 10,
+    },
+
+    // Mission card dimensions
+    missionCard: {
+      padding: 15,
+      borderRadius: 10,
+      borderWidth: 2,
+      minHeight: 80,
+    },
+
+    // Dialog/Modal dimensions
+    dialog: {
+      minWidth: 400,
+      maxWidth: 600,
+      padding: 30,
+      borderRadius: 15,
+    },
+
+    // Spacing scale
+    spacing: {
+      xs: 5,
+      sm: 10,
+      md: 15,
+      lg: 20,
+      xl: 30,
+      xxl: 40,
+    },
+
+    // Font sizes
+    fontSize: {
+      xs: 12,
+      sm: 14,
+      md: 18,
+      lg: 20,
+      xl: 24,
+      xxl: 28,
+      title: 36,
+      hero: 72,
+    },
+
+    // Border widths
+    borderWidth: {
+      thin: 1,
+      normal: 2,
+      thick: 3,
+    },
+
+    // Stat badge dimensions
+    statBadge: {
+      padding: 10,
+      borderRadius: 8,
+      borderWidth: 2,
+    },
+  } as const;
+
+  /**
+   * Battle-specific card dimensions
+   * These are larger/different from the generic DIMENSIONS.card for battle UI layout
+   */
+  export const standardCardDimensions = {
+    width: 210,
+    height: 280,
+  };
+
+  export const trapCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  export const buffCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  export const habitatShiftCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  /**
+   * Button dimensions (specific sizes for different contexts)
+   */
+  export const sideMenuButtonDimensions = {
+    width: 175,
+    height: 72,
+  };
+
+  export const longButtonDimensions = {
+    width: 201,
+    height: 35,
+  };
+
+  export const smallButtonDimensions = {
+    width: 89,
+    height: 89,
+  };
+
+  /**
+   * Mission-specific dimensions
+   */
+  export const missionCompleteCardDimensions = {
+    width: 550,
+    height: 330,
+  };
+
+  export const chestImageMissionCompleteDimensions = {
+    width: 160,
+    height: 180,
+  };
+
+  /**
+   * Common gaps for flexbox layouts
+   */
+  export const GAPS = {
+    cards: 15,
+    buttons: 3,
+    missions: 10,
+    stats: 20,
+    sections: 30,
+  } as const;
+
+  // ==================== bloombeasts/common/ui/ScreenUtils.ts ====================
+
+  /**
+   * Utilities for screen components
+   * Provides type-safe ways to work with dynamic UI components
+   */
+
+
+  /**
+   * Type annotation for UINode - since UINode is dynamically loaded, we use 'any' type
+   */
+  export type UINodeType<T = any> = any;
+
+  /**
+   * UI wrapper for RuntimeCard with additional UI properties
+   * These are properties used in the UI but not in the core game model
+   */
+  export interface UICardDisplay {
+    // The runtime card data
+    card: RuntimeCard;
+    // Add emoji based on affinity
+    emoji?: string;
+    // Use level as rarity indicator
+    rarityLevel?: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
+    // Map attack/defense/health for display
+    attack?: number;
+    defense?: number;
+    health?: number;
+  }
+
+  /**
+   * Convert RuntimeCard to UICardDisplay with additional UI properties
+   */
+  export function toUICard(card: RuntimeCard): UICardDisplay {
+    const uiCard: UICardDisplay = {
+      card: card,
+      attack: 'baseAttack' in card ? card.baseAttack : undefined,
+      defense: 0, // Not in RuntimeCard - using 0 as default
+      health: 'baseHealth' in card ? card.baseHealth : undefined,
+      emoji: getCardEmoji(card),
+      rarityLevel: getCardRarity(card)
+    };
+    return uiCard;
+  }
+
+  /**
+   * Get emoji based on card affinity
+   */
+  function getCardEmoji(card: RuntimeCard): string {
+    // Check if card has affinity property (Beast, Buff, Habitat cards)
+    const affinity = 'affinity' in card ? (card as any).affinity : undefined;
+    switch (affinity?.toLowerCase()) {
+      case 'fire':
+        return '🔥';
+      case 'water':
+        return '💧';
+      case 'forest':
+        return '🌿';
+      case 'sky':
+        return '☁️';
+      default:
+        return '✨';
+    }
+  }
+
+  /**
+   * Determine rarity based on card level
+   */
+  function getCardRarity(card: RuntimeCard): 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary' {
+    const level = card.level || 1;
+    if (level >= 10) return 'legendary';
+    if (level >= 7) return 'epic';
+    if (level >= 5) return 'rare';
+    if (level >= 3) return 'uncommon';
+    return 'common';
+  }
+
+  /**
+   * Extend MissionDisplay with UI properties
+   */
+  export interface UIMissionDisplay {
+    id: string;
+    name: string;
+    level: number;
+    difficulty: string;
+    isAvailable: boolean;
+    isCompleted: boolean;
+    description: string;
+    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
+    beastId?: string;
+    // Additional UI properties
+    progress?: number;
+    requirement?: number;
+    rewards?: {
+      coins?: number;
+    };
+  }
+
+  // ==================== bloombeasts/common/ui/constants/positions.ts ====================
+
+  // Type definitions
+  export interface SimplePosition {
+    x: number;
+    y: number;
+  }
+
+  interface PlayerCardPositions {
+    beastOne: SimplePosition;
+    beastTwo: SimplePosition;
+    beastThree: SimplePosition;
+    buffOne: SimplePosition;
+    buffTwo: SimplePosition;
+    trapOne: SimplePosition;
+    trapTwo: SimplePosition;
+    trapThree: SimplePosition;
+    health: SimplePosition;
+    energy: SimplePosition;
+    deckCount: SimplePosition;
+  }
+
+  interface CardTextInfo extends SimplePosition {
+    size: number;
+    textAlign?: 'left' | 'right' | 'center' | 'start' | 'end';
+    textBaseline?: 'top' | 'hanging' | 'middle' | 'alphabetic' | 'ideographic' | 'bottom';
+  }
+
+  export interface CardTextPositions {
+    cost: CardTextInfo;
+    affinity: SimplePosition;
+    level: CardTextInfo;
+    experienceBar: SimplePosition;
+    name: CardTextInfo;
+    ability: CardTextInfo;
+    attack: CardTextInfo;
+    health: CardTextInfo;
+    beastImage: SimplePosition;
+    icons: {
+      attack: CardTextInfo;
+      ability: CardTextInfo;
+    };
+  }
+
+  export interface UIButtonPositions {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    spacing: number;
+  }
+
+  export interface UITextSafeZone {
+    x: number;
+    y: number;
+    lineHeight: number;
+  }
+
+  export interface SideMenuPositions {
+    x: number;
+    y: number;
+    headerStartPosition: SimplePosition;
+    textStartPosition: SimplePosition;
+    buttonStartPosition: SimplePosition;
+    playerName: CardTextInfo;
+    playerLevel: CardTextInfo;
+    playerExperienceBar: SimplePosition & { maxWidth: number };
+  }
+
+  export interface BattleBoardAssetPositions {
+    playerOne: PlayerCardPositions;
+    playOneInfoPosition: SimplePosition;
+    playerTwo: PlayerCardPositions;
+    playerTwoInfoPosition: SimplePosition;
+    habitatZone: SimplePosition;
+    cardTextPositions: CardTextPositions;
+  }
+
+
+  /**
+   * Safe zone for UI buttons and interactive elements
+   * This position ensures elements won't be covered by platform-specific UI (status bars, navigation, etc.)
+   */
+  export const uiSafeZoneButtons: UIButtonPositions = {
+    x: 1149,
+    y: 131,
+    width: DIMENSIONS.button.minWidth,
+    height: DIMENSIONS.button.height,
+    spacing: DIMENSIONS.spacing.xxl * 2, // Vertical spacing between stacked buttons
+  };
+
+  /**
+   * Safe zone for text display (titles, counters, etc.)
+   * This area is safe for displaying informational text
+   */
+  export const uiSafeZoneText: UITextSafeZone = {
+    x: 1152,
+    y: 407,
+    lineHeight: DIMENSIONS.spacing.xl, // Vertical spacing between lines of text
+  };
+
+  /**
+   * Side menu positions
+   * The side menu contains player info, text, and buttons
+   */
+  export const sideMenuPositions: SideMenuPositions = {
+    x: 1045,  // Moved 100px left
+    y: 128,
+    headerStartPosition: { x: 1070, y: 152 },  // Moved 100px left
+    textStartPosition: { x: 1082, y: 240 },  // Moved 100px left
+    buttonStartPosition: { x: 1070, y: 304 },  // Moved 100px left and up (text area now half size)
+    playerName: { x: 10, y: 426, textAlign: 'left', textBaseline: 'top', size: DIMENSIONS.fontSize.sm },
+    playerLevel: { x: 64, y: 445, textAlign: 'center', textBaseline: 'top', size: DIMENSIONS.fontSize.xs },
+    playerExperienceBar: { x: 9, y: 445, maxWidth: 109 },
+  };
+
+  /**
+   * Mission complete popup card positions
+   */
+  export const missionCompleteCardPositions = {
+    title: { x: 275, y: 24, size: DIMENSIONS.fontSize.title, textAlign: 'center', textBaseline: 'top' },
+    chestImage: { x: 73, y: 76 },
+    infoText: { x: 245, y: 98, size: DIMENSIONS.fontSize.sm, textAlign: 'left', textBaseline: 'top' },
+    claimRewardButton: { x: 175, y: 271 },
+  };
+
+  // ==================== bloombeasts/common/ui/components/common/Button.ts ====================
+
+  /**
+   * Common Button Component
+   * Reusable button with hover effects and sound
+   */
+
+
+  export type ButtonType = 'default' | 'short' | 'long';
+  export type ButtonColor = 'default' | 'red' | 'green';
+
+  export interface ButtonProps {
+    ui: UIMethodMappings;
+    label: string | ValueBindingBase<string> | ReadonlyBindingInterface<string>;
+    onClick: () => void;
+    type?: ButtonType;
+
+    // Simple usage: just pass color string (static or binding)
+    color?: ButtonColor | ValueBindingBase<ButtonColor> | ReadonlyBindingInterface<ButtonColor>;
+    disabled?: boolean | ValueBindingBase<boolean> | ReadonlyBindingInterface<boolean>;
+
+    // Advanced usage: pass complete bindings that return final computed values
+    // Use these when you need reactive bindings (avoids .derive() on derived bindings)
+    imageSource?: any; // Binding or static image source for button background
+    opacity?: any; // Binding or static opacity value (0-1)
+    textColor?: any; // Binding or static text color string
+
+    playSfx?: (sfxId: string) => void;
+    style?: any; // Additional style overrides
+  }
+
+  /**
+   * Get button dimensions based on type
+   */
+  function getButtonDimensions(type: ButtonType): { width: number; height: number } {
+    switch (type) {
+      case 'short':
+        return { width: 80, height: 36 };
+      case 'long':
+        return longButtonDimensions;
+      case 'default':
+      default:
+        return sideMenuButtonDimensions;
+    }
+  }
+
+  /**
+   * Get button asset ID based on color and type
+   */
+  function getButtonAssetId(color: ButtonColor, type: ButtonType): string {
+    // Long buttons have their own green variant
+    if (type === 'long' && color === 'green') {
+      return 'long-green-button';
+    }
+
+    // Standard color mapping
+    switch (color) {
+      case 'red':
+        return 'red-button';
+      case 'green':
+        return 'green-button';
+      case 'default':
+      default:
+        return 'standard-button';
+    }
+  }
+
+  /**
+   * Create a common button with hover effects and sound
+   *
+   * Two usage patterns:
+   * 1. Simple: Pass static `color` and `disabled` props (for static buttons)
+   * 2. Advanced: Pass complete `imageSource`, `opacity`, `textColor` bindings
+   *    (for reactive buttons - avoids calling .derive() on derived bindings)
+   */
+  export function createButton(props: ButtonProps): UINodeType {
+    const {
+      ui,
+      label,
+      onClick,
+      type = 'default',
+      color = 'default',
+      disabled = false,
+      imageSource: customImageSource,
+      opacity: customOpacity,
+      textColor: customTextColor,
+      playSfx,
+      style = {},
+    } = props;
+
+    const dimensions = getButtonDimensions(type);
+
+    // Determine static color value for imageSource (only if color is static)
+    // If color is a binding, default to 'default' color (caller should use customImageSource for reactive backgrounds)
+    const staticColor = (typeof color === 'string' ? color : 'default') as ButtonColor;
+
+    // Use custom bindings if provided, otherwise compute from color/disabled
+    const imageSource = customImageSource ?? (ui.assetIdToImageSource?.(getButtonAssetId(staticColor, type)) || null);
+
+    // For opacity and textColor:
+    // - If custom values provided, use them (supports reactive bindings)
+    // - If disabled is a static boolean, use it to determine appearance
+    // - If disabled is a binding, use enabled appearance by default
+    //   (caller should provide customOpacity/customTextColor for reactive appearance)
+    const opacity = customOpacity ?? (
+      (typeof disabled === 'boolean' && disabled) ? 0.5 : 1.0
+    );
+    const textColor = customTextColor ?? (
+      (typeof disabled === 'boolean' && disabled) ? '#888' : COLORS.textPrimary
+    );
+
+    return ui.Pressable({
+      onClick: () => {
+        if (playSfx) {
+          playSfx('sfx-menu-button-select');
+        }
+        onClick();
+      },
+      disabled: disabled,
+      style: {
+        width: dimensions.width,
+        height: dimensions.height,
+        ...style,
+      },
+      children: [
+        // Button background image
+        ui.Image({
+          source: imageSource,
+          style: {
+            position: 'absolute',
+            width: dimensions.width,
+            height: dimensions.height,
+            opacity: opacity,
+          },
+        }),
+        // Button text centered
+        ui.View({
+          style: {
+            position: 'absolute',
+            width: dimensions.width,
+            height: dimensions.height,
+            justifyContent: 'center',
+            alignItems: 'center',
+          },
+          children: ui.Text({
+            text: label,
+            style: {
+              fontSize: style.fontSize ?? DIMENSIONS.fontSize.md,
+              color: textColor,
+              textAlign: style.textAlign ?? 'center',
+              fontWeight: style.fontWeight ?? 'bold',
+              textAlignVertical: 'center',
+              marginTop: style.paddingTop ?? 0,
+            },
+          }),
+        }),
+      ],
+    });
+  }
+
+  // Export alias for backwards compatibility
+  { createButton as Button };
+
+  // ==================== bloombeasts/common/ui/screens/SideMenu.ts ====================
 
   /**
    * Common Side Menu Component
@@ -5335,7 +5287,11 @@ namespace BloomBeasts {
   /**
    * Helper: Create a text row component
    */
-  export function createTextRow(ui: UIMethodMappings, text: string | ValueBindingBase<string>, top: number = 0): UINodeType {
+  export function createTextRow(
+      ui: UIMethodMappings,
+      text: string | ValueBindingBase<string> | ReadonlyBindingInterface<string>,
+      top: number = 0
+  ): UINodeType {
       return ui.View({
           style: {
               position: 'absolute',
@@ -5378,32 +5334,200 @@ namespace BloomBeasts {
       });
   }
 
-  // ==================== bloombeasts\screens\menu\MenuScreen.ts ====================
+  // ==================== bloombeasts/screens/common/BaseScreen.ts ====================
 
   /**
-   * Unified Menu Screen Component
-   * Works on both Horizon and Web platforms
-   * Matches the styling from menuScreen.new.ts
+   * BaseScreen
    */
 
 
-  export interface MenuScreenProps {
+  export interface BaseScreenProps {
     ui: UIMethodMappings;
-    onButtonClick?: (buttonId: string) => void;
     onNavigate?: (screen: string) => void;
     onRenderNeeded?: () => void;
     playSfx?: (sfxId: string) => void;
   }
 
+  export abstract class BaseScreen {
+    protected ui: UIMethodMappings;
+    protected onNavigate?: (screen: string) => void;
+    protected onRenderNeeded?: () => void;
+    protected playSfx?: (sfxId: string) => void;
+
+    constructor(props: BaseScreenProps) {
+      this.ui = props.ui;
+      this.onNavigate = props.onNavigate;
+      this.onRenderNeeded = props.onRenderNeeded;
+      this.playSfx = props.playSfx;
+    }
+
+    /**
+     * Create the screen's UI - must be implemented by subclasses
+     */
+    abstract createUI(): UINodeType;
+
+    /**
+     * Full-screen background image
+     */
+    protected createFullScreenBackground(assetId: string = 'background'): UINodeType {
+      return this.ui.Image({
+        source: this.ui.assetIdToImageSource?.(assetId) || null,
+        style: {
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          top: 0,
+          left: 0,
+        },
+      });
+    }
+
+    /**
+     * Root container that wraps all screen content
+     */
+    protected createRootContainer(children: any[]): UINodeType {
+      return this.ui.View({
+        style: {
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+        },
+        children,
+      });
+    }
+
+    /**
+     * Standard container background (used in Cards, Settings, Upgrade, etc.)
+     */
+    protected createContainerBackground(
+      assetId: string = 'cards-container',
+      position: { left: number; top: number; width: number; height: number } = {
+        left: 40,
+        top: 40,
+        width: 980,
+        height: 640,
+      }
+    ): UINodeType {
+      return this.ui.Image({
+        source: this.ui.assetIdToImageSource?.(assetId) || null,
+        style: {
+          position: 'absolute',
+          ...position,
+        },
+      });
+    }
+
+    /**
+     * Content area inside container (used in Cards, Settings, Upgrade, etc.)
+     */
+    protected createContentArea(
+      children: any[],
+      position: { left: number; top: number; width: number; height: number } = {
+        left: 70,
+        top: 70,
+        width: 920,
+        height: 580,
+      }
+    ): UINodeType {
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          ...position,
+        },
+        children,
+      });
+    }
+
+    /**
+     * Standard "Back to Menu" button configuration
+     */
+    protected getBackButton() {
+      return {
+        label: 'Back',
+        onClick: () => this.onNavigate?.('menu'),
+        disabled: false,
+      };
+    }
+
+    /**
+     * Navigate to a screen with optional sound
+     */
+    protected navigate(screen: string, playSound: boolean = true) {
+      if (playSound && this.playSfx) {
+        this.playSfx('sfx-menu-button-select');
+      }
+      this.onNavigate?.(screen);
+    }
+
+    /**
+     * Trigger a re-render
+     */
+    protected triggerRender() {
+      this.onRenderNeeded?.();
+    }
+
+    /**
+     * Cleanup - override if needed
+     */
+    dispose(): void {
+      // Override in subclasses if cleanup is needed
+    }
+  }
+
+  // ==================== bloombeasts/screens/menu/MenuScreen.ts ====================
+
   /**
-   * Unified Menu Screen that works on both platforms
+   * Menu Screen
    */
-  export class MenuScreen {
-    // UI methods (injected)
-    private ui: UIMethodMappings;
 
 
-    // Menu frame IDs
+  // UI layout constants
+  const LINE_HEIGHT_OFFSET = 5;
+  const QUOTE_WIDTH = 150;
+  const QUOTE_NUM_LINES = 2;
+
+  // Character animation constants
+  const CHARACTER_LEFT = 290;
+  const CHARACTER_TOP = 40;
+  const CHARACTER_WIDTH = 675;
+  const CHARACTER_HEIGHT = 630;
+
+  // Play button constants
+  const PLAY_BUTTON_FONT_SIZE = 32;
+  const PLAY_BUTTON_LEFT = 552;
+  const PLAY_BUTTON_TOP = 400;
+
+  // Player stats container constants
+  const STATS_CONTAINER_WIDTH = 487;
+  const STATS_CONTAINER_HEIGHT = 82;
+  const SCREEN_WIDTH = 1280;
+  const STATS_CONTAINER_Y = 20;
+  const STATS_ICON_SIZE = 28;
+
+  // Level display constants
+  const LEVEL_TEXT_LEFT = 85;
+  const LEVEL_TEXT_TOP = 29;
+
+  // Coins display constants
+  const COINS_LEFT = 250;
+  const COINS_TOP = 28;
+  const COINS_ICON_GAP = 8;
+  const COINS_TEXT_MARGIN = 4;
+
+  // Serums display constants
+  const SERUMS_LEFT = 370;
+  const SERUMS_TOP = 28;
+  const SERUMS_ICON_GAP = 8;
+  const SERUMS_TEXT_MARGIN = 4;
+
+  export interface MenuScreenProps extends BaseScreenProps {
+    onButtonClick?: (buttonId: string) => void;
+  }
+
+  /**
+   * Menu Screen - Main navigation hub
+   */
+  export class MenuScreen extends BaseScreen {
     private menuFrameIds: string[] = [
       'menu-frame-1', 'menu-frame-2', 'menu-frame-3', 'menu-frame-4', 'menu-frame-5',
       'menu-frame-6', 'menu-frame-7', 'menu-frame-8', 'menu-frame-9', 'menu-frame-10',
@@ -5413,38 +5537,22 @@ namespace BloomBeasts {
       'Welcome back, Trainer!',
     ];
 
-    // Callbacks
     private onButtonClick?: (buttonId: string) => void;
-    private onNavigate?: (screen: string) => void;
-    private onRenderNeeded?: () => void;
-    private playSfx?: (sfxId: string) => void;
 
     constructor(props: MenuScreenProps) {
-      this.ui = props.ui;
+      super(props);
       this.onButtonClick = props.onButtonClick;
-      this.onNavigate = props.onNavigate;
-      this.onRenderNeeded = props.onRenderNeeded;
-      this.playSfx = props.playSfx;
-
     }
 
-    /**
-     * Create the unified menu UI - uses common side menu
-     */
     createUI(): UINodeType {
-      const menuOptions = ['cards', 'upgrades', 'leaderboard', 'settings'];  // Removed 'missions'
-      const lineHeight = DIMENSIONS.fontSize.lg + 5;
+      const menuOptions = ['cards', 'upgrades', 'leaderboard', 'settings'];
+      const lineHeight = DIMENSIONS.fontSize.lg + LINE_HEIGHT_OFFSET;
 
-      // Create menu buttons for the side menu
       const menuButtons = menuOptions.map((option, index) => ({
         label: this.getMenuLabel(option),
         onClick: () => {
-          if (this.onButtonClick) {
-            this.onButtonClick(`btn-${option}`);
-          }
-          if (this.onNavigate) {
-            this.onNavigate(option);
-          }
+          this.onButtonClick?.(`btn-${option}`);
+          this.navigate(option);
         },
         disabled: false,
         yOffset: index * (sideMenuButtonDimensions.height + GAPS.buttons),
@@ -5456,16 +5564,15 @@ namespace BloomBeasts {
             position: 'relative',
           },
           children: [
-            // Quote text (lines 0-2)
             this.ui.View({
               style: {
                 position: 'absolute',
                 top: 0,
-                width: 150,
+                width: QUOTE_WIDTH,
               },
               children: this.ui.Text({
-                text: this.quotes[0], // TODO: listen on intervaled binding to change the quote
-                numberOfLines: 2,
+                text: this.quotes[0],
+                numberOfLines: QUOTE_NUM_LINES,
                 style: {
                   fontSize: DIMENSIONS.fontSize.lg,
                   color: COLORS.textPrimary,
@@ -5477,102 +5584,70 @@ namespace BloomBeasts {
         }),
       ];
 
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [
-          // Background image (full screen)
-          this.ui.Image({
-            source: this.ui.assetIdToImageSource?.('background') || null,
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              top: 0,
-              left: 0,
-            },
-          }),
+      return this.createRootContainer([
+        this.createFullScreenBackground(),
 
-          // Main content area with animated character
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-            },
-            children: [
-              // Animated character frame - derive directly from UIState
-              this.ui.Image({
-                  source: this.ui.assetIdToImageSource?.(this.menuFrameIds[0]) || null,
-                  // source: this.ui.bindingManager.derive([BindingType.IntervaledBinding], (counter: number) => {
-                  //   const frameId = this.menuFrameIds[counter % this.menuFrameIds.length];
-                  //   return this.ui.assetIdToImageSource?.(frameId) || null;
-                  // }),
-                  style: {
-                    position: 'absolute',
-                    left: 290,
-                    top: 40,
-                    width: 675,
-                    height: 630,
-                  },
-                }),
-            ],
-          }),
+        // Main content area with animated character
+        this.ui.View({
+          style: {
+            position: 'absolute',
+            width: '100%',
+            height: '100%',
+          },
+          children: [
+            this.ui.Image({
+              source: this.ui.assetIdToImageSource?.(this.menuFrameIds[0]) || null,
+              style: {
+                position: 'absolute',
+                left: CHARACTER_LEFT,
+                top: CHARACTER_TOP,
+                width: CHARACTER_WIDTH,
+                height: CHARACTER_HEIGHT,
+              },
+            }),
+          ],
+        }),
 
-          // Player stats container at top middle
-          this.createPlayerStatsContainer(),
+        // Player stats container at top middle
+        this.createPlayerStatsContainer(),
 
-          // "Play" button in the middle of the page, slightly down
-          createButton({
-            ui: this.ui,
-            label: 'Play',
-            onClick: () => {
-              if (this.onButtonClick) {
-                this.onButtonClick('btn-missions');
-              }
-              if (this.onNavigate) {
-                this.onNavigate('missions');
-              }
-            },
-            imageSource: this.ui.assetIdToImageSource?.('yellow-button') || null,
-            playSfx: this.playSfx,
-            style: {
-              fontSize: 32,
-              fontWeight: 'bold',
-              textAlign: 'center',
-              // paddingTop: 4,
-              position: 'absolute',
-              left: 552,  // Centered horizontally (1280/2 - 175/2 ≈ 552)
-              top: 400,   // Slightly down from center
-            },
-          }),
+        // "Play" button
+        createButton({
+          ui: this.ui,
+          label: 'Play',
+          onClick: () => {
+            this.onButtonClick?.('btn-missions');
+            this.navigate('missions');
+          },
+          imageSource: this.ui.assetIdToImageSource?.('yellow-button') || null,
+          playSfx: this.playSfx,
+          style: {
+            fontSize: PLAY_BUTTON_FONT_SIZE,
+            fontWeight: 'bold',
+            textAlign: 'center',
+            position: 'absolute',
+            left: PLAY_BUTTON_LEFT,
+            top: PLAY_BUTTON_TOP,
+          },
+        }),
 
-          // Side menu (positioned absolutely on top)
-          createSideMenu(this.ui, {
-            customTextContent,
-            buttons: menuButtons,
-            bottomButton: {
-              label: 'Close',
-              onClick: () => {}, // Disabled button
-              disabled: true,
-            },
-            onXPBarClick: (title: string, message: string) => {
-              if (this.onButtonClick) {
-                this.onButtonClick(`show-counter-info:${title}:${message}`);
-              }
-            },
-            playSfx: this.playSfx,
-          }),
-        ],
-      });
+        // Side menu
+        createSideMenu(this.ui, {
+          customTextContent,
+          buttons: menuButtons,
+          bottomButton: {
+            label: 'Close',
+            onClick: () => {},
+            disabled: true,
+          },
+          onXPBarClick: (title: string, message: string) => {
+            this.onButtonClick?.(`show-counter-info:${title}:${message}`);
+          },
+          playSfx: this.playSfx,
+        }),
+      ]);
     }
 
-    /**
-     * Get menu label for option
-     */
     private getMenuLabel(option: string): string {
       const labels: Record<string, string> = {
         missions: 'Missions',
@@ -5584,46 +5659,31 @@ namespace BloomBeasts {
       return labels[option] || option;
     }
 
-    /**
-     * Create player stats container at top middle
-     */
     private createPlayerStatsContainer(): UINodeType {
-      const containerWidth = 487;
-      const containerHeight = 82;
-      const screenWidth = 1280;
-      const containerX = (screenWidth - containerWidth) / 2;
-      const containerY = 20;
+      const containerX = (SCREEN_WIDTH - STATS_CONTAINER_WIDTH) / 2;
 
-      // Icon dimensions
-      const iconSize = 28;
-
-      // Helper to get item quantity
-      const getItemQuantity = (items: any[], itemId: string) => {
-        const item = items?.find((i: any) => i.itemId === itemId);
+      const getItemQuantity = (items: PlayerItem[], itemId: string): number => {
+        const item = items?.find((i) => i.itemId === itemId);
         return item ? item.quantity : 0;
       };
 
-      // Binding for level text with XP
-      const levelTextBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+      const levelTextBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: PlayerData) => {
         if (!data) return 'Lvl 1. 0/100';
-        const xpThresholds = [0, 100, 300, 700, 1500, 3100, 6300, 12700, 25500];
-        const playerLevel = data.playerLevel || 1;
         const totalXP = data.totalXP || 0;
-        const xpForCurrentLevel = xpThresholds[playerLevel - 1];
-        const xpForNextLevel = playerLevel < 9 ? xpThresholds[playerLevel] : xpThresholds[8];
+        const playerLevel = getPlayerLevel(totalXP);
+        const xpForCurrentLevel = XP_THRESHOLDS[playerLevel - 1];
+        const xpForNextLevel = playerLevel < GAME_CONSTANTS.MAX_PLAYER_LEVEL ? XP_THRESHOLDS[playerLevel] : XP_THRESHOLDS[GAME_CONSTANTS.MAX_PLAYER_LEVEL - 1];
         const currentXP = totalXP - xpForCurrentLevel;
         const xpNeeded = xpForNextLevel - xpForCurrentLevel;
         return `Lvl ${playerLevel}. ${currentXP}/${xpNeeded}`;
       });
 
-      // Binding for coins
-      const coinsBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+      const coinsBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: PlayerData) => {
         if (!data) return '0';
         return String(data.coins || 0);
       });
 
-      // Binding for serums
-      const serumsBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: any) => {
+      const serumsBinding = this.ui.bindingManager.playerDataBinding.binding.derive((data: PlayerData) => {
         if (!data) return '0';
         const serums = getItemQuantity(data.items || [], 'serum');
         return String(serums);
@@ -5633,29 +5693,28 @@ namespace BloomBeasts {
         style: {
           position: 'absolute',
           left: containerX,
-          top: containerY,
-          width: containerWidth,
-          height: containerHeight,
+          top: STATS_CONTAINER_Y,
+          width: STATS_CONTAINER_WIDTH,
+          height: STATS_CONTAINER_HEIGHT,
         },
         children: [
-          // Background container image
           this.ui.Image({
             source: this.ui.assetIdToImageSource?.('player-stats-container') || null,
             style: {
               position: 'absolute',
-              width: containerWidth,
-              height: containerHeight,
+              width: STATS_CONTAINER_WIDTH,
+              height: STATS_CONTAINER_HEIGHT,
               top: 0,
               left: 0,
             },
           }),
 
-          // Level text - left aligned
+          // Level text
           this.ui.View({
             style: {
               position: 'absolute',
-              left: 85,
-              top: 29,
+              left: LEVEL_TEXT_LEFT,
+              top: LEVEL_TEXT_TOP,
             },
             children: this.ui.Text({
               text: levelTextBinding,
@@ -5668,65 +5727,61 @@ namespace BloomBeasts {
             }),
           }),
 
-          // Coins section (icon + text) - centered in middle section
+          // Coins section
           this.ui.View({
             style: {
               position: 'absolute',
-              left: 250,
-              top: 28,
+              left: COINS_LEFT,
+              top: COINS_TOP,
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 8,
+              gap: COINS_ICON_GAP,
             },
             children: [
-              // Coin icon
               this.ui.Image({
                 source: this.ui.assetIdToImageSource?.('icon-coin') || null,
                 style: {
-                  width: iconSize,
-                  height: iconSize,
+                  width: STATS_ICON_SIZE,
+                  height: STATS_ICON_SIZE,
                 },
               }),
-              // Coin amount - black text
               this.ui.Text({
                 text: coinsBinding,
                 style: {
                   fontSize: DIMENSIONS.fontSize.lg,
-                  color: '#000000',
+                  color: COLORS.textPrimary,
                   fontWeight: 'bold',
-                  marginLeft: 4,
+                  marginLeft: COINS_TEXT_MARGIN,
                 },
               }),
             ],
           }),
 
-          // Serums section (icon + text) - centered in right section
+          // Serums section
           this.ui.View({
             style: {
               position: 'absolute',
-              left: 370,
-              top: 28,
+              left: SERUMS_LEFT,
+              top: SERUMS_TOP,
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 8,
+              gap: SERUMS_ICON_GAP,
             },
             children: [
-              // Serum icon
               this.ui.Image({
                 source: this.ui.assetIdToImageSource?.('icon-serum') || null,
                 style: {
-                  width: iconSize,
-                  height: iconSize,
+                  width: STATS_ICON_SIZE,
+                  height: STATS_ICON_SIZE,
                 },
               }),
-              // Serum amount - black text
               this.ui.Text({
                 text: serumsBinding,
                 style: {
                   fontSize: DIMENSIONS.fontSize.lg,
-                  color: '#000000',
+                  color: COLORS.textPrimary,
                   fontWeight: 'bold',
-                  marginLeft: 4,
+                  marginLeft: SERUMS_TEXT_MARGIN,
                 },
               }),
             ],
@@ -5734,12 +5789,9 @@ namespace BloomBeasts {
         ],
       });
     }
-
-    dispose() {
-    }
   }
 
-  // ==================== bloombeasts\common\ui\constants\emojis.ts ====================
+  // ==================== bloombeasts/common/ui/constants/emojis.ts ====================
 
   export const energyEmoji = '⚡';
   export const missionEmoji = '🎯';
@@ -5747,7 +5799,7 @@ namespace BloomBeasts {
   export const playerLevelEmoji = '💪';
   export const playerExperienceEmoji = '🧪';
 
-  // ==================== bloombeasts\screens\common\types.ts ====================
+  // ==================== bloombeasts/screens/common/types.ts ====================
 
   /**
    * Minimal card instance in player's collection
@@ -5759,7 +5811,7 @@ namespace BloomBeasts {
     currentXP: number;              // Only persistent data - everything else is derived
   }
 
-  // ==================== bloombeasts\common\engine\utils\abilityDescriptionGenerator.ts ====================
+  // ==================== bloombeasts/common/engine/utils/abilityDescriptionGenerator.ts ====================
 
   /**
    * Generates human-readable descriptions from ability effects
@@ -6087,24 +6139,7 @@ namespace BloomBeasts {
     return `${allButLast}, and ${last}`;
   }
 
-  // ==================== bloombeasts\common\engine\utils\getAbilityDescription.ts ====================
-
-  /**
-   * Helper function to get ability description
-   * Generates description from ability effects
-   */
-
-
-  /**
-   * Get the description for an ability
-   * @param ability The ability to get description for
-   * @returns The description string
-   */
-  export function getAbilityDescription(ability: StructuredAbility): string {
-    return generateAbilityDescription(ability);
-  }
-
-  // ==================== bloombeasts\common\engine\utils\cardDescriptionGenerator.ts ====================
+  // ==================== bloombeasts/common/engine/utils/cardDescriptionGenerator.ts ====================
 
   /**
    * Generates human-readable descriptions for all card types
@@ -6123,7 +6158,7 @@ namespace BloomBeasts {
     if (card.abilities && Array.isArray(card.abilities)) {
       // Generate descriptions for all abilities and combine them
       const abilityDescriptions = card.abilities
-        .map((ability: any) => getAbilityDescription(ability))
+        .map((ability: any) => generateAbilityDescription(ability))
         .filter((desc: string) => desc.length > 0);
 
       // Combine ability descriptions with bullet points if multiple
@@ -6141,7 +6176,39 @@ namespace BloomBeasts {
     return card.description || '';
   }
 
-  // ==================== bloombeasts\common\utils\cardUtils.ts ====================
+  // ==================== bloombeasts/common/engine/constants/leveling.ts ====================
+
+  /**
+   * Constants for the leveling and progression system
+   *
+   * Leveling system:
+   * - Beast cards gain XP from battles (distributed evenly across deck)
+   * - Each level increases stats by 10% (Level 1 = 100%, Level 9 = 180%)
+   * - XP thresholds use exponential scaling for progressively harder leveling
+   */
+
+
+  /**
+   * Cumulative XP thresholds for card leveling
+   * Level 2: 100 XP, Level 3: 300 XP, etc.
+   */
+  export const CARD_XP_THRESHOLDS = [
+    0,      // Level 1
+    100,    // Level 2
+    300,    // Level 3
+    700,    // Level 4
+    1500,   // Level 5
+    3100,   // Level 6
+    6300,   // Level 7
+    12700,  // Level 8
+    25500,  // Level 9
+  ];
+
+  export const MAX_LEVEL: Level = 9;
+
+  export const ENERGY_XP_COST = 1;
+
+  // ==================== bloombeasts/common/utils/cardUtils.ts ====================
 
   /**
    * Card utility functions for level/XP calculations and stat computation
@@ -6161,34 +6228,6 @@ namespace BloomBeasts {
   }
 
   /**
-   * Battle-specific card stats (runtime only, not persisted)
-   * Created when a card enters battle, mutated during combat
-   */
-  export interface CardBattleStats {
-    baseAttack?: number;
-    currentAttack?: number;
-    baseHealth?: number;
-    currentHealth?: number;
-    abilities?: any[];
-  }
-
-  /**
-   * XP thresholds for card leveling (cumulative)
-   * Level 2: 100 XP, Level 3: 300 XP, etc.
-   */
-  const CARD_XP_THRESHOLDS = [
-    0,      // Level 1
-    100,    // Level 2
-    300,    // Level 3
-    700,    // Level 4
-    1500,   // Level 5
-    3100,   // Level 6
-    6300,   // Level 7
-    12700,  // Level 8
-    25500,  // Level 9
-  ];
-
-  /**
    * Calculate card level from current XP
    * Works for all card types (Beast, Magic, Trap, Habitat, Buff)
    * Uses standard XP thresholds for all cards
@@ -6203,19 +6242,6 @@ namespace BloomBeasts {
     return 1;
   }
 
-  /**
-   * Calculate XP required for next level (uses standard progression)
-   */
-  export function getXPRequired(currentLevel: number, currentXP: number): number {
-    if (currentLevel >= 9) return 0; // Max level
-
-    const nextLevel = currentLevel + 1;
-
-    // Standard XP requirements
-    const nextLevelXP = CARD_XP_THRESHOLDS[nextLevel - 1];
-    return nextLevelXP - currentXP;
-  }
-
   export function getXPThreshold(level: number): number {
     return CARD_XP_THRESHOLDS[level - 1];
   }
@@ -6225,7 +6251,7 @@ namespace BloomBeasts {
    */
   export function getCardDefinition(cardId: string): AnyCard | undefined {
     if (!_cardUtilsCatalogManager) {
-      console.warn('[cardUtils] catalogManager not initialized');
+      Logger.warn('[cardUtils] catalogManager not initialized');
       return undefined;
     }
     const allCards = _cardUtilsCatalogManager.getAllCardData();
@@ -6311,7 +6337,7 @@ namespace BloomBeasts {
    */
   export function getPlayerDeckCards(playerDeck: string[], cardInstances: CardInstance[]): RuntimeCard[] {
     if (!_cardUtilsCatalogManager) {
-      console.warn('[cardUtils] catalogManager not initialized');
+      Logger.warn('[cardUtils] catalogManager not initialized');
       return [];
     }
 
@@ -6328,7 +6354,7 @@ namespace BloomBeasts {
         const cardDef = allCardDefs.find((card: any) => card && card.id === baseCardId);
 
         if (!cardDef) {
-          console.warn(`[cardUtils] Card definition not found for ${cardInstance.cardId}`);
+          Logger.warn(`[cardUtils] Card definition not found for ${cardInstance.cardId}`);
           continue;
         }
 
@@ -6376,7 +6402,7 @@ namespace BloomBeasts {
     cardInstances.push(cardInstance);
   }
 
-  // ==================== bloombeasts\common\ui\screens\CardRenderer.ts ====================
+  // ==================== bloombeasts/common/ui/screens/CardRenderer.ts ====================
 
   /**
    * Common Card Rendering Component
@@ -6428,7 +6454,7 @@ namespace BloomBeasts {
     // We need to extract the base ID (e.g., "nectar-block") to match catalog IDs
     const extractBaseId = (id: string | undefined): string => {
       if (!id) {
-        console.warn('[CardRenderer] Card missing id, using name fallback:', card);
+        Logger.warn('[CardRenderer] Card missing id, using name fallback:', card);
         // Fallback: use card name converted to kebab-case
         return card.name.toLowerCase().replace(/\s+/g, '-');
       }
@@ -6629,7 +6655,7 @@ namespace BloomBeasts {
     // Otherwise use View to avoid blocking parent click handlers
     if (onClick) {
       return ui.Pressable({
-        onClick: () => onClick(card.id),
+        onClick: () => onClick(card.instanceId || card.id),
         style: {
           width: cardWidth,
           height: cardHeight,
@@ -6747,8 +6773,14 @@ namespace BloomBeasts {
       if (isSelectedCardMode) {
         const cardId = uiState.cards?.selectedCardId;
         // ID-based mode: find card by ID
-        if (!cardId) return null;
+        if (!cardId) {
+          Logger.debug('[CardRenderer] selectedCard mode: no cardId in UIState');
+          return null;
+        }
         instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;
+        if (!instance) {
+          Logger.warn(`[CardRenderer] selectedCard mode: card not found for ID: ${cardId}. Available cards:`, cardInstances.map(c => c.id));
+        }
       } else if (isSlotMode && slotIndex !== undefined && cardsPerPage !== undefined) {
         // Slot-based mode: find card by slot index
         const pageStart = (uiState.cards?.scrollOffset ?? 0) * cardsPerPage;
@@ -7029,24 +7061,26 @@ namespace BloomBeasts {
       }),
 
       // Layer 7: Deck indicator border (only if showDeckIndicator is true and not in battle mode)
-      ...(showDeckIndicator && !isBattleMode ? [ui.View({
-        style: ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
+      // Use conditional rendering to show/hide the border view based on whether card is in deck
+      ...(showDeckIndicator && !isBattleMode && ui.UINode ? [ui.UINode.if(
+        ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
           const card = getCard(uiState, playerData, null);
-          const inDeck = isCardInDeck(playerData, card?.id);
-
-          return {
+          return isCardInDeck(playerData, card?.id);
+        }),
+        ui.View({
+          style: {
             position: 'absolute',
             top: 0,
             left: 0,
             width: cardWidth,
             height: cardHeight,
-            borderWidth: inDeck ? 4 : 0,
+            borderWidth: 4,
             borderColor: COLORS.success,
             borderRadius: 8,
             pointerEvents: 'none' as const, // Allow clicks to pass through
-          };
-        }),
-      })] : []),
+          },
+        })
+      )] : []),
     ];
 
     const filteredChildren = children.filter(child => child !== undefined && child !== null);
@@ -7059,8 +7093,11 @@ namespace BloomBeasts {
           const currentState = ui.bindingManager.getSnapshot(BindingType.UIState);
           const playerData = ui.bindingManager.getSnapshot(BindingType.PlayerData);
           const card = getCard(currentState, playerData, null);
-          if (card?.id) {
-            onClick(card.id);
+          Logger.debug('[CardRenderer] Card clicked:', { instanceId: card?.instanceId, cardId: card?.id, cardName: card?.name, mode });
+          if (card?.instanceId) {
+            onClick(card.instanceId);
+          } else {
+            Logger.warn('[CardRenderer] Clicked card has no instanceId:', card);
           }
         },
         style: {
@@ -7092,7 +7129,7 @@ namespace BloomBeasts {
     imageHeight: 185,
   };
 
-  // ==================== bloombeasts\common\ui\components\common\Popup.ts ====================
+  // ==================== bloombeasts/common/ui/components/common/Popup.ts ====================
 
   /**
    * Common Popup Component
@@ -7103,7 +7140,7 @@ namespace BloomBeasts {
   export interface PopupButton {
     label: string | ValueBindingBase<string> | ReadonlyBindingInterface<string>;
     onClick: () => void;
-    color?: ButtonColor;
+    color?: ButtonColor | ValueBindingBase<ButtonColor> | ReadonlyBindingInterface<ButtonColor>;
     type?: ButtonType;
     disabled?: boolean | ValueBindingBase<boolean> | ReadonlyBindingInterface<boolean>;
   }
@@ -7299,7 +7336,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts\common\ui\screens\CardDetailPopup.ts ====================
+  // ==================== bloombeasts/common/ui/screens/CardDetailPopup.ts ====================
 
   /**
    * Card Detail Popup Component
@@ -7326,11 +7363,13 @@ namespace BloomBeasts {
   export function createReactiveCardDetailPopup(ui: UIMethodMappings, props: ReactiveCardDetailPopupProps): UINodeType {
     const { onClose, buttons = [], playSfx } = props;
 
-    // Derive card name using instance method (no new binding)
-    const cardNameBinding = ui.bindingManager.derive([BindingType.UIState], (uiState: UIState) => {
-      const pd = ui.bindingManager.getSnapshot(BindingType.PlayerData);
-      const card = pd?.cards?.collected?.find((c: any) => c.id === uiState.cards?.selectedCardId);
-      return card?.name || 'Card Details';
+    // Derive card name watching both UIState and PlayerData for full reactivity
+    const cardNameBinding = ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, pd: PlayerData) => {
+      const cardInstance = pd?.cards?.collected?.find((c: any) => c.id === uiState.cards?.selectedCardId);
+      if (!cardInstance) return 'Card Details';
+      const baseCardId = extractBaseCardId(cardInstance.cardId);
+      const cardDef = getCardDefinition(baseCardId);
+      return cardDef?.name || 'Card Details';
     });
 
     // Create content with card display (centered)
@@ -7628,50 +7667,384 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts\screens\cards\CardsScreen.ts ====================
+  // ==================== bloombeasts/screens/common/UIStateManager.ts ====================
 
   /**
-   * Unified Cards Screen Component
-   * Works on both Horizon and Web platforms
-   * Matches the styling from cardsScreen.new.ts
+   * UIStateManager
    */
 
 
-  export interface CardsScreenProps {
+  export class UIStateManager<T = any> {
+    constructor(
+      private bindingManager: BindingManager,
+      private stateKey: string,
+      private onRenderNeeded?: () => void
+    ) {}
+
+    /**
+     * Update nested state and trigger render
+     */
+    update(updates: Partial<T>): void {
+      const currentState = this.bindingManager.getSnapshot(BindingType.UIState);
+      this.bindingManager.setBinding(BindingType.UIState, {
+        ...currentState,
+        [this.stateKey]: {
+          ...currentState[this.stateKey],
+          ...updates,
+        },
+      });
+      this.onRenderNeeded?.();
+    }
+
+    /**
+     * Get the current state for this screen
+     */
+    getState(): T {
+      const state = this.bindingManager.getSnapshot(BindingType.UIState);
+      return (state?.[this.stateKey] || {}) as T;
+    }
+
+    /**
+     * Get a specific value from state
+     */
+    getValue<K extends keyof T>(key: K): T[K] | undefined {
+      return this.getState()[key];
+    }
+
+    /**
+     * Set a single value in state
+     */
+    setValue<K extends keyof T>(key: K, value: T[K]): void {
+      this.update({ [key]: value } as unknown as Partial<T>);
+    }
+
+    /**
+     * Reset state to empty object
+     */
+    reset(): void {
+      const currentState = this.bindingManager.getSnapshot(BindingType.UIState);
+      this.bindingManager.setBinding(BindingType.UIState, {
+        ...currentState,
+        [this.stateKey]: {},
+      });
+      this.onRenderNeeded?.();
+    }
+
+    /**
+     * Create a derived binding that includes this state key
+     */
+    createDerivedBinding<R>(
+      additionalBindings: BindingType[],
+      deriveFn: (state: T, ...args: any[]) => R
+    ) {
+      return this.bindingManager.derive(
+        [BindingType.UIState, ...additionalBindings],
+        (uiState: any, ...args: any[]) => {
+          const state = (uiState?.[this.stateKey] || {}) as T;
+          return deriveFn(state, ...args);
+        }
+      );
+    }
+  }
+
+  // ==================== bloombeasts/screens/common/ScrollButtonFactory.ts ====================
+
+  /**
+   * ScrollButtonFactory - Eliminates scroll button duplication
+   *
+   * Replaces 110+ lines of duplicate scroll logic in CardsScreen and MissionScreen
+   * with a simple factory function.
+   */
+
+
+  export interface ScrollButtonConfig {
     ui: UIMethodMappings;
-    onCardSelect?: (cardId: string) => void;
-    onNavigate?: (screen: string) => void;
-    onRenderNeeded?: () => void;
+    stateManager: UIStateManager<{ scrollOffset?: number }>;
+    getTotalPages: () => number;
     playSfx?: (sfxId: string) => void;
+    position?: {
+      prevLeft?: number;
+      prevTop?: number;
+      nextLeft?: number;
+      nextTop?: number;
+      width?: number;
+      height?: number;
+    };
+  }
+
+  export class ScrollButtonFactory {
+    /**
+     * Create Previous and Next scroll buttons with all bindings
+     */
+    static createScrollButtons(config: ScrollButtonConfig): UINodeType[] {
+      const {
+        ui,
+        stateManager,
+        getTotalPages,
+        playSfx,
+        position = {},
+      } = config;
+
+      const {
+        prevLeft = 40,
+        prevTop = 600,
+        nextLeft = 940,
+        nextTop = 600,
+        width = 80,
+        height = 60,
+      } = position;
+
+      const getCurrentOffset = () => stateManager.getValue('scrollOffset') ?? 0;
+
+      // Previous button
+      const prevButton = Button({
+        ui,
+        label: ui.bindingManager.derive(
+          [BindingType.UIState],
+          () => {
+            const offset = getCurrentOffset();
+            return offset > 0 ? '<' : '';
+          }
+        ),
+        onClick: () => {
+          const offset = getCurrentOffset();
+          if (offset > 0) {
+            playSfx?.('sfx-menu-button-select');
+            stateManager.update({ scrollOffset: offset - 1 });
+          }
+        },
+        disabled: ui.bindingManager.derive(
+          [BindingType.UIState],
+          () => getCurrentOffset() === 0
+        ),
+        style: {
+          position: 'absolute',
+          left: prevLeft,
+          top: prevTop,
+          width,
+          height,
+          fontSize: 24,
+          opacity: ui.bindingManager.derive(
+            [BindingType.UIState],
+            () => getCurrentOffset() === 0 ? 0.5 : 1.0
+          ),
+          textColor: ui.bindingManager.derive(
+            [BindingType.UIState],
+            () => getCurrentOffset() === 0 ? '#888' : '#fff'
+          ),
+        },
+      });
+
+      // Next button
+      const nextButton = Button({
+        ui,
+        label: ui.bindingManager.derive(
+          [BindingType.UIState],
+          () => {
+            const offset = getCurrentOffset();
+            const totalPages = getTotalPages();
+            return offset < totalPages - 1 ? '>' : '';
+          }
+        ),
+        onClick: () => {
+          const offset = getCurrentOffset();
+          const totalPages = getTotalPages();
+          if (offset < totalPages - 1) {
+            playSfx?.('sfx-menu-button-select');
+            stateManager.update({ scrollOffset: offset + 1 });
+          }
+        },
+        disabled: ui.bindingManager.derive(
+          [BindingType.UIState],
+          () => {
+            const offset = getCurrentOffset();
+            const totalPages = getTotalPages();
+            return offset >= totalPages - 1;
+          }
+        ),
+        style: {
+          position: 'absolute',
+          left: nextLeft,
+          top: nextTop,
+          width,
+          height,
+          fontSize: 24,
+          opacity: ui.bindingManager.derive(
+            [BindingType.UIState],
+            () => {
+              const offset = getCurrentOffset();
+              const totalPages = getTotalPages();
+              return offset >= totalPages - 1 ? 0.5 : 1.0;
+            }
+          ),
+          textColor: ui.bindingManager.derive(
+            [BindingType.UIState],
+            () => {
+              const offset = getCurrentOffset();
+              const totalPages = getTotalPages();
+              return offset >= totalPages - 1 ? '#888' : '#fff';
+            }
+          ),
+        },
+      });
+
+      return [prevButton, nextButton];
+    }
+
+    /**
+     * Calculate pagination info for displaying "Page X of Y"
+     */
+    static createPageInfo(config: {
+      ui: UIMethodMappings;
+      stateManager: UIStateManager<{ scrollOffset?: number }>;
+      getTotalPages: () => number;
+      position?: { left?: number; top?: number };
+      fontSize?: number;
+      color?: string;
+    }): UINodeType {
+      const {
+        ui,
+        stateManager,
+        getTotalPages,
+        position = {},
+        fontSize = 16,
+        color = '#fff',
+      } = config;
+
+      const { left = 500, top = 615 } = position;
+
+      return ui.Text({
+        text: ui.bindingManager.derive(
+          [BindingType.UIState],
+          () => {
+            const offset = stateManager.getValue('scrollOffset') ?? 0;
+            const totalPages = getTotalPages();
+            return totalPages > 0 ? `Page ${offset + 1} of ${totalPages}` : '';
+          }
+        ),
+        style: {
+          position: 'absolute',
+          left,
+          top,
+          fontSize,
+          color,
+          textAlign: 'center',
+        },
+      });
+    }
+
+    /**
+     * Create Previous and Next scroll buttons for side menu
+     * Eliminates 100+ lines of duplicate code in CardsScreen and MissionScreen
+     */
+    static createSideMenuScrollButtons(config: {
+      ui: UIMethodMappings;
+      stateManager: UIStateManager<{ scrollOffset?: number }>;
+      getTotalPages: () => number;
+      playSfx?: (sfxId: string) => void;
+      playerDataBinding?: boolean; // Whether to watch PlayerData binding for total pages
+    }): SideMenuButton[] {
+      const {
+        ui,
+        stateManager,
+        getTotalPages,
+        playSfx,
+        playerDataBinding = false,
+      } = config;
+
+      const getCurrentOffset = () => stateManager.getValue('scrollOffset') ?? 0;
+
+      // Determine which bindings to watch based on content type
+      const bindings = playerDataBinding
+        ? [BindingType.UIState, BindingType.PlayerData]
+        : [BindingType.UIState, BindingType.Missions];
+
+      return [
+        {
+          label: 'Previous',
+          onClick: () => {
+            const offset = getCurrentOffset();
+            if (offset > 0) {
+              playSfx?.('sfx-menu-button-select');
+              stateManager.update({ scrollOffset: offset - 1 });
+            }
+          },
+          disabled: ui.bindingManager.derive([BindingType.UIState], () => getCurrentOffset() <= 0),
+          opacity: ui.bindingManager.derive([BindingType.UIState], () => getCurrentOffset() <= 0 ? 0.5 : 1.0),
+          textColor: ui.bindingManager.derive([BindingType.UIState], () => getCurrentOffset() <= 0 ? COLORS.textMuted : COLORS.textPrimary),
+          yOffset: 0,
+        },
+        {
+          label: 'Next',
+          onClick: () => {
+            const offset = getCurrentOffset();
+            const totalPages = getTotalPages();
+            if (offset < totalPages - 1) {
+              playSfx?.('sfx-menu-button-select');
+              stateManager.update({ scrollOffset: offset + 1 });
+            }
+          },
+          disabled: ui.bindingManager.derive(bindings, () => {
+            const offset = getCurrentOffset();
+            return offset >= getTotalPages() - 1;
+          }),
+          opacity: ui.bindingManager.derive(bindings, () => {
+            const offset = getCurrentOffset();
+            return offset >= getTotalPages() - 1 ? 0.5 : 1.0;
+          }),
+          textColor: ui.bindingManager.derive(bindings, () => {
+            const offset = getCurrentOffset();
+            return offset >= getTotalPages() - 1 ? COLORS.textMuted : COLORS.textPrimary;
+          }),
+          yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
+        },
+      ];
+    }
+  }
+
+  // ==================== bloombeasts/screens/cards/CardsScreen.ts ====================
+
+  /**
+   * Cards Screen - Refactored using BaseScreen and utilities
+   *
+   * Reduced from 407 lines to ~280 lines (31% reduction) by eliminating:
+   * - Constructor boilerplate → BaseScreen
+   * - State update patterns → UIStateManager
+   * - Scroll button logic → ScrollButtonFactory
+   * - Layout helpers → BaseScreen methods
+   */
+
+
+  export interface CardsScreenProps extends BaseScreenProps {
+    onCardSelect?: (cardId: string) => void;
+  }
+
+  interface CardsState {
+    scrollOffset?: number;
+    selectedCardId?: string | null;
   }
 
   /**
-   * Unified Cards Screen
+   * Cards Screen - Collection and Deck Management
    */
-  export class CardsScreen {
-    // UI methods (injected)
-    private ui: UIMethodMappings;
-
+  export class CardsScreen extends BaseScreen {
     private cardsPerRow = 4;
     private rowsPerPage = 2;
     private onCardSelect?: (cardId: string) => void;
-    private onNavigate?: (screen: string) => void;
-    private onRenderNeeded?: () => void;
-    private playSfx?: (sfxId: string) => void;
+    private stateManager: UIStateManager<CardsState>;
 
     constructor(props: CardsScreenProps) {
-      this.ui = props.ui;
+      super(props);
       this.onCardSelect = props.onCardSelect;
-      this.onNavigate = props.onNavigate;
-      this.onRenderNeeded = props.onRenderNeeded;
-      this.playSfx = props.playSfx;
-
+      this.stateManager = new UIStateManager<CardsState>(
+        this.ui.bindingManager,
+        'cards',
+        this.onRenderNeeded
+      );
     }
-
 
     /**
      * Create a single card slot using reactive card component
-     * Passes playerDataBinding to avoid binding nesting
      */
     private createCardSlot(
       slotIndex: number,
@@ -7686,9 +8059,7 @@ namespace BloomBeasts {
           mode: 'slot',
           slotIndex,
           cardsPerPage,
-          onClick: (cardId: string) => {
-            this.handleCardClick(cardId);
-          },
+          onClick: (cardId: string) => this.handleCardClick(cardId),
           showDeckIndicator: true,
         }),
       });
@@ -7696,185 +8067,101 @@ namespace BloomBeasts {
 
     /**
      * Create card grid with reactive bindings
-     * Card slots derive directly from playerDataBinding to avoid nesting
      */
     private createCardGrid(): UINodeType {
       const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          left: 70,
-          top: 70,
-          width: 920,
-          height: 580,
-        },
-        children: [
-          // Empty state - derive directly from playerDataBinding
-          ...(this.ui.UINode ? [this.ui.UINode.if(
-            this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
-              const cards = pd?.cards?.collected || [];
-              return cards.length === 0 ? true : false;
-            }),
-            this.ui.View({
-              style: {
-                flex: 1,
-                justifyContent: 'center',
-                alignItems: 'center',
-              },
-              children: this.ui.Text({
-                text: 'No cards in your collection yet.',
-                style: {
-                  fontSize: DIMENSIONS.fontSize.xl,
-                  color: COLORS.textPrimary,
-                },
-              }),
-            })
-          )] : []),
 
-          // Card grid - pre-create 8 slots using reactive card components
+      return this.createContentArea([
+        // Empty state
+        ...(this.ui.UINode ? [this.ui.UINode.if(
+          this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+            const cards = pd?.cards?.collected || [];
+            return cards.length === 0;
+          }),
           this.ui.View({
             style: {
-              flexDirection: 'column',
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
             },
-            children: Array.from({ length: this.rowsPerPage }, (_, rowIndex) =>
-              this.ui.View({
-                style: {
-                  flexDirection: 'row',
-                  marginBottom: rowIndex < this.rowsPerPage - 1 ? GAPS.cards : 0,
-                },
-                children: Array.from({ length: this.cardsPerRow }, (_, colIndex) => {
-                  const slotIndex = rowIndex * this.cardsPerRow + colIndex;
+            children: this.ui.Text({
+              text: 'No cards in your collection yet.',
+              style: {
+                fontSize: DIMENSIONS.fontSize.xl,
+                color: COLORS.textPrimary,
+              },
+            }),
+          })
+        )] : []),
 
-                  // Create card slot - passes playerDataBinding
-                  return this.createCardSlot(slotIndex, cardsPerPage, colIndex < this.cardsPerRow - 1);
-                }),
-              })
-            ),
-          }),
-        ],
+        // Card grid - 2 rows x 4 columns
+        this.ui.View({
+          style: {
+            flexDirection: 'column',
+          },
+          children: Array.from({ length: this.rowsPerPage }, (_, rowIndex) =>
+            this.ui.View({
+              style: {
+                flexDirection: 'row',
+                marginBottom: rowIndex < this.rowsPerPage - 1 ? GAPS.cards : 0,
+              },
+              children: Array.from({ length: this.cardsPerRow }, (_, colIndex) => {
+                const slotIndex = rowIndex * this.cardsPerRow + colIndex;
+                return this.createCardSlot(slotIndex, cardsPerPage, colIndex < this.cardsPerRow - 1);
+              }),
+            })
+          ),
+        }),
+      ]);
+    }
+
+    /**
+     * Create scroll buttons using utility (eliminates 50+ lines of code)
+     */
+    private createScrollButtons() {
+      const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
+
+      const getTotalPages = () => {
+        const playerData = this.ui.bindingManager.getSnapshot(BindingType.PlayerData);
+        const cards = playerData?.cards?.collected || [];
+        return Math.ceil(cards.length / cardsPerPage);
+      };
+
+      return ScrollButtonFactory.createSideMenuScrollButtons({
+        ui: this.ui,
+        stateManager: this.stateManager,
+        getTotalPages,
+        playSfx: this.playSfx,
+        playerDataBinding: true, // Cards screen watches PlayerData for card count
       });
     }
 
     createUI(): UINodeType {
+      const deckInfoText = this.ui.bindingManager.derive(
+        [BindingType.PlayerData],
+        (pd: PlayerData) => `${deckEmoji} ${pd?.cards?.deck?.length || 0}/30`
+      );
 
-      // Create scroll buttons for the side menu
-      // Check bounds inside onClick to avoid multi-binding derives (which create new bindings)
-      const scrollButtons = [
-        {
-          label: 'Previous',
-          onClick: () => {
-            // Check bounds before scrolling
-            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-            const currentOffset = currentState.cards?.scrollOffset ?? 0;
-            if (currentOffset > 0) {
-              // Update UIState binding
-              this.ui.bindingManager.setBinding(BindingType.UIState, {
-                ...currentState,
-                cards: {
-                  ...currentState.cards,
-                  scrollOffset: currentOffset - 1
-                }
-              });
-              // Trigger re-render for web
-              if (this.onRenderNeeded) {
-                this.onRenderNeeded();
-              }
-            }
-          },
-          disabled: this.ui.bindingManager.derive(
-            [BindingType.UIState],
-            (uiState: UIState) => {
-              const offset = uiState.cards?.scrollOffset ?? 0;
-              return offset <= 0;
-            }
-          ),
-          opacity: this.ui.bindingManager.derive(
-            [BindingType.UIState],
-            (uiState: UIState) => {
-              const offset = uiState.cards?.scrollOffset ?? 0;
-              return offset <= 0 ? 0.5 : 1.0;
-            }
-          ),
-          textColor: this.ui.bindingManager.derive(
-            [BindingType.UIState],
-            (uiState: UIState) => {
-              const offset = uiState.cards?.scrollOffset ?? 0;
-              return offset <= 0 ? '#888' : '#fff';
-            }
-          ),
-          yOffset: 0,
-        },
-        {
-          label: 'Next',
-          onClick: () => {
-            // Reactive disabled state prevents invalid scrolling, so just increment
-            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-            const playerData = this.ui.bindingManager.getSnapshot(BindingType.PlayerData);
-            const cards = playerData?.cards?.collected || [];
-            const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-            const totalPages = Math.ceil(cards.length / cardsPerPage);
-            const currentOffset = currentState.cards?.scrollOffset ?? 0;
-            if (currentOffset < totalPages - 1) {
-              this.ui.bindingManager.setBinding(BindingType.UIState, {
-                ...currentState,
-                cards: {
-                  ...currentState.cards,
-                  scrollOffset: currentOffset + 1
-                }
-              });
-              // Trigger re-render for web
-              if (this.onRenderNeeded) {
-                this.onRenderNeeded();
-              }
-            }
-          },
-          disabled: this.ui.bindingManager.derive(
-            [BindingType.UIState, BindingType.PlayerData],
-            (uiState: UIState, pd: any) => {
-              const offset = uiState.cards?.scrollOffset ?? 0;
-              const cards = pd?.cards?.collected || [];
-              const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-              const totalPages = Math.ceil(cards.length / cardsPerPage);
-              return offset >= totalPages - 1;
-            }
-          ),
-          opacity: this.ui.bindingManager.derive(
-            [BindingType.UIState, BindingType.PlayerData],
-            (uiState: UIState, pd: any) => {
-              const offset = uiState.cards?.scrollOffset ?? 0;
-              const cards = pd?.cards?.collected || [];
-              const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-              const totalPages = Math.ceil(cards.length / cardsPerPage);
-              return offset >= totalPages - 1 ? 0.5 : 1.0;
-            }
-          ),
-          textColor: this.ui.bindingManager.derive(
-            [BindingType.UIState, BindingType.PlayerData],
-            (uiState: UIState, pd: any) => {
-              const offset = uiState.cards?.scrollOffset ?? 0;
-              const cards = pd?.cards?.collected || [];
-              const cardsPerPage = this.cardsPerRow * this.rowsPerPage;
-              const totalPages = Math.ceil(cards.length / cardsPerPage);
-              return offset >= totalPages - 1 ? '#888' : '#fff';
-            }
-          ),
-          yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
-        },
-      ];
+      return this.createRootContainer([
+        this.createFullScreenBackground(),
+        this.createContainerBackground(),
+        this.createCardGrid(),
 
-      // Deck info text - derive directly from playerDataBinding to avoid nesting
-      const deckInfoText = this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => `${deckEmoji} ${pd?.cards?.deck?.length || 0}/30`);
+        // Sidebar
+        createSideMenu(this.ui, {
+          title: 'Cards',
+          customTextContent: [createTextRow(this.ui, deckInfoText, 0)],
+          buttons: this.createScrollButtons(),
+          bottomButton: this.getBackButton(),
+          playSfx: this.playSfx,
+        }),
 
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [
-          // Background
-          this.ui.Image({
-            source: this.ui.assetIdToImageSource?.('background') || null,
+        // Card detail popup
+        ...(this.ui.UINode ? [this.ui.UINode.if(
+          this.ui.bindingManager.derive([BindingType.UIState], (uiState: UIState) => {
+            return uiState.cards?.selectedCardId !== null;
+          }),
+          this.ui.View({
             style: {
               position: 'absolute',
               width: '100%',
@@ -7882,115 +8169,53 @@ namespace BloomBeasts {
               top: 0,
               left: 0,
             },
-          }),
-          // Cards Container image as background
-          this.ui.Image({
-            source: this.ui.assetIdToImageSource?.('cards-container') || null,
-            style: {
-              position: 'absolute',
-              left: 40,
-              top: 40,
-              width: 980,
-              height: 640,
-            },
-          }),
-          // Main content - card grid
-          // Card grid view with Horizon-compatible pattern (derives bindings internally)
-          this.createCardGrid(),
-          // Sidebar with common side menu
-          createSideMenu(this.ui, {
-            title: 'Cards',
-            customTextContent: [
-              createTextRow(this.ui, deckInfoText, 0),
-            ],
-            buttons: scrollButtons,
-            bottomButton: {
-              label: 'Back',
-              onClick: () => {
-                if (this.onNavigate) this.onNavigate('menu');
-              },
-              disabled: false,
-            },
-            playSfx: this.playSfx,
-          }),
-
-          // Card detail popup overlay container (conditionally rendered)
-          // Uses UINode.if() for proper conditional rendering per Horizon docs
-          ...(this.ui.UINode ? [this.ui.UINode.if(
-            this.ui.bindingManager.derive([BindingType.UIState], (state: any) => (state.cards?.selectedCardId ?? null) !== null),
-            this.ui.View({
-              style: {
-                position: 'absolute',
-                width: '100%',
-                height: '100%',
-                top: 0,
-                left: 0,
-              },
-              children: createReactiveCardDetailPopup(this.ui, {
-                onClose: () => this.closePopup(),
-                buttons: this.createPopupButtons(),
-                playSfx: this.playSfx,
-              }),
-            })
-          )] : []),
-        ],
-      });
+            children: createReactiveCardDetailPopup(this.ui, {
+              onClose: () => this.closePopup(),
+              buttons: this.createPopupButtons(),
+              playSfx: this.playSfx,
+            }),
+          })
+        )] : []),
+      ]);
     }
 
     /**
-     * Handle card click - show popup with Add/Remove options
+     * Handle card click - show popup
      */
     private handleCardClick(cardId: string): void {
-      const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-      this.ui.bindingManager.setBinding(BindingType.UIState, {
-        ...currentState,
-        cards: {
-          ...currentState.cards,
-          selectedCardId: cardId
-        }
-      });
-      this.onRenderNeeded?.();
+      console.log('[CardsScreen] Card clicked, setting selectedCardId:', cardId);
+      this.stateManager.update({ selectedCardId: cardId });
+
+      // Verify it was set correctly
+      const selectedId = this.stateManager.getValue('selectedCardId');
+      console.log('[CardsScreen] selectedCardId after update:', selectedId);
     }
 
     /**
      * Close the popup
      */
     private closePopup(): void {
-      const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-      this.ui.bindingManager.setBinding(BindingType.UIState, {
-        ...currentState,
-        cards: {
-          ...currentState.cards,
-          selectedCardId: null
-        }
-      });
-      this.onRenderNeeded?.();
+      this.stateManager.update({ selectedCardId: null });
     }
 
     /**
      * Create reactive popup buttons
-     * Returns Add/Remove and Close buttons as PopupButton array
      */
     private createPopupButtons(): PopupButton[] {
-      // Derive button label (Add/Remove) based on deck status
       const buttonLabel = this.ui.bindingManager.derive(
-        [BindingType.PlayerData],
-        (pd: any) => {
-          const state = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-          const cardId = state.cards?.selectedCardId ?? null;
+        [BindingType.UIState, BindingType.PlayerData],
+        (uiState: UIState, pd: PlayerData) => {
+          const cardId = uiState.cards?.selectedCardId;
           if (!cardId) return '';
           const deckCardIds: string[] = pd?.cards?.deck || [];
-          const isInDeck = deckCardIds.includes(cardId);
-          return isInDeck ? 'Remove' : 'Add';
+          return deckCardIds.includes(cardId) ? 'Remove' : 'Add';
         }
       );
 
-      // Derive button color based on deck status
       const buttonColor = this.ui.bindingManager.derive(
-        [BindingType.PlayerData],
-        (pd: any) => {
-          const state = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-          const cardId = state.cards?.selectedCardId ?? null;
+        [BindingType.UIState, BindingType.PlayerData],
+        (uiState: UIState, pd: PlayerData) => {
+          const cardId = uiState.cards?.selectedCardId;
           if (!cardId) return 'default' as ButtonColor;
           const deckCardIds: string[] = pd?.cards?.deck || [];
           const isInDeck = deckCardIds.includes(cardId);
@@ -7999,20 +8224,20 @@ namespace BloomBeasts {
       );
 
       return [
-        // Add/Remove button
         {
           label: buttonLabel,
           onClick: () => {
-            const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-            const cardId = currentState.cards?.selectedCardId ?? null;
+            const uiState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
+            const cardId = uiState.cards?.selectedCardId;
+            console.log('[CardsScreen] Button clicked, selectedCardId:', cardId, 'onCardSelect:', !!this.onCardSelect);
             if (cardId && this.onCardSelect) {
               this.onCardSelect(cardId);
+            } else {
+              console.warn('[CardsScreen] Cannot add/remove card:', { cardId, hasCallback: !!this.onCardSelect });
             }
           },
-          color: buttonColor as any,
+          color: buttonColor,
         },
-
-        // Close button
         {
           label: 'Close',
           onClick: () => this.closePopup(),
@@ -8020,13 +8245,9 @@ namespace BloomBeasts {
         },
       ];
     }
-
-    dispose(): void {
-      // Nothing to clean up
-    }
   }
 
-  // ==================== bloombeasts\common\constants\upgrades.ts ====================
+  // ==================== bloombeasts/common/constants/upgrades.ts ====================
 
   /**
    * Upgrade Constants
@@ -8093,102 +8314,92 @@ namespace BloomBeasts {
     [ROOSTER.id]: ROOSTER.costs
   };
 
-  // ==================== bloombeasts\screens\upgrade\UpgradeScreen.ts ====================
+  // ==================== bloombeasts/screens/upgrade/UpgradeScreen.ts ====================
 
   /**
-   * Upgrade Screen Component
-   * Displays available upgrades for purchase
+   * Upgrade Screen - Refactored using BaseScreen
+   *
+   * Reduced by eliminating constructor boilerplate and layout duplication
    */
 
 
-  export interface UpgradeScreenProps {
-    ui: UIMethodMappings;
-    onNavigate?: (screen: string) => void;
+  // UI constants
+  const UPGRADE_CONTAINER_SIZE = 150;
+  const UPGRADE_IMAGE_WIDTH = 142;
+  const UPGRADE_IMAGE_HEIGHT = 120;
+  const UPGRADE_IMAGE_OFFSET_TOP = 4;
+  const UPGRADE_IMAGE_OFFSET_LEFT = 4;
+  const UPGRADE_LEVEL_BOTTOM = 8;
+  const UPGRADE_LEVEL_FONT_SIZE = 14;
+  const UPGRADE_GRID_GAP = 40;
+
+  export interface UpgradeScreenProps extends BaseScreenProps {
     onUpgrade?: (boostId: string) => void;
-    onRenderNeeded?: () => void;
-    playSfx?: (sfxId: string) => void;
   }
 
-  export class UpgradeScreen {
-    private ui: UIMethodMappings;
-    private onNavigate?: (screen: string) => void;
+  interface UpgradeState {
+    selectedUpgradeId?: string | null;
+  }
+
+  export class UpgradeScreen extends BaseScreen {
     private onUpgrade?: (boostId: string) => void;
-    private onRenderNeeded?: () => void;
-    private playSfx?: (sfxId: string) => void;
+    private stateManager: UIStateManager<UpgradeState>;
 
     constructor(props: UpgradeScreenProps) {
-      this.ui = props.ui;
-      this.onNavigate = props.onNavigate;
+      super(props);
       this.onUpgrade = props.onUpgrade;
-      this.onRenderNeeded = props.onRenderNeeded;
-      this.playSfx = props.playSfx;
+      this.stateManager = new UIStateManager<UpgradeState>(
+        this.ui.bindingManager,
+        'upgrade',
+        this.onRenderNeeded
+      );
     }
 
-    /**
-     * Create a single upgrade item
-     */
     private createUpgradeItem(upgrade: UpgradeDefinition): UINodeType {
-      const containerSize = 150;
-      const imageSize = { width: 142, height: 120 };
-      const imageOffset = { top: 4, left: 4 };
-      const upgradeBoxSize = { width: 25, height: 26 };
-
       return this.ui.Pressable({
         onClick: () => {
-          const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-          // Update UIState binding
-          this.ui.bindingManager.setBinding(BindingType.UIState, {
-            ...currentState,
-            upgrade: {
-              ...currentState.upgrade,
-              selectedUpgradeId: upgrade.id
-            }
-          });
-          this.onRenderNeeded?.();
+          this.stateManager.update({ selectedUpgradeId: upgrade.id });
         },
         style: {
-          width: containerSize,
-          height: containerSize,
+          width: UPGRADE_CONTAINER_SIZE,
+          height: UPGRADE_CONTAINER_SIZE,
           position: 'relative',
         },
         children: [
-          // Container background
           this.ui.Image({
             source: this.ui.assetIdToImageSource?.('upgrade-container-card') || null,
             style: {
               position: 'absolute',
-              width: containerSize,
-              height: containerSize,
+              width: UPGRADE_CONTAINER_SIZE,
+              height: UPGRADE_CONTAINER_SIZE,
               top: 0,
               left: 0,
               opacity: 1.0,
             },
           }),
-          // Upgrade image overlay
           this.ui.Image({
             source: this.ui.assetIdToImageSource?.(upgrade.assetId) || null,
             style: {
               position: 'absolute',
-              width: imageSize.width,
-              height: imageSize.height,
-              top: imageOffset.top,
-              left: imageOffset.left,
+              width: UPGRADE_IMAGE_WIDTH,
+              height: UPGRADE_IMAGE_HEIGHT,
+              top: UPGRADE_IMAGE_OFFSET_TOP,
+              left: UPGRADE_IMAGE_OFFSET_LEFT,
             },
           }),
-          // Upgrade level indicator (text at center bottom)
           this.ui.Text({
-            text: this.ui.bindingManager.playerDataBinding.binding.derive((pd: any) => {
+            text: this.ui.bindingManager.playerDataBinding.binding.derive((pd: PlayerData) => {
               const level = pd?.boosts?.[upgrade.id] || 0;
               return `Level ${level}`;
             }),
             style: {
               position: 'absolute',
-              bottom: 8,
+              bottom: UPGRADE_LEVEL_BOTTOM,
               left: 0,
-              width: containerSize,
-              fontSize: 14,
+              width: UPGRADE_CONTAINER_SIZE,
+              fontSize: UPGRADE_LEVEL_FONT_SIZE,
               fontWeight: 'bold',
-              color: '#fff',
+              color: COLORS.textPrimary,
               textAlign: 'center',
             },
           }),
@@ -8196,181 +8407,79 @@ namespace BloomBeasts {
       });
     }
 
-    /**
-     * Create the upgrade grid
-     */
     private createUpgradeGrid(): UINodeType {
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          left: 70,
-          top: 70,
-          width: 920,
-          height: 580,
-        },
-        children: [
-          this.ui.View({
-            style: {
-              flexDirection: 'row',
-              flexWrap: 'wrap',
-              gap: 40,
-            },
-            children: ALL_UPGRADES.map((upgrade) =>
-              this.createUpgradeItem(upgrade)
-            ),
-          }),
-        ],
-      });
+      return this.createContentArea([
+        this.ui.View({
+          style: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            gap: UPGRADE_GRID_GAP,
+          },
+          children: ALL_UPGRADES.map((upgrade) => this.createUpgradeItem(upgrade)),
+        }),
+      ]);
     }
 
     createUI(): UINodeType {
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [
-          // Background
-          this.ui.Image({
-            source: this.ui.assetIdToImageSource?.('background') || null,
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              top: 0,
-              left: 0,
-            },
-          }),
-          // Cards Container image as background
-          this.ui.Image({
-            source: this.ui.assetIdToImageSource?.('cards-container') || null,
-            style: {
-              position: 'absolute',
-              left: 40,
-              top: 40,
-              width: 980,
-              height: 640,
-            },
-          }),
-          // Upgrade grid
-          this.createUpgradeGrid(),
-          // Sidebar with common side menu
-          createSideMenu(this.ui, {
-            title: 'Upgrades',
-            customTextContent: [],
-            buttons: [],
-            bottomButton: {
-              label: 'Back',
-              onClick: () => {
-                if (this.onNavigate) this.onNavigate('menu');
-              },
-              disabled: false,
-            },
-            playSfx: this.playSfx,
-          }),
-          // Upgrade popup (conditionally rendered) - derive from UIState
-          ...(this.ui.UINode ? [this.ui.UINode.if(
-            this.ui.bindingManager.derive([BindingType.UIState], (state: any) => {
-              const shouldShow = (state.upgrade?.selectedUpgradeId ?? null) !== null;
-              return shouldShow;
-            }),
-            this.createUpgradePopup()
-          )] : []),
-        ],
-      });
-    }
+      return this.createRootContainer([
+        this.createFullScreenBackground(),
+        this.createContainerBackground(),
+        this.createUpgradeGrid(),
 
-    /**
-     * Create the upgrade popup
-     */
-    private createUpgradePopup(): UINodeType {
-
-      return createPopup({
-        ui: this.ui,
-        title: 'Upgrade',
-        description: this.ui.bindingManager.derive([BindingType.PlayerData, BindingType.UIState], (pd: any, state: any) => {
-          const upgradeId = state.upgrade?.selectedUpgradeId ?? null;
-          const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
-          if (!upgrade) return '';
-          const currentLevel = pd?.boosts?.[upgradeId] || 0;
-          const coins = pd?.coins ?? 0;
-
-          if (currentLevel >= 6) {
-            return `${upgrade.name}\n${upgrade.description}\n\nLevel: ${currentLevel}/6 (MAX)\nYour coins: ${coins}`;
-          }
-
-          const nextLevelCost = upgrade.costs[currentLevel];
-          return `${upgrade.name}\n${upgrade.description}\n\nLevel: ${currentLevel}/6\nNext upgrade cost: ${nextLevelCost} coins\nYour coins: ${coins}`;
+        createSideMenu(this.ui, {
+          title: 'Upgrades',
+          bottomButton: this.getBackButton(),
+          playSfx: this.playSfx,
         }),
-        buttons: [
-          {
-            label: 'Upgrade',
-            onClick: () => {
-              const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-              const upgradeId = currentState.upgrade?.selectedUpgradeId ?? null;
-              if (!upgradeId) return;
-              if (this.onUpgrade) {
-                this.onUpgrade(upgradeId);
-              }
-              // Update UIState binding
-              this.ui.bindingManager.setBinding(BindingType.UIState, {
-                ...currentState,
-                upgrade: {
-                  ...currentState.upgrade,
-                  selectedUpgradeId: null
-                }
-              });
-              this.onRenderNeeded?.();
-            },
-            color: 'green',
-            disabled: this.ui.bindingManager.derive([BindingType.PlayerData, BindingType.UIState], (pd: any, state: any) => {
-              const upgradeId = state.upgrade?.selectedUpgradeId ?? null;
-              if (!upgradeId) {
-                return true;
-              }
+
+        // Upgrade popup
+        ...(this.ui.UINode ? [this.ui.UINode.if(
+          this.ui.bindingManager.derive([BindingType.UIState], () => {
+            return this.stateManager.getValue('selectedUpgradeId') !== null;
+          }),
+          createPopup({
+            ui: this.ui,
+            title: this.ui.bindingManager.derive([BindingType.UIState], () => {
+              const upgradeId = this.stateManager.getValue('selectedUpgradeId');
               const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
-              if (!upgrade) {
-                return true;
-              }
-              const currentLevel = pd?.boosts?.[upgradeId] || 0;
-              if (currentLevel >= 6) {
-                return true;
-              }
-
-              const nextLevelCost = upgrade.costs[currentLevel];
-              const coins = pd?.coins ?? 0;
-              const isDisabled = coins < nextLevelCost;
-              return isDisabled;
+              return upgrade?.name || '';
             }),
-          },
-          {
-            label: 'Close',
-            onClick: () => {
-              const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-              // Update UIState binding
-              this.ui.bindingManager.setBinding(BindingType.UIState, {
-                ...currentState,
-                upgrade: {
-                  ...currentState.upgrade,
-                  selectedUpgradeId: null
-                }
-              });
-              this.onRenderNeeded?.();
-            },
-            color: 'default',
-          },
-        ],
-        playSfx: this.playSfx,
-      });
-    }
-
-    dispose(): void {
-      // Nothing to clean up
+            description: this.ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState, pd: PlayerData) => {
+              const upgradeId = this.stateManager.getValue('selectedUpgradeId');
+              const upgrade = ALL_UPGRADES.find(u => u.id === upgradeId);
+              if (!upgrade) return '';
+              const currentLevel = pd?.boosts?.[upgrade.id] || 0;
+              const cost = upgrade.costs[currentLevel] || 0;
+              return `${upgrade.description}\n\nCurrent Level: ${currentLevel}\nCost: ${cost} coins`;
+            }),
+            buttons: [
+              {
+                label: 'Upgrade',
+                onClick: () => {
+                  const upgradeId = this.stateManager.getValue('selectedUpgradeId');
+                  if (upgradeId && this.onUpgrade) {
+                    this.onUpgrade(upgradeId);
+                  }
+                  this.stateManager.update({ selectedUpgradeId: null });
+                },
+                color: 'green',
+              },
+              {
+                label: 'Cancel',
+                onClick: () => {
+                  this.stateManager.update({ selectedUpgradeId: null });
+                },
+                color: 'default',
+              },
+            ],
+            playSfx: this.playSfx,
+          })
+        )] : []),
+      ]);
     }
   }
 
-  // ==================== bloombeasts\common\ui\screens\MissionRenderer.ts ====================
+  // ==================== bloombeasts/common/ui/screens/MissionRenderer.ts ====================
 
   /**
    * Mission Renderer Component
@@ -8576,141 +8685,84 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts\screens\missions\MissionScreen.ts ====================
+  // ==================== bloombeasts/screens/missions/MissionScreen.ts ====================
 
   /**
-   * Mission Screen - Refactored with UI Component System
+   * Mission Screen 
    */
 
 
-  // MissionScreen-specific constants
-  const cardsUIContainerDimensions = {
-    width: 950,
-    height: 640,
-  };
+  const CONTAINER_DIMENSIONS = { width: 950, height: 640 };
+  const CONTAINER_POSITION: SimplePosition = { x: 103, y: 41 };
 
-  const cardsUIContainerPosition: SimplePosition = {
-    x: 103,
-    y: 41,
-  };
+  // Mission grid constants
+  const GRID_GAP_X = 12;
+  const GRID_GAP_Y = 12;
+  const GRID_START_X = 24;
+  const GRID_START_Y = 24;
 
-  export interface MissionScreenProps {
-    ui: UIMethodMappings;
+  export interface MissionScreenProps extends BaseScreenProps {
     onMissionSelect?: (missionId: string) => void;
-    onNavigate?: (screen: string) => void;
-    onRenderNeeded?: () => void;
-    playSfx?: (sfxId: string) => void;
   }
 
-  /**
-   * Unified Mission Screen that works on both platforms
-   */
-  export class MissionScreen {
-    // UI methods (injected)
-    private ui: UIMethodMappings;
+  interface MissionState {
+    scrollOffset?: number;
+  }
 
-    // Configuration
-    private missionsPerRow: number = 3;
-    private rowsPerPage: number = 3;
-
-    // Callbacks
+  export class MissionScreen extends BaseScreen {
+    private missionsPerRow = 3;
+    private rowsPerPage = 3;
     private onMissionSelect?: (missionId: string) => void;
-    private onNavigate?: (screen: string) => void;
-    private onRenderNeeded?: () => void;
-    private playSfx?: (sfxId: string) => void;
+    private stateManager: UIStateManager<MissionState>;
 
     constructor(props: MissionScreenProps) {
-      this.ui = props.ui;
+      super(props);
       this.onMissionSelect = props.onMissionSelect;
-      this.onNavigate = props.onNavigate;
-      this.onRenderNeeded = props.onRenderNeeded;
-      this.playSfx = props.playSfx;
+      this.stateManager = new UIStateManager<MissionState>(
+        this.ui.bindingManager,
+        'missions',
+        this.onRenderNeeded
+      );
     }
 
-    /**
-     * Create the missions UI
-     */
     createUI(): UINodeType {
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [
-          // Background image (full screen)
-          this.createBackground(),
-
-          // Main content area with mission grid
-          this.createMainContent(),
-
-          // Side menu with controls (absolutely positioned)
-          this.createSideMenu(),
-        ],
-      });
+      return this.createRootContainer([
+        this.createFullScreenBackground(),
+        this.createMainContent(),
+        this.createSideMenu(),
+      ]);
     }
 
-    /**
-     * Create full-screen background image
-     */
-    private createBackground(): UINodeType {
-      return this.ui.Image({
-        source: this.ui.assetIdToImageSource?.('background') || null,
-        style: {
-          position: 'absolute',
-          width: '100%',
-          height: '100%',
-          top: 0,
-          left: 0,
-        },
-      });
-    }
-
-    /**
-     * Create main content area with mission grid
-     */
     private createMainContent(): UINodeType {
       return this.ui.View({
         style: {
           position: 'absolute',
-          left: cardsUIContainerPosition.x,
-          top: cardsUIContainerPosition.y,
-          width: cardsUIContainerDimensions.width,
-          height: cardsUIContainerDimensions.height,
+          left: CONTAINER_POSITION.x,
+          top: CONTAINER_POSITION.y,
+          width: CONTAINER_DIMENSIONS.width,
+          height: CONTAINER_DIMENSIONS.height,
         },
         children: [
-          // Cards container background image
           this.ui.Image({
             source: this.ui.assetIdToImageSource?.('cards-container') || null,
             style: {
               position: 'absolute',
-              width: cardsUIContainerDimensions.width,
-              height: cardsUIContainerDimensions.height,
+              width: CONTAINER_DIMENSIONS.width,
+              height: CONTAINER_DIMENSIONS.height,
               top: 0,
               left: 0,
             },
           }),
-          // Content on top of container image
-          // Mission grid container with reactive missions
           this.createMissionGrid(),
         ],
       });
     }
 
-    /**
-     * Create a single mission slot using reactive mission component
-     */
     private createMissionSlot(slotIndex: number, missionsPerPage: number, row: number, col: number): UINodeType {
       const cardWidth = MISSION_DIMENSIONS.width;
       const cardHeight = MISSION_DIMENSIONS.height;
-      const gapX = 12;
-      const gapY = 12;
-      const startX = 24;
-      const startY = 24;
-      const spacingX = cardWidth + gapX;
-      const spacingY = cardHeight + gapY;
-      const x = startX + col * spacingX;
-      const y = startY + row * spacingY;
+      const x = GRID_START_X + col * (cardWidth + GRID_GAP_X);
+      const y = GRID_START_Y + row * (cardHeight + GRID_GAP_Y);
 
       return this.ui.View({
         style: {
@@ -8721,19 +8773,11 @@ namespace BloomBeasts {
         children: createReactiveMissionComponent(this.ui, {
           slotIndex,
           missionsPerPage,
-          onClick: (missionId: string) => {
-            if (this.onMissionSelect) {
-              this.onMissionSelect(missionId);
-            }
-          },
+          onClick: (missionId: string) => this.onMissionSelect?.(missionId),
         }),
       });
     }
 
-
-    /**
-     * Create the mission grid using single binding (Horizon-compatible)
-     */
     private createMissionGrid(): UINodeType {
       const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
 
@@ -8742,11 +8786,10 @@ namespace BloomBeasts {
           position: 'relative',
           paddingLeft: 4,
           paddingTop: 4,
-          width: cardsUIContainerDimensions.width,
-          height: cardsUIContainerDimensions.height,
+          width: CONTAINER_DIMENSIONS.width,
+          height: CONTAINER_DIMENSIONS.height,
         },
         children: [
-          // Mission grid - pre-create all slots
           this.ui.View({
             style: {
               position: 'relative',
@@ -8761,10 +8804,10 @@ namespace BloomBeasts {
             ).flat(),
           }),
 
-          // Empty state message (only show when no missions, render on top)
+          // Empty state
           ...(this.ui.UINode ? [this.ui.UINode.if(
             this.ui.bindingManager.derive([BindingType.Missions], (missions: MissionDisplay[]) => {
-              return missions.length === 0 ? true : false;
+              return missions.length === 0;
             }),
             this.ui.View({
               style: {
@@ -8789,10 +8832,26 @@ namespace BloomBeasts {
       });
     }
 
-
     /**
-     * Create side menu with controls
+     * Create scroll buttons using utility (eliminates 50+ lines of code)
      */
+    private createScrollButtons(): SideMenuButton[] {
+      const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
+
+      const getTotalPages = () => {
+        const missions = this.ui.bindingManager.getSnapshot(BindingType.Missions) || [];
+        return Math.ceil(missions.length / missionsPerPage);
+      };
+
+      return ScrollButtonFactory.createSideMenuScrollButtons({
+        ui: this.ui,
+        stateManager: this.stateManager,
+        getTotalPages,
+        playSfx: this.playSfx,
+        playerDataBinding: false, // Mission screen watches Missions binding
+      });
+    }
+
     private createSideMenu(): UINodeType {
       const completionText = this.ui.bindingManager.derive([BindingType.Missions], (missions: MissionDisplay[]) => {
         const completedCount = missions.filter((m: MissionDisplay) => m.isCompleted).length;
@@ -8801,154 +8860,15 @@ namespace BloomBeasts {
 
       return createSideMenu(this.ui, {
         title: 'Missions',
-        customTextContent: [
-          createTextRow(this.ui, completionText as any, 0),
-        ],
-        buttons: [
-          {
-            label: 'Previous',
-            onClick: () => {
-              const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-              // Reactive disabled state prevents invalid scrolling, so just decrement
-              this.ui.bindingManager.setBinding(BindingType.UIState, {
-                ...currentState,
-                missions: {
-                  ...currentState.missions,
-                  scrollOffset: (currentState.missions?.scrollOffset ?? 0) - 1
-                }
-              });
-              this.onRenderNeeded?.();
-            },
-            disabled: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-              const offset: number = uiState.missions?.scrollOffset ?? 0;
-              return offset <= 0 ? true : false;
-            }),
-            opacity: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-              const offset: number = uiState.missions?.scrollOffset ?? 0;
-              return offset <= 0 ? 0.5 : 1.0;
-            }),
-            textColor: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-              const offset: number = uiState.missions?.scrollOffset ?? 0;
-              return offset <= 0 ? '#888' : '#fff';
-            }),
-            yOffset: 0,
-          },
-          {
-            label: 'Next',
-            onClick: () => {
-              const currentState = this.ui.bindingManager.getSnapshot(BindingType.UIState);
-              // Reactive disabled state prevents invalid scrolling, so just increment
-              this.ui.bindingManager.setBinding(BindingType.UIState, {
-                ...currentState,
-                missions: {
-                  ...currentState.missions,
-                  scrollOffset: (currentState.missions?.scrollOffset ?? 0) + 1
-                }
-              });
-              this.onRenderNeeded?.();
-            },
-            disabled: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-              const offset: number = uiState.missions?.scrollOffset ?? 0;
-              const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-              const totalPages = Math.ceil(missions.length / missionsPerPage);
-              return offset >= totalPages - 1 ? true : false;
-            }),
-            opacity: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-              const offset: number = uiState.missions?.scrollOffset ?? 0;
-              const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-              const totalPages = Math.ceil(missions.length / missionsPerPage);
-              return offset >= totalPages - 1 ? 0.5 : 1.0;
-            }),
-            textColor: this.ui.bindingManager.derive([BindingType.Missions, BindingType.UIState], (missions: MissionDisplay[], uiState: UIState) => {
-              const offset: number = uiState.missions?.scrollOffset ?? 0;
-              const missionsPerPage = this.missionsPerRow * this.rowsPerPage;
-              const totalPages = Math.ceil(missions.length / missionsPerPage);
-              return offset >= totalPages - 1 ? '#888' : '#fff';
-            }),
-            yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
-          },
-        ],
-        bottomButton: {
-          label: 'Back',
-          onClick: () => {
-            if (this.onNavigate) {
-              this.onNavigate('menu');
-            }
-          },
-          disabled: false,
-        },
+        customTextContent: [createTextRow(this.ui, completionText, 0)],
+        buttons: this.createScrollButtons(),
+        bottomButton: this.getBackButton(),
         playSfx: this.playSfx,
       });
     }
-
-    /**
-     * Cleanup
-     */
-    dispose(): void {
-      // Nothing to clean up
-    }
   }
 
-  // ==================== bloombeasts\common\engine\constants\gameRules.ts ====================
-
-  /**
-   * Game Rules Constants
-   *
-   * Central location for all game rule constants to avoid magic numbers
-   * throughout the codebase.
-   */
-
-  // Field Configuration
-  export const FIELD_SIZE = 3;
-
-  // Deck Configuration
-  export const DECK_SIZE = 30;
-  export const MIN_DECK_SIZE = 30;
-  export const MAX_DECK_SIZE = 30;
-
-  // Health Configuration
-  export const STARTING_HEALTH = 30;
-  export const PLAYER_MAX_HEALTH = 30;
-
-  // Turn Configuration
-  export const TURN_TIME_LIMIT = 60; // seconds
-  export const MAX_TURNS = 100; // to prevent infinite games
-
-  // Hand Configuration
-  export const MAX_HAND_SIZE = 10;
-  export const STARTING_HAND_SIZE = 5;
-
-  // Zone Limits
-  export const MAX_TRAP_ZONE_SIZE = 3;
-  export const MAX_MAGIC_ZONE_SIZE = 3;
-
-  // Cost Limits
-  export const MAX_CARD_COST = 10;
-  export const MIN_CARD_COST = 0;
-
-  // Resource Limits
-  export const MAX_ENERGY = 10;
-  export const MIN_ENERGY = 0;
-
-  // Level Configuration
-  export const MIN_LEVEL = 1;
-  // MAX_LEVEL is defined in leveling.ts
-
-  // Stat Limits
-  export const MAX_ATTACK = 99;
-  export const MAX_HEALTH = 99;
-  export const MIN_ATTACK = 0;
-  export const MIN_HEALTH = 1;
-
-  // Counter limits removed
-
-  // Card Limits
-  export const MAX_COPIES_PER_CARD = 3;
-
-  // Battle Configuration
-  export const FIRST_PLAYER_DRAWS_ON_FIRST_TURN = false;
-
-  // ==================== bloombeasts\common\engine\utils\fieldUtils.ts ====================
+  // ==================== bloombeasts/common/engine/utils/fieldUtils.ts ====================
 
   /**
    * Field Utilities
@@ -8957,43 +8877,6 @@ namespace BloomBeasts {
    * Eliminates common iteration patterns throughout the codebase.
    */
 
-
-  /**
-   * Iterate over all beasts in the field, including null slots
-   * @param field The field array
-   * @param callback Function to call for each slot
-   */
-  export function forEachBeast(
-    field: (RuntimeBeast | null)[],
-    callback: (beast: RuntimeBeast | null, index: number) => void
-  ): void {
-    field.forEach((beast, index) => callback(beast, index));
-  }
-
-  /**
-   * Iterate over only non-null beasts in the field
-   * @param field The field array
-   * @param callback Function to call for each beast
-   */
-  export function forEachActiveBeast(
-    field: (RuntimeBeast | null)[],
-    callback: (beast: RuntimeBeast, index: number) => void
-  ): void {
-    field.forEach((beast, index) => {
-      if (beast !== null) {
-        callback(beast, index);
-      }
-    });
-  }
-
-  /**
-   * Get all beasts from the field (including null slots)
-   * @param field The field array
-   * @returns Array of beasts and nulls
-   */
-  export function getAllSlots(field: (RuntimeBeast | null)[]): (RuntimeBeast | null)[] {
-    return [...field];
-  }
 
   /**
    * Get all non-null beasts from the field
@@ -9016,88 +8899,12 @@ namespace BloomBeasts {
   }
 
   /**
-   * Get all dead (HP <= 0) beasts from the field
-   * @param field The field array
-   * @returns Array of dead beasts
-   */
-  export function getDeadBeasts(field: (RuntimeBeast | null)[]): RuntimeBeast[] {
-    return field.filter(
-      (beast): beast is RuntimeBeast => beast !== null && beast.currentHealth <= 0
-    );
-  }
-
-  /**
-   * Count alive beasts in the field
-   * @param field The field array
-   * @returns Number of alive beasts
-   */
-  export function countAliveBeasts(field: (RuntimeBeast | null)[]): number {
-    return getAliveBeasts(field).length;
-  }
-
-  /**
-   * Count total beasts in the field (excluding null slots)
-   * @param field The field array
-   * @returns Number of beasts
-   */
-  export function countBeasts(field: (RuntimeBeast | null)[]): number {
-    return getAllBeasts(field).length;
-  }
-
-  /**
    * Find first empty slot in the field
    * @param field The field array
    * @returns Index of first empty slot, or -1 if none
    */
   export function findEmptySlot(field: (RuntimeBeast | null)[]): number {
     return field.findIndex((beast) => beast === null);
-  }
-
-  /**
-   * Check if field has any empty slots
-   * @param field The field array
-   * @returns True if at least one empty slot exists
-   */
-  export function hasEmptySlot(field: (RuntimeBeast | null)[]): boolean {
-    return findEmptySlot(field) !== -1;
-  }
-
-  /**
-   * Check if field is full (no empty slots)
-   * @param field The field array
-   * @returns True if no empty slots
-   */
-  export function isFieldFull(field: (RuntimeBeast | null)[]): boolean {
-    return !hasEmptySlot(field);
-  }
-
-  /**
-   * Get beasts by affinity
-   * @param field The field array
-   * @param affinity The affinity to filter by
-   * @returns Array of beasts with matching affinity
-   */
-  export function getBeastsByAffinity(
-    field: (RuntimeBeast | null)[],
-    affinity: string
-  ): RuntimeBeast[] {
-    return getAllBeasts(field).filter((beast) => beast.affinity === affinity);
-  }
-
-  /**
-   * Get beast at specific index
-   * @param field The field array
-   * @param index The slot index
-   * @returns Beast at index or null
-   */
-  export function getBeastAtIndex(
-    field: (RuntimeBeast | null)[],
-    index: number
-  ): RuntimeBeast | null {
-    if (index < 0 || index >= field.length) {
-      return null;
-    }
-    return field[index];
   }
 
   /**
@@ -9119,69 +8926,7 @@ namespace BloomBeasts {
     return null;
   }
 
-  /**
-   * Get adjacent beasts (left and right neighbors)
-   * @param field The field array
-   * @param index The slot index
-   * @returns Array of adjacent beasts (may be empty or contain 1-2 beasts)
-   */
-  export function getAdjacentBeasts(
-    field: (RuntimeBeast | null)[],
-    index: number
-  ): RuntimeBeast[] {
-    const adjacent: RuntimeBeast[] = [];
-
-    // Left neighbor
-    if (index > 0 && field[index - 1]) {
-      adjacent.push(field[index - 1]!);
-    }
-
-    // Right neighbor
-    if (index < field.length - 1 && field[index + 1]) {
-      adjacent.push(field[index + 1]!);
-    }
-
-    return adjacent;
-  }
-
-  /**
-   * Clear all dead beasts from field and move to graveyard
-   * @param player The player whose field to clear
-   * @returns Array of removed beasts
-   */
-  export function clearDeadBeasts(player: Player): RuntimeBeast[] {
-    const deadBeasts: RuntimeBeast[] = [];
-
-    for (let i = 0; i < player.field.length; i++) {
-      const beast = player.field[i];
-      if (beast && beast.currentHealth <= 0) {
-        deadBeasts.push(beast);
-        player.field[i] = null;
-      }
-    }
-
-    return deadBeasts;
-  }
-
-  /**
-   * Get total attack power of all alive beasts
-   * @param field The field array
-   * @returns Sum of all attack values
-   */
-  export function getTotalAttackPower(field: (RuntimeBeast | null)[]): number {
-    return getAliveBeasts(field).reduce((total, beast) => total + beast.currentAttack, 0);
-  }
-
-  /**
-   * Get total health of all alive beasts
-   * @param field The field array
-   * @returns Sum of all health values
-   */
-  export function getTotalHealth(field: (RuntimeBeast | null)[]): number {
-    return getAliveBeasts(field).reduce((total, beast) => total + beast.currentHealth, 0);
-  }
-
-  // ==================== bloombeasts\common\engine\utils\combatHelpers.ts ====================
+  // ==================== bloombeasts/common/engine/utils/combatHelpers.ts ====================
 
   /**
    * Combat Helper Utilities
@@ -9231,6 +8976,21 @@ namespace BloomBeasts {
     }
 
     return true;
+  }
+
+  /**
+   * Check if any beasts in a field can attack
+   */
+  export function hasAttackableBeasts(field: (RuntimeBeast | null)[]): boolean {
+    if (!field) return false;
+
+    for (const beast of field) {
+      if (beast && canAttack(beast)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -9340,34 +9100,7 @@ namespace BloomBeasts {
     });
   }
 
-  /**
-   * Check if a position is adjacent
-   */
-  export function isAdjacent(pos1: number, pos2: number): boolean {
-    return Math.abs(pos1 - pos2) === 1;
-  }
-
-  /**
-   * Get adjacent positions
-   */
-  export function getAdjacentPositions(position: number): number[] {
-    const adjacent: number[] = [];
-    if (position > 0) adjacent.push(position - 1);
-    if (position < FIELD_SIZE - 1) adjacent.push(position + 1);
-    return adjacent;
-  }
-
-  /**
-   * Check if player has lost (no beasts on field and no cards in hand)
-   */
-  export function hasPlayerLost(player: Player): boolean {
-    const hasFieldBeasts = getAliveBeasts(player.field).length > 0;
-    const hasPlayableCards = player.hand.length > 0 || player.deck.length > 0;
-
-    return !hasFieldBeasts && !hasPlayableCards;
-  }
-
-  // ==================== bloombeasts\common\engine\constants\battleConstants.ts ====================
+  // ==================== bloombeasts/common/engine/constants/battleConstants.ts ====================
 
   /**
    * Battle System Constants
@@ -9398,44 +9131,18 @@ namespace BloomBeasts {
   export const TURN_TIMER_SECONDS = 300; // 5 minutes per turn
 
   /**
-   * Field Limits
-   */
-  export const MAX_BEASTS_ON_FIELD = 3;
-  export const MAX_TRAPS_IN_ZONE = 3;
-  export const MAX_BUFFS_IN_ZONE = 2;
-
-  /**
    * Battle Event Thresholds
    */
   export const LOW_HEALTH_THRESHOLD_PERCENT = 10;
 
-  // ==================== bloombeasts\screens\battle\ui\types.ts ====================
+  // ==================== bloombeasts/screens/battle/ui/types.ts ====================
 
   /**
    * Shared types and constants for Battle Screen components
    */
 
 
-  // Re-export standardCardDimensions from dimensions.ts to avoid duplication
-
-  /**
-   * Card dimensions (battle-specific)
-   */
-
-  export const trapCardDimensions = {
-    width: 100,
-    height: 133,
-  };
-
-  export const buffCardDimensions = {
-    width: 100,
-    height: 133,
-  };
-
-  export const habitatShiftCardDimensions = {
-    width: 100,
-    height: 133,
-  };
+  // Re-export dimensions from consolidated dimensions file
 
   /**
    * Game dimensions
@@ -9458,6 +9165,7 @@ namespace BloomBeasts {
       trapThree: { x: 1060, y: 240 },
       buffOne: { x: 20, y: 50 },
       buffTwo: { x: 20, y: 193 },
+      buffThree: { x: 20, y: 336 },
       health: { x: 30, y: 10 },
       energy: { x: 930, y: 10 },
       deckCount: { x: 1150, y: 10 },
@@ -9469,8 +9177,9 @@ namespace BloomBeasts {
       trapOne: { x: 120, y: 347 },
       trapTwo: { x: 590, y: 347 },
       trapThree: { x: 1060, y: 347 },
-      buffOne: { x: 1160, y: 477 },
-      buffTwo: { x: 1160, y: 587 },
+      buffOne: { x: 1160, y: 440 },
+      buffTwo: { x: 1160, y: 550 },
+      buffThree: { x: 1160, y: 660 },
       health: { x: 30, y: 680 },
       energy: { x: 930, y: 680 },
       deckCount: { x: 1150, y: 680 },
@@ -9492,8 +9201,8 @@ namespace BloomBeasts {
    */
   export interface BattleComponentWithCallbacks extends BattleComponentProps {
     onAction?: (action: string) => void;
-    showPlayedCard?: (card: any, callback?: () => void) => void;
-    onCardDetailSelected?: (card: any) => void;
+    showPlayedCard?: (card: Card, callback?: () => void) => void;
+    onCardDetailSelected?: (card: Card) => void;
   }
 
   /**
@@ -9505,7 +9214,7 @@ namespace BloomBeasts {
     onShowHandChange?: (newValue: boolean) => void;
     onScrollOffsetChange?: (newValue: number) => void;
     onRenderNeeded?: () => void;
-    showPlayedCard?: (card: any, callback?: () => void) => void;
+    showPlayedCard?: (card: Card, callback?: () => void) => void;
   }
 
   /**
@@ -9526,7 +9235,7 @@ namespace BloomBeasts {
   export interface InfoDisplaysProps extends BattleComponentProps {
   }
 
-  // ==================== bloombeasts\screens\battle\ui\BattleBackground.ts ====================
+  // ==================== bloombeasts/screens/battle/ui/BattleBackground.ts ====================
 
   /**
    * Battle background and playboard rendering
@@ -9573,7 +9282,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\ui\BeastField.ts ====================
+  // ==================== bloombeasts/screens/battle/ui/BeastField.ts ====================
 
   /**
    * Beast field rendering - 3 slots per player
@@ -9707,7 +9416,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\ui\TrapZone.ts ====================
+  // ==================== bloombeasts/screens/battle/ui/TrapZone.ts ====================
 
   /**
    * Trap zone rendering - 3 slots per player
@@ -9716,7 +9425,7 @@ namespace BloomBeasts {
 
   export class TrapZone {
     private ui: BattleComponentWithCallbacks['ui'];
-    private onCardDetailSelected?: (card: any) => void;
+    private onCardDetailSelected?: (card: Card) => void;
 
     constructor(props: BattleComponentWithCallbacks) {
       this.ui = props.ui;
@@ -9794,16 +9503,16 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\ui\BuffZone.ts ====================
+  // ==================== bloombeasts/screens/battle/ui/BuffZone.ts ====================
 
   /**
-   * Buff zone rendering - 2 slots per player
+   * Buff zone rendering - 3 slots per player
    */
 
 
   export class BuffZone {
     private ui: BattleComponentWithCallbacks['ui'];
-    private onCardDetailSelected?: (card: any) => void;
+    private onCardDetailSelected?: (card: Card) => void;
 
     constructor(props: BattleComponentWithCallbacks) {
       this.ui = props.ui;
@@ -9812,15 +9521,15 @@ namespace BloomBeasts {
 
     /**
      * Create buff zone for a player - REACTIVE
-     * Creates 2 slots, bindings determine what's shown
+     * Creates 3 slots, bindings determine what's shown
      */
     createBuffZone(player: 'player' | 'opponent'): UINodeType[] {
       const positions = player === 'player'
         ? battleBoardAssetPositions.playerTwo
         : battleBoardAssetPositions.playerOne;
-      const buffSlots = [positions.buffOne, positions.buffTwo];
+      const buffSlots = [positions.buffOne, positions.buffTwo, positions.buffThree];
 
-      // Create 2 buff slots
+      // Create 3 buff slots
       return buffSlots.map((pos, index) => {
         // Get buff card template source directly
         const buffCardSource = this.ui.assetIdToImageSource?.('buff-card-playboard') || null;
@@ -9886,7 +9595,8 @@ namespace BloomBeasts {
                       const buffZone = player === 'player' ? state?.playerBuffZone : state?.opponentBuffZone;
                       const buff = buffZone?.[index];
                       if (!buff) return null;
-                      return this.ui.assetIdToImageSource?.(buff.id?.replace(/-\d+-\d+$/, '') || buff.name.toLowerCase().replace(/\s+/g, '-'));
+                      const baseCardId = extractBaseCardId(buff.id) || buff.name.toLowerCase().replace(/\s+/g, '-');
+                      return this.ui.assetIdToImageSource?.(baseCardId);
                     }),
                     style: {
                       width: 100,
@@ -9904,9 +9614,9 @@ namespace BloomBeasts {
                     right: -3,
                     bottom: -3,
                     borderWidth: 3,
-                    borderColor: '#FFD700',
+                    borderColor: COLOR_PALETTE.cardType.buff,
                     borderRadius: 8,
-                    shadowColor: '#FFD700',
+                    shadowColor: COLOR_PALETTE.cardType.buff,
                     shadowRadius: 8,
                   },
                 }),
@@ -9918,7 +9628,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\ui\HabitatZone.ts ====================
+  // ==================== bloombeasts/screens/battle/ui/HabitatZone.ts ====================
 
   /**
    * Habitat zone rendering (center of board)
@@ -9927,7 +9637,7 @@ namespace BloomBeasts {
 
   export class HabitatZone {
     private ui: BattleComponentWithCallbacks['ui'];
-    private onCardDetailSelected?: (card: any) => void;
+    private onCardDetailSelected?: (card: Card) => void;
 
     constructor(props: BattleComponentWithCallbacks) {
       this.ui = props.ui;
@@ -9988,7 +9698,8 @@ namespace BloomBeasts {
                   source: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => {
                     if (!state?.habitatZone) return null;
                     const habitat = state?.habitatZone;
-                    return this.ui.assetIdToImageSource?.(habitat.id?.replace(/-\d+-\d+$/, '') || habitat.name.toLowerCase().replace(/\s+/g, '-'));
+                    const baseCardId = extractBaseCardId(habitat.id) || habitat.name.toLowerCase().replace(/\s+/g, '-');
+                    return this.ui.assetIdToImageSource?.(baseCardId);
                   }),
                   style: {
                     width: 70,
@@ -10006,9 +9717,9 @@ namespace BloomBeasts {
                   right: -4,
                   bottom: -4,
                   borderWidth: 4,
-                  borderColor: '#4caf50',
+                  borderColor: COLOR_PALETTE.cardType.habitat,
                   borderRadius: 8,
-                  shadowColor: '#4caf50',
+                  shadowColor: COLOR_PALETTE.cardType.habitat,
                   shadowRadius: 10,
                 },
               }),
@@ -10019,7 +9730,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\ui\PlayerHand.ts ====================
+  // ==================== bloombeasts/screens/battle/ui/PlayerHand.ts ====================
 
   /**
    * Player hand overlay - 5 card slots with scroll and toggle
@@ -10368,7 +10079,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\ui\InfoDisplays.ts ====================
+  // ==================== bloombeasts/screens/battle/ui/InfoDisplays.ts ====================
 
   /**
    * Player and opponent info displays (health, energy, deck count, timer)
@@ -10552,12 +10263,16 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\ui\BattleSideMenu.ts ====================
+  // ==================== bloombeasts/screens/battle/ui/BattleSideMenu.ts ====================
 
   /**
    * Battle side menu - Turn counter, end turn button, forfeit
    */
 
+
+  // Side menu container dimensions
+  const SIDE_MENU_WIDTH = 225;
+  const SIDE_MENU_HEIGHT = 497;
 
   export class BattleSideMenu {
     private ui: BattleSideMenuProps['ui'];
@@ -10579,6 +10294,30 @@ namespace BloomBeasts {
     }
 
     /**
+     * Helper function to check if it's the player's turn
+     */
+    private isPlayerTurn(state: BattleDisplay | null): boolean {
+      return state?.turnPlayer === 'player';
+    }
+
+    /**
+     * Helper function to check if player has attackable beasts
+     */
+    private hasAttackableBeasts(state: BattleDisplay | null): boolean {
+      if (!this.isPlayerTurn(state)) return false;
+
+      if (state!.playerField && Array.isArray(state!.playerField)) {
+        for (const beast of state!.playerField) {
+          if (beast && canAttack(beast)) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    }
+
+    /**
      * Create battle-specific side menu - Fully reactive
      */
     createBattleSideMenu(): UINodeType {
@@ -10587,16 +10326,16 @@ namespace BloomBeasts {
           position: 'absolute',
           left: sideMenuPositions.x,
           top: sideMenuPositions.y,
-          width: 225,
-          height: 497,
+          width: SIDE_MENU_WIDTH,
+          height: SIDE_MENU_HEIGHT,
         },
         children: [
           this.ui.Image({
             source: this.ui.assetIdToImageSource?.('container-side-menu') || null,
             style: {
               position: 'absolute',
-              width: 225,
-              height: 497,
+              width: SIDE_MENU_WIDTH,
+              height: SIDE_MENU_HEIGHT,
             },
           }),
 
@@ -10621,79 +10360,31 @@ namespace BloomBeasts {
             ui: this.ui,
             label: 'Attack',
             onClick: async () => {
+              console.log('[BattleSideMenu] Attack button clicked!');
               const currentIsPlayerTurn = this.getIsPlayerTurn();
               const hasAttackable = this.getHasAttackableBeasts();
+              console.log('[BattleSideMenu] currentIsPlayerTurn:', currentIsPlayerTurn, 'hasAttackable:', hasAttackable);
 
               if (currentIsPlayerTurn && hasAttackable) {
+                console.log('[BattleSideMenu] Calling onActionAsync with auto-attack-all');
                 // Attack and wait for it to complete, then auto end turn
                 await this.onActionAsync?.('auto-attack-all');
                 this.onStopTurnTimer?.();
                 this.onAction?.('end-turn');
+              } else {
+                console.log('[BattleSideMenu] Attack button clicked but conditions not met');
               }
             },
             // Use complete bindings (avoids .derive() on derived bindings)
             imageSource: this.ui.assetIdToImageSource?.('red-button') || null,
             opacity: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
-              // Disabled if state not ready
-              if (!state) return 0.5;
-
-              // Disabled if not player turn
-              if (state.turnPlayer !== 'player') return 0.5;
-
-              // Check if player has any attackable beasts
-              let hasAttackable = false;
-              if (state.playerField && Array.isArray(state.playerField)) {
-                for (const beast of state.playerField) {
-                  if (beast && canAttack(beast)) {
-                    hasAttackable = true;
-                    break;
-                  }
-                }
-              }
-
-              return hasAttackable ? 1.0 : 0.5;
+              return this.hasAttackableBeasts(state) ? 1.0 : 0.5;
             }),
             textColor: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
-              // Disabled if state not ready
-              if (!state) return '#888';
-
-              // Disabled if not player turn
-              if (state.turnPlayer !== 'player') return '#888';
-
-              // Check if player has any attackable beasts
-              let hasAttackable = false;
-              if (state.playerField && Array.isArray(state.playerField)) {
-                for (const beast of state.playerField) {
-                  if (beast && canAttack(beast)) {
-                    hasAttackable = true;
-                    break;
-                  }
-                }
-              }
-
-              return hasAttackable ? COLORS.textPrimary : '#888';
+              return this.hasAttackableBeasts(state) ? COLORS.textPrimary : '#888';
             }),
             disabled: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
-              // Disabled if state not ready
-              if (!state) return true;
-
-              // Disabled if not player turn
-              const notPlayerTurn = state.turnPlayer !== 'player';
-              if (notPlayerTurn) return true;
-
-              // Check if player has any attackable beasts (using proper canAttack check)
-              let hasAttackable = false;
-              if (state.playerField && Array.isArray(state.playerField)) {
-                for (const beast of state.playerField) {
-                  if (beast && canAttack(beast)) {
-                    hasAttackable = true;
-                    break;
-                  }
-                }
-              }
-
-              // Disabled if no attackable beasts
-              return !hasAttackable;
+              return !this.hasAttackableBeasts(state);
             }),
             playSfx: this.playSfx,
             style: {
@@ -10707,7 +10398,7 @@ namespace BloomBeasts {
           createButton({
             ui: this.ui,
             label: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
-              state?.turnPlayer === 'player' ? 'Skip' : 'Enemy Turn'
+              this.isPlayerTurn(state) ? 'Skip' : 'Enemy Turn'
             ),
             onClick: () => {
               const currentIsPlayerTurn = this.getIsPlayerTurn();
@@ -10718,18 +10409,17 @@ namespace BloomBeasts {
             },
             // Use complete bindings (avoids .derive() on derived bindings)
             imageSource: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) => {
-              const color = state?.turnPlayer === 'player' ? 'green' : 'default';
-              const assetId = color === 'green' ? 'green-button' : 'standard-button';
+              const assetId = this.isPlayerTurn(state) ? 'green-button' : 'standard-button';
               return this.ui.assetIdToImageSource?.(assetId) || null;
             }),
             opacity: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
-              state?.turnPlayer !== 'player' ? 0.5 : 1.0
+              this.isPlayerTurn(state) ? 1.0 : 0.5
             ),
             textColor: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
-              state?.turnPlayer !== 'player' ? '#888' : COLORS.textPrimary
+              this.isPlayerTurn(state) ? COLORS.textPrimary : '#888'
             ),
             disabled: this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay) =>
-              state?.turnPlayer !== 'player'
+              !this.isPlayerTurn(state)
             ),
             playSfx: this.playSfx,
             style: {
@@ -10743,7 +10433,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\ui\index.ts ====================
+  // ==================== bloombeasts/screens/battle/ui/index.ts ====================
 
   /**
    * Battle screen components - Modular, reactive battle UI
@@ -10757,7 +10447,318 @@ namespace BloomBeasts {
   // but not re-exported here to avoid namespace bundling issues.
   // Import them directly from './types' if needed externally.
 
-  // ==================== bloombeasts\screens\battle\BattleScreen.ts ====================
+  // ==================== bloombeasts/screens/battle/BattleTimerManager.ts ====================
+
+  /**
+   * Battle Timer Manager - Handles chess-clock style turn timers
+   *
+   * Extracted from BattleScreen to reduce complexity and consolidate timer logic
+   */
+
+
+  export interface BattleTimerCallbacks {
+    onPlayerTimeout: () => void;
+    onOpponentTimeout: () => void;
+    onTimerTick?: (playerTime: number, opponentTime: number) => void;
+  }
+
+  export class BattleTimerManager {
+    private timerInterval: number | null = null;
+    private playerTimerValue = TURN_TIMER_SECONDS;
+    private opponentTimerValue = TURN_TIMER_SECONDS;
+    private isPlayerTurnValue = false;
+
+    constructor(
+      private async: AsyncMethods,
+      private callbacks: BattleTimerCallbacks
+    ) {}
+
+    /**
+     * Start the turn timer (chess-clock style)
+     */
+    start(isPlayerTurn: boolean): void {
+      // Don't start if already running
+      if (this.timerInterval !== null) {
+        return;
+      }
+
+      this.isPlayerTurnValue = isPlayerTurn;
+
+      this.timerInterval = this.async.setInterval(() => {
+        // Count down the current player's timer
+        if (this.isPlayerTurnValue) {
+          this.playerTimerValue--;
+          this.callbacks.onTimerTick?.(this.playerTimerValue, this.opponentTimerValue);
+
+          if (this.playerTimerValue <= 0) {
+            this.stop();
+            this.callbacks.onPlayerTimeout();
+          }
+        } else {
+          this.opponentTimerValue--;
+          this.callbacks.onTimerTick?.(this.playerTimerValue, this.opponentTimerValue);
+
+          if (this.opponentTimerValue <= 0) {
+            this.stop();
+            this.callbacks.onOpponentTimeout();
+          }
+        }
+      }, 1000);
+    }
+
+    /**
+     * Stop the turn timer
+     */
+    stop(): void {
+      if (this.timerInterval) {
+        this.async.clearInterval(this.timerInterval);
+        this.timerInterval = null;
+      }
+    }
+
+    /**
+     * Restart the timer (called on turn changes)
+     */
+    restart(isPlayerTurn: boolean): void {
+      this.stop();
+      this.isPlayerTurnValue = isPlayerTurn;
+      this.start(isPlayerTurn);
+    }
+
+    /**
+     * Reset timer values to initial state
+     */
+    reset(): void {
+      this.stop();
+      this.playerTimerValue = TURN_TIMER_SECONDS;
+      this.opponentTimerValue = TURN_TIMER_SECONDS;
+      this.isPlayerTurnValue = false;
+    }
+
+    /**
+     * Get current timer values
+     */
+    getTimerValues(): { playerTimer: number; opponentTimer: number } {
+      return {
+        playerTimer: this.playerTimerValue,
+        opponentTimer: this.opponentTimerValue,
+      };
+    }
+
+    /**
+     * Check if timer is currently running
+     */
+    isRunning(): boolean {
+      return this.timerInterval !== null;
+    }
+  }
+
+  // ==================== bloombeasts/screens/battle/CardPopupManager.ts ====================
+
+  /**
+   * Card Popup Manager - Handles all card popup UI logic for BattleScreen
+   *
+   * Extracted from BattleScreen to reduce complexity and consolidate popup logic
+   */
+
+
+  export interface CardPopupCallbacks {
+    onCardDetailSelected: (card: any, cardType?: string) => void;
+    onUpdateUIState: (updates: any) => void;
+    onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
+    onAction?: (action: string) => void;
+  }
+
+  export class CardPopupManager {
+    // Temporary card display (for showing played cards)
+    private playedCardDisplay: any | null = null;
+    private playedCardTimeout: number | null = null;
+
+    constructor(
+      private ui: UIMethodMappings,
+      private async: AsyncMethods,
+      private callbacks: CardPopupCallbacks
+    ) {}
+
+    /**
+     * Handle card detail selection from trap/buff/habitat zones
+     */
+    handleCardDetailSelected(card: any, cardType?: string): void {
+      const cardWithType = cardType ? { ...card, type: cardType } : card;
+      this.callbacks.onUpdateUIState({ selectedCardDetail: cardWithType });
+    }
+
+    /**
+     * Create card popup layer (from battleDisplay.cardPopup) - conditionally visible
+     */
+    createCardPopupLayer(): UINodeType {
+      // Use UINode.if for conditional rendering if available
+      if (this.ui.UINode?.if) {
+        return this.ui.UINode.if(
+          this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => !!state?.cardPopup),
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              zIndex: 1000,
+            },
+            children: this.ui.Text({
+              text: 'Card Popup',
+              style: { color: '#fff', fontSize: 20 }
+            }),
+          })
+        );
+      }
+
+      // Fallback: empty View (popup won't work)
+      return this.ui.View({ style: { display: 'none' } });
+    }
+
+    /**
+     * Create selected card detail popup layer (from UIState.battle.selectedCardDetail) - conditionally visible
+     */
+    createSelectedCardDetailLayer(): UINodeType {
+      // Use UINode.if for conditional rendering if available
+      if (this.ui.UINode?.if) {
+        return this.ui.UINode.if(
+          // Derive visibility from base UIState binding (not from derived selectedCardDetail)
+          this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) => !!(state.battle?.selectedCardDetail)),
+          this.ui.View({
+            style: {
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              top: 0,
+              left: 0,
+            },
+            children: [
+              // Black backdrop
+              this.ui.Pressable({
+                onClick: () => {
+                  this.callbacks.onUpdateUIState({ selectedCardDetail: null });
+                },
+                style: {
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                },
+              }),
+              // Card display centered on screen with reactive rendering
+              this.ui.View({
+                style: {
+                  position: 'absolute',
+                  width: '100%',
+                  height: '100%',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                },
+                children: this.createBattleCardDisplay(),
+              }),
+            ],
+          })
+        );
+      }
+
+      // Fallback: empty View
+      return this.ui.View({ style: { display: 'none' } });
+    }
+
+    /**
+     * Create battle card display with reactive bindings for selectedCardDetail
+     * Uses the shared reactive card component
+     */
+    private createBattleCardDisplay(): UINodeType {
+      return createReactiveCardComponent(this.ui, {
+        mode: 'battleSelectedCard',
+        showDeckIndicator: false,
+      });
+    }
+
+    /**
+     * Create card popup overlay (legacy/unused)
+     */
+    createCardPopup(popup: any): UINodeType {
+      return this.ui.View({
+        style: {
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000,
+        },
+        children: [
+          // Card detail popup
+          createCardDetailPopup(this.ui, {
+            cardDetail: {
+              card: popup.card,
+              isInDeck: false,
+              buttons: popup.showCloseButton ? ['Close'] : []
+            },
+            onButtonClick: () => this.callbacks.onAction?.('btn-card-close'),
+          }),
+        ],
+      });
+    }
+
+    /**
+     * Create played card popup (shows for 2 seconds when card is played)
+     */
+    private createPlayedCardPopup(card: any): UINodeType {
+      return createCardDetailPopup(this.ui, {
+        cardDetail: {
+          card: card,
+          isInDeck: false,
+          buttons: []
+        },
+        onButtonClick: (buttonId: string) => {
+          // User can close early by clicking
+          if (this.playedCardTimeout) {
+            this.async.clearTimeout(this.playedCardTimeout);
+            this.playedCardTimeout = null;
+          }
+          this.playedCardDisplay = null;
+        }
+      });
+    }
+
+    /**
+     * Show a played card popup for 2 seconds, then execute callback
+     */
+    showPlayedCard(card: any, callback?: () => void): void {
+      // Use the onShowCardDetail callback if available
+      if (this.callbacks.onShowCardDetail) {
+        this.callbacks.onShowCardDetail(card, 2000, callback);
+      } else {
+        Logger.warn('[CardPopupManager] onShowCardDetail not defined, executing callback immediately');
+        callback?.();
+      }
+    }
+
+    /**
+     * Cleanup resources
+     */
+    cleanup(): void {
+      // Clear played card timeout
+      if (this.playedCardTimeout) {
+        this.async.clearTimeout(this.playedCardTimeout);
+        this.playedCardTimeout = null;
+      }
+      this.playedCardDisplay = null;
+    }
+  }
+
+  // ==================== bloombeasts/screens/battle/BattleScreen.ts ====================
 
   /**
    * Unified Battle Screen Component
@@ -10768,13 +10769,23 @@ namespace BloomBeasts {
 
   // Import modular battle components
 
+  interface BattleUIState {
+    battle: {
+      showHand: boolean;
+      handScrollOffset: number;
+      playerTimer: number;
+      opponentTimer: number;
+      selectedCardDetail: Card | null;
+    };
+  }
+
   export interface BattleScreenProps {
     ui: UIMethodMappings;
     async: AsyncMethods;
     onAction?: (action: string) => void;
     onNavigate?: (screen: string) => void;
     onRenderNeeded?: () => void;
-    onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
+    onShowCardDetail?: (card: Card, durationMs: number, callback?: () => void) => void;
     playSfx?: (sfxId: string) => void;
   }
 
@@ -10786,27 +10797,22 @@ namespace BloomBeasts {
     private ui: UIMethodMappings;
     private async: AsyncMethods;
 
-    // Temporary card display (for showing played cards)
-    private playedCardDisplay: any | null = null;
-    private playedCardTimeout: number | null = null;
-
-    // Timer management
-    private timerInterval: number | null = null;
+    // Manager instances
+    private timerManager: BattleTimerManager;
+    private cardPopupManager: CardPopupManager;
 
     // Track binding values separately (as per Horizon docs - no .get() method)
-    private playerTimerValue = TURN_TIMER_SECONDS;
-    private opponentTimerValue = TURN_TIMER_SECONDS;
     private isPlayerTurnValue = false;
-    private battleDisplayValue: any | null = null;
+    private battleDisplayValue: BattleDisplay | null = null;
     private hasAttackableBeasts = false;
 
     // Track current UIState value for updates
-    private currentUIState: any = {
+    private currentUIState: BattleUIState = {
       battle: {
         showHand: true,
         handScrollOffset: 0,
-        playerTimer: 300,
-        opponentTimer: 300,
+        playerTimer: TURN_TIMER_SECONDS,
+        opponentTimer: TURN_TIMER_SECONDS,
         selectedCardDetail: null,
       },
     };
@@ -10819,7 +10825,7 @@ namespace BloomBeasts {
     private onAction?: (action: string) => void;
     private onNavigate?: (screen: string) => void;
     private onRenderNeeded?: () => void;
-    private onShowCardDetail?: (card: any, durationMs: number, callback?: () => void) => void;
+    private onShowCardDetail?: (card: Card, durationMs: number, callback?: () => void) => void;
     private playSfx?: (sfxId: string) => void;
 
     // Battle components (modular)
@@ -10836,9 +10842,21 @@ namespace BloomBeasts {
       this.ui = props.ui;
       this.async = props.async;
 
-      // Initialize local value trackers
-      this.playerTimerValue = TURN_TIMER_SECONDS;
-      this.opponentTimerValue = TURN_TIMER_SECONDS;
+      // Initialize managers
+      this.timerManager = new BattleTimerManager(this.async, {
+        onPlayerTimeout: () => this.onAction?.('timeout-player'),
+        onOpponentTimeout: () => this.onAction?.('timeout-opponent'),
+        onTimerTick: (playerTimer, opponentTimer) => {
+          this.updateUIState({ playerTimer, opponentTimer });
+        },
+      });
+
+      this.cardPopupManager = new CardPopupManager(this.ui, this.async, {
+        onCardDetailSelected: (card, cardType) => this.handleCardDetailSelected(card, cardType),
+        onUpdateUIState: (updates) => this.updateUIState(updates),
+        onShowCardDetail: props.onShowCardDetail,
+        onAction: props.onAction,
+      });
 
       // Wrap onAction to add logging
       this.onAction = props.onAction ? (action: string) => {
@@ -10858,26 +10876,17 @@ namespace BloomBeasts {
         // Cache battle display value for onClick handlers
         this.battleDisplayValue = state;
 
-        // Check if player has any beasts that can attack (using proper canAttack check)
-        this.hasAttackableBeasts = false;
-        if (state && state.playerField) {
-          for (const beast of state.playerField) {
-            if (beast && canAttack(beast)) {
-              this.hasAttackableBeasts = true;
-              break;
-            }
-          }
-        }
+        // Check if player has any beasts that can attack
+        this.hasAttackableBeasts = state?.playerField ? hasAttackableBeasts(state.playerField) : false;
 
         // Start/restart timer based on turn changes or if timer not running
         if (this.isPlayerTurnValue !== newIsPlayerTurn) {
           this.isPlayerTurnValue = newIsPlayerTurn;
           // Restart timer to ensure it's tracking the correct player
-          this.stopTurnTimer();
-          this.startTurnTimer();
-        } else if (state && this.timerInterval === null) {
+          this.timerManager.restart(newIsPlayerTurn);
+        } else if (state && !this.timerManager.isRunning()) {
           // Start timer if it's not running but we have a valid battle state
-          this.startTurnTimer();
+          this.timerManager.start(newIsPlayerTurn);
         }
 
         return newIsPlayerTurn;
@@ -10891,29 +10900,22 @@ namespace BloomBeasts {
       this.beastFieldComponent = new BeastField({
         ui: this.ui,
         onAction: this.onAction,
-        showPlayedCard: this.showPlayedCard.bind(this),
+        showPlayedCard: this.cardPopupManager.showPlayedCard.bind(this.cardPopupManager),
       });
 
       this.trapZoneComponent = new TrapZone({
         ui: this.ui,
-        onCardDetailSelected: (card) => {
-          this.updateUIState({ selectedCardDetail: card });
-        },
+        onCardDetailSelected: (card) => this.cardPopupManager.handleCardDetailSelected(card),
       });
 
       this.buffZoneComponent = new BuffZone({
         ui: this.ui,
-        onCardDetailSelected: (card) => {
-          this.updateUIState({ selectedCardDetail: card });
-        },
+        onCardDetailSelected: (card) => this.cardPopupManager.handleCardDetailSelected(card),
       });
 
       this.habitatZoneComponent = new HabitatZone({
         ui: this.ui,
-        onCardDetailSelected: (card) => {
-          const habitatWithType = { ...card, type: 'Habitat' };
-          this.updateUIState({ selectedCardDetail: habitatWithType });
-        },
+        onCardDetailSelected: (card) => this.cardPopupManager.handleCardDetailSelected(card, 'Habitat'),
       });
 
       this.playerHandComponent = new PlayerHand({
@@ -10927,7 +10929,7 @@ namespace BloomBeasts {
           this.updateUIState({ handScrollOffset: newValue });
         },
         onRenderNeeded: this.onRenderNeeded,
-        showPlayedCard: this.showPlayedCard.bind(this),
+        showPlayedCard: this.cardPopupManager.showPlayedCard.bind(this.cardPopupManager),
       });
 
       this.infoDisplaysComponent = new InfoDisplays({
@@ -10950,7 +10952,7 @@ namespace BloomBeasts {
             });
           }
         },
-        onStopTurnTimer: () => this.stopTurnTimer(),
+        onStopTurnTimer: () => this.timerManager.stop(),
         playSfx: this.playSfx,
       });
     }
@@ -10968,6 +10970,14 @@ namespace BloomBeasts {
       };
       this.ui.bindingManager.setBinding(BindingType.UIState, this.currentUIState);
       this.onRenderNeeded?.();
+    }
+
+    /**
+     * Handle card detail selection from trap/buff/habitat zones
+     * Delegates to CardPopupManager
+     */
+    private handleCardDetailSelected(card: any, cardType?: string): void {
+      this.cardPopupManager.handleCardDetailSelected(card, cardType);
     }
 
     /**
@@ -11002,8 +11012,7 @@ namespace BloomBeasts {
               left: 0,
             },
             children: [
-                // Layer 2: Playboard overlay
-                // TODO futre
+                // Layer 2: Playboard overlay (future enhancement)
                 // this.backgroundComponent.createPlayboard(),
 
                 // Layer 3: Battle zones (beasts, traps, buffs, habitat)
@@ -11025,13 +11034,10 @@ namespace BloomBeasts {
                 this.playerHandComponent.createPlayerHand(),
 
                 // Layer 7: Card detail popup (from battleDisplay) - conditionally visible
-                this.createCardPopupLayer(),
+                this.cardPopupManager.createCardPopupLayer(),
 
                 // Layer 7.25: Selected card detail popup (from clicking buff/trap cards) - conditionally visible
-                this.createSelectedCardDetailLayer(),
-
-                // Layer 7.5: Played card popup (temporary 2-second display) - conditionally visible
-                this.createPlayedCardPopupLayer(),
+                this.cardPopupManager.createSelectedCardDetailLayer(),
 
                 // Layer 8: Attack animation overlays
                 this.createAttackAnimations(),
@@ -11045,204 +11051,12 @@ namespace BloomBeasts {
 
 
     /**
-     * Create card popup layer with conditional visibility
-     */
-    private createCardPopupLayer(): UINodeType {
-      // Use UINode.if for conditional rendering if available
-      if (this.ui.UINode?.if) {
-        return this.ui.UINode.if(
-          this.ui.bindingManager.derive([BindingType.BattleDisplay], (state: BattleDisplay | null) => !!state?.cardPopup),
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-              justifyContent: 'center',
-              alignItems: 'center',
-              zIndex: 1000,
-            },
-            children: this.ui.Text({
-              text: 'Card Popup - TODO: Implement with reactive data',
-              style: { color: '#fff', fontSize: 20 }
-            }),
-          })
-        );
-      }
-
-      // Fallback: empty View (popup won't work)
-      return this.ui.View({ style: { display: 'none' } });
-    }
-
-    /**
-     * Create selected card detail popup layer with conditional visibility
-     */
-    private createSelectedCardDetailLayer(): UINodeType {
-      // Use UINode.if for conditional rendering if available
-      if (this.ui.UINode?.if) {
-        return this.ui.UINode.if(
-          // Derive visibility from base UIState binding (not from derived selectedCardDetail)
-          this.ui.bindingManager.derive([BindingType.UIState], (state: UIState) => !!(state.battle?.selectedCardDetail)),
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              top: 0,
-              left: 0,
-            },
-            children: [
-              // Black backdrop
-              this.ui.Pressable({
-                onClick: () => {
-                  this.updateUIState({ selectedCardDetail: null });
-                },
-                style: {
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                },
-              }),
-              // Card display centered on screen with reactive rendering
-              this.ui.View({
-                style: {
-                  position: 'absolute',
-                  width: '100%',
-                  height: '100%',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                },
-                children: this.createBattleCardDisplay(),
-              }),
-            ],
-          })
-        );
-      }
-
-      // Fallback: empty View
-      return this.ui.View({ style: { display: 'none' } });
-    }
-
-    /**
-     * Create played card popup layer with conditional visibility
-     */
-    private createPlayedCardPopupLayer(): UINodeType {
-      // For now, return empty View since playedCardDisplay is not reactive yet
-      // TODO: Make playedCardDisplay reactive and implement properly
-      return this.ui.View({ style: { display: 'none' } });
-    }
-
-    /**
-     * Forfeit popup is now handled at the root level in BloomBeastsGame.ts
-     * This method has been removed to avoid duplicate popups
-     */
-
-    /**
-     * Create battle card display with reactive bindings for selectedCardDetail
-     * Now uses the shared reactive card component
-     */
-    private createBattleCardDisplay(): UINodeType {
-      return createReactiveCardComponent(this.ui, {
-        mode: 'battleSelectedCard',
-        showDeckIndicator: false,
-      });
-    }
-
-    /**
-     * Create card popup overlay
-     */
-    private createCardPopup(popup: any): UINodeType {
-      return this.ui.View({
-        style: {
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000,
-        },
-        children: [
-          // Card detail popup
-          createCardDetailPopup(this.ui, {
-            cardDetail: {
-              card: popup.card,
-              isInDeck: false,
-              buttons: popup.showCloseButton ? ['Close'] : []
-            },
-            onButtonClick: () => this.onAction?.('btn-card-close'),
-          }),
-        ],
-      });
-    }
-
-    /**
      * Create attack animation overlays
      */
     private createAttackAnimations(): UINodeType | null {
       // Attack animations are handled directly in the beast field rendering (reactive)
       // This is a placeholder for any additional animation effects
       return null;
-    }
-
-    /**
-     * Start the turn timer (chess-clock style)
-     */
-    private startTurnTimer(): void {
-      // Don't start if already running
-      if (this.timerInterval !== null) {
-        return;
-      }
-
-      this.onRenderNeeded?.(); // Trigger re-render
-
-      this.timerInterval = this.async.setInterval(() => {
-        // Count down the current player's timer
-        if (this.isPlayerTurnValue) {
-          const current = this.playerTimerValue;
-          if (current <= 0) {
-            this.stopTurnTimer();
-            // Player ran out of time - they lose immediately
-            this.onAction?.('timeout-player');
-          } else {
-            this.playerTimerValue = current - 1;
-            this.updateUIState({ playerTimer: this.playerTimerValue });
-          }
-        } else {
-          const current = this.opponentTimerValue;
-          if (current <= 0) {
-            this.stopTurnTimer();
-            // Opponent ran out of time - they lose immediately
-            this.onAction?.('timeout-opponent');
-          } else {
-            this.opponentTimerValue = current - 1;
-            this.updateUIState({ opponentTimer: this.opponentTimerValue });
-          }
-        }
-      }, 1000);
-    }
-
-    /**
-     * Stop the turn timer
-     */
-    private stopTurnTimer(): void {
-      if (this.timerInterval) {
-        this.async.clearInterval(this.timerInterval);
-        this.timerInterval = null;
-      }
-    }
-
-    /**
-     * Update the end turn button text based on turn and timer
-     */
-    private updateEndTurnButtonText(): void {
-      // endTurnButtonText is now a derived binding, so it updates automatically
-      // This method is kept for compatibility but doesn't need to do anything
     }
 
     /**
@@ -11260,52 +11074,16 @@ namespace BloomBeasts {
     /**
      * Cleanup resources
      */
-    /**
-     * Create played card popup (shows for 2 seconds when card is played)
-     */
-    private createPlayedCardPopup(card: any): UINodeType {
-      return createCardDetailPopup(this.ui, {
-        cardDetail: {
-          card: card,
-          isInDeck: false,
-          buttons: []
-        },
-        onButtonClick: (buttonId: string) => {
-          // User can close early by clicking
-          if (this.playedCardTimeout) {
-            this.async.clearTimeout(this.playedCardTimeout);
-            this.playedCardTimeout = null;
-          }
-          this.playedCardDisplay = null;
-          this.onRenderNeeded?.();
-        }
-      });
-    }
-
-    /**
-     * Show a played card popup for 2 seconds, then execute callback
-     */
-    private showPlayedCard(card: any, callback?: () => void): void {
-
-      // Use the onShowCardDetail callback if available
-      if (this.onShowCardDetail) {
-        this.onShowCardDetail(card, 2000, callback);
-      } else {
-        console.warn('[BattleScreen] onShowCardDetail not defined, executing callback immediately');
-        callback?.();
-      }
-    }
-
     public cleanup(): void {
-      this.stopTurnTimer();
-      // Reset all UI state
-      this.playerTimerValue = TURN_TIMER_SECONDS;
-      this.opponentTimerValue = TURN_TIMER_SECONDS;
+      // Reset managers
+      this.timerManager.reset();
+      this.cardPopupManager.cleanup();
 
       // Update UIState with reset values
+      const { playerTimer, opponentTimer } = this.timerManager.getTimerValues();
       this.updateUIState({
-        playerTimer: 300,
-        opponentTimer: 300,
+        playerTimer,
+        opponentTimer,
         showHand: true,
         handScrollOffset: 0,
         selectedCardDetail: null,
@@ -11313,135 +11091,96 @@ namespace BloomBeasts {
 
       // Trigger final re-render
       this.onRenderNeeded?.();
-
-      // Clear played card timeout
-      if (this.playedCardTimeout) {
-        this.async.clearTimeout(this.playedCardTimeout);
-        this.playedCardTimeout = null;
-      }
-      this.playedCardDisplay = null;
     }
   }
 
-  // ==================== bloombeasts\screens\settings\SettingsScreen.ts ====================
+  // ==================== bloombeasts/screens/settings/SettingsScreen.ts ====================
 
   /**
-   * Unified Settings Screen Component
-   * Works on both Horizon and Web platforms
-   * Matches the styling from settingsScreen.new.ts
+   * Settings Screen - Refactored using BaseScreen
+   *
+   * Reduced by eliminating constructor boilerplate and layout duplication
    */
 
 
-  export interface SettingsScreenProps {
-    ui: UIMethodMappings;
-    onSettingChange?: (settingId: string, value: any) => void;
-    onNavigate?: (screen: string) => void;
-    onRenderNeeded?: () => void;
-    playSfx?: (sfxId: string) => void;
+  // Settings constants
+  const VOLUME_DEFAULT = 50;
+  const VOLUME_MIN = 0;
+  const VOLUME_MAX = 100;
+  const VOLUME_STEP = 10;
+
+  // UI constants
+  const BUTTON_SIZE = 40;
+  const TOGGLE_WIDTH = 80;
+  const TOGGLE_HEIGHT = 40;
+  const CONTROL_MARGIN_BOTTOM = 30;
+  const BUTTON_MARGIN = 10;
+
+  // Color constants (for controls not in COLORS)
+  const CONTROL_BUTTON_BG = '#333';
+  const TOGGLE_ON_COLOR = '#4CAF50';
+  const TOGGLE_OFF_COLOR = '#888';
+
+  /**
+   * Settings data structure
+   */
+  export interface Settings {
+    musicVolume?: number;
+    sfxVolume?: number;
+    musicEnabled?: boolean;
+    sfxEnabled?: boolean;
   }
 
   /**
-   * Unified Settings Screen
+   * Player data structure (subset for settings)
    */
-  export class SettingsScreen {
-    // UI methods (injected)
-    private ui: UIMethodMappings;
-    private settingsValue: any = {};
+  interface PlayerData {
+    settings?: Settings;
+  }
 
-    private onSettingChange?: (settingId: string, value: any) => void;
-    private onNavigate?: (screen: string) => void;
-    private onRenderNeeded?: () => void;
-    private playSfx?: (sfxId: string) => void;
+  export interface SettingsScreenProps extends BaseScreenProps {
+    onSettingChange?: (settingId: string, value: number | boolean) => void;
+  }
+
+  export class SettingsScreen extends BaseScreen {
+    private settingsValue: Settings = {};
+    private onSettingChange?: (settingId: string, value: number | boolean) => void;
 
     constructor(props: SettingsScreenProps) {
-      this.ui = props.ui;
+      super(props);
       this.onSettingChange = props.onSettingChange;
-      this.onNavigate = props.onNavigate;
-      this.onRenderNeeded = props.onRenderNeeded;
-      this.playSfx = props.playSfx;
     }
 
     createUI(): UINodeType {
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [
-          // Background
-          this.ui.Image({
-            source: this.ui.assetIdToImageSource?.('background') || null,
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              top: 0,
-              left: 0,
-            },
-          }),
-          // Cards Container image as background
-          this.ui.Image({
-            source: this.ui.assetIdToImageSource?.('cards-container') || null,
-            style: {
-              position: 'absolute',
-              left: 40,
-              top: 40,
-              width: 980,
-              height: 640,
-            },
-          }),
-          // Main content - settings panel
-          // Pass playerDataBinding directly to controls to avoid nesting
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              left: 70,
-              top: 70,
-              width: 920,
-              height: 580,
-              padding: 40,
-            },
-            children: [
-              // Music settings (pass playerDataBinding directly)
-              this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume'),
-              this.createToggleControl('Music', 'musicEnabled', 'musicEnabled'),
+      return this.createRootContainer([
+        this.createFullScreenBackground(),
+        this.createContainerBackground(),
 
-              // SFX settings (pass playerDataBinding directly)
-              this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume'),
-              this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled'),
-            ],
-          }),
-          // Sidebar with common side menu
-          createSideMenu(this.ui, {
-            title: 'Settings',
-            bottomButton: {
-              label: 'Back',
-              onClick: () => {
-                if (this.onNavigate) this.onNavigate('menu');
-              },
-              disabled: false,
-            },
-            playSfx: this.playSfx,
-          }),
-        ],
-      });
+        // Settings controls
+        this.createContentArea([
+          this.createVolumeControl('Music Volume', 'musicVolume', 'musicVolume'),
+          this.createToggleControl('Music', 'musicEnabled', 'musicEnabled'),
+          this.createVolumeControl('SFX Volume', 'sfxVolume', 'sfxVolume'),
+          this.createToggleControl('Sound Effects', 'sfxEnabled', 'sfxEnabled'),
+        ], { left: 70, top: 70, width: 920, height: 580 }),
+
+        // Side menu
+        createSideMenu(this.ui, {
+          title: 'Settings',
+          bottomButton: this.getBackButton(),
+          playSfx: this.playSfx,
+        }),
+      ]);
     }
 
-    /**
-     * Create volume control with +/- buttons
-     */
     private createVolumeControl(
       label: string,
       settingKey: 'musicVolume' | 'sfxVolume',
       settingId: string
     ): UINodeType {
       return this.ui.View({
-        style: {
-          marginBottom: 30,
-        },
+        style: { marginBottom: CONTROL_MARGIN_BOTTOM },
         children: [
-          // Label and value
           this.ui.View({
             style: {
               flexDirection: 'row',
@@ -11457,82 +11196,71 @@ namespace BloomBeasts {
                   color: COLORS.textPrimary,
                 },
               }),
-              // Volume control: - button, value, + button
               this.ui.View({
                 style: {
                   flexDirection: 'row',
                   alignItems: 'center',
                 },
                 children: [
-                  // Decrease button
                   this.ui.Pressable({
                     onClick: () => {
-                      if (this.onSettingChange) {
-                        const currentSettings = this.settingsValue;
-                        const currentValue = currentSettings[settingKey] || 0;
-                        const newValue = Math.max(0, currentValue - 10);
-                        this.onSettingChange(settingId, newValue);
-                      }
+                      const currentSettings = this.settingsValue;
+                      const currentValue = currentSettings[settingKey] || VOLUME_DEFAULT;
+                      const newValue = Math.max(VOLUME_MIN, currentValue - VOLUME_STEP);
+                      this.settingsValue[settingKey] = newValue;
+                      this.onSettingChange?.(settingId, newValue);
                     },
                     style: {
-                      width: 40,
-                      height: 40,
-                      backgroundColor: COLORS.surface,
-                      borderRadius: 5,
+                      width: BUTTON_SIZE,
+                      height: BUTTON_SIZE,
                       justifyContent: 'center',
                       alignItems: 'center',
-                      marginRight: 15,
+                      backgroundColor: CONTROL_BUTTON_BG,
+                      borderRadius: 5,
+                      marginRight: BUTTON_MARGIN,
                     },
                     children: this.ui.Text({
                       text: '-',
                       style: {
-                        fontSize: DIMENSIONS.fontSize.xl,
-                        color: COLORS.textPrimary,
-                        textAlign: 'center',
+                        fontSize: 24,
+                        color: '#fff',
                         fontWeight: 'bold',
                       },
                     }),
                   }),
-                  // Volume display
                   this.ui.Text({
-                    text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
-                      const settings = pd?.settings;
-                      this.settingsValue = settings;
-                      const volume = settings?.[settingKey];
-                      return `${volume !== undefined && volume !== null && typeof volume === 'number' ? Math.round(volume) : 0}%`;
+                    text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                      return String(pd?.settings?.[settingKey] || VOLUME_DEFAULT);
                     }),
                     style: {
-                      fontSize: DIMENSIONS.fontSize.xl,
-                      color: COLORS.success,
-                      width: 70,
+                      fontSize: DIMENSIONS.fontSize.lg,
+                      color: COLORS.textPrimary,
+                      width: 40,
                       textAlign: 'center',
                     },
                   }),
-                  // Increase button
                   this.ui.Pressable({
                     onClick: () => {
-                      if (this.onSettingChange) {
-                        const currentSettings = this.settingsValue;
-                        const currentValue = currentSettings[settingKey] || 0;
-                        const newValue = Math.min(100, currentValue + 10);
-                        this.onSettingChange(settingId, newValue);
-                      }
+                      const currentSettings = this.settingsValue;
+                      const currentValue = currentSettings[settingKey] || VOLUME_DEFAULT;
+                      const newValue = Math.min(VOLUME_MAX, currentValue + VOLUME_STEP);
+                      this.settingsValue[settingKey] = newValue;
+                      this.onSettingChange?.(settingId, newValue);
                     },
                     style: {
-                      width: 40,
-                      height: 40,
-                      backgroundColor: COLORS.surface,
-                      borderRadius: 5,
+                      width: BUTTON_SIZE,
+                      height: BUTTON_SIZE,
                       justifyContent: 'center',
                       alignItems: 'center',
-                      marginLeft: 15,
+                      backgroundColor: CONTROL_BUTTON_BG,
+                      borderRadius: 5,
+                      marginLeft: BUTTON_MARGIN,
                     },
                     children: this.ui.Text({
                       text: '+',
                       style: {
-                        fontSize: DIMENSIONS.fontSize.xl,
-                        color: COLORS.textPrimary,
-                        textAlign: 'center',
+                        fontSize: 24,
+                        color: '#fff',
                         fontWeight: 'bold',
                       },
                     }),
@@ -11545,81 +11273,53 @@ namespace BloomBeasts {
       });
     }
 
-    /**
-     * Create toggle button control
-     */
     private createToggleControl(
       label: string,
       settingKey: 'musicEnabled' | 'sfxEnabled',
       settingId: string
     ): UINodeType {
       return this.ui.View({
-        style: {
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: 30,
-        },
+        style: { marginBottom: CONTROL_MARGIN_BOTTOM },
         children: [
-          this.ui.Text({
-            text: label,
+          this.ui.View({
             style: {
-              fontSize: DIMENSIONS.fontSize.xl,
-              color: COLORS.textPrimary,
-            },
-          }),
-
-          // Toggle button
-          this.ui.Pressable({
-            onClick: () => {
-              if (this.onSettingChange) {
-                const currentSettings = this.settingsValue;
-                const currentValue = currentSettings[settingKey];
-                const newValue = !currentValue;
-
-                // Just call the callback - let the parent handle updating the binding
-                // The binding update will trigger a re-render automatically
-                this.onSettingChange(settingId, newValue);
-              }
-            },
-            style: {
-              position: 'relative',
-              width: 120,
-              height: 40,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
             },
             children: [
-              // Button background image (standard or green based on state)
-              this.ui.Image({
-                source: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
-                  const settings = pd?.settings;
-                  return this.ui.assetIdToImageSource?.(settings?.[settingKey] ? 'green-button' : 'standard-button') ?? null;
-                }),
+              this.ui.Text({
+                text: label,
                 style: {
-                  position: 'absolute',
-                  width: 120,
-                  height: 40,
+                  fontSize: DIMENSIONS.fontSize.xl,
+                  color: COLORS.textPrimary,
                 },
               }),
-              // Button text centered
-              this.ui.View({
+              this.ui.Pressable({
+                onClick: () => {
+                  const currentSettings = this.settingsValue;
+                  const newValue = !(currentSettings[settingKey] ?? true);
+                  this.settingsValue[settingKey] = newValue;
+                  this.onSettingChange?.(settingId, newValue);
+                },
                 style: {
-                  position: 'absolute',
-                  width: 120,
-                  height: 40,
+                  width: TOGGLE_WIDTH,
+                  height: TOGGLE_HEIGHT,
                   justifyContent: 'center',
                   alignItems: 'center',
+                  backgroundColor: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                    return (pd?.settings?.[settingKey] ?? true) ? TOGGLE_ON_COLOR : TOGGLE_OFF_COLOR;
+                  }),
+                  borderRadius: 20,
                 },
                 children: this.ui.Text({
-                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: any) => {
-                    const settings = pd?.settings;
-                    return settings?.[settingKey] ? 'ON' : 'OFF';
+                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                    return (pd?.settings?.[settingKey] ?? true) ? 'ON' : 'OFF';
                   }),
                   style: {
                     fontSize: DIMENSIONS.fontSize.md,
-                    color: COLORS.textPrimary,
-                    textAlign: 'center',
+                    color: '#fff',
                     fontWeight: 'bold',
-                    textAlignVertical: 'center',
                   },
                 }),
               }),
@@ -11628,24 +11328,19 @@ namespace BloomBeasts {
         ],
       });
     }
-
-    dispose(): void {
-      // Cleanup
-    }
   }
 
-  // ==================== bloombeasts\screens\leaderboard\LeaderboardScreen.ts ====================
+  // ==================== bloombeasts/screens/leaderboard/LeaderboardScreen.ts ====================
 
   /**
-   * Leaderboard Screen Component
-   * Displays top players by experience and fastest Cluck Norris completion time
+   * Leaderboard Screen
    */
 
 
   export interface LeaderboardEntry {
     playerName: string;
-    score: number; // XP for experience leaderboard, time in seconds for speed leaderboard
-    level?: number; // Only for experience leaderboard
+    score: number;
+    level?: number;
   }
 
   export interface LeaderboardData {
@@ -11653,26 +11348,13 @@ namespace BloomBeasts {
     fastestCluckNorris: LeaderboardEntry[];
   }
 
-  export interface LeaderboardScreenProps {
-    ui: UIMethodMappings;
-    onNavigate?: (screen: string) => void;
-    playSfx?: (sfxId: string) => void;
-  }
+  export type LeaderboardScreenProps = BaseScreenProps;
 
-  export class LeaderboardScreen {
-    private ui: UIMethodMappings;
-    private onNavigate?: (screen: string) => void;
-    private playSfx?: (sfxId: string) => void;
-
+  export class LeaderboardScreen extends BaseScreen {
     constructor(props: LeaderboardScreenProps) {
-      this.ui = props.ui;
-      this.onNavigate = props.onNavigate;
-      this.playSfx = props.playSfx;
+      super(props);
     }
 
-    /**
-     * Format all leaderboard entries as a single text string
-     */
     private formatLeaderboardText(leaderboardType: 'experience' | 'speed'): any {
       return this.ui.bindingManager.derive([BindingType.LeaderboardData], (data: LeaderboardData | null) => {
         if (!data) return '';
@@ -11686,12 +11368,9 @@ namespace BloomBeasts {
 
           if (entries[i]) {
             const entry = entries[i];
-            let scoreText = '';
-            if (leaderboardType === 'speed') {
-              scoreText = this.formatTime(entry.score);
-            } else {
-              scoreText = entry.level ? `Lv${entry.level} ${entry.score}XP` : `${entry.score}XP`;
-            }
+            const scoreText = leaderboardType === 'speed'
+              ? this.formatTime(entry.score)
+              : entry.level ? `Lv${entry.level} ${entry.score}XP` : `${entry.score}XP`;
             lines.push(`${rankEmoji} ${entry.playerName} - ${scoreText}`);
           } else {
             lines.push(`${rankEmoji} ---`);
@@ -11701,18 +11380,12 @@ namespace BloomBeasts {
       });
     }
 
-    /**
-     * Format time in seconds to readable format
-     */
     private formatTime(seconds: number): string {
       const mins = Math.floor(seconds / 60);
       const secs = Math.floor(seconds % 60);
       return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    /**
-     * Create a single leaderboard panel with text column
-     */
     private createLeaderboardPanel(
       title: string,
       leaderboardType: 'experience' | 'speed',
@@ -11730,14 +11403,12 @@ namespace BloomBeasts {
           height: panelHeight,
         },
         children: [
-          // Title
           this.ui.View({
             style: {
               width: panelWidth,
               height: 50,
               justifyContent: 'center',
               alignItems: 'center',
-              // backgroundColor: 'rgba(0, 0, 0, 0.5)',
               borderRadius: 10,
             },
             children: this.ui.Text({
@@ -11746,11 +11417,9 @@ namespace BloomBeasts {
                 fontSize: DIMENSIONS.fontSize.xl,
                 fontWeight: 'bold',
                 color: COLORS.primary,
-                // textAlign: 'center',
               },
             }),
           }),
-          // All entries as a single text column
           this.ui.View({
             style: {
               position: 'absolute',
@@ -11758,7 +11427,6 @@ namespace BloomBeasts {
               left: 25,
               width: panelWidth - 50,
               height: panelHeight - 80,
-              // backgroundColor: 'rgba(0, 0, 0, 0.5)',
               borderRadius: 10,
               padding: 15,
             },
@@ -11777,669 +11445,1460 @@ namespace BloomBeasts {
     }
 
     createUI(): UINodeType {
-      return this.ui.View({
-        style: {
-          width: '100%',
-          height: '100%',
-          position: 'relative',
-        },
-        children: [
-          // Background
-          this.ui.Image({
-            source: this.ui.assetIdToImageSource?.('background') || null,
-            style: {
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              top: 0,
-              left: 0,
-            },
-          }),
-          // Cards Container image as background
-          this.ui.Image({
-            source: this.ui.assetIdToImageSource?.('cards-container') || null,
-            style: {
-              position: 'absolute',
-              left: 40,
-              top: 40,
-              width: 980,
-              height: 640,
-            },
-          }),
-          // Leaderboard panels - pre-created with reactive data
-          this.ui.View({
-            style: {
-              position: 'absolute',
-              left: 70,
-              top: 0,
-              width: 920,
-              height: 720,
-            },
-            children: [
-              // Experience Leaderboard (left)
-              this.createLeaderboardPanel(
-                '🏆 Top Experience',
-                'experience',
-                0
-              ),
-              // Speed Leaderboard (right)
-              this.createLeaderboardPanel(
-                '🐔 Fastest Cluck Norris',
-                'speed',
-                460
-              ),
-            ],
-          }),
-          // Sidebar with common side menu
-          createSideMenu(this.ui, {
-            title: 'Leaderboard',
-            customTextContent: [
-              this.ui.View({
-                style: {
-                  position: 'relative',
-                  width: 150,
-                },
-                children: this.ui.Text({
-                  text: 'Who is the Cluck Mister?',
-                  numberOfLines: 2,
-                  style: {
-                    fontSize: DIMENSIONS.fontSize.lg,
-                    color: COLORS.textPrimary,
-                    lineHeight: DIMENSIONS.fontSize.lg + 5,
-                  },
-                }),
-              }),
-            ],
-            buttons: [],
-            bottomButton: {
-              label: 'Back',
-              onClick: () => {
-                if (this.onNavigate) this.onNavigate('menu');
-              },
-              disabled: false,
-            },
-            playSfx: this.playSfx,
-          }),
-        ],
-      });
-    }
+      return this.createRootContainer([
+        this.createFullScreenBackground(),
+        this.createContainerBackground(),
 
-    dispose(): void {
-      // Nothing to clean up
-    }
-  }
+        // Two leaderboard panels
+        this.createLeaderboardPanel('Top Experience', 'experience', 70),
+        this.createLeaderboardPanel('Fastest Cluck Norris', 'speed', 540),
 
-  // ==================== bloombeasts\common\ui\screens\MissionCompletePopup.ts ====================
-
-  /**
-   * Unified Mission Complete Popup Component
-   * Works on both Horizon and Web platforms
-   * Exactly mimics the UI from bloombeasts/screens/missions/MissionCompletePopup.ts
-   */
-
-
-  export interface MissionCompletePopupProps {
-    mission: {
-      id: string;
-      name: string;
-      affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
-    };
-    rewards: {
-      xpGained: number;
-      beastXP: number;
-      coinsReceived?: number;
-      completionTimeSeconds: number;
-      cardsReceived: any[];
-      itemsReceived: Array<{
-        itemId: string;
-        quantity: number;
-        emoji?: string;
-        name?: string;
-      }>;
-      bonusRewards?: string[];
-    } | null; // null for mission failed
-    chestOpened: boolean;
-    onClaimRewards?: () => void;
-    onContinue?: () => void;
-    playSfx?: (sfxId: string) => void;
-  }
-
-  /**
-   * Unified Mission Complete Popup using common Popup component
-   * Derives content from MissionCompletePopup binding
-   */
-  export function createMissionCompletePopup(ui: UIMethodMappings, bindingManager: any): UINodeType {
-    // Get the playSfx function from current binding state
-    const currentProps = bindingManager.getSnapshot(BindingType.MissionCompletePopup);
-    const playSfx = currentProps?.playSfx;
-
-    // Derive chest image source
-    const chestImageSource = bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
-      if (!props) return null;
-      if (!props.rewards) {
-        return ui.assetIdToImageSource?.('lose-image') || null;
-      }
-      const affinity = props.mission.affinity === 'Boss' ? 'Fire' : (props.mission.affinity || 'Forest');
-      const state = props.chestOpened ? 'opened' : 'closed';
-      return ui.assetIdToImageSource?.(`${affinity}-chest-${state}`.toLowerCase()) || null;
-    });
-
-    // Derive info text
-    const infoText = bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
-      if (!props) return '';
-      if (!props.rewards) {
-        return 'Better luck next time!\n\nKeep training your beasts\nand try again.';
-      }
-      if (props.chestOpened) {
-        // Show detailed rewards
-        const lines: string[] = [];
-        if (props.rewards.coinsReceived) {
-          lines.push(`🪙 ${props.rewards.coinsReceived} Coins`);
-        }
-        if (props.rewards.bonusRewards && props.rewards.bonusRewards.length > 0) {
-          lines.push(...props.rewards.bonusRewards);
-        }
-        if (props.rewards.cardsReceived && props.rewards.cardsReceived.length > 0) {
-          lines.push('', 'Cards Received:');
-          props.rewards.cardsReceived.forEach((card: any) => {
-            lines.push(`• ${card.name}`);
-          });
-        }
-        return lines.join('\n');
-      } else {
-        // Show basic info
-        const minutes = Math.floor(props.rewards.completionTimeSeconds / 60);
-        const seconds = props.rewards.completionTimeSeconds % 60;
-        const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
-        const lines = [
-          `Time: ${timeString}`,
-          '',
-          `Player XP: +${props.rewards.xpGained}`,
-          `Beast XP: +${props.rewards.beastXP}`
-        ];
-        if (props.rewards.coinsReceived) {
-          lines.push(`Coins: +${props.rewards.coinsReceived}`);
-        }
-        return lines.join('\n');
-      }
-    });
-
-    // Create content
-    const content: UINodeType[] = [
-      ui.View({
-        style: {
-          width: '100%',
-          flexDirection: 'row',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: 20,
-          marginTop: 10,
-          marginBottom: 20,
-        },
-        children: [
-          // Chest or lose image
-          ui.Image({
-            source: chestImageSource as any,
-            style: {
-              width: chestImageMissionCompleteDimensions.width,
-              height: chestImageMissionCompleteDimensions.height,
-            },
-          }),
-
-          // Info text
-          ui.View({
-            style: {
-              flex: 1,
-              paddingRight: 20,
-            },
-            children: ui.Text({
-              text: infoText as any,
-              numberOfLines: 15,
-              style: {
-                fontSize: DIMENSIONS.fontSize.md,
-                color: COLORS.textPrimary,
-                textAlign: 'left',
-                lineHeight: 20,
-              },
-            }),
-          }),
-        ],
-      }),
-    ];
-
-    // Create button with derived label
-    const popupButton: PopupButton = {
-      label: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
-        if (!props) return 'CONTINUE';
-        if (!props.rewards || props.chestOpened) return 'CONTINUE';
-        return 'CLAIM REWARDS';
-      }) as any,
-      onClick: () => {
-        const props = bindingManager.getSnapshot(BindingType.MissionCompletePopup);
-        if (!props) return;
-
-        if (!props.rewards || props.chestOpened) {
-          props.onContinue?.();
-        } else {
-          props.onClaimRewards?.();
-        }
-      },
-      type: 'long',
-      color: 'green',
-    };
-
-    return createPopup({
-      ui,
-      title: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
-        return props?.rewards === null ? 'MISSION FAILED' : 'MISSION COMPLETE!';
-      }) as any,
-      titleColor: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
-        return props?.rewards === null ? '#FF4444' : '#FFD700';
-      }) as any,
-      content,
-      buttons: [popupButton],
-      playSfx, // Direct function reference, not a binding
-      width: missionCompleteCardDimensions.width,
-      height: missionCompleteCardDimensions.height,
-    });
-  }
-
-  /**
-   * Create failed mission info text
-   */
-  function createFailedInfo(ui: UIMethodMappings): UINodeType {
-    return ui.View({
-      style: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-      },
-      children: [
-        ui.Text({
-          text: 'Better luck next time!\n\nKeep training your beasts\nand try again.',
-          style: {
-            fontSize: DIMENSIONS.fontSize.md,
-            lineHeight: 20,
-            color: COLORS.textPrimary,
-            textAlign: 'center',
-          },
+        createSideMenu(this.ui, {
+          title: 'Leaderboard',
+          bottomButton: this.getBackButton(),
+          playSfx: this.playSfx,
         }),
-      ],
-    });
+      ]);
+    }
+  }
+
+  // ==================== bloombeasts/types/ui/UITypes.ts ====================
+
+  /**
+   * Core UI type definitions
+   *
+   * Fundamental UI types for the platform-agnostic UI system.
+   */
+
+  /**
+   * Base UI element (platform-specific implementation)
+   */
+  export type UIElement = any; // Platform-specific element type
+
+  /**
+   * Conditional UI node (from UINode.if)
+   */
+  export type ConditionalUINode = any; // Platform-specific conditional type
+
+  /**
+   * UINode type - represents a UI node returned by UI components
+   * Can be a single element, array of elements, null, or conditional rendering
+   */
+  export type UINode = UIElement | UIElement[] | null | ConditionalUINode;
+
+  // ==================== bloombeasts/types/ui/UIBindings.ts ====================
+
+  /**
+   * Binding type definitions
+   *
+   * Platform-agnostic reactive data binding interfaces.
+   * Each platform provides its own implementation.
+   */
+
+  /**
+   * Read-only binding interface (for derived bindings)
+   */
+  export interface ReadonlyBindingInterface<T> {
+    get(): T;
+    subscribe(callback: () => void): void;
   }
 
   /**
-   * Create basic info (before chest opened)
+   * Binding interface - platform-agnostic reactive data binding
+   * Each platform provides its own implementation
    */
-  function createBasicInfo(ui: UIMethodMappings, rewards: any): UINodeType {
-    const minutes = Math.floor(rewards.completionTimeSeconds / 60);
-    const seconds = rewards.completionTimeSeconds % 60;
-    const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+  export interface BindingInterface<T> {
+    get(): T;
+    set(value: T): void;
+    subscribe(callback: () => void): void;
+    derive<U>(fn: (value: T) => U): ReadonlyBindingInterface<U>;
+  }
 
-    const lines = [`Time: ${timeString}`, '', `Player XP: +${rewards.xpGained}`, `Beast XP: +${rewards.beastXP}`];
+  /**
+   * Binding constructor type
+   */
+  export type BindingConstructor = {
+    new <T>(value: T): BindingInterface<T>;
+    derive<T extends any[], R>(
+      bindings: any[],
+      deriveFn: (...values: T) => R
+    ): ReadonlyBindingInterface<R>;
+  };
 
-    // Add coins if present
-    if (rewards.coinsReceived) {
-      lines.push(`Coins: +${rewards.coinsReceived}`);
+  // ==================== bloombeasts/types/ui/UIProps.ts ====================
+
+  /**
+   * UI component props definitions
+   *
+   * Platform-agnostic prop interfaces for all UI components.
+   */
+
+
+  /**
+   * Style properties - platform-agnostic style definitions
+   * These match Horizon's styling but work on web too
+   */
+  export interface StyleProps {
+    // Dimensions
+    width?: number | string; // Support '100%', 'auto', etc.
+    height?: number | string; // Support '100%', 'auto', etc.
+    maxWidth?: number | string; // Max width constraint
+    maxHeight?: number | string; // Max height constraint
+    aspectRatio?: number; // Width/height ratio
+
+    // Colors and visual
+    backgroundColor?: string;
+    color?: string; // Text/foreground color
+    opacity?: number;
+    borderRadius?: number;
+    borderWidth?: number;
+    borderTopWidth?: number;
+    borderBottomWidth?: number;
+    borderLeftWidth?: number;
+    borderRightWidth?: number;
+    borderColor?: string;
+    borderTopColor?: string;
+    borderBottomColor?: string;
+    borderLeftColor?: string;
+    borderRightColor?: string;
+    shadowColor?: string;
+    shadowRadius?: number;
+
+    // Spacing
+    padding?: number;
+    paddingTop?: number;
+    paddingBottom?: number;
+    paddingLeft?: number;
+    paddingRight?: number;
+    margin?: number;
+    marginTop?: number;
+    marginBottom?: number;
+    marginLeft?: number;
+    marginRight?: number;
+
+    // Layout
+    display?: 'flex' | 'block' | 'inline' | 'none' | any; // Allow any for platform-specific values
+    flex?: number; // Flex grow factor
+    flexDirection?: 'row' | 'column';
+    flexWrap?: 'nowrap' | 'wrap' | 'wrap-reverse';
+    justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
+    alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
+    gap?: number; // Gap between flex items
+    overflow?: 'visible' | 'hidden';
+
+    // Positioning
+    position?: 'relative' | 'absolute';
+    top?: number;
+    left?: number;
+    right?: number;
+    bottom?: number;
+
+    // Typography (for convenience in style)
+    fontSize?: number;
+    fontWeight?: 'normal' | 'bold' | number;
+    textAlign?: 'left' | 'center' | 'right'; // Text alignment
+    textAlignVertical?: 'top' | 'center' | 'bottom'; // Vertical text alignment
+    lineHeight?: number; // Line height for text
+    textShadowColor?: string; // Text shadow color
+    textShadowOffset?: { width: number; height: number }; // Text shadow offset
+    textShadowRadius?: number; // Text shadow blur radius
+
+    // Z-index for layering
+    zIndex?: number;
+
+    // Add more as needed
+  }
+
+  /**
+   * Common props for all UI components
+   */
+  export interface BaseUIProps {
+    style?: StyleProps;
+    children?: UINode | UINode[];
+  }
+
+  /**
+   * View component props
+   */
+  export interface ViewProps extends BaseUIProps {}
+
+  /**
+   * Text component props
+   */
+  export interface TextProps extends BaseUIProps {
+    text?: string | any; // Support both string and bindings (ValueBindingBase, ReadonlyBindingInterface)
+    fontSize?: number;
+    fontWeight?: 'normal' | 'bold';
+    color?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    numberOfLines?: number; // Max number of lines before truncation
+  }
+
+  /**
+   * Image component props
+   */
+  export interface ImageProps extends BaseUIProps {
+    imageId?: string | any; // Single image asset ID (or binding)
+    source?: any; // Image source (platform-specific, can be URL, asset ID, or binding)
+    binding?: any; // BaseBinding<string> for animations, derived values, etc.
+    width?: number;
+    height?: number;
+  }
+
+  /**
+   * Pressable (button) component props
+   */
+  export interface PressableProps extends BaseUIProps {
+    onPress?: () => void;
+    onClick?: () => void; // Alias for onPress (web compatibility)
+    disabled?: boolean | any; // Whether the button is disabled (supports bindings)
+    id?: string;
+  }
+
+  /**
+   * ScrollView component props
+   */
+  export interface ScrollViewProps extends BaseUIProps {
+    horizontal?: boolean;
+    showsScrollIndicator?: boolean;
+  }
+
+  // ==================== bloombeasts/types/ui/UIMethodMappings.ts ====================
+
+  /**
+   * UI method mappings definition
+   *
+   * Platform-specific UI method implementations.
+   * Each platform provides its own implementation of these methods.
+   * Screens receive this object and use it to create UI elements.
+   */
+
+
+  /**
+   * Platform-specific UI method mappings
+   * Each platform provides its own implementation of these methods
+   * Screens receive this object and use it to create UI elements
+   */
+  export interface UIMethodMappings {
+    // Core UI components - return UIElement (platform-specific element)
+    View: (props: ViewProps) => UIElement;
+    Text: (props: TextProps) => UIElement;
+    Image: (props: ImageProps) => UIElement;
+    Pressable: (props: PressableProps) => UIElement;
+    ScrollView?: (props: ScrollViewProps) => UIElement;
+
+    // UINode utilities for conditional rendering
+    // Platform-specific type for conditional UI nodes (e.g., Horizon's ConditionalUINode)
+    UINode?: ConditionalUINode;
+
+    // Centralized binding manager - ONLY way to create/access bindings
+    bindingManager: BindingManager;
+
+    // Platform-specific helpers
+    // Returns platform-specific image source (ImageSource on Horizon, string on Web)
+    assetIdToImageSource?: (assetId: string) => unknown;
+  }
+
+  // ==================== bloombeasts/types/ui/index.ts ====================
+
+  /**
+   * UI types barrel export
+   */
+
+  // ==================== bloombeasts/screens/battle/engine/types/actions.ts ====================
+
+  /**
+   * Typed Action System
+   *
+   * Replaces string-based action parsing with proper TypeScript discriminated unions.
+   * This provides type safety, better IDE support, and eliminates string parsing bugs.
+   *
+   * Migration from:
+   *   action = 'play-card-0-target-2'
+   * To:
+   *   action = { type: 'play-card', cardIndex: 0, targetIndex: 2 }
+   */
+
+
+  /**
+   * Base action that all battle actions extend
+   */
+  export interface BaseBattleAction {
+    type: string;
+    playerId?: string;
+    timestamp?: number;
+  }
+
+  /**
+   * Play a card from hand
+   */
+  export interface PlayCardAction extends BaseBattleAction {
+    type: 'play-card';
+    cardIndex: number;
+    cardId?: string;
+    targetIndex?: number; // For targeted cards like Magic
+    position?: number; // For beast placement
+  }
+
+  /**
+   * Attack with a beast
+   */
+  export interface AttackBeastAction extends BaseBattleAction {
+    type: 'attack-beast';
+    attackerId: string;
+    attackerIndex?: number;
+    targetId?: string;
+    targetIndex?: number;
+  }
+
+  /**
+   * Attack opponent player directly
+   */
+  export interface AttackPlayerAction extends BaseBattleAction {
+    type: 'attack-player';
+    attackerId: string;
+    attackerIndex?: number;
+  }
+
+  /**
+   * Use a beast's ability
+   */
+  export interface UseAbilityAction extends BaseBattleAction {
+    type: 'use-ability';
+    beastId: string;
+    beastIndex?: number;
+    abilityIndex: number;
+    targetId?: string;
+    targetIndex?: number;
+  }
+
+  /**
+   * End the current turn
+   */
+  export interface EndTurnAction extends BaseBattleAction {
+    type: 'end-turn';
+  }
+
+  /**
+   * Forfeit the battle
+   */
+  export interface ForfeitAction extends BaseBattleAction {
+    type: 'forfeit';
+  }
+
+  /**
+   * Timeout - player ran out of time
+   */
+  export interface TimeoutAction extends BaseBattleAction {
+    type: 'timeout';
+    timedOutPlayerId?: string; // Which player actually timed out
+  }
+
+  /**
+   * Auto-attack with all available beasts
+   */
+  export interface AutoAttackAllAction extends BaseBattleAction {
+    type: 'auto-attack-all';
+  }
+
+  /**
+   * Discriminated union of all possible battle actions
+   */
+  export type BattleAction =
+    | PlayCardAction
+    | AttackBeastAction
+    | AttackPlayerAction
+    | UseAbilityAction
+    | EndTurnAction
+    | ForfeitAction
+    | TimeoutAction
+    | AutoAttackAllAction;
+
+  /**
+   * Action creator functions for type-safe action construction
+   */
+  export const BattleActions = {
+    playCard: (cardIndex: number, options?: {
+      cardId?: string;
+      targetIndex?: number;
+      position?: number;
+      playerId?: string;
+    }): PlayCardAction => ({
+      type: 'play-card',
+      cardIndex,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    attackBeast: (attackerId: string, options?: {
+      attackerIndex?: number;
+      targetId?: string;
+      targetIndex?: number;
+      playerId?: string;
+    }): AttackBeastAction => ({
+      type: 'attack-beast',
+      attackerId,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    attackPlayer: (attackerId: string, options?: {
+      attackerIndex?: number;
+      playerId?: string;
+    }): AttackPlayerAction => ({
+      type: 'attack-player',
+      attackerId,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    useAbility: (beastId: string, abilityIndex: number, options?: {
+      beastIndex?: number;
+      targetId?: string;
+      targetIndex?: number;
+      playerId?: string;
+    }): UseAbilityAction => ({
+      type: 'use-ability',
+      beastId,
+      abilityIndex,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    endTurn: (playerId?: string): EndTurnAction => ({
+      type: 'end-turn',
+      playerId,
+      timestamp: Date.now(),
+    }),
+
+    forfeit: (playerId?: string): ForfeitAction => ({
+      type: 'forfeit',
+      playerId,
+      timestamp: Date.now(),
+    }),
+
+    timeout: (playerId?: string): TimeoutAction => ({
+      type: 'timeout',
+      playerId,
+      timestamp: Date.now(),
+    }),
+
+    autoAttackAll: (playerId?: string): AutoAttackAllAction => ({
+      type: 'auto-attack-all',
+      playerId,
+      timestamp: Date.now(),
+    }),
+  };
+
+  /**
+   * Parse legacy string-based actions into typed actions
+   * This function helps migrate from old string format to new typed format.
+   *
+   * Examples:
+   *   'play-card-0' -> { type: 'play-card', cardIndex: 0 }
+   *   'play-card-0-target-2' -> { type: 'play-card', cardIndex: 0, targetIndex: 2 }
+   *   'attack-beast-1-2' -> { type: 'attack-beast', attackerIndex: 1, targetIndex: 2 }
+   *   'end-turn' -> { type: 'end-turn' }
+   */
+  export function parseActionString(actionStr: string, playerId?: string): BattleAction | null {
+    // End turn
+    if (actionStr === 'end-turn') {
+      return BattleActions.endTurn(playerId);
     }
 
-    // Add bonus rewards if present
-    if (rewards.bonusRewards && rewards.bonusRewards.length > 0) {
-      lines.push('');
-      rewards.bonusRewards.forEach((bonus: string) => {
-        lines.push(bonus);
+    // Forfeit
+    if (actionStr === 'forfeit') {
+      return BattleActions.forfeit(playerId);
+    }
+
+    // Auto attack all
+    if (actionStr === 'auto-attack-all') {
+      return BattleActions.autoAttackAll(playerId);
+    }
+
+    // Play card: 'play-card-0' or 'play-card-0-target-2'
+    if (actionStr.startsWith('play-card-')) {
+      const parts = actionStr.substring('play-card-'.length).split('-target-');
+      const cardIndex = parseInt(parts[0], 10);
+      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
+
+      if (isNaN(cardIndex)) return null;
+
+      return BattleActions.playCard(cardIndex, { targetIndex, playerId });
+    }
+
+    // Attack beast: 'attack-beast-1-2' (attacker index 1, target index 2)
+    if (actionStr.startsWith('attack-beast-')) {
+      const parts = actionStr.substring('attack-beast-'.length).split('-');
+      if (parts.length >= 2) {
+        const attackerIndex = parseInt(parts[0], 10);
+        const targetIndex = parseInt(parts[1], 10);
+
+        if (isNaN(attackerIndex) || isNaN(targetIndex)) return null;
+
+        return BattleActions.attackBeast(attackerIndex.toString(), {
+          attackerIndex,
+          targetIndex,
+          playerId,
+        });
+      }
+    }
+
+    // Attack player: 'attack-player-1' (attacker index 1)
+    if (actionStr.startsWith('attack-player-')) {
+      const attackerIndex = parseInt(actionStr.substring('attack-player-'.length), 10);
+
+      if (isNaN(attackerIndex)) return null;
+
+      return BattleActions.attackPlayer(attackerIndex.toString(), {
+        attackerIndex,
+        playerId,
       });
     }
 
-    return ui.View({
-      style: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-      },
-      children: lines.map((line, index) =>
-        ui.Text({
-          text: line,
-          style: {
-            fontSize: DIMENSIONS.fontSize.md,
-            color: line.includes('Boost:') ? '#FFD700' : COLORS.textPrimary,
-            textAlign: 'center',
-            marginBottom: 5,
-          },
-        })
-      ),
-    });
-  }
+    // Use ability: 'use-ability-1' or 'use-ability-1-target-2'
+    if (actionStr.startsWith('use-ability-')) {
+      const parts = actionStr.substring('use-ability-'.length).split('-target-');
+      const beastIndex = parseInt(parts[0], 10);
+      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
 
-  /**
-   * Create detailed rewards (after chest opened)
-   */
-  function createDetailedRewards(ui: UIMethodMappings, rewards: any): UINodeType {
-    const elements: UINodeType[] = [];
+      if (isNaN(beastIndex)) return null;
 
-    // Coins received
-    if (rewards.coinsReceived) {
-      elements.push(
-        ui.Text({
-          text: `🪙 ${rewards.coinsReceived} Coins`,
-          style: {
-            fontSize: DIMENSIONS.fontSize.md,
-            color: '#FFD700',
-            textAlign: 'center',
-            marginBottom: 10,
-            fontWeight: 'bold',
-          },
-        })
-      );
-    }
-
-    // Bonus rewards (boosts)
-    if (rewards.bonusRewards && rewards.bonusRewards.length > 0) {
-      rewards.bonusRewards.forEach((bonus: string) => {
-        elements.push(
-          ui.Text({
-            text: bonus,
-            style: {
-              fontSize: DIMENSIONS.fontSize.sm,
-              color: '#FFD700',
-              textAlign: 'center',
-              marginBottom: 5,
-            },
-          })
-        );
+      return BattleActions.useAbility(beastIndex.toString(), 0, {
+        beastIndex,
+        targetIndex,
+        playerId,
       });
-      elements.push(
-        ui.View({
-          style: { height: 10 },
-        })
-      );
     }
 
-    // Cards received
-    if (rewards.cardsReceived && rewards.cardsReceived.length > 0) {
-      elements.push(
-        ui.Text({
-          text: 'Cards Received:',
-          style: {
-            fontSize: DIMENSIONS.fontSize.md,
-            color: '#FFD700',
-            textAlign: 'center',
-            marginBottom: 5,
-            fontWeight: 'bold',
-          },
-        })
-      );
-
-      rewards.cardsReceived.forEach((card: any, index: number) => {
-        elements.push(
-          ui.Text({
-            text: `• ${card.name}`,
-            style: {
-              fontSize: DIMENSIONS.fontSize.sm,
-              color: COLORS.textPrimary,
-              textAlign: 'center',
-              marginBottom: 5,
-            },
-          })
-        );
-      });
-
-      // Extra spacing
-      elements.push(
-        ui.View({
-          style: { height: 10 },
-        })
-      );
-    }
-
-    // Items received
-    if (rewards.itemsReceived && rewards.itemsReceived.length > 0) {
-      elements.push(
-        ui.Text({
-          text: 'Items Received:',
-          style: {
-            fontSize: DIMENSIONS.fontSize.md,
-            color: '#FFD700',
-            textAlign: 'center',
-            marginBottom: 5,
-            fontWeight: 'bold',
-          },
-        })
-      );
-
-      rewards.itemsReceived.forEach((itemReward: any, index: number) => {
-        const emoji = itemReward.emoji || '';
-        const itemName = itemReward.name || itemReward.itemId;
-        elements.push(
-          ui.Text({
-            text: `${emoji} ${itemName} x${itemReward.quantity}`,
-            style: {
-              fontSize: DIMENSIONS.fontSize.sm,
-              color: COLORS.textPrimary,
-              textAlign: 'center',
-              marginBottom: 5,
-            },
-          })
-        );
-      });
-
-      // Extra spacing
-      elements.push(
-        ui.View({
-          style: { height: 10 },
-        })
-      );
-    }
-
-    return ui.View({
-      style: {
-        flexDirection: 'column',
-        alignItems: 'center',
-        width: '100%',
-      },
-      children: elements,
-    });
-  }
-
-  // ==================== bloombeasts\common\ui\screens\ButtonPopup.ts ====================
-
-  /**
-   * Button Popup Component
-   * Simple popup that shows buttons for user choices
-   */
-
-
-  export interface ButtonPopupProps {
-    title: string;
-    message?: string;
-    buttons: {
-      text: string;
-      onClick: () => void;
-      color?: 'default' | 'red' | 'green';
-    }[];
-    playSfx?: (sfxId: string) => void;
+    // Unknown action
+    Logger.warn(`[ActionParser] Unknown action string: ${actionStr}`);
+    return null;
   }
 
   /**
-   * Create a button popup using the common Popup component
-   * Derives content from ForfeitPopup binding
+   * Convert typed action back to legacy string format
+   * Used during migration to maintain compatibility with old code.
    */
-  export function createButtonPopup(ui: UIMethodMappings, bindingManager: any): any {
-    // Get the playSfx function from current binding state
-    const currentProps = bindingManager.getSnapshot(BindingType.ForfeitPopup);
-    const playSfx = currentProps?.playSfx;
+  export function actionToString(action: BattleAction): string {
+    switch (action.type) {
+      case 'play-card':
+        if (action.targetIndex !== undefined) {
+          return `play-card-${action.cardIndex}-target-${action.targetIndex}`;
+        }
+        return `play-card-${action.cardIndex}`;
 
-    // Derive title
-    const title = bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
-      return props?.title || '';
-    });
+      case 'attack-beast':
+        return `attack-beast-${action.attackerIndex ?? action.attackerId}-${action.targetIndex ?? action.targetId}`;
 
-    // Derive message
-    const message = bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
-      return props?.message || '';
-    });
+      case 'attack-player':
+        return `attack-player-${action.attackerIndex ?? action.attackerId}`;
 
-    // Create buttons that capture click handlers at click time
-    const popupButtons: PopupButton[] = [
-      {
-        label: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
-          return props?.buttons?.[0]?.text || 'Yes';
-        }) as any,
-        onClick: () => {
-          const props = bindingManager.getSnapshot(BindingType.ForfeitPopup);
-          if (props?.buttons?.[0]?.onClick) {
-            props.buttons[0].onClick();
-          }
-        },
-        color: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
-          return (props?.buttons?.[0]?.color || 'default') as ButtonColor;
-        }) as any,
-      },
-      {
-        label: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
-          return props?.buttons?.[1]?.text || 'No';
-        }) as any,
-        onClick: () => {
-          const props = bindingManager.getSnapshot(BindingType.ForfeitPopup);
-          if (props?.buttons?.[1]?.onClick) {
-            props.buttons[1].onClick();
-          }
-        },
-        color: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
-          return (props?.buttons?.[1]?.color || 'default') as ButtonColor;
-        }) as any,
-      },
-    ];
+      case 'use-ability':
+        if (action.targetIndex !== undefined) {
+          return `use-ability-${action.beastIndex ?? action.beastId}-target-${action.targetIndex}`;
+        }
+        return `use-ability-${action.beastIndex ?? action.beastId}`;
 
-    return createPopup({
-      ui,
-      title: title as any,
-      description: message as any,
-      buttons: popupButtons,
-      playSfx, // Direct function reference, not a binding
-      width: 450,
-      height: 280,
-    });
+      case 'end-turn':
+        return 'end-turn';
+
+      case 'forfeit':
+        return 'forfeit';
+
+      case 'timeout':
+        return 'timeout';
+
+      case 'auto-attack-all':
+        return 'auto-attack-all';
+
+      default:
+        // Exhaustiveness check
+        const exhaustive: never = action;
+        throw new Error(`Unknown action type: ${(exhaustive as any).type}`);
+    }
   }
 
-  // ==================== bloombeasts\screens\battle\BattleDisplayManager.ts ====================
+  /**
+   * Type guard to check if an object is a valid BattleAction
+   */
+  export function isBattleAction(obj: any): obj is BattleAction {
+    return obj && typeof obj === 'object' && typeof obj.type === 'string';
+  }
+
+  // ==================== bloombeasts/core/interfaces/IBattleUI.ts ====================
 
   /**
-   * BattleDisplayManager - Handles battle UI rendering and display enrichment
-   * Manages battle state visualization, animations, and card popups
+   * IBattleUI - Interface for battle UI operations
+   * Breaks circular dependency between core and screens
    */
 
 
-  export class BattleDisplayManager {
-    private catalogManager: any;
+  /**
+   * Battle state representation
+   */
+  export interface BattleState {
+    battleState: any;  // TODO: Type this properly when we have the full battle state type
+    isComplete: boolean;
+    rewards: any | null;  // TODO: Type this properly
+    winner: string | null;
+  }
 
-    constructor(catalogManager: any) {
-      this.catalogManager = catalogManager;
-    }
+  /**
+   * Interface for battle UI operations
+   */
+  export interface IBattleUI {
     /**
-     * Create a battle display object from battle state
+     * Initialize a new battle
+     */
+    initializeBattle(playerDeckCards: RuntimeCard[], playerName: string): BattleState | null;
+
+    /**
+     * Get the current battle state
+     */
+    getCurrentBattle(): BattleState | null;
+
+    /**
+     * Process a battle action
+     */
+    processTypedAction(action: BattleAction, data?: any): Promise<void>;
+  }
+
+  // ==================== bloombeasts/core/interfaces/IBattleDisplayManager.ts ====================
+
+  /**
+   * IBattleDisplayManager - Interface for battle display management
+   * Breaks circular dependency between core and screens
+   */
+
+
+  /**
+   * Options for creating battle display
+   */
+  export interface BattleDisplayOptions {
+    attackerPlayer?: 'player' | 'opponent';
+    attackerIndex?: number;
+    targetPlayer?: 'player' | 'opponent' | 'health';
+    targetIndex?: number;
+  }
+
+  /**
+   * Interface for battle display manager
+   */
+  export interface IBattleDisplayManager {
+    /**
+     * Create a battle display from current state
      */
     createBattleDisplay(
-      battleUIState: any,
-      attackAnimation?: {
-        attackerPlayer: 'player' | 'opponent';
-        attackerIndex: number;
-        targetPlayer: 'player' | 'opponent' | 'health';
-        targetIndex?: number;
-      } | null
-    ): BattleDisplay | null {
-      // Handle new TURBO-based battle state structure
-      if (!battleUIState || !battleUIState.battleState || !battleUIState.battleState.turboState) {
-        return null;
-      }
-
-      const turboState = battleUIState.battleState.turboState;
-      const gameData = turboState.gameData;
-
-      // Extract players and field from TURBO state
-      const player = gameData.players[0];
-      const opponent = gameData.players[1];
-      const playerField = gameData.field.player1;
-      const opponentField = gameData.field.player2;
-
-      if (!player || !opponent) return null;
-
-      // Determine current turn player
-      const turnPlayer = turboState.turnInfo.currentPlayerId === 'player' ? 'player' : 'opponent';
-
-      // Convert to display format
-      const display: BattleDisplay = {
-        playerHealth: player.health,
-        playerMaxHealth: player.maxHealth || STARTING_HEALTH,
-        playerDeckCount: player.deck.length,
-        playerEnergy: player.energy,
-        playerHand: this.enrichHandCards(player.hand),
-        playerTrapZone: playerField.traps || [],
-        playerBuffZone: playerField.buffs || [],
-        opponentHealth: opponent.health,
-        opponentMaxHealth: opponent.maxHealth || STARTING_HEALTH,
-        opponentDeckCount: opponent.deck.length,
-        opponentEnergy: opponent.energy,
-        opponentField: this.enrichFieldBeasts(opponentField.beasts, turboState, 1),
-        opponentTrapZone: opponentField.traps || [],
-        opponentBuffZone: opponentField.buffs || [],
-        playerField: this.enrichFieldBeasts(playerField.beasts, turboState, 0),
-        currentTurn: turboState.turnInfo.turnNumber,
-        turnPlayer: turnPlayer,
-        turnTimeRemaining: TURN_TIME_LIMIT,
-        objectives: this.getObjectiveDisplay(battleUIState),
-        habitatZone: playerField.habitat || opponentField.habitat, // Use whichever has a habitat
-        attackAnimation: attackAnimation,
-      };
-
-      return display;
-    }
-
-    /**
-     * Get objective display for current battle
-     */
-    private getObjectiveDisplay(battleState: any): ObjectiveDisplay[] {
-      if (!battleState.mission || !battleState.progress) {
-        return [];
-      }
-
-      // Check if mission has objectives defined
-      if (!battleState.mission.objectives || !Array.isArray(battleState.mission.objectives)) {
-        return [];
-      }
-
-      return battleState.mission.objectives.map((obj: any) => {
-        const key = `${obj.type}-${obj.target || 0}`;
-        const progress = battleState.progress.objectiveProgress.get(key) || 0;
-        const target = obj.target || 1;
-
-        return {
-          description: obj.description || 'Unknown objective',
-          progress: Math.min(progress, target),
-          target: target,
-          isComplete: progress >= target,
-        };
-      });
-    }
-
-    /**
-     * Return field beasts as RuntimeCard
-     * NOTE: Do NOT apply bonuses here - the engine's StatModifierManager already handles this!
-     */
-    private enrichFieldBeasts(field: RuntimeCard[], turboState?: any, playerIndex?: number): RuntimeCard[] {
-      return field.filter(beast => beast !== null);
-    }
-
-    /**
-     * Return hand cards as RuntimeCard
-     */
-    private enrichHandCards(hand: RuntimeCard[]): RuntimeCard[] {
-      return hand.filter(card => card !== null);
-    }
-
+      battleState: BattleState | null,
+      options?: BattleDisplayOptions
+    ): any;  // TODO: Type this as BattleDisplay when we have the type
   }
 
-  // ==================== bloombeasts\lib\Turbo-Standalone.ts ====================
+  // ==================== bloombeasts/types/game/DisplayTypes.ts ====================
+
+  /**
+   * Display type definitions
+   *
+   * Types used for UI display and presentation.
+   * These are view models that aggregate game state for presentation.
+   */
+
+
+  /**
+   * Player statistics displayed in UI
+   */
+  export interface MenuStats {
+    playerLevel: number;
+    totalXP: number;
+    coins: number;
+    serums: number;
+  }
+
+  /**
+   * Sound settings for audio playback
+   */
+  export interface SoundSettings {
+    musicVolume: number; // 0-100
+    sfxVolume: number; // 0-100
+    musicEnabled: boolean;
+    sfxEnabled: boolean;
+  }
+
+  /**
+   * Mission information for display in mission selection
+   */
+  export interface MissionDisplay {
+    id: string;
+    name: string;
+    level: number;
+    difficulty: string;
+    isAvailable: boolean;
+    isCompleted: boolean;
+    description: string;
+    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
+    beastId?: string;
+  }
+
+  /**
+   * Card detail popup information
+   */
+  export interface CardDetailDisplay {
+    card: RuntimeCard;
+    buttons: string[];
+    isInDeck: boolean;
+  }
+
+  /**
+   * Mission objective progress for display
+   */
+  export interface ObjectiveDisplay {
+    description: string;
+    progress: number;
+    target: number;
+    isComplete: boolean;
+  }
+
+  /**
+   * Complete battle state for display in battle screen
+   */
+  export interface BattleDisplay {
+    playerHealth: number;
+    playerMaxHealth: number;
+    playerDeckCount: number;
+    playerEnergy: number;
+    playerHand: any[];
+    playerTrapZone: any[]; // Player's trap cards (face-down)
+    playerBuffZone: any[]; // Player's active buff cards
+    opponentHealth: number;
+    opponentMaxHealth: number;
+    opponentDeckCount: number;
+    opponentEnergy: number;
+    opponentField: any[];
+    opponentTrapZone: any[]; // Opponent's trap cards (face-down)
+    opponentBuffZone: any[]; // Opponent's active buff cards
+    playerField: any[];
+    currentTurn: number;
+    turnPlayer: string;
+    turnTimeRemaining: number;
+    objectives: ObjectiveDisplay[];
+    habitatZone: any | null; // Current habitat card
+    attackAnimation?: BattleDisplayOptions; // Attack animation state
+    cardPopup?: { // Card popup display (for magic/trap/buff cards)
+      card: any;
+      player: 'player' | 'opponent';
+      showCloseButton?: boolean; // Show close button for manual popups
+    } | null;
+  }
+
+  // ==================== bloombeasts/types/game/PlayerTypes.ts ====================
+
+  /**
+   * Player data type definitions
+   *
+   * Core player data structures used throughout the game.
+   */
+
+
+  /**
+   * Player item in inventory
+   */
+  export interface PlayerItem {
+    itemId: string;
+    quantity: number;
+  }
+
+  /**
+   * Player data structure - persisted to platform storage
+   * This is the canonical save data format
+   *
+   * Note: Player level is derived from totalXP and not stored directly
+   */
+  export interface PlayerData {
+    // Identity and progression
+    name: string;
+    totalXP: number; // Level is derived from this via getPlayerLevel()
+
+    // Currency
+    coins: number;
+
+    // Card collection and deck (SINGLE SOURCE OF TRUTH)
+    cards: {
+      collected: CardInstance[]; // All owned card instances
+      deck: string[]; // Card instance IDs in player's deck
+    };
+
+    // Mission tracking
+    missions: {
+      completedMissions: { [missionId: string]: number }; // Mission ID -> completion count
+    };
+
+    // Item inventory (only special items like serums)
+    items: PlayerItem[];
+
+    // Boost upgrades (0-6 levels per boost)
+    boosts: {
+      [boostId: string]: number; // Boost ID -> upgrade level (0-6)
+    };
+
+    // UI preferences (not persisted on all platforms)
+    settings?: SoundSettings;
+  }
+
+  // ==================== bloombeasts/types/game/index.ts ====================
+
+  /**
+   * Game types barrel export
+   */
+
+  // ==================== bloombeasts/types/platform/IStorageProvider.ts ====================
+
+  /**
+   * Storage Provider Interface
+   *
+   * Handles persistent data storage and retrieval.
+   * Platform must implement these methods to support save/load functionality.
+   */
+
+
+  /**
+   * Storage provider for persisting player data
+   *
+   * Examples:
+   * - Web: localStorage
+   * - Horizon: Persistent Variables API
+   * - Native: File system or database
+   */
+  export interface IStorageProvider {
+    /**
+     * Save player data to persistent storage
+     *
+     * @param data - Player data to persist
+     *
+     * @example Web
+     * ```ts
+     * setPlayerData: (data) => localStorage.setItem('playerData', JSON.stringify(data))
+     * ```
+     *
+     * @example Horizon
+     * ```ts
+     * setPlayerData: (data) => persistentVar.set(data)
+     * ```
+     */
+    setPlayerData: (data: PlayerData) => void;
+
+    /**
+     * Load player data from persistent storage
+     *
+     * Platform must ensure valid PlayerData is returned (create default if none exists)
+     *
+     * @returns Player data or null if not found
+     *
+     * @example Web
+     * ```ts
+     * getPlayerData: () => JSON.parse(localStorage.getItem('playerData') || 'null')
+     * ```
+     *
+     * @example Horizon
+     * ```ts
+     * getPlayerData: () => persistentVar.get()
+     * ```
+     */
+    getPlayerData: () => PlayerData | null;
+  }
+
+  // ==================== bloombeasts/types/platform/IAssetProvider.ts ====================
+
+  /**
+   * Asset Provider Interface
+   *
+   * Handles asset loading and management.
+   * Platform must implement these methods to provide game assets.
+   */
+
+  /**
+   * Asset provider for loading images, sounds, and other resources
+   *
+   * Examples:
+   * - Web: Returns file paths as strings
+   * - Horizon: Returns ImageSource objects
+   */
+  export interface IAssetProvider {
+    /**
+     * Get an image asset by ID
+     *
+     * Platform queries AssetCatalogManager and returns the asset in platform format
+     *
+     * @param assetId - Unique identifier for the asset
+     * @returns Platform-specific asset representation
+     *
+     * @example Web
+     * ```ts
+     * getImageAsset: (assetId) => {
+     *   const catalog = catalogManager.getAsset(assetId);
+     *   return catalog.webPath; // '/assets/cards/fire/beast.png'
+     * }
+     * ```
+     *
+     * @example Horizon
+     * ```ts
+     * getImageAsset: (assetId) => {
+     *   const catalog = catalogManager.getAsset(assetId);
+     *   return ImageSource.fromTextureAsset(new hz.Asset(BigInt(catalog.horizonAssetId)));
+     * }
+     * ```
+     */
+    getImageAsset: (assetId: string) => any;
+
+    /**
+     * Asset catalog manager instance
+     *
+     * Provides access to all game asset metadata and card definitions.
+     * Platform should initialize this with the appropriate catalog data.
+     */
+    catalogManager: any; // AssetCatalogManager instance
+  }
+
+  // ==================== bloombeasts/types/platform/IUIProvider.ts ====================
+
+  /**
+   * UI Provider Interface
+   *
+   * Handles UI rendering and async operations.
+   * Platform must implement these methods to support the UI system.
+   */
+
+
+  /**
+   * UI provider for rendering and async operations
+   *
+   * Examples:
+   * - Web: DOM-based rendering
+   * - Horizon: Component update system
+   */
+  export interface IUIProvider {
+    /**
+     * Get platform-specific UI method implementations
+     *
+     * @returns Platform-specific UI component factory
+     *
+     * @example Web
+     * ```ts
+     * getUIMethodMappings: () => ({
+     *   View: webViewComponent,
+     *   Text: webTextComponent,
+     *   Image: webImageComponent,
+     *   Pressable: webPressableComponent,
+     *   bindingManager: webBindingManager
+     * })
+     * ```
+     *
+     * @example Horizon
+     * ```ts
+     * getUIMethodMappings: () => ({
+     *   View: hz.View,
+     *   Text: hz.Text,
+     *   Image: hz.Image,
+     *   Pressable: hz.Pressable,
+     *   bindingManager: horizonBindingManager
+     * })
+     * ```
+     */
+    getUIMethodMappings: () => UIMethodMappings;
+
+    /**
+     * Platform-specific async methods
+     *
+     * Provides setTimeout, setInterval, etc. for the platform
+     *
+     * @example Web
+     * ```ts
+     * async: {
+     *   setTimeout: window.setTimeout.bind(window),
+     *   setInterval: window.setInterval.bind(window),
+     *   clearTimeout: window.clearTimeout.bind(window),
+     *   clearInterval: window.clearInterval.bind(window)
+     * }
+     * ```
+     *
+     * @example Horizon
+     * ```ts
+     * async: component.async
+     * ```
+     */
+    async: AsyncMethods;
+
+    /**
+     * Render the UI tree
+     *
+     * Called whenever the UI needs to be updated.
+     * Platform should update its rendering system with the new UI tree.
+     *
+     * @param uiNode - The root UI node to render
+     *
+     * @example Web
+     * ```ts
+     * render: (uiNode) => renderer.render(uiNode)
+     * ```
+     *
+     * @example Horizon
+     * ```ts
+     * render: (uiNode) => component.update(uiNode)
+     * ```
+     */
+    render: (uiNode: UINode) => void;
+  }
+
+  // ==================== bloombeasts/types/platform/IAudioProvider.ts ====================
+
+  /**
+   * Audio Provider Interface
+   *
+   * Handles audio playback and settings.
+   * Platform can optionally implement these methods to support sound/music.
+   */
+
+  /**
+   * Audio provider for sound effects and music
+   *
+   * All methods are optional - platform can choose which audio features to support.
+   *
+   * Examples:
+   * - Web: HTML5 Audio API
+   * - Horizon: Horizon audio system
+   * - Headless: No implementation (silent mode)
+   */
+  export interface IAudioProvider {
+    /**
+     * Play a sound effect or music track
+     *
+     * @param assetId - Sound asset identifier
+     * @param loop - Whether to loop the sound
+     * @param volume - Volume level (0-100)
+     *
+     * @example Web
+     * ```ts
+     * playSound: (assetId, loop, volume) => {
+     *   const audio = new Audio(getSoundPath(assetId));
+     *   audio.loop = loop;
+     *   audio.volume = volume / 100;
+     *   audio.play();
+     * }
+     * ```
+     *
+     * @example Horizon
+     * ```ts
+     * playSound: (assetId, loop, volume) => {
+     *   world.playSound(soundAssets[assetId], { loop, volume: volume / 100 });
+     * }
+     * ```
+     */
+    playSound?: (assetId: string, loop: boolean, volume: number) => void;
+
+    /**
+     * Stop a playing sound
+     *
+     * @param assetId - Optional sound to stop (if omitted, stops all sounds)
+     *
+     * @example
+     * ```ts
+     * stopSound: (assetId) => {
+     *   if (assetId) {
+     *     audioMap.get(assetId)?.pause();
+     *   } else {
+     *     audioMap.forEach(audio => audio.pause());
+     *   }
+     * }
+     * ```
+     */
+    stopSound?: (assetId?: string) => void;
+
+    /**
+     * Set music volume level
+     *
+     * @param volume - Volume level (0-100)
+     *
+     * @example
+     * ```ts
+     * setMusicVolume: (volume) => {
+     *   musicTracks.forEach(track => track.volume = volume / 100);
+     * }
+     * ```
+     */
+    setMusicVolume?: (volume: number) => void;
+
+    /**
+     * Set sound effects volume level
+     *
+     * @param volume - Volume level (0-100)
+     *
+     * @example
+     * ```ts
+     * setSfxVolume: (volume) => {
+     *   sfxTracks.forEach(sfx => sfx.volume = volume / 100);
+     * }
+     * ```
+     */
+    setSfxVolume?: (volume: number) => void;
+
+    /**
+     * Enable or disable music playback
+     *
+     * @param enabled - Whether music should play
+     *
+     * @example
+     * ```ts
+     * setMusicEnabled: (enabled) => {
+     *   if (enabled) resumeMusic();
+     *   else pauseMusic();
+     * }
+     * ```
+     */
+    setMusicEnabled?: (enabled: boolean) => void;
+
+    /**
+     * Enable or disable sound effects playback
+     *
+     * @param enabled - Whether sound effects should play
+     *
+     * @example
+     * ```ts
+     * setSfxEnabled: (enabled) => {
+     *   sfxEnabled = enabled;
+     * }
+     * ```
+     */
+    setSfxEnabled?: (enabled: boolean) => void;
+  }
+
+  // ==================== bloombeasts/types/platform/IWorldProvider.ts ====================
+
+  /**
+   * World Provider Interface
+   *
+   * Handles multiplayer/world features like variables and network events.
+   * Platform can optionally implement these methods to support multiplayer.
+   */
+
+  /**
+   * World provider for multiplayer features
+   *
+   * All methods are optional - platform can choose which world features to support.
+   *
+   * Examples:
+   * - Horizon: World variables and network events
+   * - Web: Mock implementation or server-based
+   * - Single-player: No implementation
+   */
+  export interface IWorldProvider {
+    /**
+     * Get a world variable value
+     *
+     * World variables are shared across all players in the world.
+     * Useful for leaderboards, global state, etc.
+     *
+     * @param variableGroup - Variable group name
+     * @param variableName - Variable name within group
+     * @returns The variable value (any type)
+     *
+     * @example Horizon
+     * ```ts
+     * getWorldVariable: (group, name) => world.getVariable(group, name)
+     * ```
+     *
+     * @example Web (Mock)
+     * ```ts
+     * getWorldVariable: (group, name) => mockWorldData[group]?.[name]
+     * ```
+     */
+    getWorldVariable?: (variableGroup: string, variableName: string) => any;
+
+    /**
+     * Set a world variable value
+     *
+     * Updates a world variable that's shared across all players.
+     *
+     * @param variableGroup - Variable group name
+     * @param variableName - Variable name within group
+     * @param value - New value to set
+     *
+     * @example Horizon
+     * ```ts
+     * setWorldVariable: (group, name, value) => world.setVariable(group, name, value)
+     * ```
+     *
+     * @example Web (Mock)
+     * ```ts
+     * setWorldVariable: (group, name, value) => {
+     *   mockWorldData[group] = mockWorldData[group] || {};
+     *   mockWorldData[group][name] = value;
+     * }
+     * ```
+     */
+    setWorldVariable?: (variableGroup: string, variableName: string, value: any) => void;
+
+    /**
+     * Send a network event to server/other players
+     *
+     * Triggers a network event that can be received by server or other clients.
+     * Useful for multiplayer actions, leaderboard updates, etc.
+     *
+     * @param eventName - Name of the event
+     * @param data - Event payload data
+     *
+     * @example Horizon
+     * ```ts
+     * sendNetworkEvent: (eventName, data) => world.sendNetworkEvent(eventName, data)
+     * ```
+     *
+     * @example Web (Mock)
+     * ```ts
+     * sendNetworkEvent: (eventName, data) => {
+     *   console.log('Network event:', eventName, data);
+     *   // Could send to server via WebSocket/HTTP
+     * }
+     * ```
+     */
+    sendNetworkEvent?: (eventName: string, data: any) => void;
+  }
+
+  // ==================== bloombeasts/types/platform/PlatformConfig.ts ====================
+
+  /**
+   * Platform configuration interface
+   *
+   * Platform-agnostic configuration for adapting the game to different platforms.
+   * Composed of focused provider interfaces for better separation of concerns.
+   *
+   * Each provider handles a specific aspect of platform integration:
+   * - IStorageProvider: Data persistence (required)
+   * - IAssetProvider: Asset loading (required)
+   * - IUIProvider: UI rendering and async operations (required)
+   * - IAudioProvider: Sound and music (optional)
+   * - IWorldProvider: Multiplayer/world features (optional)
+   *
+   * Example implementation for Web:
+   * ```ts
+   * const webPlatform: PlatformConfig = {
+   *   // Storage
+   *   setPlayerData: (data) => localStorage.setItem('playerData', JSON.stringify(data)),
+   *   getPlayerData: () => JSON.parse(localStorage.getItem('playerData') || 'null'),
+   *
+   *   // Assets
+   *   getImageAsset: (assetId) => catalogManager.getAsset(assetId).webPath,
+   *   catalogManager: webCatalogManager,
+   *
+   *   // UI
+   *   getUIMethodMappings: () => webUIComponents,
+   *   async: { setTimeout, setInterval, clearTimeout, clearInterval },
+   *   render: (uiNode) => renderer.render(uiNode),
+   *
+   *   // Audio (optional)
+   *   playSound: (assetId, loop, volume) => webAudio.play(assetId, { loop, volume }),
+   *   stopSound: (assetId) => webAudio.stop(assetId),
+   *   // ... other audio methods
+   * };
+   * ```
+   *
+   * Example implementation for Horizon:
+   * ```ts
+   * const horizonPlatform: PlatformConfig = {
+   *   // Storage
+   *   setPlayerData: (data) => persistentVar.set(data),
+   *   getPlayerData: () => persistentVar.get(),
+   *
+   *   // Assets
+   *   getImageAsset: (assetId) => ImageSource.fromTextureAsset(getHorizonAsset(assetId)),
+   *   catalogManager: horizonCatalogManager,
+   *
+   *   // UI
+   *   getUIMethodMappings: () => ({ View: hz.View, Text: hz.Text, ... }),
+   *   async: component.async,
+   *   render: (uiNode) => component.update(uiNode),
+   *
+   *   // Audio (optional)
+   *   playSound: (assetId, loop, volume) => world.playSound(soundAssets[assetId], { loop, volume }),
+   *   // ... other audio methods
+   *
+   *   // World (optional)
+   *   getWorldVariable: (group, name) => world.getVariable(group, name),
+   *   setWorldVariable: (group, name, value) => world.setVariable(group, name, value),
+   *   sendNetworkEvent: (event, data) => world.sendNetworkEvent(event, data),
+   * };
+   * ```
+   */
+
+
+  /**
+   * Platform configuration - implement all required providers for your platform
+   *
+   * Composes multiple provider interfaces:
+   * - Storage, Asset, and UI providers are required
+   * - Audio and World providers are optional
+   */
+  export interface PlatformConfig
+    extends IStorageProvider,
+      IAssetProvider,
+      IUIProvider,
+      IAudioProvider,
+      IWorldProvider {}
+
+  // ==================== bloombeasts/types/platform/index.ts ====================
+
+  /**
+   * Platform types barrel export
+   *
+   * Exports the main PlatformConfig interface and all provider interfaces.
+   * Provider interfaces can be used for more granular platform implementations.
+   */
+
+  // Main platform configuration (composes all providers)
+
+  // Individual provider interfaces (for granular implementations)
+
+  // ==================== bloombeasts/types/index.ts ====================
+
+  /**
+   * Main types barrel export
+   *
+   * Centralized export for all game types organized by domain.
+   */
+
+  // UI types
+
+  // Game types
+
+  // Platform types
+
+  // ==================== bloombeasts/core/ScreenFactory.ts ====================
+
+  /**
+   * ScreenFactory - Centralized screen creation
+   *
+   * Extracts screen instantiation logic from BloomBeastsGame.
+   * Reduces god object complexity and centralizes screen configuration.
+   */
+
+
+  /**
+   * Screen factory configuration - all dependencies needed for screen creation
+   */
+  export interface ScreenFactoryConfig {
+    ui: UIMethodMappings;
+    asyncMethods: AsyncMethods;
+
+    // Event handlers
+    onButtonClick: (buttonId: string) => Promise<void>;
+    onCardSelect: (cardId: string) => Promise<void>;
+    onMissionSelect: (missionId: string) => Promise<void>;
+    onSettingChange: (settingId: string, value: any) => void;
+    onUpgrade: (boostId: string) => void;
+    onBattleAction: (action: string) => Promise<void>;
+    onNavigate: (screen: string) => void;
+    onShowCardDetail: (card: any, durationMs: number, callback?: () => void) => void;
+
+    // Utilities
+    onRenderNeeded: () => void;
+    playSfx: (sfxId: string) => void;
+  }
+
+  /**
+   * All game screens
+   */
+  export interface GameScreens {
+    menuScreen: MenuScreen;
+    cardsScreen: CardsScreen;
+    upgradeScreen: UpgradeScreen;
+    missionScreen: MissionScreen;
+    battleScreen: BattleScreen;
+    settingsScreen: SettingsScreen;
+    leaderboardScreen: LeaderboardScreen;
+  }
+
+  /**
+   * ScreenFactory - Creates all game screens with proper configuration
+   */
+  export class ScreenFactory {
+    /**
+     * Create all game screens
+     */
+    static createScreens(config: ScreenFactoryConfig): GameScreens {
+      const {
+        ui,
+        asyncMethods,
+        onButtonClick,
+        onCardSelect,
+        onMissionSelect,
+        onSettingChange,
+        onUpgrade,
+        onBattleAction,
+        onNavigate,
+        onShowCardDetail,
+        onRenderNeeded,
+        playSfx,
+      } = config;
+
+      return {
+        menuScreen: new MenuScreen({
+          ui,
+          onButtonClick,
+          onNavigate,
+          onRenderNeeded,
+          playSfx,
+        }),
+
+        cardsScreen: new CardsScreen({
+          ui,
+          onCardSelect,
+          onNavigate,
+          onRenderNeeded,
+          playSfx,
+        }),
+
+        upgradeScreen: new UpgradeScreen({
+          ui,
+          onNavigate,
+          onUpgrade,
+          onRenderNeeded,
+          playSfx,
+        }),
+
+        missionScreen: new MissionScreen({
+          ui,
+          onMissionSelect,
+          onNavigate,
+          onRenderNeeded,
+          playSfx,
+        }),
+
+        battleScreen: new BattleScreen({
+          ui,
+          async: asyncMethods,
+          onAction: onBattleAction,
+          onNavigate,
+          onRenderNeeded,
+          onShowCardDetail,
+          playSfx,
+        }),
+
+        settingsScreen: new SettingsScreen({
+          ui,
+          onSettingChange,
+          onNavigate,
+          onRenderNeeded,
+          playSfx,
+        }),
+
+        leaderboardScreen: new LeaderboardScreen({
+          ui,
+          onNavigate,
+          playSfx,
+        }),
+      };
+    }
+  }
+
+  // ==================== bloombeasts/lib/Turbo-Standalone.ts ====================
 
   /**
    * TURBO - TURn-Based Operations
@@ -14402,377 +14861,19 @@ namespace BloomBeasts {
     (globalThis as any).Turbo = Turbo;
   }
 
-  // ==================== bloombeasts\screens\battle\engine\types\actions.ts ====================
-
-  /**
-   * Typed Action System
-   *
-   * Replaces string-based action parsing with proper TypeScript discriminated unions.
-   * This provides type safety, better IDE support, and eliminates string parsing bugs.
-   *
-   * Migration from:
-   *   action = 'play-card-0-target-2'
-   * To:
-   *   action = { type: 'play-card', cardIndex: 0, targetIndex: 2 }
-   */
-
-  /**
-   * Base action that all battle actions extend
-   */
-  export interface BaseBattleAction {
-    type: string;
-    playerId?: string;
-    timestamp?: number;
-  }
-
-  /**
-   * Play a card from hand
-   */
-  export interface PlayCardAction extends BaseBattleAction {
-    type: 'play-card';
-    cardIndex: number;
-    cardId?: string;
-    targetIndex?: number; // For targeted cards like Magic
-    position?: number; // For beast placement
-  }
-
-  /**
-   * Attack with a beast
-   */
-  export interface AttackBeastAction extends BaseBattleAction {
-    type: 'attack-beast';
-    attackerId: string;
-    attackerIndex?: number;
-    targetId?: string;
-    targetIndex?: number;
-  }
-
-  /**
-   * Attack opponent player directly
-   */
-  export interface AttackPlayerAction extends BaseBattleAction {
-    type: 'attack-player';
-    attackerId: string;
-    attackerIndex?: number;
-  }
-
-  /**
-   * Use a beast's ability
-   */
-  export interface UseAbilityAction extends BaseBattleAction {
-    type: 'use-ability';
-    beastId: string;
-    beastIndex?: number;
-    abilityIndex: number;
-    targetId?: string;
-    targetIndex?: number;
-  }
-
-  /**
-   * End the current turn
-   */
-  export interface EndTurnAction extends BaseBattleAction {
-    type: 'end-turn';
-  }
-
-  /**
-   * Forfeit the battle
-   */
-  export interface ForfeitAction extends BaseBattleAction {
-    type: 'forfeit';
-  }
-
-  /**
-   * Timeout - player ran out of time
-   */
-  export interface TimeoutAction extends BaseBattleAction {
-    type: 'timeout';
-    timedOutPlayerId?: string; // Which player actually timed out
-  }
-
-  /**
-   * Auto-attack with all available beasts
-   */
-  export interface AutoAttackAllAction extends BaseBattleAction {
-    type: 'auto-attack-all';
-  }
-
-  /**
-   * Discriminated union of all possible battle actions
-   */
-  export type BattleAction =
-    | PlayCardAction
-    | AttackBeastAction
-    | AttackPlayerAction
-    | UseAbilityAction
-    | EndTurnAction
-    | ForfeitAction
-    | TimeoutAction
-    | AutoAttackAllAction;
-
-  /**
-   * Action creator functions for type-safe action construction
-   */
-  export const BattleActions = {
-    playCard: (cardIndex: number, options?: {
-      cardId?: string;
-      targetIndex?: number;
-      position?: number;
-      playerId?: string;
-    }): PlayCardAction => ({
-      type: 'play-card',
-      cardIndex,
-      ...options,
-      timestamp: Date.now(),
-    }),
-
-    attackBeast: (attackerId: string, options?: {
-      attackerIndex?: number;
-      targetId?: string;
-      targetIndex?: number;
-      playerId?: string;
-    }): AttackBeastAction => ({
-      type: 'attack-beast',
-      attackerId,
-      ...options,
-      timestamp: Date.now(),
-    }),
-
-    attackPlayer: (attackerId: string, options?: {
-      attackerIndex?: number;
-      playerId?: string;
-    }): AttackPlayerAction => ({
-      type: 'attack-player',
-      attackerId,
-      ...options,
-      timestamp: Date.now(),
-    }),
-
-    useAbility: (beastId: string, abilityIndex: number, options?: {
-      beastIndex?: number;
-      targetId?: string;
-      targetIndex?: number;
-      playerId?: string;
-    }): UseAbilityAction => ({
-      type: 'use-ability',
-      beastId,
-      abilityIndex,
-      ...options,
-      timestamp: Date.now(),
-    }),
-
-    endTurn: (playerId?: string): EndTurnAction => ({
-      type: 'end-turn',
-      playerId,
-      timestamp: Date.now(),
-    }),
-
-    forfeit: (playerId?: string): ForfeitAction => ({
-      type: 'forfeit',
-      playerId,
-      timestamp: Date.now(),
-    }),
-
-    timeout: (playerId?: string): TimeoutAction => ({
-      type: 'timeout',
-      playerId,
-      timestamp: Date.now(),
-    }),
-
-    autoAttackAll: (playerId?: string): AutoAttackAllAction => ({
-      type: 'auto-attack-all',
-      playerId,
-      timestamp: Date.now(),
-    }),
-  };
-
-  /**
-   * Parse legacy string-based actions into typed actions
-   * This function helps migrate from old string format to new typed format.
-   *
-   * Examples:
-   *   'play-card-0' -> { type: 'play-card', cardIndex: 0 }
-   *   'play-card-0-target-2' -> { type: 'play-card', cardIndex: 0, targetIndex: 2 }
-   *   'attack-beast-1-2' -> { type: 'attack-beast', attackerIndex: 1, targetIndex: 2 }
-   *   'end-turn' -> { type: 'end-turn' }
-   */
-  export function parseActionString(actionStr: string, playerId?: string): BattleAction | null {
-    // End turn
-    if (actionStr === 'end-turn') {
-      return BattleActions.endTurn(playerId);
-    }
-
-    // Forfeit
-    if (actionStr === 'forfeit') {
-      return BattleActions.forfeit(playerId);
-    }
-
-    // Auto attack all
-    if (actionStr === 'auto-attack-all') {
-      return BattleActions.autoAttackAll(playerId);
-    }
-
-    // Play card: 'play-card-0' or 'play-card-0-target-2'
-    if (actionStr.startsWith('play-card-')) {
-      const parts = actionStr.substring('play-card-'.length).split('-target-');
-      const cardIndex = parseInt(parts[0], 10);
-      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
-
-      if (isNaN(cardIndex)) return null;
-
-      return BattleActions.playCard(cardIndex, { targetIndex, playerId });
-    }
-
-    // Attack beast: 'attack-beast-1-2' (attacker index 1, target index 2)
-    if (actionStr.startsWith('attack-beast-')) {
-      const parts = actionStr.substring('attack-beast-'.length).split('-');
-      if (parts.length >= 2) {
-        const attackerIndex = parseInt(parts[0], 10);
-        const targetIndex = parseInt(parts[1], 10);
-
-        if (isNaN(attackerIndex) || isNaN(targetIndex)) return null;
-
-        return BattleActions.attackBeast(attackerIndex.toString(), {
-          attackerIndex,
-          targetIndex,
-          playerId,
-        });
-      }
-    }
-
-    // Attack player: 'attack-player-1' (attacker index 1)
-    if (actionStr.startsWith('attack-player-')) {
-      const attackerIndex = parseInt(actionStr.substring('attack-player-'.length), 10);
-
-      if (isNaN(attackerIndex)) return null;
-
-      return BattleActions.attackPlayer(attackerIndex.toString(), {
-        attackerIndex,
-        playerId,
-      });
-    }
-
-    // Use ability: 'use-ability-1' or 'use-ability-1-target-2'
-    if (actionStr.startsWith('use-ability-')) {
-      const parts = actionStr.substring('use-ability-'.length).split('-target-');
-      const beastIndex = parseInt(parts[0], 10);
-      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
-
-      if (isNaN(beastIndex)) return null;
-
-      return BattleActions.useAbility(beastIndex.toString(), 0, {
-        beastIndex,
-        targetIndex,
-        playerId,
-      });
-    }
-
-    // Unknown action
-    console.warn(`[ActionParser] Unknown action string: ${actionStr}`);
-    return null;
-  }
-
-  /**
-   * Convert typed action back to legacy string format
-   * Used during migration to maintain compatibility with old code.
-   */
-  export function actionToString(action: BattleAction): string {
-    switch (action.type) {
-      case 'play-card':
-        if (action.targetIndex !== undefined) {
-          return `play-card-${action.cardIndex}-target-${action.targetIndex}`;
-        }
-        return `play-card-${action.cardIndex}`;
-
-      case 'attack-beast':
-        return `attack-beast-${action.attackerIndex ?? action.attackerId}-${action.targetIndex ?? action.targetId}`;
-
-      case 'attack-player':
-        return `attack-player-${action.attackerIndex ?? action.attackerId}`;
-
-      case 'use-ability':
-        if (action.targetIndex !== undefined) {
-          return `use-ability-${action.beastIndex ?? action.beastId}-target-${action.targetIndex}`;
-        }
-        return `use-ability-${action.beastIndex ?? action.beastId}`;
-
-      case 'end-turn':
-        return 'end-turn';
-
-      case 'forfeit':
-        return 'forfeit';
-
-      case 'timeout':
-        return 'timeout';
-
-      case 'auto-attack-all':
-        return 'auto-attack-all';
-
-      default:
-        // Exhaustiveness check
-        const exhaustive: never = action;
-        throw new Error(`Unknown action type: ${(exhaustive as any).type}`);
-    }
-  }
-
-  /**
-   * Type guard to check if an object is a valid BattleAction
-   */
-  export function isBattleAction(obj: any): obj is BattleAction {
-    return obj && typeof obj === 'object' && typeof obj.type === 'string';
-  }
-
-  // ==================== bloombeasts\screens\battle\engine\types\index.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/types/index.ts ====================
 
   /**
    * Battle Engine Types - Re-exports
    */
 
-  // ==================== bloombeasts\common\engine\utils\random.ts ====================
+  // ==================== bloombeasts/common/engine/utils/random.ts ====================
 
   /**
    * Random Utilities
    *
-   * Centralized random number generation and selection utilities.
-   * Makes randomization consistent and easier to test.
+   * Utility functions for randomization in the game.
    */
-
-  /**
-   * Pick a random element from an array
-   * @param array The array to pick from
-   * @returns Random element from array, or undefined if empty
-   */
-  export function pickRandom<T>(array: T[]): T | undefined {
-    if (array.length === 0) {
-      return undefined;
-    }
-    return array[Math.floor(Math.random() * array.length)];
-  }
-
-  /**
-   * Pick multiple random elements from an array (without replacement)
-   * @param array The array to pick from
-   * @param count Number of elements to pick
-   * @returns Array of random elements
-   */
-  export function pickRandomMultiple<T>(array: T[], count: number): T[] {
-    if (count <= 0 || array.length === 0) {
-      return [];
-    }
-
-    const result: T[] = [];
-    const available = [...array];
-
-    const actualCount = Math.min(count, available.length);
-
-    for (let i = 0; i < actualCount; i++) {
-      const index = Math.floor(Math.random() * available.length);
-      result.push(available[index]);
-      available.splice(index, 1);
-    }
-
-    return result;
-  }
 
   /**
    * Shuffle an array in place using Fisher-Yates algorithm
@@ -14787,103 +14888,7 @@ namespace BloomBeasts {
     return array;
   }
 
-  /**
-   * Get a random integer between min (inclusive) and max (inclusive)
-   * @param min Minimum value
-   * @param max Maximum value
-   * @returns Random integer
-   */
-  export function randomInt(min: number, max: number): number {
-    min = Math.ceil(min);
-    max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
-
-  /**
-   * Get a random number between min (inclusive) and max (exclusive)
-   * @param min Minimum value
-   * @param max Maximum value
-   * @returns Random number
-   */
-  export function randomFloat(min: number, max: number): number {
-    return Math.random() * (max - min) + min;
-  }
-
-  /**
-   * Roll a percentage chance (0-100)
-   * @param chance Percentage chance (0-100)
-   * @returns True if roll succeeded
-   */
-  export function rollChance(chance: number): boolean {
-    return Math.random() * 100 < chance;
-  }
-
-  /**
-   * Roll a probability (0-1)
-   * @param probability Probability (0-1)
-   * @returns True if roll succeeded
-   */
-  export function rollProbability(probability: number): boolean {
-    return Math.random() < probability;
-  }
-
-  /**
-   * Pick a weighted random element from an array
-   * @param items Array of items
-   * @param weights Array of weights (same length as items)
-   * @returns Random element based on weights, or undefined if empty
-   */
-  export function pickWeightedRandom<T>(items: T[], weights: number[]): T | undefined {
-    if (items.length === 0 || items.length !== weights.length) {
-      return undefined;
-    }
-
-    const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-    let random = Math.random() * totalWeight;
-
-    for (let i = 0; i < items.length; i++) {
-      random -= weights[i];
-      if (random <= 0) {
-        return items[i];
-      }
-    }
-
-    return items[items.length - 1];
-  }
-
-  /**
-   * Generate a random ID string
-   * @param prefix Optional prefix for the ID
-   * @param length Length of random part (default: 8)
-   * @returns Random ID string
-   */
-  export function generateId(prefix: string = '', length: number = 8): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    let id = prefix;
-    for (let i = 0; i < length; i++) {
-      id += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return id;
-  }
-
-  /**
-   * Coin flip - returns true or false with 50/50 chance
-   * @returns Random boolean
-   */
-  export function coinFlip(): boolean {
-    return Math.random() < 0.5;
-  }
-
-  /**
-   * Roll a dice with specified number of sides
-   * @param sides Number of sides on the dice
-   * @returns Random number from 1 to sides (inclusive)
-   */
-  export function rollDice(sides: number): number {
-    return randomInt(1, sides);
-  }
-
-  // ==================== bloombeasts\screens\battle\engine\actions\ActionHandler.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/actions/ActionHandler.ts ====================
 
   /**
    * Action Handler Interface
@@ -14989,7 +14994,7 @@ namespace BloomBeasts {
      */
     register(handler: IActionHandler): void {
       if (this.handlers.has(handler.actionType)) {
-        console.warn(`[ActionHandlerRegistry] Overwriting handler for action type: ${handler.actionType}`);
+        Logger.warn(`[ActionHandlerRegistry] Overwriting handler for action type: ${handler.actionType}`);
       }
       this.handlers.set(handler.actionType, handler);
     }
@@ -15107,7 +15112,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\actions\DrawCardActionHandler.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/actions/DrawCardActionHandler.ts ====================
 
   /**
    * Draw Card Action Handler
@@ -15180,7 +15185,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\actions\PlayCardActionHandler.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/actions/PlayCardActionHandler.ts ====================
 
   /**
    * Play Card Action Handler
@@ -15366,7 +15371,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\actions\AttackActionHandler.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/actions/AttackActionHandler.ts ====================
 
   /**
    * Attack Action Handler
@@ -15411,22 +15416,34 @@ namespace BloomBeasts {
         return { valid: false, reason: 'Beast has no attack power' };
       }
 
-      // If there's a target, validate it exists
-      if (actionData.targetId) {
-        const playerIndex = state.gameData.players.findIndex(p => p.id === playerId);
-        const opponentIndex = 1 - playerIndex;
-        const opponent = state.gameData.players[opponentIndex];
+      // Recalculate valid targets based on current field state (slot-based targeting)
+      const playerIndex = state.gameData.players.findIndex(p => p.id === playerId);
+      const opponentIndex = 1 - playerIndex;
+      const opponent = state.gameData.players[opponentIndex];
+      const currentField = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
+      const opponentField = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
 
-        // Check if targeting opponent player
-        if (actionData.targetId === opponent.id) {
-          return { valid: true };
-        }
+      // Find the slot index of the attacking beast
+      const slotIndex = currentField.beasts.findIndex(b => b?.id === actionData.cardId);
+      if (slotIndex === -1) {
+        return { valid: false, reason: 'Attacker not found on field' };
+      }
 
-        // Check if targeting a beast
-        const target = this.findBeastOnField(actionData.targetId, state);
-        if (!target) {
-          return { valid: false, reason: 'Target not found' };
-        }
+      // Determine the correct target based on current field state
+      const opponentBeast = opponentField.beasts[slotIndex];
+      let validTargetId: string;
+
+      if (opponentBeast) {
+        // Beast in opposite slot - must attack that beast
+        validTargetId = opponentBeast.id;
+      } else {
+        // No beast in opposite slot - must attack player
+        validTargetId = opponent.id;
+      }
+
+      // Validate that the provided target matches the calculated valid target
+      if (actionData.targetId !== validTargetId) {
+        return { valid: false, reason: 'Invalid target for slot position' };
       }
 
       return { valid: true };
@@ -15527,7 +15544,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\actions\EndTurnActionHandler.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/actions/EndTurnActionHandler.ts ====================
 
   /**
    * End Turn Action Handler
@@ -15651,7 +15668,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\actions\TimeoutActionHandler.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/actions/TimeoutActionHandler.ts ====================
 
   /**
    * Timeout Action Handler
@@ -15709,7 +15726,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\actions\ForfeitActionHandler.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/actions/ForfeitActionHandler.ts ====================
 
   /**
    * Forfeit Action Handler
@@ -15763,13 +15780,13 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\actions\index.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/actions/index.ts ====================
 
   /**
    * Action Handlers - Exports all game action handlers
    */
 
-  // ==================== bloombeasts\screens\battle\engine\core\WinConditionChecker.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/core/WinConditionChecker.ts ====================
 
   /**
    * WinConditionChecker - Determines battle end conditions and winners
@@ -15879,7 +15896,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\BloomBeastsGame.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/BloomBeastsGame.ts ====================
 
   /**
    * BloomBeasts game implementation using the TURBO library
@@ -16289,7 +16306,7 @@ namespace BloomBeasts {
 
         return result;
       } catch (error) {
-        console.error('[BloomBeastsGame] Action execution failed:', error);
+        Logger.error('[BloomBeastsGame] Action execution failed:', error);
         return {
           success: false,
           error: error instanceof Error ? error : new Error(String(error)),
@@ -16485,20 +16502,24 @@ namespace BloomBeasts {
 
     private getValidAttackTargets(beast: RuntimeBeast, state: Turbo.IGameState<BloomBeastsState>): string[] {
       const targets: string[] = [];
-      const opponentField = this.getCurrentPlayerIndex(state) === 0 ?
-                            state.gameData!.field.player2 :
-                            state.gameData!.field.player1;
+      const currentPlayerIndex = this.getCurrentPlayerIndex(state);
+      const currentField = currentPlayerIndex === 0 ? state.gameData!.field.player1 : state.gameData!.field.player2;
+      const opponentField = currentPlayerIndex === 0 ? state.gameData!.field.player2 : state.gameData!.field.player1;
 
-      // Can attack opponent beasts
-      opponentField.beasts.forEach(opponentBeast => {
-        if (opponentBeast) {
-          targets.push(opponentBeast.id);
-        }
-      });
+      // Find the slot index of the attacking beast
+      const slotIndex = currentField.beasts.findIndex(b => b?.id === beast.id);
+      if (slotIndex === -1) {
+        return targets; // Beast not found on field
+      }
 
-      // Can attack opponent directly if no beasts
-      if (opponentField.beasts.every(b => b === null)) {
-        const opponentPlayer = state.gameData!.players[1 - this.getCurrentPlayerIndex(state)];
+      // Check if opponent has a beast in the same slot
+      const opponentBeast = opponentField.beasts[slotIndex];
+      if (opponentBeast) {
+        // Attack the beast in the opposite slot
+        targets.push(opponentBeast.id);
+      } else {
+        // No beast in opposite slot, attack the player
+        const opponentPlayer = state.gameData!.players[1 - currentPlayerIndex];
         targets.push(opponentPlayer.id);
       }
 
@@ -16576,7 +16597,7 @@ namespace BloomBeasts {
     return new Turbo.GameController(rules);
   }
 
-  // ==================== bloombeasts\screens\battle\engine\BloomBeastsAI.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/BloomBeastsAI.ts ====================
 
   /**
    * BloomBeasts AI implementation using the TURBO library
@@ -16671,6 +16692,7 @@ namespace BloomBeasts {
 
     /**
      * Evaluate an action's immediate value
+     * CRITICAL: Always derive from passed state parameter, never use this.currentState
      */
     evaluateAction(
       action: Turbo.IGameAction<BloomBeastsActionData>,
@@ -16681,6 +16703,10 @@ namespace BloomBeasts {
       const opponent = state.gameData.players[1 - playerIndex];
       const playerField = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
       const opponentField = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
+
+      // Calculate beast counts from passed state (not cached this.currentState)
+      const playerBeasts = playerField.beasts.filter(b => b !== null).length;
+      const opponentBeasts = opponentField.beasts.filter(b => b !== null).length;
 
       switch (action.data.type) {
         case BloomBeastsActionType.DRAW_CARD:
@@ -16710,7 +16736,7 @@ namespace BloomBeasts {
               }
 
               // Board control bonus
-              if (this.playerBeasts < this.opponentBeasts) {
+              if (playerBeasts < opponentBeasts) {
                 value += 10; // Extra value when behind on board
               }
               break;
@@ -16723,19 +16749,19 @@ namespace BloomBeasts {
             case 'Trap':
               // Traps are defensive
               value = 6;
-              if (this.opponentBeasts > this.playerBeasts) {
+              if (opponentBeasts > playerBeasts) {
                 value += 4; // More valuable when opponent has board advantage
               }
               break;
 
             case 'Buff':
               // Buffs need creatures to be valuable
-              value = this.playerBeasts * 4;
+              value = playerBeasts * 4;
               break;
 
             case 'Habitat':
               // Habitat provides long-term value
-              value = 7 + this.playerBeasts * 2;
+              value = 7 + playerBeasts * 2;
               break;
           }
 
@@ -16896,21 +16922,9 @@ namespace BloomBeasts {
       return null;
     }
 
-    private get playerBeasts(): number {
-      const state = this.currentState;
-      if (!state) return 0;
-      const playerIndex = state.gameData.players.findIndex(p => p.id === this.playerId);
-      const field = playerIndex === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
-      return field.beasts.filter(b => b !== null).length;
-    }
-
-    private get opponentBeasts(): number {
-      const state = this.currentState;
-      if (!state) return 0;
-      const playerIndex = state.gameData.players.findIndex(p => p.id === this.playerId);
-      const field = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
-      return field.beasts.filter(b => b !== null).length;
-    }
+    // Removed playerBeasts and opponentBeasts getters - they cached this.currentState
+    // which caused stale data bugs. Beast counts now calculated from passed state parameter
+    // in evaluateAction() method.
   }
 
   /**
@@ -16929,7 +16943,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\core\AIManager.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/core/AIManager.ts ====================
 
   /**
    * AIManager - Manages AI players and their turn execution
@@ -17074,7 +17088,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\core\ActionProcessor.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/core/ActionProcessor.ts ====================
 
   /**
    * ActionProcessor - Processes player actions
@@ -17222,7 +17236,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\core\BattleOrchestrator.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/core/BattleOrchestrator.ts ====================
 
   /**
    * BattleOrchestrator - Orchestrates battle lifecycle and coordinates subsystems
@@ -17367,7 +17381,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\engine\core\BattleController.ts ====================
+  // ==================== bloombeasts/screens/battle/engine/core/BattleController.ts ====================
 
   /**
    * BattleController - Thin facade for battle management
@@ -17521,7 +17535,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\screens\battle\BattleUI.ts ====================
+  // ==================== bloombeasts/screens/battle/BattleUI.ts ====================
 
   /**
    * Battle UI - Manages battle state and connects missions to the battle system
@@ -17543,6 +17557,7 @@ namespace BloomBeasts {
     progress: MissionRunProgress | null;
     isComplete: boolean;
     rewards: RewardResult | null;
+    winner: string | null;
   }
 
   /**
@@ -17562,7 +17577,27 @@ namespace BloomBeasts {
     });
   }
 
-  export class BattleUI {
+  /**
+   * Helper: Extract a unique identifier from a RuntimeCard
+   * Tries instanceId first, then id, then falls back to provided fallback
+   */
+  function getCardId(card: RuntimeCard, fallback: string): string {
+    if ('instanceId' in card && card.instanceId) return card.instanceId;
+    if (card.id) return card.id;
+    return fallback;
+  }
+
+  /**
+   * Helper: Extract a unique identifier from a RuntimeBeast on field
+   * Tries instanceId first, then id, then falls back to provided fallback
+   */
+  function getBeastId(beast: RuntimeBeast, fallback: string): string {
+    if (beast.instanceId) return beast.instanceId;
+    if (beast.id) return beast.id;
+    return fallback;
+  }
+
+  export class BattleUI implements IBattleUI {
     private missionManager: MissionManager;
     // private gameEngine: GameEngine;
     private async: AsyncMethods;
@@ -17667,6 +17702,7 @@ namespace BloomBeasts {
         progress: this.missionManager.getProgress(),
         isComplete: false,
         rewards: null,
+        winner: null,
       };
 
       return this.currentBattle;
@@ -17733,8 +17769,8 @@ namespace BloomBeasts {
           // Get the card from player's hand
           const card = player.hand[action.cardIndex];
           if (card) {
-            // Use the card's id property
-            const cardId = action.cardId || (card as any).id || (card as any).name || action.cardIndex.toString();
+            // Use the actual card ID from the card object
+            const cardId = (card as any).id || (card as any).instanceId;
 
             // For Beast and Buff cards, find an empty position if not specified
             let position = action.position || action.targetIndex;
@@ -17772,7 +17808,7 @@ namespace BloomBeasts {
             const playerField = this.getPlayerField();
             const beast = playerField?.beasts[beastIndex];
             if (beast) {
-              const beastId = action.beastId || (beast as any).id || (beast as any).instanceId || beastIndex.toString();
+              const beastId = action.beastId || getBeastId(beast, beastIndex.toString());
               result.success = this.battleController.useAbility(beastId, null, playerId);
             }
           }
@@ -17784,33 +17820,12 @@ namespace BloomBeasts {
           break;
         }
 
-        case 'attack-beast': {
-          const attackerIndex = action.attackerIndex;
-          const targetIndex = action.targetIndex;
-          if (attackerIndex !== undefined && targetIndex !== undefined) {
-            const playerField = this.getPlayerField();
-            const opponentField = this.getOpponentField();
-            const attacker = playerField?.beasts[attackerIndex];
-            const target = opponentField?.beasts[targetIndex];
-            if (attacker && target) {
-              const attackerId = action.attackerId || (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
-              const targetId = action.targetId || (target as any).id || (target as any).instanceId || targetIndex.toString();
-              result.success = this.battleController.attackBeast(attackerId, targetId, playerId);
-            }
-          }
-          break;
-        }
-
+        // NOTE: attack-beast and attack-player are legacy - all attacks now use auto-attack-all
+        // which handles slot-based targeting. Keeping type definitions for backwards compatibility.
+        case 'attack-beast':
         case 'attack-player': {
-          const attackerIndex = action.attackerIndex;
-          if (attackerIndex !== undefined) {
-            const playerField = this.getPlayerField();
-            const attacker = playerField?.beasts[attackerIndex];
-            if (attacker) {
-              const attackerId = action.attackerId || (attacker as any).id || (attacker as any).instanceId || attackerIndex.toString();
-              result.success = this.battleController.attackPlayer(attackerId, playerId);
-            }
-          }
+          Logger.warn('[BattleUI] Direct attack actions are deprecated - use auto-attack-all instead');
+          result.success = false;
           break;
         }
 
@@ -17824,7 +17839,7 @@ namespace BloomBeasts {
           const turboResult = this.battleController.getGameController().performAction({
             type: 'game_action',
             playerId,
-            data: { type: 'forfeit' as any }, // BloomBeastsActionType.FORFEIT
+            data: { type: BloomBeastsActionType.FORFEIT },
           });
           result.success = turboResult.success;
           break;
@@ -17837,7 +17852,7 @@ namespace BloomBeasts {
             type: 'game_action',
             playerId,
             data: {
-              type: 'timeout' as any, // BloomBeastsActionType.TIMEOUT
+              type: BloomBeastsActionType.TIMEOUT,
               timedOutPlayerId: action.timedOutPlayerId || playerId
             },
           });
@@ -17846,7 +17861,9 @@ namespace BloomBeasts {
         }
 
         default: {
-          Logger.warn(`[BattleUI] Unknown action type: ${(action as any).type}`);
+          // TypeScript exhaustiveness check ensures this is unreachable
+          const exhaustiveCheck: never = action;
+          Logger.warn(`[BattleUI] Unknown action type: ${(exhaustiveCheck as BattleAction).type}`);
         }
       }
 
@@ -17878,18 +17895,16 @@ namespace BloomBeasts {
       const results: any[] = [];
       const playerId = 'player';
 
-      const playerField = this.getPlayerField();
-      const opponentField = this.getOpponentField();
-
-      if (!playerField || !opponentField) {
-        return {
-          success: false,
-          results: [],
-          message: 'Field data not available'
-        };
-      }
-
       for (let i = 0; i < 3; i++) {
+        // CRITICAL: Refresh field state before each attack to reflect deaths from previous attacks
+        const playerField = this.getPlayerField();
+        const opponentField = this.getOpponentField();
+
+        if (!playerField || !opponentField) {
+          results.push({ success: false });
+          continue;
+        }
+
         const attackerBeast = playerField.beasts[i];
         if (!attackerBeast || attackerBeast.summoningSickness) continue;
 
@@ -17898,12 +17913,12 @@ namespace BloomBeasts {
 
         if (opposingBeast) {
           if (onAttackAnimation) await onAttackAnimation(i, 'beast', i);
-          const attackerId = (attackerBeast as any).id || (attackerBeast as any).instanceId || i.toString();
-          const targetId = (opposingBeast as any).id || (opposingBeast as any).instanceId || i.toString();
+          const attackerId = getBeastId(attackerBeast, i.toString());
+          const targetId = getBeastId(opposingBeast, i.toString());
           success = this.battleController.attackBeast(attackerId, targetId, playerId);
         } else {
           if (onAttackAnimation) await onAttackAnimation(i, 'health');
-          const attackerId = (attackerBeast as any).id || (attackerBeast as any).instanceId || i.toString();
+          const attackerId = getBeastId(attackerBeast, i.toString());
           success = this.battleController.attackPlayer(attackerId, playerId);
         }
 
@@ -18040,7 +18055,7 @@ namespace BloomBeasts {
 
       // Check if opponent is defeated
       if (opponent.health <= 0) {
-        console.log('[BattleUI] Opponent defeated! Updating mission progress.');
+        Logger.info('[BattleUI] Opponent defeated! Updating mission progress.');
         this.missionManager.updateProgress('opponent-defeated', {});
       }
 
@@ -18055,50 +18070,46 @@ namespace BloomBeasts {
      */
     private endBattle(): void {
       if (!this.currentBattle) {
-        console.log('[BattleUI] endBattle called but no current battle');
+        Logger.info('[BattleUI] endBattle called but no current battle');
         return;
       }
 
       // Prevent multiple calls
       if (this.currentBattle.isComplete) {
-        console.log('[BattleUI] Battle already completed, ignoring duplicate endBattle call');
+        Logger.info('[BattleUI] Battle already completed, ignoring duplicate endBattle call');
         return;
       }
 
       const battleResult = this.battleController.checkBattleEnd();
       if (!battleResult) {
-        console.log('[BattleUI] endBattle called but battle not ended yet');
+        Logger.info('[BattleUI] endBattle called but battle not ended yet');
         return;
       }
 
-      console.log(`[BattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
       Logger.info(`[BattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
 
       this.shouldStopAI = true;
       this.currentBattle.isComplete = true;
+      this.currentBattle.winner = battleResult.winner;
 
       // Calculate rewards based on winner
       if (battleResult.winner === 'player1') {
         // Player won!
-        console.log('[BattleUI] Player 1 (YOU) won! Awarding rewards.');
         Logger.info('[BattleUI] Player 1 won! Awarding rewards.');
         this.currentBattle.rewards = this.missionManager.completeMission();
         this.battleController.completeBattle('player1');
       } else if (battleResult.winner === 'player2') {
         // Player lost
-        console.log('[BattleUI] Player 2 (OPPONENT) won! No rewards.');
         Logger.info('[BattleUI] Player 2 won! No rewards.');
         this.currentBattle.rewards = null;
         this.battleController.completeBattle('player2');
       } else {
         // Tie (both died) - treat as loss for now
-        console.log('[BattleUI] Tie (both died)! No rewards.');
         Logger.info('[BattleUI] Tie! No rewards.');
         this.currentBattle.rewards = null;
         this.battleController.completeBattle(null);
       }
 
-      console.log(`[BattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}, Rewards object:`, this.currentBattle.rewards);
       Logger.info(`[BattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}`);
     }
 
@@ -18119,671 +18130,234 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts\BloomBeastsGame.ts ====================
+  // ==================== bloombeasts/common/engine/constants/gameRules.ts ====================
 
   /**
-   * BloomBeastsGame - Unified Game Controller
+   * Game Rules Constants
    *
-   * This is the main entry point for the game that works across all platforms (web, horizon).
-   * Platform-specific code should be minimal - just implement the PlatformConfig callbacks.
-   *
-   * The game is fully platform-agnostic - it doesn't even import UI methods directly,
-   * but receives them from the platform configuration.
+   * Central location for all game rule constants to avoid magic numbers
+   * throughout the codebase.
    */
 
+  // Field Configuration
+  export const FIELD_SIZE = 3;
 
-  /**
-   * XP thresholds for player leveling (cumulative)
-   * Formula: XP = 100 * (2.0 ^ (level - 1))
-   */
-  const XP_THRESHOLDS = [
-    0,      // Level 1
-    100,    // Level 2: 100 XP
-    300,    // Level 3: 300 XP total
-    700,    // Level 4: 700 XP total
-    1500,   // Level 5: 1500 XP total
-    3100,   // Level 6: 3100 XP total
-    6300,   // Level 7: 6300 XP total
-    12700,  // Level 8: 12700 XP total
-    25500,  // Level 9: 25500 XP total
-  ];
+  // Deck Configuration
+  export const DECK_SIZE = 30;
+
+  // Health Configuration
+  export const STARTING_HEALTH = 30;
+  export const PLAYER_MAX_HEALTH = 30;
+
+  // Turn Configuration
+  export const TURN_TIME_LIMIT = 60; // seconds
+
+  // Battle Configuration
+  export const FIRST_PLAYER_DRAWS_ON_FIRST_TURN = false;
+
+  // ==================== bloombeasts/screens/battle/BattleDisplayManager.ts ====================
 
   /**
-   * Calculate player level from total XP (derived data)
+   * BattleDisplayManager - Handles battle UI rendering and display enrichment
+   * Manages battle state visualization, animations, and card popups
    */
-  function getPlayerLevel(totalXP: number): number {
-    for (let level = 9; level >= 1; level--) {
-      if (totalXP >= XP_THRESHOLDS[level - 1]) {
-        return level;
+
+
+  export class BattleDisplayManager implements IBattleDisplayManager {
+    private catalogManager: any;
+
+    constructor(catalogManager: any) {
+      this.catalogManager = catalogManager;
+    }
+    /**
+     * Create a battle display object from battle state
+     */
+    createBattleDisplay(
+      battleUIState: any,
+      options?: BattleDisplayOptions
+    ): BattleDisplay | null {
+      // Handle new TURBO-based battle state structure
+      if (!battleUIState || !battleUIState.battleState || !battleUIState.battleState.turboState) {
+        return null;
       }
+
+      const turboState = battleUIState.battleState.turboState;
+      const gameData = turboState.gameData;
+
+      // Extract players and field from TURBO state
+      const player = gameData.players[0];
+      const opponent = gameData.players[1];
+      const playerField = gameData.field.player1;
+      const opponentField = gameData.field.player2;
+
+      if (!player || !opponent) return null;
+
+      // Determine current turn player
+      const turnPlayer = turboState.turnInfo.currentPlayerId === 'player' ? 'player' : 'opponent';
+
+      // Convert to display format
+      const display: BattleDisplay = {
+        playerHealth: player.health,
+        playerMaxHealth: player.maxHealth || STARTING_HEALTH,
+        playerDeckCount: player.deck.length,
+        playerEnergy: player.energy,
+        playerHand: this.enrichHandCards(player.hand),
+        playerTrapZone: playerField.traps || [],
+        playerBuffZone: playerField.buffs || [],
+        opponentHealth: opponent.health,
+        opponentMaxHealth: opponent.maxHealth || STARTING_HEALTH,
+        opponentDeckCount: opponent.deck.length,
+        opponentEnergy: opponent.energy,
+        opponentField: this.enrichFieldBeasts(opponentField.beasts, turboState, 1),
+        opponentTrapZone: opponentField.traps || [],
+        opponentBuffZone: opponentField.buffs || [],
+        playerField: this.enrichFieldBeasts(playerField.beasts, turboState, 0),
+        currentTurn: turboState.turnInfo.turnNumber,
+        turnPlayer: turnPlayer,
+        turnTimeRemaining: TURN_TIME_LIMIT,
+        objectives: this.getObjectiveDisplay(battleUIState),
+        habitatZone: playerField.habitat || opponentField.habitat, // Use whichever has a habitat
+        attackAnimation: options,
+      };
+
+      return display;
     }
-    return 1;
-  }
-
-  // UINode type - represents a UI node returned by UI components
-  export type UINode = any;
-
-  /**
-   * Read-only binding interface (for derived bindings)
-   */
-  export interface ReadonlyBindingInterface<T> {
-    get(): T;
-    subscribe(callback: () => void): void;
-  }
-
-  /**
-   * Binding interface - platform-agnostic reactive data binding
-   * Each platform provides its own implementation
-   */
-  export interface BindingInterface<T> {
-    get(): T;
-    set(value: T): void;
-    subscribe(callback: () => void): void;
-    derive<U>(fn: (value: T) => U): ReadonlyBindingInterface<U>;
-  }
-
-  /**
-   * Binding constructor type
-   */
-  export type BindingConstructor = {
-    new <T>(value: T): BindingInterface<T>;
-    derive<T extends any[], R>(
-      bindings: any[],
-      deriveFn: (...values: T) => R
-    ): ReadonlyBindingInterface<R>;
-  };
-
-  /**
-   * Style properties - platform-agnostic style definitions
-   * These match Horizon's styling but work on web too
-   */
-  export interface StyleProps {
-    width?: number;
-    height?: number;
-    backgroundColor?: string;
-    borderRadius?: number;
-    padding?: number;
-    margin?: number;
-    flexDirection?: 'row' | 'column';
-    justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
-    alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
-    position?: 'relative' | 'absolute';
-    top?: number;
-    left?: number;
-    right?: number;
-    bottom?: number;
-    opacity?: number;
-    // Add more as needed
-  }
-
-  /**
-   * Common props for all UI components
-   */
-  export interface BaseUIProps {
-    style?: StyleProps;
-    children?: UINode | UINode[];
-  }
-
-  /**
-   * View component props
-   */
-  export interface ViewProps extends BaseUIProps {}
-
-  /**
-   * Text component props
-   */
-  export interface TextProps extends BaseUIProps {
-    text?: string;
-    fontSize?: number;
-    fontWeight?: 'normal' | 'bold';
-    color?: string;
-    textAlign?: 'left' | 'center' | 'right';
-  }
-
-  /**
-   * Image component props
-   */
-  export interface ImageProps extends BaseUIProps {
-    imageId?: string | any; // Single image asset ID (or binding)
-    binding?: any; // BaseBinding<string> for animations, derived values, etc.
-    width?: number;
-    height?: number;
-  }
-
-  /**
-   * Pressable (button) component props
-   */
-  export interface PressableProps extends BaseUIProps {
-    onPress?: () => void;
-    id?: string;
-  }
-
-  /**
-   * Platform-specific UI method mappings
-   * Each platform provides its own implementation of these methods
-   * Screens receive this object and use it to create UI elements
-   */
-  export interface UIMethodMappings {
-    // Core UI components
-    View: (props: any) => any;
-    Text: (props: any) => any;
-    Image: (props: any) => any;
-    Pressable: (props: any) => any;
-    ScrollView?: (props: any) => any;
-
-    // UINode utilities for conditional rendering
-    // Matches Horizon's actual signature
-    UINode?: any;
-
-    // Centralized binding manager - ONLY way to create/access bindings
-    bindingManager: BindingManager;
-
-    // Platform-specific helpers
-    assetIdToImageSource?: (assetId: string) => any; // Convert asset ID to ImageSource (Horizon) or string (Web)
-  }
-
-  /**
-   * Player item in inventory
-   */
-  export interface PlayerItem {
-    itemId: string;
-    quantity: number;
-  }
-
-  /**
-   * Player data structure - persisted to platform storage
-   * This is the canonical save data format
-   *
-   * Note: Player level is derived from totalXP and not stored directly
-   */
-  export interface PlayerData {
-    // Identity and progression
-    name: string;
-    totalXP: number; // Level is derived from this via getPlayerLevel()
-
-    // Currency
-    coins: number;
-
-    // Card collection and deck (SINGLE SOURCE OF TRUTH)
-    cards: {
-      collected: CardInstance[]; // All owned card instances
-      deck: string[]; // Card instance IDs in player's deck
-    };
-
-    // Mission tracking
-    missions: {
-      completedMissions: { [missionId: string]: number }; // Mission ID -> completion count
-    };
-
-    // Item inventory (only special items like serums)
-    items: PlayerItem[];
-
-    // Boost upgrades (0-6 levels per boost)
-    boosts: {
-      [boostId: string]: number; // Boost ID -> upgrade level (0-6)
-    };
-
-    // UI preferences (not persisted on all platforms)
-    settings?: SoundSettings;
-  }
-
-  /**
-   * Platform configuration - implement these callbacks for your platform
-   *
-   * TypeScript ensures ALL assets from the catalog are provided!
-   *
-   * Example for Web:
-   * {
-   *   setPlayerData: (data) => localStorage.setItem('playerData', JSON.stringify(data)),
-   *   getPlayerData: () => JSON.parse(localStorage.getItem('playerData') || 'null'),
-   *   imageAssets: {
-   *     [ImageAssetIds.CARD_ROOTLING]: '/shared/images/cards/Forest/Rootling.png',
-   *     [ImageAssetIds.CARD_EMBERLING]: '/shared/images/cards/Fire/Emberling.png',
-   *     // ... TypeScript enforces all assets are provided!
-   *   },
-   *   soundAssets: {
-   *     [SoundAssetIds.MUSIC_BACKGROUND]: '/shared/sounds/BackgroundMusic.mp3',
-   *     // ... TypeScript enforces all assets are provided!
-   *   },
-   *   getUIMethodMappings: () => ({ View, Text, Image, Pressable, Binding }),
-   *   render: (uiNode) => renderer.render(uiNode)
-   * }
-   *
-   * Example for Horizon:
-   * {
-   *   setPlayerData: (data) => persistentVar.set(data),
-   *   getPlayerData: () => persistentVar.get(),
-   *   imageAssets: {
-   *     [ImageAssetIds.CARD_ROOTLING]: ImageSource.fromTextureAsset(new hz.Asset(BigInt('123'))),
-   *     [ImageAssetIds.CARD_EMBERLING]: ImageSource.fromTextureAsset(new hz.Asset(BigInt('456'))),
-   *     // ... TypeScript enforces all assets are provided!
-   *   },
-   *   soundAssets: {
-   *     [SoundAssetIds.MUSIC_BACKGROUND]: new hz.Asset(BigInt('789')),
-   *     // ... TypeScript enforces all assets are provided!
-   *   },
-   *   getUIMethodMappings: () => ({ View: hz.View, Text: hz.Text, ... }),
-   *   render: (uiNode) => horizonComponent.update(uiNode)
-   * }
-   */
-  export interface PlatformConfig {
-    /**
-     * Save player data to persistent storage
-     * For web: localStorage
-     * For horizon: Persistent Variables API
-     */
-    setPlayerData: (data: PlayerData) => void;
 
     /**
-     * Load player data from persistent storage
-     * Platform must ensure valid PlayerData is returned (create default if none exists)
+     * Get objective display for current battle
      */
-    getPlayerData: () => PlayerData | null;
+    private getObjectiveDisplay(battleState: any): ObjectiveDisplay[] {
+      if (!battleState.mission || !battleState.progress) {
+        return [];
+      }
+
+      // Check if mission has objectives defined
+      if (!battleState.mission.objectives || !Array.isArray(battleState.mission.objectives)) {
+        return [];
+      }
+
+      return battleState.mission.objectives.map((obj: any) => {
+        const key = `${obj.type}-${obj.target || 0}`;
+        const progress = battleState.progress.objectiveProgress.get(key) || 0;
+        const target = obj.target || 1;
+
+        return {
+          description: obj.description || 'Unknown objective',
+          progress: Math.min(progress, target),
+          target: target,
+          isComplete: progress >= target,
+        };
+      });
+    }
 
     /**
-     * Get an image asset by ID
-     * Platform queries AssetCatalogManager and returns the asset in platform format
-     *
-     * For web: Returns string path from catalog (e.g., '/assets/cards/fire/beast.png')
-     * For horizon: Converts catalog horizonAssetId to ImageSource object
+     * Return field beasts as RuntimeCard
+     * NOTE: Do NOT apply bonuses here - the engine's StatModifierManager already handles this!
      */
-    getImageAsset: (assetId: string) => any;
+    private enrichFieldBeasts(field: RuntimeCard[], turboState?: any, playerIndex?: number): RuntimeCard[] {
+      return field.filter(beast => beast !== null);
+    }
 
     /**
-     * Asset catalog manager instance
-     * Provides access to all game asset metadata and card definitions
+     * Return hand cards as RuntimeCard
      */
-    catalogManager: any; // AssetCatalogManager instance
+    private enrichHandCards(hand: RuntimeCard[]): RuntimeCard[] {
+      return hand.filter(card => card !== null);
+    }
 
-    /**
-     * Get platform-specific UI method implementations
-     *
-     * For web: Returns web-specific View, Text, Image, Pressable
-     * For horizon: Returns hz.View, hz.Text, hz.Image, hz.Pressable
-     */
-    getUIMethodMappings: () => UIMethodMappings;
-
-    /**
-     * Platform-specific async methods (setTimeout, setInterval, etc.)
-     *
-     * For web: Standard window.setTimeout, window.setInterval, etc.
-     * For horizon: component.async.setTimeout, component.async.setInterval, etc.
-     */
-    async: AsyncMethods;
-
-    /**
-     * Render the UI tree
-     * Called whenever the UI needs to be updated
-     *
-     * For web: renderer.render(uiNode)
-     * For horizon: component.update(uiNode) or similar
-     */
-    render: (uiNode: UINode) => void;
-
-    /**
-     * Audio callbacks (optional)
-     * Implement if your platform supports audio
-     */
-    playSound?: (assetId: string, loop: boolean, volume: number) => void;
-    stopSound?: (assetId?: string) => void;
-    setMusicVolume?: (volume: number) => void;
-    setSfxVolume?: (volume: number) => void;
-    setMusicEnabled?: (enabled: boolean) => void;
-    setSfxEnabled?: (enabled: boolean) => void;
-
-    /**
-     * World Variables (optional)
-     * Implement if your platform supports world variables (e.g., Horizon)
-     *
-     * For Horizon: Use world.getVariable() and world.setVariable()
-     * For web: Use mock data or skip
-     */
-    getWorldVariable?: (variableGroup: string, variableName: string) => any;
-    setWorldVariable?: (variableGroup: string, variableName: string, value: any) => void;
-
-    /**
-     * Network Events (optional)
-     * Implement if your platform supports network events (e.g., Horizon)
-     *
-     * For Horizon: Use world.sendNetworkEvent()
-     * For web: Use mock/skip
-     */
-    sendNetworkEvent?: (eventName: string, data: any) => void;
   }
 
+  // ==================== bloombeasts/core/GameStateManager.ts ====================
+
   /**
-   * Main game class - handles all game logic and UI orchestration
+   * GameStateManager - Manages player data mutations and game state
+   * Extracted from BloomBeastsGame to separate concerns
    */
-  export class BloomBeastsGame {
-    // Platform configuration
-    private platform: PlatformConfig;
 
-    // Platform-specific UI methods
-    private UI: UIMethodMappings;
 
-    // Platform-specific async methods
-    private asyncMethods: AsyncMethods;
-
-    // Platform-provided asset getters
-    private platformGetImageAsset: (assetId: string) => any;
-
-    // Core game systems
-    private missionManager: MissionManager;
-    private missionUI: MissionSelectionUI;
-    private battleUI: BattleUI;
-
-    // Sound and display state
-    private currentMusic: string | null = null;
-    private battleDisplayManager: BattleDisplayManager;
-
-    // Player data state - SINGLE SOURCE OF TRUTH (no duplicates!)
-    // Starts as null to indicate data hasn't loaded yet (prevents race conditions)
+  /**
+   * Manages all player data state and mutations
+   * Provides safe accessors to avoid null checks throughout the codebase
+   */
+  export class GameStateManager {
     private playerData: PlayerData | null = null;
+    private onLeaderboardScoreSubmit?: (type: 'experience' | 'cluckNorris', score: number) => void;
 
-    // Game state
-    private isInitializing: boolean = true;  // Prevent renders during initialization
-    private currentBattleId: string | null = null;
-    private battleStartTime: number | null = null;  // Track battle start time for leaderboard
-
-
-    // Screen instances
-    private menuScreen: MenuScreen;
-    private cardsScreen: CardsScreen;
-    private upgradeScreen: UpgradeScreen;
-    private missionScreen: MissionScreen;
-    private battleScreen: BattleScreen;
-    private settingsScreen: SettingsScreen;
-    private leaderboardScreen: LeaderboardScreen;
-
-    // UI tree (created once, updated reactively)
-    // Public so platform wrappers can access it (needed for Horizon's initializeUI)
-    public uiTree: UINode | null = null;
-
-    constructor(config: PlatformConfig) {
-      this.platform = config;
-
-      // Get platform-specific async methods
-      this.asyncMethods = config.async;
-
-      // Store platform-provided asset getters
-      this.platformGetImageAsset = config.getImageAsset;
-
-      // Initialize card utils and deck builder with catalog manager
-      setCatalogManagerForUtils(config.catalogManager);
-      setCatalogManagerForDeckBuilder(config.catalogManager);
-
-      // Initialize core systems
-      this.missionManager = new MissionManager(config.catalogManager);
-      this.missionUI = new MissionSelectionUI(this.missionManager);
-      this.battleUI = new BattleUI(this.missionManager, this.asyncMethods);
-      this.battleDisplayManager = new BattleDisplayManager(config.catalogManager);
-
-      // Get platform-specific UI methods and add bindingManager to them
-      this.UI = config.getUIMethodMappings() as UIMethodMappings;
-
-      // Create screen instances (pass UI methods and playerData binding)
-      this.menuScreen = new MenuScreen({
-        ui: this.UI,
-        onButtonClick: this.handleButtonClick.bind(this),
-        onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this),
-        playSfx: this.playSfx.bind(this)
-      });
-
-      this.cardsScreen = new CardsScreen({
-        ui: this.UI,
-        onCardSelect: this.handleCardSelect.bind(this),
-        onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this),
-        playSfx: this.playSfx.bind(this)
-      });
-
-      this.upgradeScreen = new UpgradeScreen({
-        ui: this.UI,
-        onNavigate: this.navigate.bind(this),
-        onUpgrade: this.handleUpgrade.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this),
-        playSfx: this.playSfx.bind(this)
-      });
-
-      this.missionScreen = new MissionScreen({
-        ui: this.UI,
-        onMissionSelect: this.handleMissionSelect.bind(this),
-        onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this),
-        playSfx: this.playSfx.bind(this)
-      });
-
-      this.battleScreen = new BattleScreen({
-        ui: this.UI,
-        async: this.asyncMethods,
-        onAction: this.handleBattleAction.bind(this),
-        onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this),
-        onShowCardDetail: this.showCardDetailPopup.bind(this),
-        playSfx: this.playSfx.bind(this)
-      });
-
-      this.settingsScreen = new SettingsScreen({
-        ui: this.UI,
-        onSettingChange: this.handleSettingsChange.bind(this),
-        onNavigate: this.navigate.bind(this),
-        onRenderNeeded: this.triggerRender.bind(this),
-        playSfx: this.playSfx.bind(this)
-      });
-
-      this.leaderboardScreen = new LeaderboardScreen({
-        ui: this.UI,
-        onNavigate: this.navigate.bind(this),
-        playSfx: this.playSfx.bind(this)
-      });
-
-      // All screens are now created, enable rendering
-      this.isInitializing = false;
-
-      // Create UI tree once (it's reactive via bindings)
-      this.uiTree = this.createUI();
+    constructor(onLeaderboardScoreSubmit?: (type: 'experience' | 'cluckNorris', score: number) => void) {
+      this.onLeaderboardScoreSubmit = onLeaderboardScoreSubmit;
     }
 
     /**
-     * Get an image asset by ID
-     * Delegates to platform-specific implementation
+     * Set player data
      */
-    getImageAsset(assetId: string): any {
-      return this.platformGetImageAsset(assetId);
+    setPlayerData(data: PlayerData | null): void {
+      this.playerData = data;
     }
 
     /**
-     * Get platform async methods (setTimeout, setInterval, etc.)
-     * Screens can use this to access platform-specific async operations
+     * Get player data (safely)
+     * Throws error if data not loaded - forces explicit null handling
      */
-    get async(): AsyncMethods {
-      return this.asyncMethods;
+    getPlayerData(): PlayerData {
+      if (!this.playerData) {
+        throw new Error('PlayerData not loaded - initialize game first');
+      }
+      return this.playerData;
     }
 
     /**
-     * Initialize the game
-     * Call this after construction to load data and show initial screen
+     * Get player data or null (for optional operations)
      */
-    async initialize(): Promise<void> {
-      // Load saved game data (initializes starting cards if needed)
-      await this.loadGameData();
+    getPlayerDataOrNull(): PlayerData | null {
+      return this.playerData;
+    }
 
-      // Update bindings from loaded data
-      await this.updateBindingsFromGameState();
+    /**
+     * Check if player data is loaded
+     */
+    hasPlayerData(): boolean {
+      return this.playerData !== null;
+    }
 
-      // Trigger initial render
-      this.triggerRender();
-
-      // Start menu music
-      this.playMusic('music-background', true);
-      this.navigate('menu');
+    /**
+     * Execute operation with player data (safe accessor pattern)
+     * Returns undefined if player data is not loaded
+     */
+    withPlayerData<T>(fn: (data: PlayerData) => T): T | undefined {
+      return this.playerData ? fn(this.playerData) : undefined;
     }
 
     /**
      * Get current player level (derived from totalXP)
      */
-    private get playerLevel(): number {
+    getPlayerLevel(): number {
       return getPlayerLevel(this.playerData?.totalXP ?? 0);
-    }
-
-    /**
-     * Load game data from platform storage
-     * Platform is responsible for creating default data if none exists
-     */
-    private async loadGameData(): Promise<void> {
-      const savedData = this.platform.getPlayerData?.();
-
-      if (!savedData || Object.keys(savedData).length === 0) {
-        throw new Error('Platform must provide valid PlayerData (either loaded or newly created)');
-      }
-
-      // Use platform-provided data directly
-      this.playerData = savedData;
-      Logger.info(`[BloomBeastsGame] Loaded player data for "${this.playerData.name}" with ${savedData.cards.collected.length} cards`);
-
-      Logger.info(`[BloomBeastsGame] Restored deck with ${this.playerData.cards.deck.length} cards`);
-
-      // Apply sound settings to platform
-      if (this.playerData.settings) {
-        this.platform.setMusicVolume?.(this.playerData.settings!.musicVolume / 100);
-        this.platform.setSfxVolume?.(this.playerData.settings!.sfxVolume / 100);
-        this.platform.setMusicEnabled?.(this.playerData.settings!.musicEnabled);
-        this.platform.setSfxEnabled?.(this.playerData.settings!.sfxEnabled);
-      }
-
-      // Load completed missions into MissionManager
-      this.missionManager.loadCompletedMissions(this.playerData.missions.completedMissions);
-
-      // Initialize starting cards if collection is empty
-      if (this.playerData.cards.collected.length === 0) {
-        Logger.info('[BloomBeastsGame] Initializing starting card collection');
-        await this.initializeStartingCollection();
-      }
-
-      // Save to ensure data persists
-      await this.saveGameData();
-    }
-
-    /**
-     * Save game data to platform storage
-     */
-    private async saveGameData(): Promise<void> {
-      if (!this.playerData) {
-        Logger.warn('[BloomBeastsGame] Cannot save null player data');
-        return;
-      }
-      this.platform.setPlayerData?.(this.playerData);
-      Logger.debug('[BloomBeastsGame] Player data saved');
-    }
-
-    /**
-     * Play background music
-     */
-    private playMusic(musicId: string, loop: boolean = true): void {
-      // Don't restart music if it's already playing
-      if (this.currentMusic === musicId) {
-        return;
-      }
-
-      this.currentMusic = musicId;
-
-      if (this.playerData?.settings?.musicEnabled) {
-        const volume = this.playerData.settings.musicVolume / 100;
-        this.platform.playSound?.(musicId, loop, volume);
-      }
-    }
-
-    /**
-     * Stop background music
-     */
-    private stopMusic(): void {
-      this.currentMusic = null;
-      this.platform.stopSound?.();
-    }
-
-    /**
-     * Play sound effect
-     */
-    private playSfx(sfxId: string): void {
-      if (this.playerData?.settings?.sfxEnabled) {
-        const volume = this.playerData.settings.sfxVolume / 100;
-        this.platform.playSound?.(sfxId, false, volume);
-      }
-    }
-
-    /**
-     * Set music volume (0-100)
-     */
-    private setMusicVolume(volume: number): void {
-      if (!this.playerData?.settings) return;
-      this.playerData.settings.musicVolume = Math.max(0, Math.min(100, volume));
-      if (this.playerData.settings.musicEnabled) {
-        this.platform.setMusicVolume?.(this.playerData.settings.musicVolume / 100);
-      }
-    }
-
-    /**
-     * Set SFX volume (0-100)
-     */
-    private setSfxVolume(volume: number): void {
-      if (!this.playerData?.settings) return;
-      this.playerData.settings.sfxVolume = Math.max(0, Math.min(100, volume));
-      if (this.playerData.settings.sfxEnabled) {
-        this.platform.setSfxVolume?.(this.playerData.settings.sfxVolume / 100);
-      }
-    }
-
-    /**
-     * Toggle music on/off
-     */
-    private toggleMusic(enabled: boolean): void {
-      if (!this.playerData?.settings) return;
-      this.playerData.settings.musicEnabled = enabled;
-
-      // Notify platform
-      this.platform.setMusicEnabled?.(enabled);
-
-      if (enabled && this.currentMusic) {
-        // Resume music - force replay even if it's the same track
-        const musicToResume = this.currentMusic;
-        const volume = this.playerData.settings.musicVolume / 100;
-        this.platform.playSound?.(musicToResume, true, volume);
-      } else if (!enabled) {
-        // Stop music playback but keep track of current music for resume
-        // Don't call stopMusic() as it clears this.currentMusic
-        this.platform.stopSound?.();
-      }
-    }
-
-    /**
-     * Toggle SFX on/off
-     */
-    private toggleSfx(enabled: boolean): void {
-      if (!this.playerData?.settings) return;
-      this.playerData.settings.sfxEnabled = enabled;
-
-      // Notify platform
-      this.platform.setSfxEnabled?.(enabled);
     }
 
     /**
      * Add XP to player (level is automatically derived)
      */
-    private addXP(amount: number): void {
-      if (!this.playerData) return;
+    addXP(amount: number): void {
+      if (!this.playerData) {
+        Logger.warn('[GameStateManager] Cannot add XP: player data not loaded');
+        return;
+      }
+
       this.playerData.totalXP += amount;
-      Logger.debug(`[BloomBeastsGame] Added ${amount} XP (total: ${this.playerData.totalXP}, level: ${this.playerLevel})`);
+      Logger.debug(`[GameStateManager] Added ${amount} XP (total: ${this.playerData.totalXP}, level: ${this.getPlayerLevel()})`);
 
       // Submit experience to leaderboard
-      this.submitLeaderboardScore('experience', this.playerData.totalXP);
+      this.onLeaderboardScoreSubmit?.('experience', this.playerData.totalXP);
     }
 
     /**
      * Get the quantity of a specific item from player's items array
      */
-    private getItemQuantity(itemId: string): number {
-      if (!this.playerData) return 0;
+    getItemQuantity(itemId: string): number {
+      if (!this.playerData) {
+        Logger.warn('[GameStateManager] Cannot get item quantity: player data not loaded');
+        return 0;
+      }
       const item = this.playerData.items.find(i => i.itemId === itemId);
       return item ? item.quantity : 0;
     }
@@ -18791,18 +18365,26 @@ namespace BloomBeasts {
     /**
      * Track mission completion
      */
-    private trackMissionCompletion(missionId: string): void {
-      if (!this.playerData) return;
+    trackMissionCompletion(missionId: string): void {
+      if (!this.playerData) {
+        Logger.warn('[GameStateManager] Cannot track mission completion: player data not loaded');
+        return;
+      }
+
       const currentCount = this.playerData.missions.completedMissions[missionId] || 0;
       this.playerData.missions.completedMissions[missionId] = currentCount + 1;
-      Logger.debug(`[BloomBeastsGame] Mission ${missionId} completed ${currentCount + 1} times`);
+      Logger.debug(`[GameStateManager] Mission ${missionId} completed ${currentCount + 1} times`);
     }
 
     /**
      * Add items to player's inventory
      */
-    private addItems(itemId: string, quantity: number): void {
-      if (!this.playerData) return;
+    addItems(itemId: string, quantity: number): void {
+      if (!this.playerData) {
+        Logger.warn('[GameStateManager] Cannot add items: player data not loaded');
+        return;
+      }
+
       const existingItem = this.playerData.items.find(i => i.itemId === itemId);
 
       if (existingItem) {
@@ -18813,20 +18395,93 @@ namespace BloomBeasts {
           quantity,
         });
       }
-      Logger.debug(`[BloomBeastsGame] Added ${quantity}x ${itemId} to inventory`);
+      Logger.debug(`[GameStateManager] Added ${quantity}x ${itemId} to inventory`);
+    }
+
+    /**
+     * Add coins to player's balance
+     */
+    addCoins(amount: number): void {
+      if (!this.playerData) {
+        Logger.warn('[GameStateManager] Cannot add coins: player data not loaded');
+        return;
+      }
+      this.playerData.coins += amount;
+    }
+
+    /**
+     * Deduct coins from player's balance
+     * Returns false if insufficient coins
+     */
+    deductCoins(amount: number): boolean {
+      if (!this.playerData) {
+        Logger.warn('[GameStateManager] Cannot deduct coins: player data not loaded');
+        return false;
+      }
+
+      if (this.playerData.coins < amount) {
+        Logger.warn(`[GameStateManager] Insufficient coins: need ${amount}, have ${this.playerData.coins}`);
+        return false;
+      }
+
+      this.playerData.coins -= amount;
+      return true;
+    }
+
+    /**
+     * Get current boost level
+     */
+    getBoostLevel(boostId: string): number {
+      if (!this.playerData) {
+        Logger.warn('[GameStateManager] Cannot get boost level: player data not loaded');
+        return 0;
+      }
+      return this.playerData.boosts?.[boostId] || 0;
+    }
+
+    /**
+     * Upgrade a boost
+     * Returns true if upgrade successful
+     */
+    upgradeBoost(boostId: string): boolean {
+      if (!this.playerData) {
+        Logger.warn('[GameStateManager] Cannot upgrade boost: player data not loaded');
+        return false;
+      }
+
+      const currentLevel = this.getBoostLevel(boostId);
+
+      if (currentLevel >= GAME_CONSTANTS.MAX_BOOST_LEVEL) {
+        Logger.warn(`[GameStateManager] Boost ${boostId} already at max level ${GAME_CONSTANTS.MAX_BOOST_LEVEL}`);
+        return false;
+      }
+
+      // Initialize boosts if not present
+      if (!this.playerData.boosts) {
+        this.playerData.boosts = {};
+      }
+
+      this.playerData.boosts[boostId] = currentLevel + 1;
+      return true;
     }
 
     /**
      * Initialize a new game with starter cards
      */
-    private async initializeStartingCollection(): Promise<void> {
-      if (!this.playerData) return;
+    async initializeStartingCollection(): Promise<void> {
+      if (!this.playerData) {
+        Logger.error('[GameStateManager] Cannot initialize starting collection: player data not loaded');
+        return;
+      }
 
       // Get starter deck cards from deck builder
       const starterDeckList = getStarterDeck('Forest');
       const starterCards = starterDeckList.cards;
 
-      Logger.info(`[BloomBeastsGame] Initializing starter deck: ${starterDeckList.name} with ${starterCards.length} cards`);
+      Logger.info(`[GameStateManager] Initializing starter deck: ${starterDeckList.name} with ${starterCards.length} cards`);
+
+      // Use const reference to avoid non-null assertions
+      const playerData = this.playerData;
 
       // Create card instances and add to collection and deck
       starterCards.forEach((card: any, index: number) => {
@@ -18839,26 +18494,401 @@ namespace BloomBeasts {
           currentXP: 0, // Start at 0 XP (level 1)
         };
 
-        this.playerData!.cards.collected.push(cardInstance);
-        this.playerData!.cards.deck.push(cardInstance.id);
+        playerData.cards.collected.push(cardInstance);
+        playerData.cards.deck.push(cardInstance.id);
       });
 
-      Logger.info(`[BloomBeastsGame] Starter deck initialized with ${this.playerData.cards.deck.length} cards in deck and ${this.playerData.cards.collected.length} cards collected`);
+      Logger.info(`[GameStateManager] Starter deck initialized with ${playerData.cards.deck.length} cards in deck and ${playerData.cards.collected.length} cards collected`);
+    }
 
-      await this.saveGameData();
+    /**
+     * Add card to player's deck
+     */
+    addCardToDeck(cardId: string, maxDeckSize: number): boolean {
+      if (!this.playerData) {
+        Logger.warn('[GameStateManager] Cannot add card to deck: player data not loaded');
+        return false;
+      }
+
+      if (this.playerData.cards.deck.length >= maxDeckSize) {
+        Logger.warn(`[GameStateManager] Deck is full (${maxDeckSize} cards)`);
+        return false;
+      }
+
+      if (!this.playerData.cards.deck.includes(cardId)) {
+        this.playerData.cards.deck.push(cardId);
+        return true;
+      }
+
+      return false;
+    }
+
+    /**
+     * Remove card from player's deck
+     */
+    removeCardFromDeck(cardId: string): boolean {
+      if (!this.playerData) {
+        Logger.warn('[GameStateManager] Cannot remove card from deck: player data not loaded');
+        return false;
+      }
+
+      const index = this.playerData.cards.deck.indexOf(cardId);
+      if (index > -1) {
+        this.playerData.cards.deck.splice(index, 1);
+        return true;
+      }
+
+      return false;
+    }
+  }
+
+  // ==================== bloombeasts/core/SoundManager.ts ====================
+
+  /**
+   * SoundManager - Handles all audio/sound operations
+   * Extracted from BloomBeastsGame to separate concerns
+   */
+
+
+  /**
+   * Manages all game audio (music and sound effects)
+   */
+  export class SoundManager {
+    private platform: PlatformConfig;
+    private currentMusic: string | null = null;
+    private settings: SoundSettings | null = null;
+
+    constructor(platform: PlatformConfig, settings?: SoundSettings) {
+      this.platform = platform;
+      this.settings = settings || null;
+    }
+
+    /**
+     * Update settings reference (called when settings change)
+     */
+    updateSettings(settings: SoundSettings): void {
+      this.settings = settings;
+    }
+
+    /**
+     * Play background music
+     */
+    playMusic(musicId: string, loop: boolean = true): void {
+      // Don't restart music if it's already playing
+      if (this.currentMusic === musicId) {
+        return;
+      }
+
+      this.currentMusic = musicId;
+
+      if (this.settings?.musicEnabled) {
+        const volume = this.settings.musicVolume / 100;
+        if (!this.platform.playSound) {
+          Logger.debug('[SoundManager] playSound not implemented by platform');
+        } else {
+          this.platform.playSound(musicId, loop, volume);
+        }
+      }
+    }
+
+    /**
+     * Stop background music
+     */
+    stopMusic(): void {
+      this.currentMusic = null;
+      if (!this.platform.stopSound) {
+        Logger.debug('[SoundManager] stopSound not implemented by platform');
+      } else {
+        this.platform.stopSound();
+      }
+    }
+
+    /**
+     * Play sound effect
+     */
+    playSfx(sfxId: string): void {
+      if (this.settings?.sfxEnabled) {
+        const volume = this.settings.sfxVolume / 100;
+        if (!this.platform.playSound) {
+          Logger.debug('[SoundManager] playSound not implemented by platform');
+        } else {
+          this.platform.playSound(sfxId, false, volume);
+        }
+      }
+    }
+
+    /**
+     * Set music volume (0-100)
+     */
+    setMusicVolume(volume: number): void {
+      if (!this.settings) {
+        Logger.warn('[SoundManager] Cannot set music volume: settings not initialized');
+        return;
+      }
+      this.settings.musicVolume = Math.max(0, Math.min(100, volume));
+      if (this.settings.musicEnabled) {
+        if (this.platform.setMusicVolume) {
+          this.platform.setMusicVolume(this.settings.musicVolume / 100);
+        }
+      }
+    }
+
+    /**
+     * Set SFX volume (0-100)
+     */
+    setSfxVolume(volume: number): void {
+      if (!this.settings) {
+        Logger.warn('[SoundManager] Cannot set SFX volume: settings not initialized');
+        return;
+      }
+      this.settings.sfxVolume = Math.max(0, Math.min(100, volume));
+      if (this.settings.sfxEnabled) {
+        if (this.platform.setSfxVolume) {
+          this.platform.setSfxVolume(this.settings.sfxVolume / 100);
+        }
+      }
+    }
+
+    /**
+     * Toggle music on/off
+     */
+    toggleMusic(enabled: boolean): void {
+      if (!this.settings) {
+        Logger.warn('[SoundManager] Cannot toggle music: settings not initialized');
+        return;
+      }
+      this.settings.musicEnabled = enabled;
+
+      // Notify platform
+      if (this.platform.setMusicEnabled) {
+        this.platform.setMusicEnabled(enabled);
+      }
+
+      if (enabled && this.currentMusic) {
+        // Resume music - force replay even if it's the same track
+        const musicToResume = this.currentMusic;
+        const volume = this.settings.musicVolume / 100;
+        if (this.platform.playSound) {
+          this.platform.playSound(musicToResume, true, volume);
+        }
+      } else if (!enabled) {
+        // Stop music playback but keep track of current music for resume
+        // Don't call stopMusic() as it clears this.currentMusic
+        if (this.platform.stopSound) {
+          this.platform.stopSound();
+        }
+      }
+    }
+
+    /**
+     * Toggle SFX on/off
+     */
+    toggleSfx(enabled: boolean): void {
+      if (!this.settings) {
+        Logger.warn('[SoundManager] Cannot toggle SFX: settings not initialized');
+        return;
+      }
+      this.settings.sfxEnabled = enabled;
+
+      // Notify platform
+      if (this.platform.setSfxEnabled) {
+        this.platform.setSfxEnabled(enabled);
+      }
+    }
+
+    /**
+     * Apply sound settings to platform
+     */
+    applySettings(): void {
+      if (!this.settings) {
+        Logger.warn('[SoundManager] Cannot apply settings: settings not initialized');
+        return;
+      }
+
+      if (this.platform.setMusicVolume) {
+        this.platform.setMusicVolume(this.settings.musicVolume / 100);
+      }
+      if (this.platform.setSfxVolume) {
+        this.platform.setSfxVolume(this.settings.sfxVolume / 100);
+      }
+      if (this.platform.setMusicEnabled) {
+        this.platform.setMusicEnabled(this.settings.musicEnabled);
+      }
+      if (this.platform.setSfxEnabled) {
+        this.platform.setSfxEnabled(this.settings.sfxEnabled);
+      }
+    }
+
+    /**
+     * Get current music ID
+     */
+    getCurrentMusic(): string | null {
+      return this.currentMusic;
+    }
+  }
+
+  // ==================== bloombeasts/core/BattleRewardCalculator.ts ====================
+
+  /**
+   * BattleRewardCalculator - Calculates and applies battle rewards with boost multipliers
+   * Extracted from BloomBeastsGame to separate concerns
+   */
+
+
+  export interface BoostMap {
+    [boostId: string]: number;
+  }
+
+  export interface BattleRewards {
+    xpGained: number;
+    beastXP: number;
+    coinsReceived: number;
+    cardsReceived: any[];
+    itemsReceived?: any[];
+    bonusRewards?: string[];
+  }
+
+  /**
+   * Calculates battle rewards and applies boost multipliers
+   */
+  export class BattleRewardCalculator {
+    /**
+     * Calculate and apply boost multipliers to rewards
+     * Returns modified rewards object with bonus information
+     */
+    calculateRewards(baseRewards: BattleRewards, boosts: BoostMap): BattleRewards {
+      const rewards = { ...baseRewards };
+
+      const coinBoostLevel = boosts[COIN_BOOST.id] || 0;
+      const expBoostLevel = boosts[EXP_BOOST.id] || 0;
+      const luckBoostLevel = boosts[LUCK_BOOST.id] || 0;
+
+      let coinBoostPercent = 0;
+      let expBoostPercent = 0;
+      let luckBoostPercent = 0;
+
+      // Calculate and apply coin boost
+      if (coinBoostLevel > 0 && COIN_BOOST.values && rewards.coinsReceived) {
+        coinBoostPercent = COIN_BOOST.values[coinBoostLevel - 1];
+        const multiplier = (coinBoostPercent / 100) + 1;
+        rewards.coinsReceived = Math.floor(rewards.coinsReceived * multiplier);
+      }
+
+      // Calculate and apply exp boost
+      if (expBoostLevel > 0 && EXP_BOOST.values) {
+        expBoostPercent = EXP_BOOST.values[expBoostLevel - 1];
+        const multiplier = (expBoostPercent / 100) + 1;
+        rewards.xpGained = Math.floor(rewards.xpGained * multiplier);
+        rewards.beastXP = Math.floor(rewards.beastXP * multiplier);
+      }
+
+      // Calculate luck boost (affects drop chances - already rolled, so no effect on this implementation)
+      if (luckBoostLevel > 0 && LUCK_BOOST.values) {
+        luckBoostPercent = LUCK_BOOST.values[luckBoostLevel - 1];
+        // Luck boost would affect drop chances, but rewards are already generated
+        // This is shown for informational purposes
+      }
+
+      // Add boost info to rewards for display
+      if (!rewards.bonusRewards) {
+        rewards.bonusRewards = [];
+      }
+      if (coinBoostPercent > 0) {
+        rewards.bonusRewards.push(`Coin Boost: +${coinBoostPercent}%`);
+      }
+      if (expBoostPercent > 0) {
+        rewards.bonusRewards.push(`EXP Boost: +${expBoostPercent}%`);
+      }
+      if (luckBoostPercent > 0) {
+        rewards.bonusRewards.push(`Luck Boost: +${luckBoostPercent}%`);
+      }
+
+      return rewards;
+    }
+
+    /**
+     * Get boost levels from player data
+     */
+    getBoostMap(playerBoosts?: { [boostId: string]: number }): BoostMap {
+      return {
+        [COIN_BOOST.id]: playerBoosts?.[COIN_BOOST.id] || 0,
+        [EXP_BOOST.id]: playerBoosts?.[EXP_BOOST.id] || 0,
+        [LUCK_BOOST.id]: playerBoosts?.[LUCK_BOOST.id] || 0,
+      };
+    }
+  }
+
+  // ==================== bloombeasts/core/UICoordinator.ts ====================
+
+  /**
+   * UICoordinator - Manages UI bindings and screen navigation
+   * Extracted from BloomBeastsGame to separate concerns
+   */
+
+
+  /**
+   * Coordinates UI updates and screen transitions
+   */
+  export class UICoordinator {
+    private bindingManager: BindingManager;
+    private onRender: () => void;
+    private uiTree: UINode | null = null;
+
+    constructor(bindingManager: BindingManager, onRender: () => void) {
+      this.bindingManager = bindingManager;
+      this.onRender = onRender;
+    }
+
+    /**
+     * Set UI tree reference
+     */
+    setUITree(uiTree: UINode): void {
+      this.uiTree = uiTree;
+    }
+
+    /**
+     * Update binding and trigger render (common pattern)
+     */
+    updateBindingAndRender<T>(type: BindingType, value: T): void {
+      this.bindingManager.setBinding(type, value);
+      this.triggerRender();
+    }
+
+    /**
+     * Trigger a render
+     */
+    triggerRender(): void {
+      this.onRender();
+    }
+
+    /**
+     * Navigate to a different screen
+     */
+    navigate(screen: string, onLeaderboardNavigate?: () => void): void {
+      this.bindingManager.setBinding(BindingType.CurrentScreen, screen);
+
+      // Load leaderboard data when navigating to leaderboard screen
+      if (screen === 'leaderboard' && onLeaderboardNavigate) {
+        onLeaderboardNavigate();
+      }
+
+      this.triggerRender();
     }
 
     /**
      * Update bindings from current game state
-     * This syncs the UI bindings with the actual game state
      */
-    private async updateBindingsFromGameState(): Promise<void> {
+    updateBindingsFromGameState(
+      playerData: PlayerData,
+      missionUI: IMissionSelectionUI,
+      playerLevel: number
+    ): void {
       // Update player data binding (screens derive what they need from this)
-      this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
+      this.bindingManager.setBinding(BindingType.PlayerData, playerData);
 
       // Update missions binding (still separate as it includes availability logic)
-      this.missionUI.setPlayerLevel(this.playerLevel);
-      const missionList = this.missionUI.getMissionList();
+      missionUI.setPlayerLevel(playerLevel);
+      const missionList = missionUI.getMissionList();
       const displayMissions: MissionDisplay[] = missionList.map(m => ({
         id: m.mission.id,
         name: m.mission.name,
@@ -18871,44 +18901,891 @@ namespace BloomBeasts {
         beastId: m.mission.beastId,
       }));
 
-      this.UI.bindingManager.setBinding(BindingType.Missions, displayMissions);
+      this.bindingManager.setBinding(BindingType.Missions, displayMissions);
     }
 
     /**
-     * Navigate to a different screen
+     * Show forfeit confirmation popup
      */
-    private navigate(screen: string): void {
-      this.UI.bindingManager.setBinding(BindingType.CurrentScreen, screen);
-
-      // Load leaderboard data when navigating to leaderboard screen
-      if (screen === 'leaderboard') {
-        this.loadLeaderboardData();
-      }
-
+    showForfeitConfirmation(onConfirm: () => void, playSfx: (sfxId: string) => void): void {
+      this.bindingManager.setBinding(BindingType.ForfeitPopup, {
+        title: 'Are you sure?',
+        message: 'You will lose this battle.',
+        buttons: [
+          {
+            text: 'Yes',
+            onClick: onConfirm,
+            color: 'red',
+          },
+          {
+            text: 'No',
+            onClick: () => {
+              this.bindingManager.setBinding(BindingType.ForfeitPopup, null);
+              this.triggerRender();
+            },
+            color: 'default',
+          },
+        ],
+        playSfx,
+      });
       this.triggerRender();
     }
 
     /**
-     * Trigger a render
-     * Notifies the platform to render (bindings update automatically)
+     * Show card detail popup
      */
-    private triggerRender(): void {
-      // Skip rendering during initialization to prevent errors
-      if (this.isInitializing) {
-        return;
-      }
+    showCardDetailPopup(
+      card: any,
+      durationMs: number,
+      playSfx: (sfxId: string) => void,
+      setTimeout: (callback: () => void, delay: number) => void,
+      callback?: () => void
+    ): void {
+      // Set the card detail popup
+      this.bindingManager.setBinding(BindingType.CardDetailPopup, {
+        cardDetail: {
+          card: card,
+          stats: null,
+        },
+        onButtonClick: () => {
+          // Close button clicked
+          this.bindingManager.setBinding(BindingType.CardDetailPopup, null);
+          this.triggerRender();
+        },
+        playSfx,
+        hideBackdrop: true, // Hide backdrop for played card popups
+      });
+      this.triggerRender();
 
-      // Just notify platform - UI tree is reactive via bindings
-      // No need to recreate the entire tree!
-      this.platform.render(this.uiTree);
+      // After duration, close the popup and execute callback
+      setTimeout(() => {
+        this.bindingManager.setBinding(BindingType.CardDetailPopup, null);
+        this.triggerRender();
+        callback?.();
+      }, durationMs);
     }
 
     /**
-     * Handle button clicks
+     * Show mission complete popup
      */
-    private async handleButtonClick(buttonId: string): Promise<void> {
+    showMissionCompletePopup(
+      mission: any,
+      rewards: any,
+      playSfx: (sfxId: string) => void,
+      onContinue: () => void
+    ): void {
+      const popupData = {
+        mission,
+        rewards,
+        chestOpened: false,
+        onClaimRewards: () => {
+          const current = this.bindingManager.getSnapshot(BindingType.MissionCompletePopup);
+          if (current) {
+            const updatedData = {
+              ...current,
+              chestOpened: true
+            };
+            this.bindingManager.setBinding(BindingType.MissionCompletePopup, updatedData);
+            this.triggerRender();
+          }
+        },
+        onContinue,
+        playSfx
+      };
+
+      this.bindingManager.setBinding(BindingType.MissionCompletePopup, popupData);
+      this.triggerRender();
+    }
+
+    /**
+     * Show mission failed popup
+     */
+    showMissionFailedPopup(
+      mission: any,
+      playSfx: (sfxId: string) => void,
+      onContinue: () => void
+    ): void {
+      const failedPopupProps = {
+        mission,
+        rewards: null, // null indicates failure
+        chestOpened: false,
+        onContinue,
+        playSfx
+      };
+
+      this.bindingManager.setBinding(BindingType.MissionCompletePopup, failedPopupProps);
+      this.triggerRender();
+    }
+
+    /**
+     * Clear battle display
+     */
+    clearBattleDisplay(): void {
+      this.bindingManager.setBinding(BindingType.BattleDisplay, null);
+    }
+
+    /**
+     * Close popup and navigate
+     */
+    closePopupAndNavigate(screen: string): void {
+      this.bindingManager.setBinding(BindingType.BattleDisplay, null);
+      this.bindingManager.setBinding(BindingType.MissionCompletePopup, null);
+      this.navigate(screen);
+    }
+  }
+
+  // ==================== bloombeasts/core/ValidationHelpers.ts ====================
+
+  /**
+   * ValidationHelpers - Validation utilities for critical operations
+   *
+   * Phase 4: Code Hygiene - Add validation before critical operations
+   */
+
+
+  /**
+   * Validation result
+   */
+  export interface ValidationResult {
+    valid: boolean;
+    errors: string[];
+  }
+
+  /**
+   * ValidationHelpers - Centralized validation logic
+   */
+  export class ValidationHelpers {
+    /**
+     * Validate deck before starting battle
+     */
+    static validateDeck(deckCards: any[]): ValidationResult {
+      const errors: string[] = [];
+
+      // Check deck size
+      if (!deckCards || deckCards.length === 0) {
+        errors.push('Deck is empty');
+        return { valid: false, errors };
+      }
+
+      if (deckCards.length < GAME_CONSTANTS.MIN_DECK_SIZE) {
+        errors.push(`Deck must have at least ${GAME_CONSTANTS.MIN_DECK_SIZE} card(s) (current: ${deckCards.length})`);
+      }
+
+      // Check for valid cards
+      const invalidCards = deckCards.filter(card => !card || !card.id);
+      if (invalidCards.length > 0) {
+        errors.push(`Deck contains ${invalidCards.length} invalid card(s)`);
+      }
+
+      // Check for duplicate instance IDs (should not happen, but safety check)
+      const instanceIds = deckCards.map(c => c.instanceId).filter(Boolean);
+      const uniqueIds = new Set(instanceIds);
+      if (instanceIds.length !== uniqueIds.size) {
+        errors.push('Deck contains duplicate card instances');
+      }
+
+      if (errors.length > 0) {
+        Logger.error('[ValidationHelpers] Deck validation failed:', errors);
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors,
+      };
+    }
+
+    /**
+     * Validate player data structure
+     */
+    static validatePlayerData(data: any): ValidationResult {
+      const errors: string[] = [];
+
+      if (!data || typeof data !== 'object') {
+        errors.push('Player data is not an object');
+        return { valid: false, errors };
+      }
+
+      // Check required fields
+      if (!data.name || typeof data.name !== 'string') {
+        errors.push('Player name is missing or invalid');
+      }
+
+      if (typeof data.totalXP !== 'number' || data.totalXP < 0) {
+        errors.push('Player XP is invalid');
+      }
+
+      if (typeof data.coins !== 'number' || data.coins < 0) {
+        errors.push('Player coins is invalid');
+      }
+
+      // Check cards structure
+      if (!data.cards || typeof data.cards !== 'object') {
+        errors.push('Player cards data is missing');
+      } else {
+        if (!Array.isArray(data.cards.collected)) {
+          errors.push('Player collected cards must be an array');
+        }
+        if (!Array.isArray(data.cards.deck)) {
+          errors.push('Player deck must be an array');
+        }
+      }
+
+      // Check missions structure
+      if (!data.missions || typeof data.missions !== 'object') {
+        errors.push('Player missions data is missing');
+      } else if (typeof data.missions.completedMissions !== 'object') {
+        errors.push('Completed missions must be an object');
+      }
+
+      if (errors.length > 0) {
+        Logger.error('[ValidationHelpers] Player data validation failed:', errors);
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors,
+      };
+    }
+
+    /**
+     * Validate battle action
+     */
+    static validateBattleAction(action: string, battleState: any): ValidationResult {
+      const errors: string[] = [];
+
+      if (!action || typeof action !== 'string') {
+        errors.push('Battle action is invalid');
+        return { valid: false, errors };
+      }
+
+      if (!battleState) {
+        errors.push('Battle state is null or undefined');
+        return { valid: false, errors };
+      }
+
+      if (battleState.isComplete) {
+        errors.push('Cannot perform action - battle is already complete');
+      }
+
+      if (errors.length > 0) {
+        Logger.warn('[ValidationHelpers] Battle action validation failed:', errors);
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors,
+      };
+    }
+
+    /**
+     * Validate upgrade purchase
+     */
+    static validateUpgradePurchase(
+      playerCoins: number,
+      upgradeCost: number,
+      upgradeId: string
+    ): ValidationResult {
+      const errors: string[] = [];
+
+      if (typeof playerCoins !== 'number' || playerCoins < 0) {
+        errors.push('Player coins is invalid');
+        return { valid: false, errors };
+      }
+
+      if (typeof upgradeCost !== 'number' || upgradeCost < 0) {
+        errors.push('Upgrade cost is invalid');
+        return { valid: false, errors };
+      }
+
+      if (playerCoins < upgradeCost) {
+        errors.push(`Insufficient coins for ${upgradeId} (need ${upgradeCost}, have ${playerCoins})`);
+      }
+
+      if (errors.length > 0) {
+        Logger.warn('[ValidationHelpers] Upgrade validation failed:', errors);
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors,
+      };
+    }
+
+    /**
+     * Validate card addition to deck
+     */
+    static validateCardAddition(
+      cardId: string,
+      currentDeckSize: number,
+      maxDeckSize: number,
+      cardExists: boolean
+    ): ValidationResult {
+      const errors: string[] = [];
+
+      if (!cardId || typeof cardId !== 'string') {
+        errors.push('Card ID is invalid');
+        return { valid: false, errors };
+      }
+
+      if (!cardExists) {
+        errors.push(`Card ${cardId} does not exist in collection`);
+      }
+
+      if (currentDeckSize >= maxDeckSize) {
+        errors.push(`Deck is full (${maxDeckSize} cards maximum)`);
+      }
+
+      if (errors.length > 0) {
+        Logger.warn('[ValidationHelpers] Card addition validation failed:', errors);
+      }
+
+      return {
+        valid: errors.length === 0,
+        errors,
+      };
+    }
+  }
+
+  // ==================== bloombeasts/core/BattleOrchestrator.ts ====================
+
+  /**
+   * BattleOrchestrator - Manages battle actions, state, and completion
+   * Extracted from BloomBeastsGame to separate concerns
+   */
+
+
+  /**
+   * Orchestrates all battle-related operations
+   */
+  export class BattleOrchestrator {
+    private battleUI: IBattleUI;
+    private battleDisplayManager: IBattleDisplayManager;
+    private gameStateManager: GameStateManager;
+    private rewardCalculator: BattleRewardCalculator;
+    private uiCoordinator: UICoordinator;
+    private soundManager: SoundManager;
+    private asyncMethods: AsyncMethods;
+
+    private currentBattleId: string | null = null;
+    private battleStartTime: number | null = null;
+
+    constructor(
+      battleUI: IBattleUI,
+      battleDisplayManager: IBattleDisplayManager,
+      gameStateManager: GameStateManager,
+      rewardCalculator: BattleRewardCalculator,
+      uiCoordinator: UICoordinator,
+      soundManager: SoundManager,
+      asyncMethods: AsyncMethods
+    ) {
+      this.battleUI = battleUI;
+      this.battleDisplayManager = battleDisplayManager;
+      this.gameStateManager = gameStateManager;
+      this.rewardCalculator = rewardCalculator;
+      this.uiCoordinator = uiCoordinator;
+      this.soundManager = soundManager;
+      this.asyncMethods = asyncMethods;
+    }
+
+    /**
+     * Initialize battle with mission ID
+     */
+    initializeBattle(missionId: string, playerDeckCards: any[], playerName: string): any {
+      const battleState = this.battleUI.initializeBattle(playerDeckCards, playerName);
+
+      if (battleState) {
+        this.currentBattleId = missionId;
+        this.battleStartTime = Date.now();
+      }
+
+      return battleState;
+    }
+
+    /**
+     * Get current battle ID
+     */
+    getCurrentBattleId(): string | null {
+      return this.currentBattleId;
+    }
+
+    /**
+     * Clear battle state
+     */
+    clearBattle(): void {
+      this.currentBattleId = null;
+      this.battleStartTime = null;
+    }
+
+    /**
+     * Handle battle actions
+     */
+    async handleBattleAction(action: string): Promise<void> {
+      Logger.debug('[BattleOrchestrator] handleBattleAction called with action:', action);
+
+      // Handle timeout losses - convert to TIMEOUT action
+      if (action === 'timeout-player' || action === 'timeout-opponent') {
+        await this.handleTimeout(action);
+        return;
+      }
+
+      // Handle forfeit button - show confirmation popup
+      if (action === 'btn-forfeit' || action === 'forfeit') {
+        this.uiCoordinator.showForfeitConfirmation(
+          () => this.handleForfeit(),
+          (sfxId: string) => this.soundManager.playSfx(sfxId)
+        );
+        return;
+      }
+
+      // Handle back button
+      if (action === 'btn-back') {
+        this.uiCoordinator.navigate('menu');
+        return;
+      }
+
+      // Get current battle state
+      const currentBattle = this.battleUI.getCurrentBattle();
+
+      // Validate battle action
+      const validation = ValidationHelpers.validateBattleAction(action, currentBattle?.battleState);
+      if (!validation.valid) {
+        Logger.warn('[BattleOrchestrator] Battle action validation failed:', validation.errors);
+        return;
+      }
+
+      // CRITICAL: Check if battle is already complete - prevent double processing
+      if (currentBattle && currentBattle.isComplete) {
+        Logger.info(`[BattleOrchestrator] Battle already complete, ignoring action: ${action}`);
+        return;
+      }
+
+      // Beast and opponent clicks are now just for viewing details (no selection)
+      if (action.startsWith('view-field-card-player-') || action.startsWith('view-field-card-opponent-')) {
+        return;
+      }
+
+      // Parse string action to typed action
+      const typedAction = parseActionString(action, 'player');
+      if (!typedAction) {
+        Logger.warn(`[BattleOrchestrator] Failed to parse action: ${action}`);
+        return;
+      }
+
+      // Play sound effects and show animations based on action type
+      if (typedAction.type === 'auto-attack-all') {
+        await this.handleAutoAttackAll(typedAction);
+        return;
+      } else if (typedAction.type === 'attack-beast') {
+        this.soundManager.playSfx(SOUND_EFFECTS.ATTACK);
+      } else if (typedAction.type === 'attack-player') {
+        this.soundManager.playSfx(SOUND_EFFECTS.ATTACK);
+        if (typedAction.attackerIndex !== undefined) {
+          await this.showAttackAnimation('player', typedAction.attackerIndex, 'health', undefined);
+        }
+      } else if (typedAction.type === 'play-card') {
+        this.soundManager.playSfx(SOUND_EFFECTS.PLAY_CARD);
+      } else if (action.startsWith('activate-trap-')) {
+        this.soundManager.playSfx(SOUND_EFFECTS.TRAP_ACTIVATED);
+      } else if (typedAction.type === 'end-turn') {
+        this.soundManager.playSfx(SOUND_EFFECTS.MENU_BUTTON_SELECT);
+      }
+
+      // Process action
+      await this.battleUI.processTypedAction(typedAction, {});
+
+      // Immediately update display after action to show cards instantly
+      const immediateState = this.battleUI.getCurrentBattle();
+      if (immediateState && !immediateState.isComplete) {
+        const immediateDisplay = this.battleDisplayManager.createBattleDisplay(
+          immediateState,
+          undefined
+        );
+        if (immediateDisplay) {
+          this.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, immediateDisplay);
+        }
+      }
+
+      // Get updated battle state
+      const updatedState = this.battleUI.getCurrentBattle();
+      if (updatedState) {
+        // Check if battle ended FIRST - never render after completion
+        if (updatedState.isComplete) {
+          await this.handleBattleComplete(updatedState);
+          return;
+        }
+
+        // Create updated battle display with fresh state
+        const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
+          updatedState,
+          undefined
+        );
+
+        if (updatedDisplay) {
+          this.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, updatedDisplay);
+        }
+      }
+    }
+
+    /**
+     * Handle auto-attack-all action with animations
+     */
+    private async handleAutoAttackAll(typedAction: any): Promise<void> {
+      this.soundManager.playSfx(SOUND_EFFECTS.ATTACK);
+
+      // Process action with animation callback
+      await this.battleUI.processTypedAction(typedAction, {
+        onAttackAnimation: async (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => {
+          if (targetType === 'beast' && targetIndex !== undefined) {
+            await this.showAttackAnimation('player', attackerIndex, 'opponent', targetIndex);
+          } else {
+            await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
+          }
+        }
+      });
+
+      // Get updated state and render
+      const updatedState = this.battleUI.getCurrentBattle();
+      if (updatedState) {
+        if (updatedState.isComplete) {
+          await this.handleBattleComplete(updatedState);
+          return;
+        }
+
+        const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
+          updatedState,
+          undefined
+        );
+        if (updatedDisplay) {
+          this.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, updatedDisplay);
+        }
+      }
+    }
+
+    /**
+     * Handle timeout action
+     */
+    private async handleTimeout(action: string): Promise<void> {
+      const timedOutPlayerId = action === 'timeout-player' ? 'player' : 'opponent';
+
+      const currentBattle = this.battleUI.getCurrentBattle();
+      if (currentBattle && currentBattle.battleState) {
+        const currentPlayerId = currentBattle.battleState.turboState.turnInfo.currentPlayerId;
+
+        // Process TIMEOUT action through TURBO
+        await this.battleUI.processTypedAction({
+          type: 'timeout',
+          playerId: currentPlayerId,
+          timedOutPlayerId,
+          timestamp: Date.now()
+        });
+
+        // Check if battle ended and handle completion
+        const updatedState = this.battleUI.getCurrentBattle();
+        if (updatedState && updatedState.isComplete) {
+          await this.handleBattleComplete(updatedState);
+        }
+      }
+    }
+
+    /**
+     * Handle forfeit - player gives up
+     */
+    private async handleForfeit(): Promise<void> {
+      // Close popup
+      this.uiCoordinator.updateBindingAndRender(BindingType.ForfeitPopup, null);
+
+      // Play lose sound
+      this.soundManager.playSfx(SOUND_EFFECTS.LOSE);
+
+      // Process FORFEIT action through TURBO
+      await this.battleUI.processTypedAction(BattleActions.forfeit('player'));
+
+      // Check if battle ended and handle completion
+      const updatedState = this.battleUI.getCurrentBattle();
+      if (updatedState && updatedState.isComplete) {
+        await this.handleBattleComplete(updatedState);
+      }
+    }
+
+    /**
+     * Handle battle completion (victory or defeat)
+     */
+    async handleBattleComplete(battleState: any): Promise<void> {
+      const playerData = this.gameStateManager.getPlayerDataOrNull();
+      if (!playerData) return;
+
+      Logger.info('[BattleOrchestrator] handleBattleComplete called');
+
+      const battleId = this.currentBattleId;
+      this.currentBattleId = null;
+
+      if (battleState.rewards) {
+        // Victory!
+        await this.handleVictory(battleState, playerData, battleId);
+      } else {
+        // Defeat
+        await this.handleDefeat(battleState);
+      }
+
+      // Resume background music
+      this.soundManager.playMusic('music-background', true);
+    }
+
+    /**
+     * Handle victory scenario
+     */
+    private async handleVictory(battleState: any, playerData: any, battleId: string | null): Promise<void> {
+      Logger.info('[BattleOrchestrator] VICTORY! Showing rewards popup');
+
+      // Apply boost multipliers to rewards
+      const boostMap = this.rewardCalculator.getBoostMap(playerData.boosts);
+      battleState.rewards = this.rewardCalculator.calculateRewards(battleState.rewards, boostMap);
+
+      // Award XP
+      this.gameStateManager.addXP(battleState.rewards.xpGained);
+
+      // Award card XP directly to deck cards
+      const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
+      awardDeckExperience(
+        cardXP,
+        playerData.cards.deck,
+        playerData.cards.collected
+      );
+
+      // Add cards directly to collection
+      battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
+        addCardReward(card, playerData.cards.collected, index);
+      });
+
+      // Add coins
+      if (battleState.rewards.coinsReceived) {
+        this.gameStateManager.addCoins(battleState.rewards.coinsReceived);
+      }
+
+      // Add items to inventory
+      if (battleState.rewards.itemsReceived) {
+        battleState.rewards.itemsReceived.forEach((itemReward: any) => {
+          this.gameStateManager.addItems(itemReward.itemId, itemReward.quantity);
+        });
+      }
+
+      // Track mission completion
+      if (battleId) {
+        this.gameStateManager.trackMissionCompletion(battleId);
+
+        // If this is Cluck Norris mission, submit time to leaderboard
+        if (battleId === GAME_CONSTANTS.MISSION_CLUCK_NORRIS_ID && this.battleStartTime) {
+          const completionTime = (Date.now() - this.battleStartTime) / 1000;
+          // Submit via callback if available
+          // This will need to be passed through constructor or method
+        }
+      }
+
+      // Reset battle start time
+      this.battleStartTime = null;
+
+      // Play win sound
+      this.soundManager.playSfx(SOUND_EFFECTS.WIN);
+
+      // Show mission complete popup
+      this.uiCoordinator.showMissionCompletePopup(
+        battleState.mission,
+        battleState.rewards,
+        (sfxId: string) => this.soundManager.playSfx(sfxId),
+        () => this.uiCoordinator.closePopupAndNavigate('missions')
+      );
+    }
+
+    /**
+     * Handle defeat scenario
+     */
+    private async handleDefeat(battleState: any): Promise<void> {
+      Logger.info('[BattleOrchestrator] DEFEAT! Showing failed popup');
+
+      // Reset battle start time
+      this.battleStartTime = null;
+
+      // Play lose sound
+      this.soundManager.playSfx(SOUND_EFFECTS.LOSE);
+
+      // Show mission failed popup
+      this.uiCoordinator.showMissionFailedPopup(
+        battleState.mission,
+        (sfxId: string) => this.soundManager.playSfx(sfxId),
+        () => this.uiCoordinator.closePopupAndNavigate('missions')
+      );
+    }
+
+    /**
+     * Show attack animation
+     */
+    async showAttackAnimation(
+      attackerPlayer: 'player' | 'opponent',
+      attackerIndex: number,
+      targetPlayer: 'player' | 'opponent' | 'health',
+      targetIndex?: number
+    ): Promise<void> {
+      const currentState = this.battleUI.getCurrentBattle();
+      if (!currentState) return;
+
+      // Show animation (attacker glows green, target glows red)
+      const displayWithAnimation = this.battleDisplayManager.createBattleDisplay(
+        currentState,
+        {
+          attackerPlayer,
+          attackerIndex,
+          targetPlayer,
+          targetIndex
+        }
+      );
+
+      if (displayWithAnimation) {
+        this.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, displayWithAnimation);
+      }
+
+      // Wait for animation duration
+      await new Promise(resolve => this.asyncMethods.setTimeout(resolve, GAME_CONSTANTS.ATTACK_ANIMATION_DURATION_MS));
+
+      // CRITICAL: Refresh state before clearing animation (state may have changed during delay)
+      const updatedState = this.battleUI.getCurrentBattle();
+      if (!updatedState) return;
+
+      // Clear animation with fresh state
+      const displayWithoutAnimation = this.battleDisplayManager.createBattleDisplay(
+        updatedState,
+        undefined
+      );
+
+      if (displayWithoutAnimation) {
+        this.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, displayWithoutAnimation);
+      }
+    }
+  }
+
+  // ==================== bloombeasts/core/CoreSystemsInitializer.ts ====================
+
+  /**
+   * CoreSystemsInitializer - Centralized core system initialization
+   *
+   * Extracts core system setup from BloomBeastsGame constructor.
+   * Reduces god object complexity by delegating initialization logic.
+   */
+
+
+  /**
+   * Collection of all core game systems
+   */
+  export interface CoreSystems {
+    missionManager: MissionManager;
+    missionUI: MissionSelectionUI;
+    battleUI: BattleUI;
+    battleDisplayManager: BattleDisplayManager;
+    gameStateManager: GameStateManager;
+    soundManager: SoundManager;
+    rewardCalculator: BattleRewardCalculator;
+    uiCoordinator: UICoordinator;
+    battleOrchestrator: BattleOrchestrator;
+  }
+
+  /**
+   * CoreSystemsInitializer - Initializes all core game systems
+   */
+  export class CoreSystemsInitializer {
+    /**
+     * Initialize all core game systems
+     */
+    static initializeSystems(
+      platform: PlatformConfig,
+      ui: UIMethodMappings,
+      asyncMethods: AsyncMethods,
+      onSubmitScore: (type: 'experience' | 'cluckNorris', score: number) => void,
+      onTriggerRender: () => void
+    ): CoreSystems {
+      // Initialize catalog manager for utilities
+      setCatalogManagerForUtils(platform.catalogManager);
+      setCatalogManagerForDeckBuilder(platform.catalogManager);
+
+      // Mission systems
+      const missionManager = new MissionManager(platform.catalogManager);
+      const missionUI = new MissionSelectionUI(missionManager);
+
+      // Battle systems
+      const battleUI = new BattleUI(missionManager, asyncMethods);
+      const battleDisplayManager = new BattleDisplayManager(platform.catalogManager);
+
+      // Core managers
+      const gameStateManager = new GameStateManager(onSubmitScore);
+      const soundManager = new SoundManager(platform);
+      const rewardCalculator = new BattleRewardCalculator();
+      const uiCoordinator = new UICoordinator(ui.bindingManager, onTriggerRender);
+
+      // Battle orchestrator (coordinates battle systems)
+      const battleOrchestrator = new BattleOrchestrator(
+        battleUI,
+        battleDisplayManager,
+        gameStateManager,
+        rewardCalculator,
+        uiCoordinator,
+        soundManager,
+        asyncMethods
+      );
+
+      return {
+        missionManager,
+        missionUI,
+        battleUI,
+        battleDisplayManager,
+        gameStateManager,
+        soundManager,
+        rewardCalculator,
+        uiCoordinator,
+        battleOrchestrator,
+      };
+    }
+  }
+
+  // ==================== bloombeasts/core/ActionHandler.ts ====================
+
+  /**
+   * ActionHandler - Handles all user actions and events
+   *
+   * Extracted from BloomBeastsGame to reduce its size and improve maintainability.
+   * Centralizes all user interaction handling (button clicks, card selection, etc.)
+   */
+
+
+  export interface ActionHandlerConfig {
+    systems: CoreSystems;
+    asyncMethods: AsyncMethods;
+    navigate: (screen: string) => void;
+    saveGameData: () => Promise<void>;
+    updateBindingsFromGameState: () => Promise<void>;
+  }
+
+  /**
+   * Handles all user actions and interactions
+   */
+  export class ActionHandler {
+    private systems: CoreSystems;
+    private asyncMethods: AsyncMethods;
+    private navigate: (screen: string) => void;
+    private saveGameData: () => Promise<void>;
+    private updateBindingsFromGameState: () => Promise<void>;
+
+    constructor(config: ActionHandlerConfig) {
+      this.systems = config.systems;
+      this.asyncMethods = config.asyncMethods;
+      this.navigate = config.navigate;
+      this.saveGameData = config.saveGameData;
+      this.updateBindingsFromGameState = config.updateBindingsFromGameState;
+    }
+
+    /**
+     * Handle button clicks (navigation, back buttons, etc.)
+     */
+    async handleButtonClick(buttonId: string): Promise<void> {
       // Play button sound
-      this.playSfx('sfx-menu-button-select');
+      this.systems.soundManager.playSfx(SOUND_EFFECTS.MENU_BUTTON_SELECT);
 
       // Handle navigation buttons
       switch (buttonId) {
@@ -18936,165 +19813,74 @@ namespace BloomBeasts {
         case 'btn-back':
           this.navigate('menu');
           break;
-        case 'forfeit':
-          // Show forfeit confirmation popup
-          this.showForfeitConfirmation();
-          break;
         default:
       }
     }
 
     /**
-     * Show forfeit confirmation popup
-     */
-    private showForfeitConfirmation(): void {
-      this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, {
-        title: 'Are you sure?',
-        message: 'You will lose this battle.',
-        buttons: [
-          {
-            text: 'Yes',
-            onClick: () => {
-              this.handleForfeit();
-            },
-            color: 'red',
-          },
-          {
-            text: 'No',
-            onClick: () => {
-              this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, null);
-              this.triggerRender();
-            },
-            color: 'default',
-          },
-        ],
-        playSfx: this.playSfx.bind(this),
-      });
-      this.triggerRender();
-    }
-
-    /**
      * Show card detail popup for a duration, then close and execute callback
      */
-    private showCardDetailPopup(card: any, durationMs: number, callback?: () => void): void {
-      // Set the card detail popup
-      this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, {
-        cardDetail: {
-          card: card,
-          stats: null,
-        },
-        onButtonClick: () => {
-          // Close button clicked
-          this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, null);
-          this.triggerRender();
-        },
-        playSfx: this.playSfx.bind(this),
-        hideBackdrop: true, // Hide backdrop for played card popups
-      });
-      this.triggerRender();
-
-      // After duration, close the popup and execute callback
-      this.asyncMethods.setTimeout(() => {
-        this.UI.bindingManager.setBinding(BindingType.CardDetailPopup, null);
-        this.triggerRender();
-        callback?.();
-      }, durationMs);
+    showCardDetailPopup(card: any, durationMs: number, callback?: () => void): void {
+      this.systems.uiCoordinator.showCardDetailPopup(
+        card,
+        durationMs,
+        (sfxId: string) => this.systems.soundManager.playSfx(sfxId),
+        (cb: () => void, delay: number) => this.asyncMethods.setTimeout(cb, delay),
+        callback
+      );
     }
 
     /**
-     * Handle forfeit - player gives up
+     * Handle card selection (add/remove from deck)
      */
-    private async handleForfeit(): Promise<void> {
-      // Close popup
-      this.UI.bindingManager.setBinding(BindingType.ForfeitPopup, null);
-      this.triggerRender();
-
-      // Play lose sound
-      this.playSfx('sfx-lose');
-
-      // Process FORFEIT action through TURBO instead of manual state manipulation
-      if (this.battleUI) {
-        await this.battleUI.processTypedAction(BattleActions.forfeit('player'));
-      }
-    }
-
-    /**
-     * Handle card selection
-     */
-    private async handleCardSelect(cardId: string): Promise<void> {
-      if (!this.playerData) return;
+    async handleCardSelect(cardId: string): Promise<void> {
+      const playerData = this.systems.gameStateManager.getPlayerDataOrNull();
+      if (!playerData) return;
 
       // Play menu button sound
-      this.playSfx('sfx-menu-button-select');
+      this.systems.soundManager.playSfx(SOUND_EFFECTS.MENU_BUTTON_SELECT);
 
-      const cardEntry = this.playerData.cards.collected.find(c => c.id === cardId);
-
-      if (!cardEntry) {
-        return;
-      }
+      const cardEntry = playerData.cards.collected.find(c => c.id === cardId);
+      if (!cardEntry) return;
 
       // Check if card is in deck
-      const isInDeck = this.playerData.cards.deck.includes(cardId);
+      const isInDeck = playerData.cards.deck.includes(cardId);
 
       // Toggle card in/out of deck
       if (isInDeck) {
-        await this.removeCardFromDeck(cardId);
+        if (this.systems.gameStateManager.removeCardFromDeck(cardId)) {
+          await this.saveGameData();
+          await this.updateBindingsFromGameState();
+        }
       } else {
-        await this.addCardToDeck(cardId);
+        if (this.systems.gameStateManager.addCardToDeck(cardId, DECK_SIZE)) {
+          await this.saveGameData();
+          await this.updateBindingsFromGameState();
+        }
       }
     }
 
     /**
-     * Add card to player's deck
+     * Handle mission selection and battle initialization
      */
-    private async addCardToDeck(cardId: string): Promise<void> {
-      if (!this.playerData) return;
-      if (this.playerData.cards.deck.length >= DECK_SIZE) {
-        Logger.warn(`Deck is full (${DECK_SIZE} cards)`);
-        return;
-      }
-
-      if (!this.playerData.cards.deck.includes(cardId)) {
-        this.playerData.cards.deck.push(cardId);
-        await this.saveGameData();
-        await this.updateBindingsFromGameState();
-      }
-    }
-
-    /**
-     * Remove card from player's deck
-     */
-    private async removeCardFromDeck(cardId: string): Promise<void> {
-      if (!this.playerData) return;
-      const index = this.playerData.cards.deck.indexOf(cardId);
-      if (index > -1) {
-        this.playerData.cards.deck.splice(index, 1);
-        await this.saveGameData();
-        await this.updateBindingsFromGameState();
-      }
-    }
-
-    /**
-     * Handle mission selection
-     */
-    private async handleMissionSelect(missionId: string): Promise<void> {
+    async handleMissionSelect(missionId: string): Promise<void> {
       Logger.info(`Mission selected: ${missionId}`);
-      if (!this.playerData) return;
+      const playerData = this.systems.gameStateManager.getPlayerDataOrNull();
+      if (!playerData) return;
 
       // Play menu button sound
-      this.playSfx('sfx-menu-button-select');
+      this.systems.soundManager.playSfx(SOUND_EFFECTS.MENU_BUTTON_SELECT);
 
       // Check if player has cards in deck
-      if (this.playerData.cards.deck.length === 0) {
+      if (playerData.cards.deck.length === 0) {
         Logger.warn('No cards in deck');
-        // TODO: Show dialog or message to user
         return;
       }
 
       // Get player's deck cards
       const playerDeckCards = getPlayerDeckCards(
-        this.playerData.cards.deck,
-        this.playerData.cards.collected
+        playerData.cards.deck,
+        playerData.cards.collected
       );
 
       if (playerDeckCards.length === 0) {
@@ -19102,57 +19888,53 @@ namespace BloomBeasts {
         return;
       }
 
+      // Validate deck before starting battle
+      const deckValidation = ValidationHelpers.validateDeck(playerDeckCards);
+      if (!deckValidation.valid) {
+        Logger.error('[ActionHandler] Deck validation failed:', deckValidation.errors);
+        // Could show error popup to user here in future
+        return;
+      }
+
       // Start the mission
-      const success = this.missionUI.startMission(missionId);
+      const success = this.systems.missionUI.startMission(missionId);
 
       if (success) {
-        // Initialize battle with player's deck cards and name
-        const battleState = this.battleUI.initializeBattle(playerDeckCards, this.playerData.name);
+        // Initialize battle using BattleOrchestrator
+        const battleState = this.systems.battleOrchestrator.initializeBattle(missionId, playerDeckCards, playerData.name);
 
         if (battleState) {
-          this.currentBattleId = missionId;
-          this.battleStartTime = Date.now();  // Track start time for leaderboard
-
           // Set up render callback for battle UI to update display during AI turns
-          this.battleUI.setRenderCallback(() => {
-            const currentBattle = this.battleUI.getCurrentBattle();
+          this.systems.battleUI.setRenderCallback(() => {
+            const currentBattle = this.systems.battleUI.getCurrentBattle();
             if (currentBattle && !currentBattle.isComplete) {
-              const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
+              const updatedDisplay = this.systems.battleDisplayManager.createBattleDisplay(
                 currentBattle,
                 null
               );
               if (updatedDisplay) {
-                this.UI.bindingManager.setBinding(BindingType.BattleDisplay, updatedDisplay);
-                this.triggerRender();
+                this.systems.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, updatedDisplay);
               }
             }
           });
 
           // Create battle display from battle state
-          const battleDisplay = this.battleDisplayManager.createBattleDisplay(
+          const battleDisplay = this.systems.battleDisplayManager.createBattleDisplay(
             battleState,
-            null  // No attack animation
+            null
           );
 
-          // Update battle display binding
+          // Update battle display binding and navigate
           if (battleDisplay) {
-            this.UI.bindingManager.setBinding(BindingType.BattleDisplay, battleDisplay);
-          } else {
-            console.error('[BloomBeastsGame] battleDisplay is null!');
+            this.systems.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, battleDisplay);
           }
 
-          // Navigate to battle screen
-          this.UI.bindingManager.setBinding(BindingType.CurrentScreen, 'battle');
-
-          // Trigger re-render to show battle screen
-          this.triggerRender();
+          this.navigate('battle');
 
           // Play battle music
-          this.playMusic('music-battle', true);
+          this.systems.soundManager.playMusic(MUSIC_TRACKS.BATTLE, true);
 
           Logger.info('Battle initialized successfully');
-        } else {
-          console.error('[BloomBeastsGame] battleState is null or undefined!');
         }
       } else {
         Logger.warn('Mission is not available');
@@ -19162,451 +19944,233 @@ namespace BloomBeasts {
     /**
      * Handle settings changes
      */
-    private handleSettingsChange(settingId: string, value: any): void {
-      if (!this.playerData) return;
+    handleSettingsChange(settingId: string, value: any): void {
+      const playerData = this.systems.gameStateManager.getPlayerDataOrNull();
+      if (!playerData) return;
 
       // Play button sound for toggles (not sliders)
       if (settingId === 'musicEnabled' || settingId === 'sfxEnabled') {
-        this.playSfx('sfx-menu-button-select');
+        this.systems.soundManager.playSfx(SOUND_EFFECTS.MENU_BUTTON_SELECT);
       }
 
       // Apply settings via sound manager
       switch (settingId) {
         case 'musicVolume':
-          this.setMusicVolume(value);
+          this.systems.soundManager.setMusicVolume(value);
           break;
         case 'sfxVolume':
-          this.setSfxVolume(value);
+          this.systems.soundManager.setSfxVolume(value);
           break;
         case 'musicEnabled':
-          this.toggleMusic(value);
+          this.systems.soundManager.toggleMusic(value);
           break;
         case 'sfxEnabled':
-          this.toggleSfx(value);
+          this.systems.soundManager.toggleSfx(value);
           break;
       }
 
       // Save settings and update binding
-      this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
+      this.systems.uiCoordinator.updateBindingAndRender(BindingType.PlayerData, playerData);
       this.saveGameData();
-
-      // Trigger re-render to update UI
-      this.triggerRender();
     }
 
     /**
      * Handle upgrade purchase
      */
-    private handleUpgrade(boostId: string): void {
-      if (!this.playerData) return;
+    handleUpgrade(boostId: string): void {
+      const playerData = this.systems.gameStateManager.getPlayerDataOrNull();
+      if (!playerData) return;
 
-      // Get current boost level
-      const currentLevel = this.playerData.boosts?.[boostId] || 0;
+      const currentLevel = this.systems.gameStateManager.getBoostLevel(boostId);
 
       // Check if already at max level
-      if (currentLevel >= 6) {
+      if (currentLevel >= GAME_CONSTANTS.MAX_BOOST_LEVEL) {
         return;
       }
 
-      // Get cost for next level based on current level
+      // Get cost for next level
       const costs = UPGRADE_COSTS[boostId];
-      if (!costs) {
-        return;
-      }
+      if (!costs) return;
 
       const cost = costs[currentLevel];
 
-      // Check if player has enough coins
-      if (this.playerData.coins < cost) {
+      // Deduct coins (returns false if insufficient)
+      if (!this.systems.gameStateManager.deductCoins(cost)) {
         return;
       }
 
-      // Deduct coins
-      this.playerData.coins -= cost;
-
-      // Initialize boosts if not present
-      if (!this.playerData.boosts) {
-        this.playerData.boosts = {
-          [COIN_BOOST.id]: 0,
-          [EXP_BOOST.id]: 0,
-          [LUCK_BOOST.id]: 0,
-          [ROOSTER.id]: 0
-        };
+      // Upgrade boost
+      if (!this.systems.gameStateManager.upgradeBoost(boostId)) {
+        // Refund if upgrade failed
+        this.systems.gameStateManager.addCoins(cost);
+        return;
       }
-
-      // Increment boost level
-      this.playerData.boosts[boostId] = currentLevel + 1;
 
       // Play upgrade sound (special sound for rooster)
       if (boostId === ROOSTER.id) {
-        this.playSfx('sfx-upgrade-rooster');
+        this.systems.soundManager.playSfx(SOUND_EFFECTS.UPGRADE_ROOSTER);
       } else {
-        this.playSfx('sfx-upgrade');
+        this.systems.soundManager.playSfx(SOUND_EFFECTS.UPGRADE);
       }
 
       // Save and update
-      this.UI.bindingManager.setBinding(BindingType.PlayerData, this.playerData);
+      this.systems.uiCoordinator.updateBindingAndRender(BindingType.PlayerData, playerData);
       this.saveGameData();
-      this.triggerRender();
     }
 
     /**
      * Handle battle actions
-     * Converts string actions from UI to typed actions
+     * Delegates to BattleOrchestrator
      */
-    private async handleBattleAction(action: string): Promise<void> {
-      // Handle timeout losses - convert to TIMEOUT action
-      if (action === 'timeout-player' || action === 'timeout-opponent') {
-        // Determine which player timed out
-        const timedOutPlayerId = action === 'timeout-player' ? 'player' : 'opponent';
+    async handleBattleAction(action: string, battleScreen?: BattleScreen): Promise<void> {
+      // Stop all timers when battle completes
+      if (battleScreen) {
+        const currentBattle = this.systems.battleUI.getCurrentBattle();
+        const wasComplete = currentBattle?.isComplete;
 
-        if (this.battleUI) {
-          // Get current turn player - timeout action must be executed by current player
-          const currentBattle = this.battleUI.getCurrentBattle();
-          if (currentBattle && currentBattle.battleState) {
-            const currentPlayerId = currentBattle.battleState.turboState.turnInfo.currentPlayerId;
+        await this.systems.battleOrchestrator.handleBattleAction(action);
 
-            // Process TIMEOUT action through TURBO
-            // Execute as current player, but mark who actually timed out
-            await this.battleUI.processTypedAction({
-              type: 'timeout',
-              playerId: currentPlayerId,
-              timedOutPlayerId,
-              timestamp: Date.now()
-            });
-          }
+        // Check if battle just completed and cleanup if needed
+        const updatedBattle = this.systems.battleUI.getCurrentBattle();
+        if (!wasComplete && updatedBattle?.isComplete) {
+          battleScreen.cleanup();
         }
-        return;
+      } else {
+        await this.systems.battleOrchestrator.handleBattleAction(action);
       }
 
-      // Handle forfeit button - show confirmation popup
-      if (action === 'btn-forfeit' || action === 'forfeit') {
-        this.showForfeitConfirmation();
-        return;
-      }
+      // Save game data after battle actions
+      await this.saveGameData();
+    }
+  }
 
-      // Handle back button - navigate to menu
-      if (action === 'btn-back') {
-        this.navigate('menu');
-        return;
-      }
+  // ==================== bloombeasts/core/DataManager.ts ====================
 
-      // Process the action through the battle UI
-      if (!this.battleUI) {
-        Logger.warn('Battle UI not initialized');
-        return;
-      }
+  /**
+   * DataManager - Handles all data persistence and state synchronization
+   *
+   * Extracted from BloomBeastsGame to reduce its size and improve maintainability.
+   * Centralizes save/load operations, binding updates, and leaderboard management.
+   */
 
-      // CRITICAL: Check if battle is already complete - prevent double processing
-      const currentBattle = this.battleUI.getCurrentBattle();
-      if (currentBattle && currentBattle.isComplete) {
-        console.log(`[BloomBeastsGame] Battle already complete, ignoring action: ${action}`);
-        return;
-      }
 
-      // Beast and opponent clicks are now just for viewing details (no selection)
-      if (action.startsWith('view-field-card-player-') || action.startsWith('view-field-card-opponent-')) {
-        // Just return - card details will be shown by the UI layer if needed
-        return;
-      }
+  export interface DataManagerConfig {
+    platform: PlatformConfig;
+    systems: CoreSystems;
+    bindingManager: BindingManager;
+    validatePlayerData: (data: any) => data is PlayerData;
+  }
 
-      // Parse string action to typed action
-      const typedAction = parseActionString(action, 'player');
-      if (!typedAction) {
-        Logger.warn(`[BloomBeastsGame] Failed to parse action: ${action}`);
-        return;
-      }
+  /**
+   * Manages data persistence, state synchronization, and leaderboards
+   */
+  export class DataManager {
+    private platform: PlatformConfig;
+    private systems: CoreSystems;
+    private bindingManager: BindingManager;
+    private validatePlayerData: (data: any) => data is PlayerData;
 
-      // Play sound effects and show animations based on action type
-      if (typedAction.type === 'auto-attack-all') {
-        // Handle auto-attack with animations
-        this.playSfx('sfx-attack');
+    constructor(config: DataManagerConfig) {
+      this.platform = config.platform;
+      this.systems = config.systems;
+      this.bindingManager = config.bindingManager;
+      this.validatePlayerData = config.validatePlayerData;
+    }
 
-        // Process action with animation callback
-        await this.battleUI.processTypedAction(typedAction, {
-          onAttackAnimation: async (attackerIndex: number, targetType: 'beast' | 'health', targetIndex?: number) => {
-            if (targetType === 'beast' && targetIndex !== undefined) {
-              await this.showAttackAnimation('player', attackerIndex, 'opponent', targetIndex);
-            } else {
-              await this.showAttackAnimation('player', attackerIndex, 'health', undefined);
-            }
-          }
-        });
-
-        // Get updated state and render
-        const updatedState = this.battleUI.getCurrentBattle();
-        if (updatedState) {
-          if (updatedState.isComplete) {
-            await this.handleBattleComplete(updatedState);
-            return;
-          }
-
-          const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
-            updatedState,
-            null
-          );
-          if (updatedDisplay) {
-            this.UI.bindingManager.setBinding(BindingType.BattleDisplay, updatedDisplay);
-            this.triggerRender();
-          }
-        }
-        return;
-      } else if (typedAction.type === 'attack-beast') {
-        this.playSfx('sfx-attack');
-        // Animation already shown above
-      } else if (typedAction.type === 'attack-player') {
-        this.playSfx('sfx-attack');
-        // Extract attacker index and show animation for direct health attack
-        if (typedAction.attackerIndex !== undefined) {
-          await this.showAttackAnimation('player', typedAction.attackerIndex, 'health', undefined);
-        }
-      } else if (typedAction.type === 'play-card') {
-        this.playSfx('sfx-play-card');
-      } else if (action.startsWith('activate-trap-')) {
-        // TODO: Convert activate-trap to typed action
-        this.playSfx('sfx-trap-card-activated');
-      } else if (typedAction.type === 'end-turn') {
-        this.playSfx('sfx-menu-button-select');
-      }
-
-      // Process action
-      await this.battleUI.processTypedAction(typedAction, {});
-
-      // Immediately update display after action to show cards instantly
-      const immediateState = this.battleUI.getCurrentBattle();
-      if (immediateState && !immediateState.isComplete) {
-        const immediateDisplay = this.battleDisplayManager.createBattleDisplay(
-          immediateState,
-          null
-        );
-        if (immediateDisplay) {
-          this.UI.bindingManager.setBinding(BindingType.BattleDisplay, immediateDisplay);
-          this.triggerRender();
-        }
-      }
-
-      // Get updated battle state
-      const updatedState = this.battleUI.getCurrentBattle();
-      if (updatedState) {
-        // Check if battle ended FIRST - never render after completion
-        if (updatedState.isComplete) {
-          await this.handleBattleComplete(updatedState);
-          return;
+    /**
+     * Load game data from platform storage
+     */
+    async loadGameData(): Promise<void> {
+      try {
+        if (!this.platform.getPlayerData) {
+          throw new Error('Platform does not support getPlayerData');
         }
 
-        // Create updated battle display with fresh state
-        const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
-          updatedState,
-          null  // No attack animation
-        );
+        const savedData = this.platform.getPlayerData();
 
-        // Update battle display binding - this should trigger UI refresh
-        if (updatedDisplay) {
-          //   playerHealth: updatedDisplay.playerHealth,
-          //   opponentHealth: updatedDisplay.opponentHealth
-          // });
-          this.UI.bindingManager.setBinding(BindingType.BattleDisplay, updatedDisplay);
-          this.triggerRender();
+        if (!savedData || Object.keys(savedData).length === 0) {
+          throw new Error('Platform must provide valid PlayerData (either loaded or newly created)');
         }
+
+        // Validate data structure
+        if (!this.validatePlayerData(savedData)) {
+          Logger.error('[DataManager] Player data validation failed - attempting recovery');
+          throw new Error('Invalid player data structure');
+        }
+
+        // Set player data in game state manager
+        this.systems.gameStateManager.setPlayerData(savedData);
+        Logger.info(`[DataManager] Loaded player data for "${savedData.name}" with ${savedData.cards.collected.length} cards`);
+
+        Logger.info(`[DataManager] Restored deck with ${savedData.cards.deck.length} cards`);
+
+        // Apply sound settings to platform
+        if (savedData.settings) {
+          this.systems.soundManager.updateSettings(savedData.settings);
+          this.systems.soundManager.applySettings();
+        }
+
+        // Load completed missions into MissionManager
+        this.systems.missionManager.loadCompletedMissions(savedData.missions.completedMissions);
+
+        // Initialize starting cards if collection is empty
+        if (savedData.cards.collected.length === 0) {
+          Logger.info('[DataManager] Initializing starting card collection');
+          await this.systems.gameStateManager.initializeStartingCollection();
+          await this.saveGameData();
+        }
+
+        // Save to ensure data persists
+        await this.saveGameData();
+      } catch (error) {
+        Logger.error('[DataManager] Failed to load game data:', error);
+        throw error; // Re-throw to let caller handle initialization failure
       }
     }
 
     /**
-     * Handle battle completion (victory or defeat)
+     * Save game data to platform storage
      */
-    private async handleBattleComplete(battleState: any): Promise<void> {
-      if (!this.playerData) return;
-
-      console.log('[BloomBeastsGame] handleBattleComplete called');
-      console.log('[BloomBeastsGame] Has rewards:', !!battleState.rewards);
-      console.log('[BloomBeastsGame] Rewards object:', battleState.rewards);
-
-      // Capture playerData in local const for TypeScript null safety in callbacks
-      const playerData = this.playerData;
-
-      // Stop all timers immediately
-      if (this.battleScreen) {
-        this.battleScreen.cleanup();
+    async saveGameData(): Promise<void> {
+      const playerData = this.systems.gameStateManager.getPlayerDataOrNull();
+      if (!playerData) {
+        const error = new Error('[DataManager] Cannot save invalid player data - critical error');
+        Logger.error(error.message);
+        throw error;
       }
 
-      // Keep battle visible in background while popup shows
-      // Battle display will be cleared when user clicks Continue
-      const battleId = this.currentBattleId; // Save before clearing
-      this.currentBattleId = null;
-
-      //   hasRewards: !!battleState.rewards,
-      //   rewards: battleState.rewards
-      // });
-
-      if (battleState.rewards) {
-        // Victory!
-        console.log('[BloomBeastsGame] VICTORY! Showing rewards popup');
-
-        // Apply boost multipliers to rewards
-        const coinBoostLevel = playerData.boosts?.[COIN_BOOST.id] || 0;
-        const expBoostLevel = playerData.boosts?.[EXP_BOOST.id] || 0;
-        const luckBoostLevel = playerData.boosts?.[LUCK_BOOST.id] || 0;
-
-        let coinBoostPercent = 0;
-        let expBoostPercent = 0;
-        let luckBoostPercent = 0;
-
-        // Calculate and apply coin boost
-        if (coinBoostLevel > 0 && COIN_BOOST.values && battleState.rewards.coinsReceived) {
-          coinBoostPercent = COIN_BOOST.values[coinBoostLevel - 1];
-          const multiplier = (coinBoostPercent / 100) + 1;
-          const boostedCoins = Math.floor(battleState.rewards.coinsReceived * multiplier);
-          battleState.rewards.coinsReceived = boostedCoins;
+      try {
+        if (!this.platform.setPlayerData) {
+          Logger.warn('[DataManager] Platform does not support setPlayerData - save skipped');
+          return;
         }
 
-        // Calculate and apply exp boost
-        if (expBoostLevel > 0 && EXP_BOOST.values) {
-          expBoostPercent = EXP_BOOST.values[expBoostLevel - 1];
-          const multiplier = (expBoostPercent / 100) + 1;
-          const boostedXP = Math.floor(battleState.rewards.xpGained * multiplier);
-          const boostedBeastXP = Math.floor(battleState.rewards.beastXP * multiplier);
-          battleState.rewards.xpGained = boostedXP;
-          battleState.rewards.beastXP = boostedBeastXP;
-        }
-
-        // Calculate luck boost (affects drop chances - already rolled, so no effect on this implementation)
-        if (luckBoostLevel > 0 && LUCK_BOOST.values) {
-          luckBoostPercent = LUCK_BOOST.values[luckBoostLevel - 1];
-          // Luck boost would affect drop chances, but rewards are already generated
-          // This is shown for informational purposes
-        }
-
-        // Add boost info to rewards for display
-        if (!battleState.rewards.bonusRewards) {
-          battleState.rewards.bonusRewards = [];
-        }
-        if (coinBoostPercent > 0) {
-          battleState.rewards.bonusRewards.push(`Coin Boost: +${coinBoostPercent}%`);
-        }
-        if (expBoostPercent > 0) {
-          battleState.rewards.bonusRewards.push(`EXP Boost: +${expBoostPercent}%`);
-        }
-        if (luckBoostPercent > 0) {
-          battleState.rewards.bonusRewards.push(`Luck Boost: +${luckBoostPercent}%`);
-        }
-
-        // Award XP
-        this.addXP(battleState.rewards.xpGained);
-
-        // Award card XP directly to deck cards
-        const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
-        awardDeckExperience(
-          cardXP,
-          playerData.cards.deck,
-          playerData.cards.collected
-        );
-
-        // Add cards directly to collection
-        battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
-          addCardReward(card, playerData.cards.collected, index);
-        });
-
-        // Add coins
-        if (battleState.rewards.coinsReceived) {
-          playerData.coins += battleState.rewards.coinsReceived;
-        }
-
-        // Add items to inventory
-        if (battleState.rewards.itemsReceived) {
-          battleState.rewards.itemsReceived.forEach((itemReward: any) => {
-            this.addItems(itemReward.itemId, itemReward.quantity);
-          });
-        }
-
-        // Track mission completion
-        if (battleId) {
-          this.trackMissionCompletion(battleId);
-
-          // If this is Cluck Norris mission, submit time to leaderboard
-          if (battleId === 'mission17' && this.battleStartTime) {
-            const completionTime = (Date.now() - this.battleStartTime) / 1000; // Convert to seconds
-            this.submitLeaderboardScore('cluckNorris', completionTime);
-          }
-        }
-
-        // Reset battle start time
-        this.battleStartTime = null;
-
-        // Play win sound
-        this.playSfx('sfx-win');
-
-        // Save game data
-        await this.saveGameData();
-
-        // Show mission complete popup
-        const popupData = {
-          mission: battleState.mission,
-          rewards: battleState.rewards,
-          chestOpened: false,
-          onClaimRewards: () => {
-            // Chest animation could go here
-            const current = this.UI.bindingManager.getSnapshot(BindingType.MissionCompletePopup);
-            if (current) {
-              const updatedData = {
-                ...current,
-                chestOpened: true
-              };
-              this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, updatedData);
-              this.triggerRender();
-            }
-          },
-          onContinue: () => {
-            // Clear battle display and close popup
-            this.UI.bindingManager.setBinding(BindingType.BattleDisplay, null);
-            this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, null);
-            this.navigate('missions');
-          },
-          playSfx: this.playSfx.bind(this)
-        };
-
-        // Set both tracked value and binding
-        this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, popupData);
-        this.triggerRender();
-      } else {
-        // Defeat
-        console.log('[BloomBeastsGame] DEFEAT! Showing failed popup');
-
-        // Reset battle start time
-        this.battleStartTime = null;
-
-        // Play lose sound
-        this.playSfx('sfx-lose');
-
-        // Show mission failed popup
-        const failedPopupProps = {
-          mission: battleState.mission,
-          rewards: null, // null indicates failure
-          chestOpened: false,
-          onContinue: () => {
-            // Clear battle display and close popup
-            this.UI.bindingManager.setBinding(BindingType.BattleDisplay, null);
-            this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, null);
-            this.navigate('missions');
-          },
-          playSfx: this.playSfx.bind(this)
-        };
-        this.UI.bindingManager.setBinding(BindingType.MissionCompletePopup, failedPopupProps);
-        this.triggerRender();
+        this.platform.setPlayerData(playerData);
+        Logger.info('[DataManager] Player data saved successfully');
+      } catch (error) {
+        Logger.error('[DataManager] Failed to save player data:', error);
+        // Don't throw - allow game to continue even if save failed
+        // User will see warning but won't lose current session
       }
+    }
 
-      // Resume background music
-      this.playMusic('music-background', true);
-
-      // Note: Navigation happens when user clicks Continue in the popup
+    /**
+     * Update bindings from current game state
+     * This syncs the UI bindings with the actual game state
+     */
+    async updateBindingsFromGameState(): Promise<void> {
+      const playerData = this.systems.gameStateManager.getPlayerData();
+      const playerLevel = this.systems.gameStateManager.getPlayerLevel();
+      this.systems.uiCoordinator.updateBindingsFromGameState(playerData, this.systems.missionUI, playerLevel);
     }
 
     /**
      * Load leaderboard data from world variables
      */
-    private loadLeaderboardData(): void {
+    loadLeaderboardData(): void {
       if (!this.platform.getWorldVariable) {
         // World variables not supported on this platform, use mock data
-        this.UI.bindingManager.setBinding(BindingType.LeaderboardData, {
+        this.bindingManager.setBinding(BindingType.LeaderboardData, {
           topExperience: [
             { playerName: 'Player 1', score: 10000, level: 7 },
             { playerName: 'Player 2', score: 5000, level: 6 },
@@ -19626,17 +20190,17 @@ namespace BloomBeasts {
         const leaderboardData = this.platform.getWorldVariable('BloomBeastsData', 'leaderboard');
 
         if (leaderboardData) {
-          this.UI.bindingManager.setBinding(BindingType.LeaderboardData, leaderboardData);
+          this.bindingManager.setBinding(BindingType.LeaderboardData, leaderboardData);
         } else {
           // No data yet, set empty arrays
-          this.UI.bindingManager.setBinding(BindingType.LeaderboardData, {
+          this.bindingManager.setBinding(BindingType.LeaderboardData, {
             topExperience: [],
             fastestCluckNorris: [],
           });
         }
       } catch (error) {
-        console.error('[BloomBeastsGame] Failed to load leaderboard data:', error);
-        this.UI.bindingManager.setBinding(BindingType.LeaderboardData, {
+        Logger.error('[DataManager] Failed to load leaderboard data:', error);
+        this.bindingManager.setBinding(BindingType.LeaderboardData, {
           topExperience: [],
           fastestCluckNorris: [],
         });
@@ -19646,83 +20210,562 @@ namespace BloomBeasts {
     /**
      * Submit player score to leaderboard via network event
      */
-    private submitLeaderboardScore(type: 'experience' | 'cluckNorris', score: number): void {
-      if (!this.platform.sendNetworkEvent) {
-        // Network events not supported on this platform
-        return;
-      }
+    submitLeaderboardScore(type: 'experience' | 'cluckNorris', score: number): void {
+      if (!this.platform.sendNetworkEvent) return;
 
-      if (!this.playerData) {
-        console.warn('[BloomBeastsGame] Cannot submit score: player data not loaded');
+      const playerData = this.systems.gameStateManager.getPlayerDataOrNull();
+      if (!playerData) {
+        Logger.warn('[DataManager] Cannot submit score: player data not loaded');
         return;
       }
 
       try {
-        const playerName = this.playerData.name || 'Unknown Player';
         const eventData = {
-          playerName,
+          playerName: playerData.name || 'Unknown Player',
           type,
           score,
-          level: type === 'experience' ? getPlayerLevel(this.playerData.totalXP) : undefined,
+          level: type === 'experience' ? this.systems.gameStateManager.getPlayerLevel() : undefined,
         };
 
         this.platform.sendNetworkEvent('leaderboard_score_submit', eventData);
       } catch (error) {
-        console.error('[BloomBeastsGame] Failed to submit leaderboard score:', error);
+        Logger.error('[DataManager] Failed to submit leaderboard score:', error);
       }
+    }
+  }
+
+  // ==================== bloombeasts/common/ui/screens/MissionCompletePopup.ts ====================
+
+  /**
+   * Unified Mission Complete Popup Component
+   * Works on both Horizon and Web platforms
+   * Exactly mimics the UI from bloombeasts/screens/missions/MissionCompletePopup.ts
+   */
+
+
+  export interface MissionCompletePopupProps {
+    mission: {
+      id: string;
+      name: string;
+      affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
+    };
+    rewards: {
+      xpGained: number;
+      beastXP: number;
+      coinsReceived?: number;
+      completionTimeSeconds: number;
+      cardsReceived: any[];
+      itemsReceived: Array<{
+        itemId: string;
+        quantity: number;
+        emoji?: string;
+        name?: string;
+      }>;
+      bonusRewards?: string[];
+    } | null; // null for mission failed
+    chestOpened: boolean;
+    onClaimRewards?: () => void;
+    onContinue?: () => void;
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Unified Mission Complete Popup using common Popup component
+   * Derives content from MissionCompletePopup binding
+   */
+  export function createMissionCompletePopup(ui: UIMethodMappings, bindingManager: any): UINodeType {
+    // Get the playSfx function from current binding state
+    const currentProps = bindingManager.getSnapshot(BindingType.MissionCompletePopup);
+    const playSfx = currentProps?.playSfx;
+
+    // Derive chest image source
+    const chestImageSource = bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+      if (!props) return null;
+      if (!props.rewards) {
+        return ui.assetIdToImageSource?.('lose-image') || null;
+      }
+      const affinity = props.mission.affinity === 'Boss' ? 'Fire' : (props.mission.affinity || 'Forest');
+      const state = props.chestOpened ? 'opened' : 'closed';
+      return ui.assetIdToImageSource?.(`${affinity}-chest-${state}`.toLowerCase()) || null;
+    });
+
+    // Derive info text
+    const infoText = bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+      if (!props) return '';
+      if (!props.rewards) {
+        return 'Better luck next time!\n\nKeep training your beasts\nand try again.';
+      }
+      if (props.chestOpened) {
+        // Show detailed rewards
+        const lines: string[] = [];
+        if (props.rewards.coinsReceived) {
+          lines.push(`🪙 ${props.rewards.coinsReceived} Coins`);
+        }
+        if (props.rewards.bonusRewards && props.rewards.bonusRewards.length > 0) {
+          lines.push(...props.rewards.bonusRewards);
+        }
+        if (props.rewards.cardsReceived && props.rewards.cardsReceived.length > 0) {
+          lines.push('', 'Cards Received:');
+          props.rewards.cardsReceived.forEach((card: any) => {
+            lines.push(`• ${card.name}`);
+          });
+        }
+        return lines.join('\n');
+      } else {
+        // Show basic info
+        const minutes = Math.floor(props.rewards.completionTimeSeconds / 60);
+        const seconds = props.rewards.completionTimeSeconds % 60;
+        const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+        const lines = [
+          `Time: ${timeString}`,
+          '',
+          `Player XP: +${props.rewards.xpGained}`,
+          `Beast XP: +${props.rewards.beastXP}`
+        ];
+        if (props.rewards.coinsReceived) {
+          lines.push(`Coins: +${props.rewards.coinsReceived}`);
+        }
+        return lines.join('\n');
+      }
+    });
+
+    // Create content
+    const content: UINodeType[] = [
+      ui.View({
+        style: {
+          width: '100%',
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 20,
+          marginTop: 10,
+          marginBottom: 20,
+        },
+        children: [
+          // Chest or lose image
+          ui.Image({
+            source: chestImageSource as any,
+            style: {
+              width: chestImageMissionCompleteDimensions.width,
+              height: chestImageMissionCompleteDimensions.height,
+            },
+          }),
+
+          // Info text
+          ui.View({
+            style: {
+              flex: 1,
+              paddingRight: 20,
+            },
+            children: ui.Text({
+              text: infoText as any,
+              numberOfLines: 15,
+              style: {
+                fontSize: DIMENSIONS.fontSize.md,
+                color: COLORS.textPrimary,
+                textAlign: 'left',
+                lineHeight: 20,
+              },
+            }),
+          }),
+        ],
+      }),
+    ];
+
+    // Create button with derived label
+    const popupButton: PopupButton = {
+      label: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+        if (!props) return 'CONTINUE';
+        if (!props.rewards || props.chestOpened) return 'CONTINUE';
+        return 'CLAIM REWARDS';
+      }) as any,
+      onClick: () => {
+        const props = bindingManager.getSnapshot(BindingType.MissionCompletePopup);
+        if (!props) return;
+
+        if (!props.rewards || props.chestOpened) {
+          props.onContinue?.();
+        } else {
+          props.onClaimRewards?.();
+        }
+      },
+      type: 'long',
+      color: 'green',
+    };
+
+    return createPopup({
+      ui,
+      title: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+        return props?.rewards === null ? 'MISSION FAILED' : 'MISSION COMPLETE!';
+      }) as any,
+      titleColor: bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+        return props?.rewards === null ? '#FF4444' : '#FFD700';
+      }) as any,
+      content,
+      buttons: [popupButton],
+      playSfx, // Direct function reference, not a binding
+      width: missionCompleteCardDimensions.width,
+      height: missionCompleteCardDimensions.height,
+    });
+  }
+
+  /**
+   * Create failed mission info text
+   */
+  function createFailedInfo(ui: UIMethodMappings): UINodeType {
+    return ui.View({
+      style: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+      },
+      children: [
+        ui.Text({
+          text: 'Better luck next time!\n\nKeep training your beasts\nand try again.',
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            lineHeight: 20,
+            color: COLORS.textPrimary,
+            textAlign: 'center',
+          },
+        }),
+      ],
+    });
+  }
+
+  /**
+   * Create basic info (before chest opened)
+   */
+  function createBasicInfo(ui: UIMethodMappings, rewards: any): UINodeType {
+    const minutes = Math.floor(rewards.completionTimeSeconds / 60);
+    const seconds = rewards.completionTimeSeconds % 60;
+    const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+
+    const lines = [`Time: ${timeString}`, '', `Player XP: +${rewards.xpGained}`, `Beast XP: +${rewards.beastXP}`];
+
+    // Add coins if present
+    if (rewards.coinsReceived) {
+      lines.push(`Coins: +${rewards.coinsReceived}`);
+    }
+
+    // Add bonus rewards if present
+    if (rewards.bonusRewards && rewards.bonusRewards.length > 0) {
+      lines.push('');
+      rewards.bonusRewards.forEach((bonus: string) => {
+        lines.push(bonus);
+      });
+    }
+
+    return ui.View({
+      style: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+      },
+      children: lines.map((line, index) =>
+        ui.Text({
+          text: line,
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            color: line.includes('Boost:') ? '#FFD700' : COLORS.textPrimary,
+            textAlign: 'center',
+            marginBottom: 5,
+          },
+        })
+      ),
+    });
+  }
+
+  /**
+   * Create detailed rewards (after chest opened)
+   */
+  function createDetailedRewards(ui: UIMethodMappings, rewards: any): UINodeType {
+    const elements: UINodeType[] = [];
+
+    // Coins received
+    if (rewards.coinsReceived) {
+      elements.push(
+        ui.Text({
+          text: `🪙 ${rewards.coinsReceived} Coins`,
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            color: '#FFD700',
+            textAlign: 'center',
+            marginBottom: 10,
+            fontWeight: 'bold',
+          },
+        })
+      );
+    }
+
+    // Bonus rewards (boosts)
+    if (rewards.bonusRewards && rewards.bonusRewards.length > 0) {
+      rewards.bonusRewards.forEach((bonus: string) => {
+        elements.push(
+          ui.Text({
+            text: bonus,
+            style: {
+              fontSize: DIMENSIONS.fontSize.sm,
+              color: '#FFD700',
+              textAlign: 'center',
+              marginBottom: 5,
+            },
+          })
+        );
+      });
+      elements.push(
+        ui.View({
+          style: { height: 10 },
+        })
+      );
+    }
+
+    // Cards received
+    if (rewards.cardsReceived && rewards.cardsReceived.length > 0) {
+      elements.push(
+        ui.Text({
+          text: 'Cards Received:',
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            color: '#FFD700',
+            textAlign: 'center',
+            marginBottom: 5,
+            fontWeight: 'bold',
+          },
+        })
+      );
+
+      rewards.cardsReceived.forEach((card: any, index: number) => {
+        elements.push(
+          ui.Text({
+            text: `• ${card.name}`,
+            style: {
+              fontSize: DIMENSIONS.fontSize.sm,
+              color: COLORS.textPrimary,
+              textAlign: 'center',
+              marginBottom: 5,
+            },
+          })
+        );
+      });
+
+      // Extra spacing
+      elements.push(
+        ui.View({
+          style: { height: 10 },
+        })
+      );
+    }
+
+    // Items received
+    if (rewards.itemsReceived && rewards.itemsReceived.length > 0) {
+      elements.push(
+        ui.Text({
+          text: 'Items Received:',
+          style: {
+            fontSize: DIMENSIONS.fontSize.md,
+            color: '#FFD700',
+            textAlign: 'center',
+            marginBottom: 5,
+            fontWeight: 'bold',
+          },
+        })
+      );
+
+      rewards.itemsReceived.forEach((itemReward: any, index: number) => {
+        const emoji = itemReward.emoji || '';
+        const itemName = itemReward.name || itemReward.itemId;
+        elements.push(
+          ui.Text({
+            text: `${emoji} ${itemName} x${itemReward.quantity}`,
+            style: {
+              fontSize: DIMENSIONS.fontSize.sm,
+              color: COLORS.textPrimary,
+              textAlign: 'center',
+              marginBottom: 5,
+            },
+          })
+        );
+      });
+
+      // Extra spacing
+      elements.push(
+        ui.View({
+          style: { height: 10 },
+        })
+      );
+    }
+
+    return ui.View({
+      style: {
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+      },
+      children: elements,
+    });
+  }
+
+  // ==================== bloombeasts/common/ui/screens/ButtonPopup.ts ====================
+
+  /**
+   * Button Popup Component
+   * Simple popup that shows buttons for user choices
+   */
+
+
+  export interface ButtonPopupProps {
+    title: string;
+    message?: string;
+    buttons: {
+      text: string;
+      onClick: () => void;
+      color?: 'default' | 'red' | 'green';
+    }[];
+    playSfx?: (sfxId: string) => void;
+  }
+
+  /**
+   * Create a button popup using the common Popup component
+   * Derives content from ForfeitPopup binding
+   */
+  export function createButtonPopup(ui: UIMethodMappings, bindingManager: any): any {
+    // Get the playSfx function from current binding state
+    const currentProps = bindingManager.getSnapshot(BindingType.ForfeitPopup);
+    const playSfx = currentProps?.playSfx;
+
+    // Derive title
+    const title = bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+      return props?.title || '';
+    });
+
+    // Derive message
+    const message = bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+      return props?.message || '';
+    });
+
+    // Create buttons that capture click handlers at click time
+    const popupButtons: PopupButton[] = [
+      {
+        label: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+          return props?.buttons?.[0]?.text || 'Yes';
+        }) as any,
+        onClick: () => {
+          const props = bindingManager.getSnapshot(BindingType.ForfeitPopup);
+          if (props?.buttons?.[0]?.onClick) {
+            props.buttons[0].onClick();
+          }
+        },
+        color: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+          return (props?.buttons?.[0]?.color || 'default') as ButtonColor;
+        }) as any,
+      },
+      {
+        label: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+          return props?.buttons?.[1]?.text || 'No';
+        }) as any,
+        onClick: () => {
+          const props = bindingManager.getSnapshot(BindingType.ForfeitPopup);
+          if (props?.buttons?.[1]?.onClick) {
+            props.buttons[1].onClick();
+          }
+        },
+        color: bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+          return (props?.buttons?.[1]?.color || 'default') as ButtonColor;
+        }) as any,
+      },
+    ];
+
+    return createPopup({
+      ui,
+      title: title as any,
+      description: message as any,
+      buttons: popupButtons,
+      playSfx, // Direct function reference, not a binding
+      width: 450,
+      height: 280,
+    });
+  }
+
+  // ==================== bloombeasts/core/UIBuilder.ts ====================
+
+  /**
+   * UIBuilder - Creates the main UI tree structure
+   *
+   * Extracted from BloomBeastsGame to reduce its size and improve maintainability.
+   * Handles UI tree creation with conditional screen rendering and popups.
+   */
+
+
+  export interface UIBuilderConfig {
+    ui: UIMethodMappings;
+    screens: GameScreens;
+  }
+
+  /**
+   * Builds the main UI tree with conditional screen rendering
+   */
+  export class UIBuilder {
+    private ui: UIMethodMappings;
+    private screens: GameScreens;
+
+    constructor(config: UIBuilderConfig) {
+      this.ui = config.ui;
+      this.screens = config.screens;
     }
 
     /**
      * Create the main UI tree
      * This is created once and updated reactively via bindings
      */
-    private createUI(): UINode {
-      const { View } = this.UI;
+    createUI(): UINode {
+      const { View } = this.ui;
 
       // Build main UI with conditional screens
       const children: any[] = [
-        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'loading'), this.createLoadingScreen()) : null,
-        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'menu'), this.menuScreen.createUI()) : null,
-        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'cards'), this.cardsScreen.createUI()) : null,
-        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'upgrades'), this.upgradeScreen.createUI()) : null,
-        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'missions'), this.missionScreen.createUI()) : null,
-        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'battle'), this.battleScreen.createUI()) : null,
-        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'settings'), this.settingsScreen.createUI()) : null,
-        this.UI.UINode ? this.UI.UINode.if( this.UI.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'leaderboard'), this.leaderboardScreen.createUI()) : null,
+        this.ui.UINode ? this.ui.UINode.if( this.ui.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'loading'), this.createLoadingScreen()) : null,
+        this.ui.UINode ? this.ui.UINode.if( this.ui.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'menu'), this.screens.menuScreen.createUI()) : null,
+        this.ui.UINode ? this.ui.UINode.if( this.ui.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'cards'), this.screens.cardsScreen.createUI()) : null,
+        this.ui.UINode ? this.ui.UINode.if( this.ui.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'upgrades'), this.screens.upgradeScreen.createUI()) : null,
+        this.ui.UINode ? this.ui.UINode.if( this.ui.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'missions'), this.screens.missionScreen.createUI()) : null,
+        this.ui.UINode ? this.ui.UINode.if( this.ui.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'battle'), this.screens.battleScreen.createUI()) : null,
+        this.ui.UINode ? this.ui.UINode.if( this.ui.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'settings'), this.screens.settingsScreen.createUI()) : null,
+        this.ui.UINode ? this.ui.UINode.if( this.ui.bindingManager.derive([BindingType.CurrentScreen], (current: string) => current === 'leaderboard'), this.screens.leaderboardScreen.createUI()) : null,
       ];
 
       // Add popups (these already use UINode.if)
       // Mission Complete Popup - static structure with derived content
-      if (this.UI.UINode) {
+      if (this.ui.UINode) {
         children.push(
-          this.UI.UINode.if(
-            this.UI.bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
+          this.ui.UINode.if(
+            this.ui.bindingManager.derive([BindingType.MissionCompletePopup], (props: any) => {
               return props !== null;
             }),
-            createMissionCompletePopup(this.UI, this.UI.bindingManager)
+            createMissionCompletePopup(this.ui, this.ui.bindingManager)
           )
         );
       }
 
       // Forfeit Popup - static structure with derived content
-      if (this.UI.UINode) {
+      if (this.ui.UINode) {
         children.push(
-          this.UI.UINode.if(
-            this.UI.bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
+          this.ui.UINode.if(
+            this.ui.bindingManager.derive([BindingType.ForfeitPopup], (props: any) => {
               return props !== null;
             }),
-            createButtonPopup(this.UI, this.UI.bindingManager)
+            createButtonPopup(this.ui, this.ui.bindingManager)
           )
         );
       }
 
-      if (this.UI.UINode) {
+      // Card Detail Popup
+      if (this.ui.UINode) {
         children.push(
-          this.UI.UINode.if(
-            this.UI.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
+          this.ui.UINode.if(
+            this.ui.bindingManager.derive([BindingType.CardDetailPopup], (props: any) => {
               return props !== null;
             }),
-            createReactiveCardDetailPopupFromBinding(this.UI)
+            createReactiveCardDetailPopupFromBinding(this.ui)
           )
         );
       }
@@ -19745,7 +20788,7 @@ namespace BloomBeasts {
               maxWidth: '100%',
               maxHeight: '100%',
               position: 'relative',
-              aspectRatio: `${gameDimensions.panelWidth}/${gameDimensions.panelHeight}`
+              aspectRatio: gameDimensions.panelWidth / gameDimensions.panelHeight,
             },
             children,
           })
@@ -19757,7 +20800,7 @@ namespace BloomBeasts {
      * Create the loading screen UI
      */
     private createLoadingScreen(): UINode {
-      const { View } = this.UI;
+      const { View } = this.ui;
 
       return View({
         style: {
@@ -19775,7 +20818,7 @@ namespace BloomBeasts {
               justifyContent: 'center',
               alignItems: 'center',
             },
-            children: this.UI.Text({
+            children: this.ui.Text({
               text: 'Loading...',
               style: {
                 fontSize: 32,
@@ -19790,57 +20833,233 @@ namespace BloomBeasts {
         ]
       });
     }
+  }
 
+  // ==================== bloombeasts/BloomBeastsGame.ts ====================
+
+  /**
+   * BloomBeastsGame - Unified Game Controller
+   *
+   * This is the main entry point for the game that works across all platforms (web, horizon).
+   * Platform-specific code should be minimal - just implement the PlatformConfig callbacks.
+   *
+   * The game is fully platform-agnostic - it doesn't even import UI methods directly,
+   * but receives them from the platform configuration.
+   */
+
+  // Screen imports now in ScreenFactory
+  // Popup imports now in UIBuilder
+  // Mission and Battle systems now imported via CoreSystemsInitializer
+  // Core managers now imported via CoreSystemsInitializer
+
+  // Import and re-export all types from organized type directory
+
+  export type {
+    // UI types
+    UINode,
+    UIElement,
+    ConditionalUINode,
+    ReadonlyBindingInterface,
+    BindingInterface,
+    BindingConstructor,
+    StyleProps,
+    BaseUIProps,
+    ViewProps,
+    TextProps,
+    ImageProps,
+    PressableProps,
+    ScrollViewProps,
+    UIMethodMappings,
+    // Game types
+    PlayerData,
+    PlayerItem,
+    // Platform types
+    PlatformConfig,
+  } from './types';
+
+  /**
+   * Main game class - handles all game logic and UI orchestration
+   */
+  export class BloomBeastsGame {
+    // Platform configuration
+    private platform: PlatformConfig;
+
+    // Platform-specific UI methods
+    private UI: UIMethodMappings;
+
+    // Platform-specific async methods
+    private asyncMethods: AsyncMethods;
+
+    // Platform-provided asset getters
+    private platformGetImageAsset: (assetId: string) => any;
+
+    // Core game systems - initialized via CoreSystemsInitializer
+    private systems: CoreSystems;
+
+    // Game state
+    private isInitializing: boolean = true;  // Prevent renders during initialization
+
+
+    // Screen instances - created via ScreenFactory
+    private screens: GameScreens;
+
+    // Action handler - centralizes all user action handling
+    private actionHandler: ActionHandler;
+
+    // Data manager - handles save/load/bindings/leaderboards
+    private dataManager: DataManager;
+
+    // UI builder - creates the main UI tree structure
+    private uiBuilder: UIBuilder;
+
+    // UI tree (created once, updated reactively)
+    // Public so platform wrappers can access it (needed for Horizon's initializeUI)
+    public uiTree: UINode | null = null;
+
+    constructor(config: PlatformConfig) {
+      this.platform = config;
+
+      // Get platform-specific async methods
+      this.asyncMethods = config.async;
+
+      // Store platform-provided asset getters
+      this.platformGetImageAsset = config.getImageAsset;
+
+      // Get platform-specific UI methods and add bindingManager to them
+      this.UI = config.getUIMethodMappings() as UIMethodMappings;
+
+      // Initialize all core systems using CoreSystemsInitializer
+      this.systems = CoreSystemsInitializer.initializeSystems(
+        this.platform,
+        this.UI,
+        this.asyncMethods,
+        (type, score) => this.submitLeaderboardScore(type, score),
+        () => this.triggerRender()
+      );
+
+      // Initialize data manager (before actionHandler, as actionHandler uses its methods)
+      this.dataManager = new DataManager({
+        platform: this.platform,
+        systems: this.systems,
+        bindingManager: this.UI.bindingManager,
+        validatePlayerData: this.validatePlayerData.bind(this),
+      });
+
+      // Initialize action handler (before screens, as screens use its methods)
+      this.actionHandler = new ActionHandler({
+        systems: this.systems,
+        asyncMethods: this.asyncMethods,
+        navigate: this.navigate.bind(this),
+        saveGameData: this.dataManager.saveGameData.bind(this.dataManager),
+        updateBindingsFromGameState: this.dataManager.updateBindingsFromGameState.bind(this.dataManager),
+      });
+
+      // Create all screens using ScreenFactory
+      this.screens = ScreenFactory.createScreens({
+        ui: this.UI,
+        asyncMethods: this.asyncMethods,
+        onButtonClick: this.actionHandler.handleButtonClick.bind(this.actionHandler),
+        onCardSelect: this.actionHandler.handleCardSelect.bind(this.actionHandler),
+        onMissionSelect: this.actionHandler.handleMissionSelect.bind(this.actionHandler),
+        onSettingChange: this.actionHandler.handleSettingsChange.bind(this.actionHandler),
+        onUpgrade: this.actionHandler.handleUpgrade.bind(this.actionHandler),
+        onBattleAction: (action: string) => this.actionHandler.handleBattleAction(action, this.screens.battleScreen),
+        onNavigate: this.navigate.bind(this),
+        onShowCardDetail: this.actionHandler.showCardDetailPopup.bind(this.actionHandler),
+        onRenderNeeded: () => this.systems.uiCoordinator.triggerRender(),
+        playSfx: (sfxId: string) => this.systems.soundManager.playSfx(sfxId),
+      });
+
+      // Initialize UI builder (after screens are created)
+      this.uiBuilder = new UIBuilder({
+        ui: this.UI,
+        screens: this.screens,
+      });
+
+      // All screens are now created, enable rendering
+      this.isInitializing = false;
+
+      // Create UI tree once (it's reactive via bindings)
+      this.uiTree = this.uiBuilder.createUI();
+    }
 
     /**
-     * Show attack animation
+     * Get an image asset by ID
+     * Delegates to platform-specific implementation
      */
-    private async showAttackAnimation(
-      attackerPlayer: 'player' | 'opponent',
-      attackerIndex: number,
-      targetPlayer: 'player' | 'opponent' | 'health',
-      targetIndex?: number
-    ): Promise<void> {
-      const currentState = this.battleUI.getCurrentBattle();
-      if (!currentState) return;
+    getImageAsset(assetId: string): any {
+      return this.platformGetImageAsset(assetId);
+    }
 
-      // Show animation (attacker glows green, target glows red)
-      const displayWithAnimation = this.battleDisplayManager.createBattleDisplay(
-        currentState,
-        {
-          attackerPlayer,
-          attackerIndex,
-          targetPlayer,
-          targetIndex
-        }
-      );
+    /**
+     * Get platform async methods (setTimeout, setInterval, etc.)
+     * Screens can use this to access platform-specific async operations
+     */
+    get async(): AsyncMethods {
+      return this.asyncMethods;
+    }
 
-      if (displayWithAnimation) {
-        this.UI.bindingManager.setBinding(BindingType.BattleDisplay, displayWithAnimation);
-        this.triggerRender();
+    /**
+     * Initialize the game
+     * Call this after construction to load data and show initial screen
+     */
+    async initialize(): Promise<void> {
+      // Load saved game data (initializes starting cards if needed)
+      await this.dataManager.loadGameData();
+
+      // Update bindings from loaded data
+      await this.dataManager.updateBindingsFromGameState();
+
+      // Trigger initial render
+      this.triggerRender();
+
+      // Start menu music
+      this.systems.soundManager.playMusic(MUSIC_TRACKS.BACKGROUND, true);
+      this.navigate('menu');
+    }
+
+    /**
+     * Validate player data structure
+     */
+    private validatePlayerData(data: any): data is PlayerData {
+      const result = ValidationHelpers.validatePlayerData(data);
+      return result.valid;
+    }
+
+    /**
+     * Navigate to a different screen
+     */
+    private navigate(screen: string): void {
+      this.systems.uiCoordinator.navigate(screen, () => this.dataManager.loadLeaderboardData());
+    }
+
+    /**
+     * Trigger a render
+     * Notifies the platform to render (bindings update automatically)
+     */
+    private triggerRender(): void {
+      // Skip rendering during initialization to prevent errors
+      if (this.isInitializing) {
+        return;
       }
 
-      // Wait for animation duration
-      await new Promise(resolve => this.asyncMethods.setTimeout(resolve, 500));
+      // Just notify platform - UI tree is reactive via bindings
+      this.platform.render(this.uiTree);
+    }
 
-      // Clear animation
-      const displayWithoutAnimation = this.battleDisplayManager.createBattleDisplay(
-        currentState,
-        null  // No animation
-      );
-
-      if (displayWithoutAnimation) {
-        this.UI.bindingManager.setBinding(BindingType.BattleDisplay, displayWithoutAnimation);
-        this.triggerRender();
-      }
+    /**
+     * Submit player score to leaderboard via network event
+     * Delegates to DataManager
+     */
+    private submitLeaderboardScore(type: 'experience' | 'cluckNorris', score: number): void {
+      this.dataManager.submitLeaderboardScore(type, score);
     }
 
     /**
      * Dispose resources
      */
     dispose(): void {
-      this.menuScreen.dispose();
-      // TODO: Dispose other resources
+      this.screens.menuScreen.dispose();
     }
   }
 
