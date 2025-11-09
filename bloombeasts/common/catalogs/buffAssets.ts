@@ -5,11 +5,10 @@
  * Edit card definitions below, and the builder handles all the wrapper structure.
  */
 
-import type { AssetCatalog } from '../../AssetCatalogManager';
-import { CatalogCategory, AffinityLowercase, AssetEntryType, AssetReferenceType } from '../../AssetCatalogManager';
+import { CatalogCategory } from '../../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType, ResourceType } from '../engine/types/abilities';
 import { CardType, Affinity } from '../engine/types/core';
-import { defineCard } from './catalogBuilder';
+import { defineCard, createNonAffinityCatalog } from './catalogBuilder';
 import type { BuffCard } from '../engine/types/core';
 
 /**
@@ -125,41 +124,9 @@ const buffCards = [
 ];
 
 /**
- * Build the catalog manually since Buff cards don't have a single affinity
+ * Build the catalog using the builder - eliminates boilerplate and affinity mapping duplication
  */
-export const buffAssets: AssetCatalog = {
-  version: "1.0.0",
-  category: CatalogCategory.Buff,
-  description: "Buff cards and assets",
-  data: buffCards.map((card) => {
-    const cardData = card.cardData;
-    const affinity = 'affinity' in cardData && cardData.affinity !== undefined
-      ? (() => {
-          // Map Affinity enum to AffinityLowercase enum
-          const affinityMap: Partial<Record<Affinity, AffinityLowercase>> = {
-            [Affinity.Fire]: AffinityLowercase.Fire,
-            [Affinity.Water]: AffinityLowercase.Water,
-            [Affinity.Forest]: AffinityLowercase.Forest,
-            [Affinity.Sky]: AffinityLowercase.Sky,
-            [Affinity.Boss]: AffinityLowercase.Boss,
-          };
-          return affinityMap[cardData.affinity as Affinity];
-        })()
-      : undefined;
-
-    return {
-      id: card.id,
-      type: AssetEntryType.Buff,
-      cardType: "Buff",
-      ...(affinity ? { affinity } : {}),
-      data: cardData,
-      assets: [
-        {
-          type: AssetReferenceType.Image,
-          ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
-          path: card.imagePath,
-        }
-      ]
-    };
-  })
-};
+export const buffAssets = createNonAffinityCatalog(
+  CatalogCategory.Buff,
+  buffCards
+);
