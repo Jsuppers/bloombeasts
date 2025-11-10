@@ -4,9 +4,9 @@
  * Extracted from BattleScreen to reduce complexity and consolidate popup logic
  */
 
-import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
+import type { UIMethodMappings } from '../../types/ui/UIMethodMappings';
 import type { AsyncMethods } from '../../common/ui/types/types/bindings';
-import type { BattleDisplay } from '../../../bloombeasts/gameManager';
+import type { BattleDisplay } from '../../types/game/DisplayTypes';
 import { UINodeType } from '../../common/ui/ScreenUtils';
 import { createCardDetailPopup } from '../../common/ui/screens/CardDetailPopup';
 import { createReactiveCardComponent } from '../../common/ui/screens/CardRenderer';

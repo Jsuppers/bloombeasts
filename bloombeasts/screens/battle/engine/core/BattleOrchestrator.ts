@@ -1,5 +1,5 @@
 /**
- * BattleOrchestrator - Orchestrates battle lifecycle and coordinates subsystems
+ * TurboBattleOrchestrator - Orchestrates Turbo-based battle lifecycle and coordinates subsystems
  *
  * Responsibilities:
  * - Initialize battles
@@ -19,7 +19,7 @@ import { AIManager } from './AIManager';
 import { ActionProcessor } from './ActionProcessor';
 import { WinConditionChecker } from './WinConditionChecker';
 
-export class BattleOrchestrator {
+export class TurboBattleOrchestrator {
   private async: AsyncMethods;
   private game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>;
   private config: BattleConfig | null = null;
@@ -34,7 +34,7 @@ export class BattleOrchestrator {
     this.game = createBloomBeastsGame();
 
     // Initialize subsystems
-    this.ai = new AIManager(this.game);
+    this.ai = new AIManager(this.game, this.async);
     this.actions = new ActionProcessor(this.game);
     this.winChecker = new WinConditionChecker();
   }
@@ -44,6 +44,15 @@ export class BattleOrchestrator {
    */
   initializeBattle(config: BattleConfig): BattleState {
     Logger.info('[BattleOrchestrator] Initializing battle with TURBO engine');
+    Logger.info(`[BattleOrchestrator] Player 1 deck size: ${config.player1.deck.length}`);
+    Logger.info(`[BattleOrchestrator] Player 2 deck size: ${config.player2.deck.length}`);
+
+    if (config.player1.deck.length === 0) {
+      Logger.error('[BattleOrchestrator] WARNING: Player 1 deck is EMPTY!');
+    }
+    if (config.player2.deck.length === 0) {
+      Logger.error('[BattleOrchestrator] WARNING: Player 2 deck is EMPTY!');
+    }
 
     this.config = config;
 
@@ -76,9 +85,16 @@ export class BattleOrchestrator {
     // Register AI players
     this.ai.registerAIPlayers(config);
 
-    Logger.info('[BattleOrchestrator] Battle initialized successfully');
+    const initialState = this.getState();
+    const p1 = initialState.turboState.gameData.players[0];
+    const p2 = initialState.turboState.gameData.players[1];
 
-    return this.getState();
+    Logger.info('[BattleOrchestrator] Battle initialized successfully');
+    Logger.info(`[BattleOrchestrator] Player 1 final state - Deck: ${p1.deck.length}, Hand: ${p1.hand.length}, Health: ${p1.health}`);
+    Logger.info(`[BattleOrchestrator] Player 2 final state - Deck: ${p2.deck.length}, Hand: ${p2.hand.length}, Health: ${p2.health}`);
+    Logger.info(`[BattleOrchestrator] Game complete: ${initialState.turboState.isComplete}`);
+
+    return initialState;
   }
 
   /**

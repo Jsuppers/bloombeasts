@@ -4,9 +4,9 @@
  * Exactly mimics the UI from deployments/web/src/screens/battleScreen.ts
  */
 
-import type { UIMethodMappings } from '../../../bloombeasts/BloomBeastsGame';
+import type { UIMethodMappings } from '../../types/ui/UIMethodMappings';
 import type { AsyncMethods } from '../../common/ui/types/types/bindings';
-import type { BattleDisplay } from '../../../bloombeasts/gameManager';
+import type { BattleDisplay } from '../../types/game/DisplayTypes';
 import type { Card } from '../../common/engine/types/core';
 import { UINodeType } from '../../common/ui/ScreenUtils';
 import { hasAttackableBeasts } from '../../common/engine/utils/combatHelpers';
@@ -30,7 +30,8 @@ import {
 import { BattleTimerManager } from './BattleTimerManager';
 import { CardPopupManager } from './CardPopupManager';
 
-interface BattleUIState {
+// BattleUIState interface for local UI state tracking
+interface LocalBattleUIState {
   battle: {
     showHand: boolean;
     handScrollOffset: number;
@@ -68,7 +69,7 @@ export class BattleScreen {
   private hasAttackableBeasts = false;
 
   // Track current UIState value for updates
-  private currentUIState: BattleUIState = {
+  private currentUIState: LocalBattleUIState = {
     battle: {
       showHand: true,
       handScrollOffset: 0,

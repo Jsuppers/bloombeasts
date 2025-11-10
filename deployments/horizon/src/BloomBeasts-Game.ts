@@ -38,9 +38,10 @@ type PlatformConfig = BloomBeasts.PlatformConfig;
 type PlayerData = BloomBeasts.PlayerData;
 type AssetCatalog = BloomBeasts.AssetCatalog;
 
-// Access classes and data from the namespace
+// Access classes, enums and data from the namespace
 const BloomBeastsGame = BloomBeasts.BloomBeastsGame;
 const AssetCatalogManager = BloomBeasts.AssetCatalogManager;
+const AssetReferenceType = BloomBeasts.AssetReferenceType;
 const allCatalogs = BloomBeasts.allCatalogs; // Catalogs bundled as TypeScript!
 
 /**
@@ -192,7 +193,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     const preloadImages: UINode[] = [];
     // Only preload essential UI assets
     allAssets.forEach((assetId: string) => {
-      const horizonId = this.catalogManager.getHorizonAssetId(assetId, 'image');
+      const horizonId = this.catalogManager.getHorizonAssetId(assetId, AssetReferenceType.Image);
       if (horizonId && horizonId !== 'PLACEHOLDER_HORIZON_ID') {
         preloadImages.push(
           Image({
@@ -271,7 +272,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
           if (imageSourceCache.has(assetId)) {
             return imageSourceCache.get(assetId);
           }
-          const horizonId = this.catalogManager.getHorizonAssetId(assetId, 'image');
+          const horizonId = this.catalogManager.getHorizonAssetId(assetId, AssetReferenceType.Image);
           if (!horizonId) {
             console.error(`[assetIdToImageSource] ❌ Asset not in catalog: ${assetId}`);
             console.error(`[assetIdToImageSource] Available categories:`, this.catalogManager.getLoadedCategories());
@@ -615,7 +616,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     if (type === 'music') {
       // Stop existing music before playing new music
       if (this.currentMusicEntity) {
-        const currentAudioGizmo = this.currentMusicEntity.as(AudioGizmo);
+        const currentAudioGizmo: AudioGizmo = this.currentMusicEntity.as(AudioGizmo);
         if (currentAudioGizmo) {
           currentAudioGizmo.stop();
         }
@@ -625,7 +626,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
       this.isMusicPlaying = true;
     }
 
-    const audioGizmo = entity.as(AudioGizmo);
+    const audioGizmo: AudioGizmo = entity.as(AudioGizmo);
     if (audioGizmo) {
       audioGizmo.volume.set(actualVolume);
       audioGizmo.play();
@@ -653,7 +654,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
       this.currentMusicEntity = null;
     }
 
-    const audioGizmo = entity.as(AudioGizmo);
+    const audioGizmo: AudioGizmo = entity.as(AudioGizmo);
     if (audioGizmo) {
       audioGizmo.stop();
     }
@@ -668,7 +669,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
 
     // If music is currently playing, update its volume
     if (this.currentMusicEntity) {
-      const audioGizmo = this.currentMusicEntity.as(AudioGizmo);
+      const audioGizmo: AudioGizmo = this.currentMusicEntity.as(AudioGizmo);
       if (audioGizmo) {
         audioGizmo.volume.set(volume);
       }
@@ -694,7 +695,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
 
     // If disabling music, stop currently playing music
     if (!enabled && this.currentMusicEntity) {
-      const audioGizmo = this.currentMusicEntity.as(AudioGizmo);
+      const audioGizmo: AudioGizmo = this.currentMusicEntity.as(AudioGizmo);
       if (audioGizmo) {
         audioGizmo.stop();
       }
@@ -717,7 +718,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     // console.log('[Horizon] BloomBeasts disposing...');
     // Stop any playing music
     if (this.isMusicPlaying && this.currentMusicEntity) {
-      const audioGizmo = this.currentMusicEntity.as(AudioGizmo);
+      const audioGizmo: AudioGizmo = this.currentMusicEntity.as(AudioGizmo);
       if (audioGizmo) {
         audioGizmo.stop();
       }

@@ -6,16 +6,8 @@ import { Mission } from './types';
 import { getAvailableMissions, getCompletedMissions } from './definitions';
 import { MissionManager } from './MissionManager';
 import { Logger } from '../../common/engine/utils/Logger';
-import type { IMissionSelectionUI } from '../../core/interfaces/IMissionSelectionUI';
+import type { IMissionSelectionUI, MissionDisplayData } from '../../core/interfaces/IMissionSelectionUI';
 import { getDifficultyColor } from '../../core/ColorPalette';
-
-export interface MissionDisplayData {
-  mission: Mission;
-  isAvailable: boolean;
-  completionCount: number;
-  difficultyColor: string;
-  rewardPreview: string[];
-}
 
 export class MissionSelectionUI implements IMissionSelectionUI {
   private missionManager: MissionManager;

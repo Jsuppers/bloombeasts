@@ -49,6 +49,8 @@ export class CardsScreen extends BaseScreen {
       'cards',
       this.onRenderNeeded
     );
+    // Initialize scrollOffset to 0
+    this.stateManager.update({ scrollOffset: 0 });
   }
 
   /**
@@ -141,6 +143,7 @@ export class CardsScreen extends BaseScreen {
       getTotalPages,
       playSfx: this.playSfx,
       playerDataBinding: true, // Cards screen watches PlayerData for card count
+      cardsPerPage, // Pass cardsPerPage so bindings can calculate total pages
     });
   }
 

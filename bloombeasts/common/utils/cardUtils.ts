@@ -6,7 +6,7 @@ import type { BloomBeastCard, AnyCard } from '../engine/types/core';
 import type { Level } from '../engine/types/leveling';
 import type { CardInstance } from '../../screens/common/types';
 import type { RuntimeCard, RuntimeBeast } from '../engine/types/runtime';
-import { CardType as CardTypeEnum } from '../engine/types/core';
+import { CardType } from '../engine/types/core';
 import { CARD_XP_THRESHOLDS } from '../engine/constants/leveling';
 import { Logger } from '../engine/utils/Logger';
 
@@ -119,7 +119,7 @@ export function createBattleCard(instance: CardInstance, cardDef: AnyCard): Runt
   const level = getCardLevel(instance.currentXP);
 
   // For Beast cards, compute level-scaled stats
-  if (cardDef.type === CardTypeEnum.Beast && 'baseAttack' in cardDef && 'baseHealth' in cardDef) {
+  if (cardDef.type === CardType.Beast && 'baseAttack' in cardDef && 'baseHealth' in cardDef) {
     const beastCard = cardDef as BloomBeastCard;
     const scaledAttack = computeLeveledStat(beastCard.baseAttack, level);
     const scaledHealth = computeLeveledStat(beastCard.baseHealth, level);

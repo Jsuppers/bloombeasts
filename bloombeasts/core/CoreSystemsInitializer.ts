@@ -18,6 +18,7 @@ import type { UIMethodMappings, PlatformConfig } from '../types';
 import type { AsyncMethods } from '../common/ui/types/types/bindings';
 import { setCatalogManagerForUtils } from '../common/utils/cardUtils';
 import { setCatalogManagerForDeckBuilder } from '../common/engine/utils/deckBuilder';
+import { setCatalogManagerForMissions } from '../screens/missions/utils/deckBuilder';
 
 /**
  * Collection of all core game systems
@@ -51,6 +52,7 @@ export class CoreSystemsInitializer {
     // Initialize catalog manager for utilities
     setCatalogManagerForUtils(platform.catalogManager);
     setCatalogManagerForDeckBuilder(platform.catalogManager);
+    setCatalogManagerForMissions(platform.catalogManager);
 
     // Mission systems
     const missionManager = new MissionManager(platform.catalogManager);

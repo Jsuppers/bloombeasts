@@ -3,8 +3,8 @@
  * Extracted from BloomBeastsGame to separate concerns
  */
 
-import type { IBattleUI } from './interfaces/IBattleUI';
-import type { IBattleDisplayManager } from './interfaces/IBattleDisplayManager';
+import type { BattleUI } from '../screens/battle/BattleUI';
+import type { BattleDisplayManager } from '../screens/battle/BattleDisplayManager';
 import { parseActionString, BattleActions } from '../screens/battle/engine/types/actions';
 import { Logger } from '../common/engine/utils/Logger';
 import type { AsyncMethods } from '../common/ui/types/types/bindings';
@@ -21,8 +21,8 @@ import { ValidationHelpers } from './ValidationHelpers';
  * Orchestrates all battle-related operations
  */
 export class BattleOrchestrator {
-  private battleUI: IBattleUI;
-  private battleDisplayManager: IBattleDisplayManager;
+  private battleUI: BattleUI;
+  private battleDisplayManager: BattleDisplayManager;
   private gameStateManager: GameStateManager;
   private rewardCalculator: BattleRewardCalculator;
   private uiCoordinator: UICoordinator;
@@ -33,8 +33,8 @@ export class BattleOrchestrator {
   private battleStartTime: number | null = null;
 
   constructor(
-    battleUI: IBattleUI,
-    battleDisplayManager: IBattleDisplayManager,
+    battleUI: BattleUI,
+    battleDisplayManager: BattleDisplayManager,
     gameStateManager: GameStateManager,
     rewardCalculator: BattleRewardCalculator,
     uiCoordinator: UICoordinator,

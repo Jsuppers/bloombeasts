@@ -206,10 +206,10 @@ export abstract class BaseActionHandler<TActionData extends ActionData = ActionD
 
   /**
    * Helper: Clone state (deep copy)
-   * Uses structuredClone for proper handling of Sets, Maps, Dates, etc.
+   * Uses Turbo.deepClone for proper handling of Sets, Maps, Dates, etc.
    */
   protected cloneState(state: Turbo.IGameState<BloomBeastsState>): Turbo.IGameState<BloomBeastsState> {
-    return structuredClone(state) as Turbo.IGameState<BloomBeastsState>;
+    return Turbo.deepClone(state);
   }
 
   /**

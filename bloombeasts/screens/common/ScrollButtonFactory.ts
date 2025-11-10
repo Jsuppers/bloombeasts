@@ -5,12 +5,12 @@
  * with a simple factory function.
  */
 
-import type { UIMethodMappings } from '../../BloomBeastsGame';
+import type { UIMethodMappings } from '../../types/ui/UIMethodMappings';
 import { UINodeType } from '../../common/ui/ScreenUtils';
 import { BindingManager, BindingType } from '../../common/ui/types/types/BindingManager';
 import { UIStateManager } from './UIStateManager';
 import type { SideMenuButton } from '../../common/ui/screens/SideMenu';
-import { Button } from '../../common/ui/components/common/Button';
+import { createButton } from '../../common/ui/components/common/Button';
 import { COLORS } from '../../common/ui/styles/styles/colors';
 import { sideMenuButtonDimensions, GAPS } from '../../common/ui/styles/styles/dimensions';
 
@@ -54,7 +54,7 @@ export class ScrollButtonFactory {
     const getCurrentOffset = () => stateManager.getValue('scrollOffset') ?? 0;
 
     // Previous button
-    const prevButton = Button({
+    const prevButton = createButton({
       ui,
       label: ui.bindingManager.derive(
         [BindingType.UIState],
@@ -93,7 +93,7 @@ export class ScrollButtonFactory {
     });
 
     // Next button
-    const nextButton = Button({
+    const nextButton = createButton({
       ui,
       label: ui.bindingManager.derive(
         [BindingType.UIState],
@@ -200,6 +200,7 @@ export class ScrollButtonFactory {
     getTotalPages: () => number;
     playSfx?: (sfxId: string) => void;
     playerDataBinding?: boolean; // Whether to watch PlayerData binding for total pages
+    cardsPerPage?: number; // For calculating total pages from binding data
   }): SideMenuButton[] {
     const {
       ui,
@@ -207,14 +208,27 @@ export class ScrollButtonFactory {
       getTotalPages,
       playSfx,
       playerDataBinding = false,
+      cardsPerPage = 8,
     } = config;
 
     const getCurrentOffset = () => stateManager.getValue('scrollOffset') ?? 0;
+    const screenKey = stateManager.stateKey;
 
     // Determine which bindings to watch based on content type
     const bindings = playerDataBinding
       ? [BindingType.UIState, BindingType.PlayerData]
       : [BindingType.UIState, BindingType.Missions];
+
+    // Helper to calculate total pages from binding data instead of snapshot
+    const calculateTotalPages = (data: any): number => {
+      if (playerDataBinding) {
+        const cards = data?.cards?.collected || [];
+        return Math.ceil(cards.length / cardsPerPage);
+      } else {
+        // For missions, getTotalPages from config works fine
+        return getTotalPages();
+      }
+    };
 
     return [
       {
@@ -226,9 +240,18 @@ export class ScrollButtonFactory {
             stateManager.update({ scrollOffset: offset - 1 });
           }
         },
-        disabled: ui.bindingManager.derive([BindingType.UIState], () => getCurrentOffset() <= 0),
-        opacity: ui.bindingManager.derive([BindingType.UIState], () => getCurrentOffset() <= 0 ? 0.5 : 1.0),
-        textColor: ui.bindingManager.derive([BindingType.UIState], () => getCurrentOffset() <= 0 ? COLORS.textMuted : COLORS.textPrimary),
+        disabled: ui.bindingManager.derive([BindingType.UIState], (uiState: any) => {
+          const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+          return offset <= 0;
+        }),
+        opacity: ui.bindingManager.derive([BindingType.UIState], (uiState: any) => {
+          const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+          return offset <= 0 ? 0.5 : 1.0;
+        }),
+        textColor: ui.bindingManager.derive([BindingType.UIState], (uiState: any) => {
+          const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+          return offset <= 0 ? COLORS.textMuted : COLORS.textPrimary;
+        }),
         yOffset: 0,
       },
       {
@@ -241,17 +264,21 @@ export class ScrollButtonFactory {
             stateManager.update({ scrollOffset: offset + 1 });
           }
         },
-        disabled: ui.bindingManager.derive(bindings, () => {
-          const offset = getCurrentOffset();
-          return offset >= getTotalPages() - 1;
+        disabled: ui.bindingManager.derive(bindings, (uiState: any, otherData: any) => {
+          const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+          // Use binding value instead of snapshot for total pages calculation
+          const totalPages = calculateTotalPages(otherData);
+          return offset >= totalPages - 1;
         }),
-        opacity: ui.bindingManager.derive(bindings, () => {
-          const offset = getCurrentOffset();
-          return offset >= getTotalPages() - 1 ? 0.5 : 1.0;
+        opacity: ui.bindingManager.derive(bindings, (uiState: any, otherData: any) => {
+          const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+          const totalPages = calculateTotalPages(otherData);
+          return offset >= totalPages - 1 ? 0.5 : 1.0;
         }),
-        textColor: ui.bindingManager.derive(bindings, () => {
-          const offset = getCurrentOffset();
-          return offset >= getTotalPages() - 1 ? COLORS.textMuted : COLORS.textPrimary;
+        textColor: ui.bindingManager.derive(bindings, (uiState: any, otherData: any) => {
+          const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+          const totalPages = calculateTotalPages(otherData);
+          return offset >= totalPages - 1 ? COLORS.textMuted : COLORS.textPrimary;
         }),
         yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
       },

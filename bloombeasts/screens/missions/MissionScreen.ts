@@ -46,6 +46,8 @@ export class MissionScreen extends BaseScreen {
       'missions',
       this.onRenderNeeded
     );
+    // Initialize scrollOffset to 0
+    this.stateManager.update({ scrollOffset: 0 });
   }
 
   createUI(): UINodeType {

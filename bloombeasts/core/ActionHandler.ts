@@ -172,7 +172,7 @@ export class ActionHandler {
           if (currentBattle && !currentBattle.isComplete) {
             const updatedDisplay = this.systems.battleDisplayManager.createBattleDisplay(
               currentBattle,
-              null
+              undefined
             );
             if (updatedDisplay) {
               this.systems.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, updatedDisplay);
@@ -183,7 +183,7 @@ export class ActionHandler {
         // Create battle display from battle state
         const battleDisplay = this.systems.battleDisplayManager.createBattleDisplay(
           battleState,
-          null
+          undefined
         );
 
         // Update battle display binding and navigate

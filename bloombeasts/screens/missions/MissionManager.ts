@@ -87,7 +87,13 @@ export class MissionManager {
    * Update mission progress based on game events
    */
   updateProgress(event: string, data: any): void {
-    if (!this.progress || !this.currentMission) return;
+    Logger.info(`[MissionManager] updateProgress called with event: ${event}`);
+    Logger.info(`[MissionManager] Has progress: ${!!this.progress}, Has currentMission: ${!!this.currentMission}`);
+
+    if (!this.progress || !this.currentMission) {
+      Logger.warn('[MissionManager] updateProgress returning early - no progress or mission');
+      return;
+    }
 
     switch (event) {
       case 'turn-end':
@@ -111,7 +117,9 @@ export class MissionManager {
         break;
 
       case 'opponent-defeated':
+        Logger.info('[MissionManager] Processing opponent-defeated event');
         this.updateObjective('defeat-opponent', 1);
+        Logger.info(`[MissionManager] After update, defeat-opponent progress: ${this.progress.objectiveProgress.get('defeat-opponent')}`);
         this.checkMissionCompletion();
         break;
 
@@ -131,11 +139,20 @@ export class MissionManager {
   private checkMissionCompletion(): void {
     if (!this.currentMission || !this.progress) return;
 
+    Logger.debug(`[MissionManager] Checking mission completion for ${this.currentMission.id}`);
+    Logger.debug(`[MissionManager] Has objectives: ${!!this.currentMission.objectives}, Length: ${this.currentMission.objectives?.length || 0}`);
+
     // If no objectives, just check if opponent is defeated (default win condition)
     if (!this.currentMission.objectives || this.currentMission.objectives.length === 0) {
-      // Mission complete when opponent health reaches 0
-      if (this.progress.opponentHealth <= 0) {
+      // Mission complete when opponent is defeated (health reaches 0 OR deck-out)
+      const defeatOpponentProgress = this.progress.objectiveProgress.get('defeat-opponent') || 0;
+      Logger.debug(`[MissionManager] Default win condition check - OpponentHP: ${this.progress.opponentHealth}, DefeatProgress: ${defeatOpponentProgress}`);
+
+      if (this.progress.opponentHealth <= 0 || defeatOpponentProgress >= 1) {
         this.progress.isCompleted = true;
+        Logger.info('[MissionManager] Mission marked as completed (opponent defeated)');
+      } else {
+        Logger.debug('[MissionManager] Mission NOT completed yet');
       }
       return;
     }
@@ -168,7 +185,11 @@ export class MissionManager {
    * Complete the mission and generate rewards
    */
   completeMission(): RewardResult | null {
+    Logger.info('[MissionManager] completeMission() called');
+    Logger.info(`[MissionManager] currentMission: ${!!this.currentMission}, progress: ${!!this.progress}, isCompleted: ${this.progress?.isCompleted}`);
+
     if (!this.currentMission || !this.progress || !this.progress.isCompleted) {
+      Logger.warn('[MissionManager] completeMission() returning null - mission not completed');
       return null;
     }
 
@@ -329,11 +350,9 @@ export class MissionManager {
   private updateObjective(type: string, value: number): void {
     if (!this.progress) return;
 
-    this.progress.objectiveProgress.forEach((_, key) => {
-      if (key.startsWith(type)) {
-        this.progress!.objectiveProgress.set(key, value);
-      }
-    });
+    // Set the objective value directly (don't require it to pre-exist in the map)
+    this.progress.objectiveProgress.set(type, value);
+    Logger.debug(`[MissionManager] Set objective ${type} = ${value}`);
   }
 
   private checkTurnBasedObjectives(): void {

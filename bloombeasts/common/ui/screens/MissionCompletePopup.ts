@@ -7,10 +7,9 @@
 import { DIMENSIONS, missionCompleteCardDimensions, chestImageMissionCompleteDimensions } from '../styles/styles/dimensions';
 import { COLORS } from '../styles/styles/colors';
 import { UINodeType } from '../ScreenUtils';
-import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
+import type { UIMethodMappings } from '../../../types/ui/UIMethodMappings';
 import { createPopup, type PopupButton } from '../components/common/Popup';
 import { BindingType } from '../types/types/BindingManager';
-import type { BindingManager } from '../types/types/BindingManager';
 
 export interface MissionCompletePopupProps {
   mission: {

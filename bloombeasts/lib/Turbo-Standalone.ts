@@ -1,6 +1,6 @@
 /**
  * TURBO - TURn-Based Operations
- * Standalone TypeScript Bundle
+ * Standalone TypeScript Bundle (https://github.com/suppers-ai/turbo)
  *
  * This file contains the complete Turbo library in a single standalone TypeScript file.
  * All code is wrapped in the Turbo namespace to avoid global scope pollution.
@@ -11,7 +11,7 @@
  *   const ai = new Turbo.RandomAI(config);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-11-05T20:11:51.717Z
+ * Generated: 2025-11-10T08:09:57.402Z
  * Files: 16
  *
  * @version 2.0.0
@@ -301,6 +301,17 @@ namespace Turbo {
   }
 
   /**
+   * Platform async methods interface
+   * Provides setTimeout, setInterval, clearTimeout, clearInterval
+   */
+  export interface AsyncMethods {
+    setTimeout: (callback: (...args: any[]) => void, timeout?: number) => number;
+    clearTimeout: (id: number) => void;
+    setInterval: (callback: (...args: any[]) => void, timeout?: number) => number;
+    clearInterval: (id: number) => void;
+  }
+
+  /**
    * AI difficulty levels
    */
   export enum AILevel {
@@ -323,6 +334,7 @@ namespace Turbo {
     randomSeed?: string;
     maxDepth?: number;
     evaluationFunction?: (state: IGameState) => number;
+    async?: AsyncMethods;
   }
 
   /**
@@ -344,23 +356,10 @@ namespace Turbo {
   // ==================== src\utils\deepClone.ts ====================
 
   /**
-   * Efficient deep cloning utility using structured cloning when available
-   */
-
-  /**
-   * Deep clone an object using the most efficient method available
+   * Deep clone an object using manual cloning for consistency across all platforms
+   * (Avoids structuredClone to ensure compatibility with all environments)
    */
   export function deepClone<T>(obj: T): T {
-    // Use structured cloning if available (Node 17+ and modern browsers)
-    if (typeof structuredClone === 'function') {
-      try {
-        return structuredClone(obj);
-      } catch {
-        // Fall back to manual cloning if structuredClone fails
-      }
-    }
-
-    // Manual deep clone for older environments
     return manualDeepClone(obj);
   }
 
@@ -374,24 +373,24 @@ namespace Turbo {
     }
 
     // Handle circular references
-    if (visited.has(obj as object)) {
-      return visited.get(obj as object) as T;
+    if (visited.has(obj as unknown as object)) {
+      return visited.get(obj as unknown as object) as T;
     }
 
     // Handle Date
     if (obj instanceof Date) {
-      return new Date(obj.getTime()) as T;
+      return new Date(obj.getTime()) as unknown as T;
     }
 
     // Handle RegExp
     if (obj instanceof RegExp) {
-      return new RegExp(obj.source, obj.flags) as T;
+      return new RegExp(obj.source, obj.flags) as unknown as T;
     }
 
     // Handle Array
     if (Array.isArray(obj)) {
       const cloned: unknown[] = [];
-      visited.set(obj, cloned as T);
+      visited.set(obj, cloned as unknown as T);
 
       for (let i = 0; i < obj.length; i++) {
         cloned[i] = manualDeepClone(obj[i], visited);
@@ -403,7 +402,7 @@ namespace Turbo {
     // Handle Map
     if (obj instanceof Map) {
       const cloned = new Map();
-      visited.set(obj, cloned as T);
+      visited.set(obj, cloned as unknown as T);
 
       obj.forEach((value, key) => {
         cloned.set(
@@ -418,7 +417,7 @@ namespace Turbo {
     // Handle Set
     if (obj instanceof Set) {
       const cloned = new Set();
-      visited.set(obj, cloned as T);
+      visited.set(obj, cloned as unknown as T);
 
       obj.forEach(value => {
         cloned.add(manualDeepClone(value, visited));
@@ -429,7 +428,7 @@ namespace Turbo {
 
     // Handle plain objects
     const cloned: Record<string, unknown> = {};
-    visited.set(obj as object, cloned as T);
+    visited.set(obj as unknown as object, cloned as unknown as T);
 
     for (const key in obj) {
       if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -779,8 +778,8 @@ namespace Turbo {
       const onceHandlers = this.onceListeners.get(event);
 
       const allHandlers = [
-        ...(handlers || []),
-        ...(onceHandlers || []),
+        ...(handlers ? Array.from(handlers) : []),
+        ...(onceHandlers ? Array.from(onceHandlers) : []),
       ];
 
       await Promise.all(
@@ -1198,12 +1197,14 @@ namespace Turbo {
     protected difficulty: AILevel;
     protected thinkingTime: { min: number; max: number };
     protected randomSeed?: string;
+    protected async?: AsyncMethods;
 
     constructor(config: IAIConfig) {
       this.playerId = config.playerId;
       this.difficulty = config.difficulty;
       this.thinkingTime = config.thinkingTime || this.getDefaultThinkingTime(config.difficulty);
       this.randomSeed = config.randomSeed;
+      this.async = config.async;
     }
 
     abstract chooseAction(
@@ -1224,12 +1225,18 @@ namespace Turbo {
 
     /**
      * Simulate thinking delay for better UX
+     * Requires async methods to be provided in config
      */
     protected async simulateThinking(): Promise<void> {
+      if (!this.async) {
+        // No async methods provided - skip delay
+        return Promise.resolve();
+      }
+
       const delay = this.thinkingTime.min +
         Math.random() * (this.thinkingTime.max - this.thinkingTime.min);
 
-      return new Promise(resolve => setTimeout(resolve, delay));
+      return new Promise(resolve => this.async!.setTimeout(resolve, delay));
     }
 
     /**

@@ -39,13 +39,6 @@ export interface Settings {
   sfxEnabled?: boolean;
 }
 
-/**
- * Player data structure (subset for settings)
- */
-interface PlayerData {
-  settings?: Settings;
-}
-
 export interface SettingsScreenProps extends BaseScreenProps {
   onSettingChange?: (settingId: string, value: number | boolean) => void;
 }
@@ -137,7 +130,7 @@ export class SettingsScreen extends BaseScreen {
                   }),
                 }),
                 this.ui.Text({
-                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd) => {
                     return String(pd?.settings?.[settingKey] || VOLUME_DEFAULT);
                   }),
                   style: {
@@ -215,13 +208,13 @@ export class SettingsScreen extends BaseScreen {
                 height: TOGGLE_HEIGHT,
                 justifyContent: 'center',
                 alignItems: 'center',
-                backgroundColor: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                backgroundColor: this.ui.bindingManager.derive([BindingType.PlayerData], (pd) => {
                   return (pd?.settings?.[settingKey] ?? true) ? TOGGLE_ON_COLOR : TOGGLE_OFF_COLOR;
                 }),
                 borderRadius: 20,
               },
               children: this.ui.Text({
-                text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd) => {
                   return (pd?.settings?.[settingKey] ?? true) ? 'ON' : 'OFF';
                 }),
                 style: {

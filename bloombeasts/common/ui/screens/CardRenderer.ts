@@ -10,12 +10,13 @@ import type { RuntimeCard, RuntimeBeast } from '../../engine/types/runtime';
 import { getCardDescription } from '../../engine/utils/cardDescriptionGenerator';
 import { createBattleCard, getCardDefinition, extractBaseCardId, getXPProgressionThreshold } from '../../utils/cardUtils';
 import { UINodeType } from '../ScreenUtils';
-import type { PlayerData, UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
-import type { BattleDisplay } from '../../../../bloombeasts/gameManager';
+import type { UIMethodMappings } from '../../../types/ui/UIMethodMappings';
+import type { BattleDisplay } from '../../../types/game/DisplayTypes';
 import { BindingType, UIState } from '../types/types/BindingManager';
 import { Logger } from '../../engine/utils/Logger';
 import { CardType } from '../../engine/types/core';
 import { getCardIdentifier } from '../../../screens/battle/engine/utils/cardIdentifiers';
+import type { PlayerData } from '../../../types/game/PlayerTypes';
 
 export interface CardRendererProps {
   card: RuntimeCard;
@@ -390,7 +391,6 @@ export function createReactiveCardComponent(ui: UIMethodMappings, props: Reactiv
       const cardId = uiState.cards?.selectedCardId;
       // ID-based mode: find card by ID
       if (!cardId) {
-        Logger.debug('[CardRenderer] selectedCard mode: no cardId in UIState');
         return null;
       }
       instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;

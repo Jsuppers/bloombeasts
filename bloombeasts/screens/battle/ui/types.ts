@@ -2,7 +2,7 @@
  * Shared types and constants for Battle Screen components
  */
 
-import type { UIMethodMappings } from '../../../BloomBeastsGame';
+import type { UIMethodMappings } from '../../../types/ui/UIMethodMappings';
 import type { Card } from '../../../common/engine/types/core';
 
 // Re-export dimensions from consolidated dimensions file

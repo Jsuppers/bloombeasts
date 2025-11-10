@@ -162,4 +162,5 @@ export function createButton(props: ButtonProps): UINodeType {
 }
 
 // Export alias for backwards compatibility
-export { createButton as Button };
+// Note: Export statement removed for namespace bundling - use createButton directly
+// export { createButton as Button };

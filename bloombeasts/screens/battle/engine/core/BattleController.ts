@@ -17,14 +17,14 @@ import { Turbo } from '../../../../lib/Turbo-Standalone';
 
 import type { AsyncMethods } from '../../../../common/ui/types/types/bindings';
 import type { BattleConfig, BattleState, BattleResult } from '../types';
-import { BattleOrchestrator } from './BattleOrchestrator';
+import { TurboBattleOrchestrator } from './BattleOrchestrator';
 import type { BloomBeastsState, BloomBeastsActionData } from '../BloomBeastsGame';
 
 export class BattleController {
-  private orchestrator: BattleOrchestrator;
+  private orchestrator: TurboBattleOrchestrator;
 
   constructor(async: AsyncMethods) {
-    this.orchestrator = new BattleOrchestrator(async);
+    this.orchestrator = new TurboBattleOrchestrator(async);
   }
 
   /**

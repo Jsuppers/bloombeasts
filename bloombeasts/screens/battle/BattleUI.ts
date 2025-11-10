@@ -23,7 +23,6 @@ import type { BattleAction } from './engine/types/actions';
 import type { BloomBeastsPlayer } from './engine/BloomBeastsGame';
 import { createBattleCard } from '../../common/utils/cardUtils';
 import type { CardInstance } from '../common/types';
-import type { IBattleUI } from '../../core/interfaces/IBattleUI';
 import { getCardIdentifier } from './engine/utils/cardIdentifiers';
 
 export interface BattleUIState {
@@ -68,7 +67,7 @@ function getCardId(card: RuntimeCard, fallback: string): string {
  */
 // Removed: getBeastId - now using getCardIdentifier from cardIdentifiers utility
 
-export class BattleUI implements IBattleUI {
+export class BattleUI {
   private missionManager: MissionManager;
   // private gameEngine: GameEngine;
   private async: AsyncMethods;
@@ -137,8 +136,16 @@ export class BattleUI implements IBattleUI {
     // Resolve the opponent deck
     const opponentDeck = resolveDeck(mission.opponentDeck);
 
+    // Log opponent deck info for debugging
+    Logger.info(`[BattleUI] Opponent deck for ${mission.id}: ${opponentDeck.cards.length} cards`);
+    if (opponentDeck.cards.length === 0) {
+      Logger.error(`[BattleUI] Opponent deck is EMPTY for mission ${mission.id}! This will cause immediate game end.`);
+    }
+
     // Convert opponent deck cards to RuntimeCards (level 1)
     const opponentRuntimeCards = convertDeckToRuntimeCards(opponentDeck.cards);
+
+    Logger.info(`[BattleUI] Converted opponent runtime cards: ${opponentRuntimeCards.length}`);
 
     // Configure opponent health (mission 1 has reduced health for tutorial)
     const opponentHealth = mission.id === 'mission-01' ? 1 : 30;
@@ -566,9 +573,16 @@ export class BattleUI implements IBattleUI {
 
     // Calculate rewards based on winner
     if (battleResult.winner === 'player1') {
-      // Player won!
-      Logger.info('[BattleUI] Player 1 won! Awarding rewards.');
+      // Player won! Mark opponent as defeated for mission progress
+      Logger.info('[BattleUI] Player 1 won! Marking opponent as defeated.');
+      Logger.info(`[BattleUI] About to call updateProgress. MissionManager exists: ${!!this.missionManager}`);
+
+      this.missionManager.updateProgress('opponent-defeated', {});
+      Logger.info('[BattleUI] updateProgress called successfully');
+
+      // Now complete the mission and award rewards
       this.currentBattle.rewards = this.missionManager.completeMission();
+      Logger.info(`[BattleUI] Rewards generated: ${this.currentBattle.rewards !== null}`);
       this.battleController.completeBattle('player1');
     } else if (battleResult.winner === 'player2') {
       // Player lost

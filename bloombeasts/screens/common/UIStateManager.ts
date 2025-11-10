@@ -7,9 +7,25 @@ import { BindingManager, BindingType } from '../../common/ui/types/types/Binding
 export class UIStateManager<T = any> {
   constructor(
     private bindingManager: BindingManager,
-    private stateKey: string,
+    public readonly stateKey: string,
     private onRenderNeeded?: () => void
-  ) {}
+  ) {
+    // Initialize state if it doesn't exist
+    this.ensureStateInitialized();
+  }
+
+  /**
+   * Ensure the state key exists in UIState
+   */
+  private ensureStateInitialized(): void {
+    const currentState = this.bindingManager.getSnapshot(BindingType.UIState);
+    if (!currentState[this.stateKey]) {
+      this.bindingManager.setBinding(BindingType.UIState, {
+        ...currentState,
+        [this.stateKey]: {},
+      });
+    }
+  }
 
   /**
    * Update nested state and trigger render

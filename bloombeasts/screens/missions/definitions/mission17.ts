@@ -8,13 +8,13 @@ import { DeckList } from '../../../common/engine/utils/deckBuilder';
 import { BloomBeastCard } from '../../../common/engine/types/core';
 import type { RuntimeBeast } from '../../../common/engine/types/runtime';
 import { Logger } from '../../../common/engine/utils/Logger';
+import { getCatalogManagerForMissions } from '../utils/deckBuilder';
 
 // Get Cluck Norris deck - 3 level 9 Cluck Norris beasts
 const getCluckNorrisDeck = (): DeckList => {
   // This function will be called after catalogs are loaded
-  // Access the catalog manager through the global game instance
-  const game = (globalThis as any).bloomBeastsGame;
-  if (!game?.catalogManager) {
+  const catalogManager = getCatalogManagerForMissions();
+  if (!catalogManager) {
     Logger.error('[mission17] Catalog manager not available');
     return {
       name: 'Cluck Norris Deck',
@@ -25,7 +25,7 @@ const getCluckNorrisDeck = (): DeckList => {
   }
 
   // Get the Cluck Norris card from the boss catalog
-  const cluckNorrisCard = game.catalogManager.getCard('cluck-norris') as BloomBeastCard;
+  const cluckNorrisCard = catalogManager.getCard('cluck-norris') as BloomBeastCard;
 
   if (!cluckNorrisCard) {
     Logger.error('[mission17] Cluck Norris card not found in catalog');

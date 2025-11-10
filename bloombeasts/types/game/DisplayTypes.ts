@@ -6,7 +6,7 @@
  */
 
 import type { RuntimeCard } from '../../common/engine/types/runtime';
-import type { BattleDisplayOptions } from '../../core/interfaces/IBattleDisplayManager';
+import type { BattleDisplayOptions } from '../../screens/battle/BattleDisplayManager';
 
 /**
  * Player statistics displayed in UI

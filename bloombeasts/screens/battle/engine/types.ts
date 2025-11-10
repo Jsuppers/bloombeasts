@@ -77,7 +77,7 @@ export interface BattleResult {
  * Re-export runtime types
  * These are the unified runtime card types used throughout the battle system
  */
-export type { RuntimeCard, RuntimeBeast, RuntimeMagic, RuntimeTrap, RuntimeBuff, RuntimeHabitat };
+export type { RuntimeCard, RuntimeBeast, RuntimeMagic, RuntimeTrap, RuntimeBuff, RuntimeHabitat } from '../../../common/engine/types/runtime';
 
 /**
  * BloomBeasts Game State Types

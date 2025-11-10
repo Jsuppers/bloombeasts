@@ -90,25 +90,9 @@ export class UIBuilder {
       style: {
         width: '100%',
         height: '100%',
-        backgroundColor: 'black',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
+        position: 'relative',
       },
-      children: [
-        // Inner container with aspect ratio that scales content
-        View({
-          style: {
-            width: '100%',
-            height: 'auto',
-            maxWidth: '100%',
-            maxHeight: '100%',
-            position: 'relative',
-            aspectRatio: gameDimensions.panelWidth / gameDimensions.panelHeight,
-          },
-          children,
-        })
-      ],
+      children,
     });
   }
 

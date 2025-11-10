@@ -1,10 +1,10 @@
 /**
- * Mission 02: Mosslet
+ * Mission 02: Mushroomancer
  * Forest Affinity Mission
  */
 
 import { Mission } from '../types';
-import { createSimpleDeck } from '../utils/deckBuilder';
+import { createMissionDeck } from '../utils/deckBuilder';
 
 export const mission02: Mission = {
   id: 'mission-02',
@@ -15,7 +15,16 @@ export const mission02: Mission = {
   affinity: 'Forest',
   beastId: 'Mushroomancer',
 
-  opponentDeck: () => createSimpleDeck('Mushroomancer Pack', 'Forest' as const, 'mushroomancer', 20),
+  opponentDeck: () =>
+    createMissionDeck({
+      name: 'Mushroom Grove',
+      affinity: 'Forest' as const,
+      cards: [
+        { cardId: 'mushroomancer', count: 6 },
+        { cardId: 'rootling', count: 4 },
+        { cardId: 'nectar-block', count: 5 },
+      ],
+    }),
 
   rewards: {
     guaranteedXP: 60,

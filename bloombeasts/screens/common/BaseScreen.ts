@@ -2,7 +2,7 @@
  * BaseScreen
  */
 
-import type { UIMethodMappings } from '../../BloomBeastsGame';
+import type { UIMethodMappings } from '../../types/ui/UIMethodMappings';
 import { UINodeType } from '../../common/ui/ScreenUtils';
 
 export interface BaseScreenProps {

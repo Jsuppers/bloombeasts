@@ -3,7 +3,7 @@
  * Simple popup that shows buttons for user choices
  */
 
-import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
+import type { UIMethodMappings } from '../../../types/ui/UIMethodMappings';
 import { createPopup, type PopupButton } from '../components/common/Popup';
 import type { ButtonColor } from '../components/common/Button';
 import { BindingType } from '../types/types/BindingManager';

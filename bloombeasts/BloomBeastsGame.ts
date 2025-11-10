@@ -26,11 +26,26 @@ import { UIBuilder } from './core/UIBuilder';
 // Import and re-export all types from organized type directory
 import type {
   UINode,
+  UIElement,
+  ConditionalUINode,
+  ReadonlyBindingInterface,
+  BindingInterface,
+  BindingConstructor,
+  StyleProps,
+  BaseUIProps,
+  ViewProps,
+  TextProps,
+  ImageProps,
+  PressableProps,
+  ScrollViewProps,
   UIMethodMappings,
   PlayerData,
+  PlayerItem,
   PlatformConfig,
 } from './types';
 
+// Export types for regular module bundling (web deployment)
+// Note: These exports are fine for namespace bundling too
 export type {
   // UI types
   UINode,

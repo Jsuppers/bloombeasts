@@ -5,12 +5,11 @@
  * The actual game logic is in BloomBeastsGame.ts.
  */
 
-// Re-export all display types from centralized location
+// Export types for regular module bundling (web deployment)
 export type {
   MenuStats,
-  SoundSettings,
-  MissionDisplay,
-  CardDetailDisplay,
   BattleDisplay,
+  CardDetailDisplay,
+  MissionDisplay,
   ObjectiveDisplay,
 } from './types/game/DisplayTypes';

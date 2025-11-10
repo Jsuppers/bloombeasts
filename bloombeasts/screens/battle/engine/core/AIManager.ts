@@ -15,14 +15,20 @@ import type { BloomBeastsState, BloomBeastsActionData } from '../BloomBeastsGame
 import { BloomBeastsActionType } from '../types';
 import { BloomBeastsGreedyAI } from '../BloomBeastsAI';
 import type { BattleConfig } from '../types';
+import type { AsyncMethods } from '../../../../common/ui/types/types/bindings';
 
 export class AIManager {
   private game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>;
   private aiPlayers: Set<string>;
+  private async?: AsyncMethods;
 
-  constructor(game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>) {
+  constructor(
+    game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>,
+    asyncMethods?: AsyncMethods
+  ) {
     this.game = game;
     this.aiPlayers = new Set();
+    this.async = asyncMethods;
   }
 
   /**
@@ -33,7 +39,8 @@ export class AIManager {
       const difficulty = this.mapStrategyToDifficulty(config.player1.aiStrategy);
       const ai = new BloomBeastsGreedyAI({
         playerId: config.player1.id,
-        difficulty
+        difficulty,
+        async: this.async
       });
       this.game.registerAI(config.player1.id, ai);
       this.aiPlayers.add(config.player1.id);
@@ -44,7 +51,8 @@ export class AIManager {
       const difficulty = this.mapStrategyToDifficulty(config.player2.aiStrategy);
       const ai = new BloomBeastsGreedyAI({
         playerId: config.player2.id,
-        difficulty
+        difficulty,
+        async: this.async
       });
       this.game.registerAI(config.player2.id, ai);
       this.aiPlayers.add(config.player2.id);

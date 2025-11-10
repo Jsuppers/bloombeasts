@@ -10,8 +10,8 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-11-09T08:32:55.147Z
- * Files: 136
+ * Generated: 2025-11-10T08:48:13.075Z
+ * Files: 148
  *
  * @version 1.0.0
  * @license MIT
@@ -30,7 +30,7 @@ namespace BloomBeasts {
   // All type declarations and implementations are included from source files below.
   // UI implementations are provided by the platform via UIMethodMappings interface.
 
-  // ==================== bloombeasts/gameManager.ts ====================
+  // ==================== bloombeasts\gameManager.ts ====================
 
   /**
    * Type Definitions for BloomBeasts Game
@@ -39,17 +39,756 @@ namespace BloomBeasts {
    * The actual game logic is in BloomBeastsGame.ts.
    */
 
-  // Re-export all display types from centralized location
-  export type {
-    MenuStats,
-    SoundSettings,
-    MissionDisplay,
-    CardDetailDisplay,
-    BattleDisplay,
-    ObjectiveDisplay,
-  } from './types/game/DisplayTypes';
+  // Export types for regular module bundling (web deployment)
 
-  // ==================== bloombeasts/common/engine/types/abilities.ts ====================
+  // ==================== bloombeasts\common\ui\types\types\bindings.ts ====================
+
+  /**
+   * Binding Type Declarations
+   *
+   * These are type-only declarations for reactive data bindings.
+   * Actual implementations are provided by the platform via UIMethodMappings.
+   */
+
+  /**
+   * Base class for value bindings
+   */
+  export declare class ValueBindingBase<T> {
+    protected _key: string;
+    protected _isInitialized: boolean;
+  }
+
+  /**
+   * Reactive data binding
+   * Matches Horizon's Binding API (no get() or subscribe() methods)
+   */
+  export declare class Binding<T = any> extends ValueBindingBase<T> {
+    constructor(value: T);
+    set(value: T | ((prev: T) => T)): void;
+    derive<U>(fn: (value: T) => U): Binding<U>;
+    static derive<T extends any[], R>(
+      bindings: { [K in keyof T]: Binding<T[K]> },
+      deriveFn: (...values: T) => R
+    ): Binding<R>;
+  }
+
+  /**
+   * Platform async methods interface
+   * Provides setTimeout, setInterval, clearTimeout, clearInterval
+   *
+   * For web: Uses standard window.setTimeout, etc.
+   * For Horizon: Uses component.async.setTimeout, etc.
+   */
+  export interface AsyncMethods {
+    /**
+     * Sets a timer which executes a function once the timer expires
+     */
+    setTimeout: (callback: (...args: any[]) => void, timeout?: number) => number;
+
+    /**
+     * Cancels a timeout previously established by setTimeout
+     */
+    clearTimeout: (id: number) => void;
+
+    /**
+     * Repeatedly calls a function with a fixed time delay between calls
+     */
+    setInterval: (callback: (...args: any[]) => void, timeout?: number) => number;
+
+    /**
+     * Cancels a timed, repeating action established by setInterval
+     */
+    clearInterval: (id: number) => void;
+  }
+
+  // ==================== bloombeasts\common\ui\types\types\BindingManager.ts ====================
+
+  /**
+   * Centralized Binding Manager
+   * Horizon has a strict binding limit (~10 bindings total)
+   * This manager provides controlled access to all bindings in the app
+   */
+
+
+  export enum BindingType {
+    PlayerData = 'playerData',
+    CurrentScreen = 'currentScreen',
+    IntervaledBinding = 'intervaledBinding', // runs every 200ms to change the frame animation
+    Missions = 'missions',
+    LeaderboardData = 'leaderboardData',
+    BattleDisplay = 'battleDisplay',
+    MissionCompletePopup = 'missionCompletePopup',
+    ForfeitPopup = 'forfeitPopup',
+    CardDetailPopup = 'cardDetailPopup',
+    UIState = 'uiState', // Consolidated UI state (scroll, selected items, timers, etc.)
+  }
+
+  /**
+   * Consolidated UI State
+   * Replaces multiple screen-local bindings with single state object
+   */
+  export interface UIState {
+    // BattleScreen state
+    battle?: {
+      showHand: boolean;
+      handScrollOffset: number;
+      playerTimer: number;
+      opponentTimer: number;
+      selectedCardDetail: any | null;
+    };
+
+    // CardsScreen state
+    cards?: {
+      selectedCardId: string | null;
+      scrollOffset: number;
+    };
+
+    // MissionScreen state
+    missions?: {
+      scrollOffset?: number;
+    };
+
+    // UpgradeScreen state
+    upgrade?: {
+      selectedUpgradeId: string | null;
+    };
+  }
+
+  export interface BindingManagerInterface {
+    /**
+     * Create a derived value from one or more bindings
+     * This is the ONLY way to create derived bindings in the app
+     */
+    derive<T>(bindingTypes: BindingType[], deriveFn: (...values: any[]) => T): any;
+
+    /**
+     * Get a binding directly (for setting values)
+     */
+    setBinding(bindingType: BindingType, value: any): void;
+
+    /**
+     * Get a snapshot of the current value of a binding.
+     * Note: Use carefully, ideally only for on click events when you need to access the current value of a binding.
+     */
+    getSnapshot(bindingType: BindingType): any;
+
+    /**
+     * Get the raw binding object for a specific binding type
+     * Use this to call .derive() on a single binding
+     */
+    getBinding(bindingType: BindingType): any;
+
+    /**
+     * Legacy accessor for PlayerData binding
+     * @deprecated Use getBinding(BindingType.PlayerData) instead
+     */
+    readonly playerDataBinding: { binding: any };
+  }
+
+  export class BindingManager implements BindingManagerInterface {
+    private bindings: Map<BindingType, {
+      binding: any;
+      snapshot: any;
+    }>;
+    private BindingClass: any;
+    private async: AsyncMethods;
+
+    constructor(BindingClass: any, async: AsyncMethods) {
+      this.BindingClass = BindingClass;
+      this.async = async;
+      this.bindings = new Map();
+
+      // Initialize ALL bindings here (single source of truth)
+      // PlayerData binding - must start with valid structure due to Horizon limitation
+      this.bindings.set(BindingType.PlayerData, this.createBindingEntry({
+        name: '',
+        totalXP: 0,
+        coins: 0,
+        items: [],
+        cards: { collected: [], deck: [] },
+        missions: { completedMissions: {} },
+        boosts: {
+          'coin-boost': 0,
+          'exp-boost': 0,
+          'luck-boost': 0,
+          'rooster': 0
+        },
+        settings: { musicVolume: 10, sfxVolume: 50, musicEnabled: true, sfxEnabled: true }
+      }));
+
+      // Menu state binding - use a simple counter instead of timestamp
+      this.bindings.set(BindingType.IntervaledBinding, this.createBindingEntry(0));
+      let frameCounter = 0;
+      this.async.setInterval(() => {
+        frameCounter = (frameCounter + 1) % 1000; // Reset every 1000 to prevent overflow
+        this.setBinding(BindingType.IntervaledBinding, frameCounter);
+      }, 200);
+
+      // UI navigation binding
+      this.bindings.set(BindingType.CurrentScreen, this.createBindingEntry('loading'));
+
+      // Mission data binding
+      this.bindings.set(BindingType.Missions, this.createBindingEntry([]));
+
+      // Leaderboard data binding
+      this.bindings.set(BindingType.LeaderboardData, this.createBindingEntry());
+
+      // Battle display binding
+      this.bindings.set(BindingType.BattleDisplay, this.createBindingEntry());
+
+      // Popup bindings
+      this.bindings.set(BindingType.MissionCompletePopup, this.createBindingEntry());
+      this.bindings.set(BindingType.ForfeitPopup, this.createBindingEntry());
+      this.bindings.set(BindingType.CardDetailPopup, this.createBindingEntry());
+
+      // Consolidated UI state binding
+      this.bindings.set(BindingType.UIState, this.createBindingEntry({
+        battle: {
+          showHand: true,
+          handScrollOffset: 0,
+          playerTimer: 0,
+          opponentTimer: 0,
+          selectedCardDetail: null,
+        },
+        cards: {
+          selectedCardId: null,
+          scrollOffset: 0,
+        },
+        missions: {
+          scrollOffset: 0,
+        },
+        menu: {
+          displayedText: '',
+          frameAnimation: '',
+        },
+        upgrade: {
+          selectedUpgradeId: null,
+        },
+      }));
+
+    }
+
+    derive<T>(bindingTypes: BindingType[], deriveFn: (...values: any[]) => T): any {
+      // Get the actual binding objects
+      const actualBindings = bindingTypes.map(type => {
+        const binding = this.bindings.get(type);
+        if (!binding) {
+          throw new Error(`Binding not found: ${type}`);
+        }
+        return binding.binding;
+      });
+
+      if (actualBindings.length === 1) {
+        return actualBindings[0].derive(deriveFn);
+      }
+      return this.BindingClass.derive(actualBindings, deriveFn);
+    }
+
+    setBinding(bindingType: BindingType, value: any): void {
+      const binding = this.bindings.get(bindingType);
+      if (!binding) {
+        throw new Error(`Binding not found: ${bindingType}`);
+      }
+      binding.binding.set(value);
+      binding.snapshot = value;
+    }
+
+    getSnapshot(bindingType: BindingType): any {
+      const binding = this.bindings.get(bindingType);
+      if (!binding) {
+        throw new Error(`Binding not found: ${bindingType}`);
+      }
+      return binding.snapshot;
+    }
+
+    getBinding(bindingType: BindingType): any {
+      const binding = this.bindings.get(bindingType);
+      if (!binding) {
+        throw new Error(`Binding not found: ${bindingType}`);
+      }
+      return binding.binding;
+    }
+
+    /**
+     * Legacy accessor for PlayerData binding
+     * Returns an object with a 'binding' property for backwards compatibility
+     */
+    get playerDataBinding(): { binding: any } {
+      const binding = this.bindings.get(BindingType.PlayerData);
+      if (!binding) {
+        throw new Error(`PlayerData binding not found`);
+      }
+      return { binding: binding.binding };
+    }
+
+    private createBindingEntry(value: any = null): { binding: any, snapshot: any } {
+      return {
+        binding: new this.BindingClass(value),
+        snapshot: value,
+      };
+    }
+  }
+
+  // ==================== bloombeasts\common\engine\utils\Logger.ts ====================
+
+  /**
+   * Logger
+   *
+   * Simple logging system with configurable log levels.
+   */
+
+  export enum LogLevel {
+    DEBUG = 0,
+    INFO = 1,
+    WARN = 2,
+    ERROR = 3,
+    NONE = 4,
+  }
+
+  export interface LoggerConfig {
+    level: LogLevel;
+    prefix?: string;
+    timestamps?: boolean;
+  }
+
+  class LoggerClass {
+    private config: LoggerConfig = {
+      level: LogLevel.INFO,
+      timestamps: true,
+    };
+
+    /**
+     * Configure the logger
+     */
+    configure(config: Partial<LoggerConfig>): void {
+      this.config = { ...this.config, ...config };
+    }
+
+    /**
+     * Set log level
+     */
+    setLevel(level: LogLevel): void {
+      this.config.level = level;
+    }
+
+    /**
+     * Get current log level
+     */
+    getLevel(): LogLevel {
+      return this.config.level;
+    }
+
+    /**
+     * Format log message with timestamp and prefix
+     */
+    private format(level: string, message: string): string {
+      const parts: string[] = [];
+
+      if (this.config.timestamps) {
+        const timestamp = new Date().toISOString();
+        parts.push(`[${timestamp}]`);
+      }
+
+      parts.push(`[${level}]`);
+
+      if (this.config.prefix) {
+        parts.push(`[${this.config.prefix}]`);
+      }
+
+      parts.push(message);
+
+      return parts.join(' ');
+    }
+
+    /**
+     * Log debug message
+     */
+    debug(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.DEBUG) {
+        const formatted = this.format('DEBUG', message);
+        console.log(formatted, ...data);
+      }
+    }
+
+    /**
+     * Log info message
+     */
+    info(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.INFO) {
+        const formatted = this.format('INFO', message);
+        console.log(formatted, ...data);
+      }
+    }
+
+    /**
+     * Log warning message
+     */
+    warn(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.WARN) {
+        const formatted = this.format('WARN', message);
+        console.warn(formatted, ...data);
+      }
+    }
+
+    /**
+     * Log error message
+     */
+    error(message: string, ...data: any[]): void {
+      if (this.config.level <= LogLevel.ERROR) {
+        const formatted = this.format('ERROR', message);
+        console.error(formatted, ...data);
+      }
+    }
+  }
+
+  // Export singleton instance
+  export const Logger = new LoggerClass();
+
+  // Set default log level
+  Logger.setLevel(LogLevel.DEBUG);
+
+  // ==================== bloombeasts\core\GameConstants.ts ====================
+
+  /**
+   * Game Constants - Centralized configuration values
+   * Eliminates magic numbers and hardcoded values throughout the codebase
+   */
+
+  /**
+   * XP thresholds for player leveling (cumulative)
+   * Formula: XP = 100 * (2.0 ^ (level - 1))
+   */
+  export const XP_THRESHOLDS = [
+    0,      // Level 1
+    100,    // Level 2: 100 XP
+    300,    // Level 3: 300 XP total
+    700,    // Level 4: 700 XP total
+    1500,   // Level 5: 1500 XP total
+    3100,   // Level 6: 3100 XP total
+    6300,   // Level 7: 6300 XP total
+    12700,  // Level 8: 12700 XP total
+    25500,  // Level 9: 25500 XP total
+  ] as const;
+
+  /**
+   * Game balance constants
+   */
+  export const GAME_CONSTANTS = {
+    /** Maximum player level */
+    MAX_PLAYER_LEVEL: 9,
+
+    /** Maximum boost upgrade level */
+    MAX_BOOST_LEVEL: 6,
+
+    /** Starting player health */
+    STARTING_HEALTH: 30,
+
+    /** Maximum energy */
+    MAX_ENERGY: 10,
+
+    /** Turn timer in seconds */
+    TURN_TIMER_SECONDS: 300,
+
+    /** Starting hand size */
+    STARTING_HAND_SIZE: 3,
+
+    /** Mission ID for Cluck Norris (used in leaderboard) */
+    MISSION_CLUCK_NORRIS_ID: 'mission17',
+
+    /** Attack animation duration in milliseconds */
+    ATTACK_ANIMATION_DURATION_MS: 500,
+
+    /** Card detail popup display duration in milliseconds */
+    CARD_DETAIL_POPUP_DURATION_MS: 2000,
+
+    /** Deck size (maximum cards in deck) */
+    DECK_SIZE: 30,
+
+    /** Minimum deck size required to start a battle */
+    MIN_DECK_SIZE: 1,
+
+    /** Energy blocks per deck */
+    ENERGY_BLOCKS_PER_DECK: 27,
+
+    /** Stat increase per level (10% per level) */
+    STAT_INCREASE_PER_LEVEL: 0.1,
+
+    /** Max priority value for combat helpers */
+    MAX_PRIORITY_VALUE: 999,
+
+    /** Leaderboard max entries to display */
+    LEADERBOARD_MAX_ENTRIES: 10,
+
+    /** Percentage to decimal conversion divisor */
+    PERCENTAGE_TO_DECIMAL: 100,
+
+    /** Milliseconds per second */
+    MILLISECONDS_PER_SECOND: 1000,
+
+    /** Seconds per minute */
+    SECONDS_PER_MINUTE: 60,
+
+    /** Volume max value */
+    VOLUME_MAX: 100,
+  } as const;
+
+  /**
+   * Sound asset IDs - Type-safe references to all sound effects
+   */
+  export const SOUND_EFFECTS = {
+    MENU_BUTTON_SELECT: 'sfx-menu-button-select',
+    ATTACK: 'sfx-attack',
+    PLAY_CARD: 'sfx-play-card',
+    TRAP_ACTIVATED: 'sfx-trap-card-activated',
+    WIN: 'sfx-win',
+    LOSE: 'sfx-lose',
+    UPGRADE: 'sfx-upgrade',
+    UPGRADE_ROOSTER: 'sfx-upgrade-rooster',
+  } as const;
+
+  /**
+   * Music asset IDs - Type-safe references to all music tracks
+   */
+  export const MUSIC_TRACKS = {
+    BACKGROUND: 'music-background',
+    BATTLE: 'music-battle',
+  } as const;
+
+  /**
+   * Calculate player level from total XP (derived data)
+   */
+  export function getPlayerLevel(totalXP: number): number {
+    for (let level = GAME_CONSTANTS.MAX_PLAYER_LEVEL; level >= 1; level--) {
+      if (totalXP >= XP_THRESHOLDS[level - 1]) {
+        return level;
+      }
+    }
+    return 1;
+  }
+
+  // ==================== bloombeasts\common\ui\styles\styles\colors.ts ====================
+
+  /**
+   * Shared color palette for BloomBeasts
+   * Used across both Web and Horizon platforms
+   */
+
+  export const COLORS = {
+    // Primary colors
+    background: '#1a1a2e',
+    backgroundDark: '#0f0f1e',
+    primary: '#00d9ff',
+    primaryLight: '#3498db',
+
+    // Text colors
+    textPrimary: '#ffffff',
+    textSecondary: '#aaaaaa',
+    textMuted: '#666666',
+
+    // UI element colors
+    buttonPrimary: '#3498db',
+    buttonDanger: '#e74c3c',
+    buttonSuccess: '#27ae60',
+    buttonDisabled: '#555555',
+    surface: '#2c3e50',
+    disabled: '#555555',
+    error: '#e74c3c',
+
+    // Card/Panel colors
+    cardBackground: '#2c3e50',
+    panelBackground: '#1a1a1a',
+    overlayBackground: 'rgba(0, 0, 0, 0.8)',
+    overlayBackgroundDark: 'rgba(0, 0, 0, 0.9)',
+
+    // Borders
+    borderPrimary: '#00d9ff',
+    borderSuccess: '#27ae60',
+    borderDefault: '#3498db',
+    border: '#3a3a4a',
+
+    // Affinity colors
+    affinity: {
+      fire: '#e74c3c',
+      water: '#3498db',
+      forest: '#27ae60',
+      sky: '#9b59b6',
+      neutral: '#95a5a6',
+    },
+
+    // Status colors
+    success: '#27ae60',
+    warning: '#f39c12',
+    danger: '#e74c3c',
+    info: '#3498db',
+
+    // Rarity colors (for cards)
+    rarity: {
+      common: '#95a5a6',
+      uncommon: '#27ae60',
+      rare: '#3498db',
+      epic: '#9b59b6',
+      legendary: '#f39c12',
+    },
+  } as const;
+
+  // ==================== bloombeasts\common\ui\styles\styles\dimensions.ts ====================
+
+  /**
+   * Shared dimensions and spacing for BloomBeasts
+   * Used across both Web and Horizon platforms
+   */
+
+  export const DIMENSIONS = {
+    // Panel/Screen dimensions
+    panel: {
+      width: 1280,
+      height: 720,
+    },
+
+    // Button dimensions
+    button: {
+      height: 50,
+      minWidth: 200,
+      padding: 15,
+      borderRadius: 10,
+    },
+
+    buttonSmall: {
+      height: 40,
+      minWidth: 100,
+      padding: 10,
+      borderRadius: 8,
+    },
+
+    // Card dimensions
+    card: {
+      width: 150,
+      height: 200,
+      borderRadius: 10,
+      borderWidth: 2,
+      padding: 10,
+    },
+
+    // Mission card dimensions
+    missionCard: {
+      padding: 15,
+      borderRadius: 10,
+      borderWidth: 2,
+      minHeight: 80,
+    },
+
+    // Dialog/Modal dimensions
+    dialog: {
+      minWidth: 400,
+      maxWidth: 600,
+      padding: 30,
+      borderRadius: 15,
+    },
+
+    // Spacing scale
+    spacing: {
+      xs: 5,
+      sm: 10,
+      md: 15,
+      lg: 20,
+      xl: 30,
+      xxl: 40,
+    },
+
+    // Font sizes
+    fontSize: {
+      xs: 12,
+      sm: 14,
+      md: 18,
+      lg: 20,
+      xl: 24,
+      xxl: 28,
+      title: 36,
+      hero: 72,
+    },
+
+    // Border widths
+    borderWidth: {
+      thin: 1,
+      normal: 2,
+      thick: 3,
+    },
+
+    // Stat badge dimensions
+    statBadge: {
+      padding: 10,
+      borderRadius: 8,
+      borderWidth: 2,
+    },
+  } as const;
+
+  /**
+   * Battle-specific card dimensions
+   * These are larger/different from the generic DIMENSIONS.card for battle UI layout
+   */
+  export const standardCardDimensions = {
+    width: 210,
+    height: 280,
+  };
+
+  export const trapCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  export const buffCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  export const habitatShiftCardDimensions = {
+    width: 100,
+    height: 133,
+  };
+
+  /**
+   * Button dimensions (specific sizes for different contexts)
+   */
+  export const sideMenuButtonDimensions = {
+    width: 175,
+    height: 72,
+  };
+
+  export const longButtonDimensions = {
+    width: 201,
+    height: 35,
+  };
+
+  export const smallButtonDimensions = {
+    width: 89,
+    height: 89,
+  };
+
+  /**
+   * Mission-specific dimensions
+   */
+  export const missionCompleteCardDimensions = {
+    width: 550,
+    height: 330,
+  };
+
+  export const chestImageMissionCompleteDimensions = {
+    width: 160,
+    height: 180,
+  };
+
+  /**
+   * Common gaps for flexbox layouts
+   */
+  export const GAPS = {
+    cards: 15,
+    buttons: 3,
+    missions: 10,
+    stats: 20,
+    sections: 30,
+  } as const;
+
+  // ==================== bloombeasts\common\engine\types\abilities.ts ====================
 
   /**
    * Comprehensive ability system types for BloomBeasts
@@ -132,6 +871,7 @@ namespace BloomBeasts {
     CostAbove = 'cost-above',
     CostBelow = 'cost-below',
     AffinityMatches = 'affinity-matches',
+    AffinityNotMatches = 'affinity-not-matches',
     IsDamaged = 'is-damaged',
     IsWilting = 'is-wilting',
     TurnCount = 'turn-count',
@@ -468,7 +1208,7 @@ namespace BloomBeasts {
     maxUsesPerGame?: number;  // For once per game abilities
   }
 
-  // ==================== bloombeasts/common/engine/types/core.ts ====================
+  // ==================== bloombeasts\common\engine\types\core.ts ====================
 
   /**
    * Core type definitions for BloomBeasts card game
@@ -616,1523 +1356,7 @@ namespace BloomBeasts {
    */
   export type AnyCard = MagicCard | TrapCard | HabitatCard | BloomBeastCard | BuffCard;
 
-  // ==================== bloombeasts/common/engine/utils/Logger.ts ====================
-
-  /**
-   * Logger
-   *
-   * Simple logging system with configurable log levels.
-   */
-
-  export enum LogLevel {
-    DEBUG = 0,
-    INFO = 1,
-    WARN = 2,
-    ERROR = 3,
-    NONE = 4,
-  }
-
-  export interface LoggerConfig {
-    level: LogLevel;
-    prefix?: string;
-    timestamps?: boolean;
-  }
-
-  class LoggerClass {
-    private config: LoggerConfig = {
-      level: LogLevel.INFO,
-      timestamps: true,
-    };
-
-    /**
-     * Configure the logger
-     */
-    configure(config: Partial<LoggerConfig>): void {
-      this.config = { ...this.config, ...config };
-    }
-
-    /**
-     * Set log level
-     */
-    setLevel(level: LogLevel): void {
-      this.config.level = level;
-    }
-
-    /**
-     * Get current log level
-     */
-    getLevel(): LogLevel {
-      return this.config.level;
-    }
-
-    /**
-     * Format log message with timestamp and prefix
-     */
-    private format(level: string, message: string): string {
-      const parts: string[] = [];
-
-      if (this.config.timestamps) {
-        const timestamp = new Date().toISOString();
-        parts.push(`[${timestamp}]`);
-      }
-
-      parts.push(`[${level}]`);
-
-      if (this.config.prefix) {
-        parts.push(`[${this.config.prefix}]`);
-      }
-
-      parts.push(message);
-
-      return parts.join(' ');
-    }
-
-    /**
-     * Log debug message
-     */
-    debug(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.DEBUG) {
-        const formatted = this.format('DEBUG', message);
-        console.log(formatted, ...data);
-      }
-    }
-
-    /**
-     * Log info message
-     */
-    info(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.INFO) {
-        const formatted = this.format('INFO', message);
-        console.log(formatted, ...data);
-      }
-    }
-
-    /**
-     * Log warning message
-     */
-    warn(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.WARN) {
-        const formatted = this.format('WARN', message);
-        console.warn(formatted, ...data);
-      }
-    }
-
-    /**
-     * Log error message
-     */
-    error(message: string, ...data: any[]): void {
-      if (this.config.level <= LogLevel.ERROR) {
-        const formatted = this.format('ERROR', message);
-        console.error(formatted, ...data);
-      }
-    }
-  }
-
-  // Export singleton instance
-  export const Logger = new LoggerClass();
-
-  // Set default log level
-  Logger.setLevel(LogLevel.DEBUG);
-
-  // ==================== bloombeasts/common/engine/cards/deckConfig.ts ====================
-
-  /**
-   * Deck Configuration - Simplified deck building using card utilities
-   */
-
-
-  export type DeckCardEntry<T = AnyCard> = {
-    card: T;
-    quantity: number;
-  };
-
-  // Deck config that stores card IDs instead of card objects (for lazy loading)
-  export type DeckCardIdEntry = {
-    cardId: string;
-    quantity: number;
-  };
-
-  export type AffinityType = 'Forest' | 'Fire' | 'Water' | 'Sky';
-
-  /**
-   * Deck configuration for each affinity (with card IDs)
-   */
-  export interface AffinityDeckConfigIds {
-    name: string;
-    affinity: AffinityType;
-    beasts: DeckCardIdEntry[];
-    habitats: DeckCardIdEntry[];
-  }
-
-  /**
-   * Deck configuration for each affinity (with resolved cards)
-   */
-  export interface AffinityDeckConfig {
-    name: string;
-    affinity: AffinityType;
-    beasts: DeckCardEntry<BloomBeastCard>[];
-    habitats: DeckCardEntry<HabitatCard>[];
-  }
-
-  /**
-   * Static deck configurations using card IDs (no catalog dependency)
-   * These can be loaded at module initialization time
-   */
-  const AFFINITY_DECK_CONFIG_IDS: Record<AffinityType, AffinityDeckConfigIds> = {
-    Forest: {
-      name: 'Forest Starter: The Growth Deck',
-      affinity: 'Forest',
-      beasts: [
-        { cardId: 'mosslet', quantity: 4 },
-        { cardId: 'rootling', quantity: 4 },
-        { cardId: 'mushroomancer', quantity: 2 },
-        { cardId: 'leaf-sprite', quantity: 3 },
-      ],
-      habitats: [
-        { cardId: 'ancient-forest', quantity: 3 },
-      ],
-    },
-    Fire: {
-      name: 'Fire Starter: The Aggro Deck',
-      affinity: 'Fire',
-      beasts: [
-        { cardId: 'cinder-pup', quantity: 4 },
-        { cardId: 'blazefinch', quantity: 4 },
-        { cardId: 'magmite', quantity: 2 },
-        { cardId: 'charcoil', quantity: 3 },
-      ],
-      habitats: [
-        { cardId: 'volcanic-scar', quantity: 3 },
-      ],
-    },
-    Water: {
-      name: 'Water Starter: The Control Deck',
-      affinity: 'Water',
-      beasts: [
-        { cardId: 'bubblefin', quantity: 4 },
-        { cardId: 'aqua-pebble', quantity: 4 },
-        { cardId: 'dewdrop-drake', quantity: 2 },
-        { cardId: 'kelp-cub', quantity: 3 },
-      ],
-      habitats: [
-        { cardId: 'deep-sea-grotto', quantity: 3 },
-      ],
-    },
-    Sky: {
-      name: 'Sky Starter: The Utility Deck',
-      affinity: 'Sky',
-      beasts: [
-        { cardId: 'cirrus-floof', quantity: 4 },
-        { cardId: 'gale-glider', quantity: 4 },
-        { cardId: 'star-bloom', quantity: 2 },
-        { cardId: 'aero-moth', quantity: 3 },
-      ],
-      habitats: [
-        { cardId: 'clear-zenith', quantity: 3 },
-      ],
-    },
-  };
-
-  /**
-   * Shared core cards (card IDs) - Simplified for Forest starter deck
-   */
-  const SHARED_CORE_CARD_IDS: DeckCardIdEntry[] = [
-    // Basic resource generation
-    { cardId: 'nectar-block', quantity: 10 },
-    { cardId: 'nectar-surge', quantity: 2 },
-  ];
-
-  /**
-   * Resolve card IDs to card objects
-   */
-  function resolveCardIds<T = AnyCard>(catalogManager: any, cardIdEntries: DeckCardIdEntry[]): DeckCardEntry<T>[] {
-    if (!catalogManager) {
-      Logger.error('[deckConfig] catalogManager not provided');
-      return [];
-    }
-    return cardIdEntries.map(({ cardId, quantity }) => ({
-      card: catalogManager.getCard(cardId) as T,
-      quantity,
-    }));
-  }
-
-  /**
-   * Get shared core cards configuration (resolved from IDs)
-   */
-  export function getSharedCoreCards(catalogManager: any): DeckCardEntry<MagicCard | TrapCard>[] {
-    return resolveCardIds<MagicCard | TrapCard>(catalogManager, SHARED_CORE_CARD_IDS);
-  }
-
-  /**
-   * Get deck configuration for a specific affinity (resolves card IDs to cards)
-   */
-  export function getDeckConfig(catalogManager: any, affinity: AffinityType): AffinityDeckConfig {
-    const configIds = AFFINITY_DECK_CONFIG_IDS[affinity];
-
-    return {
-      name: configIds.name,
-      affinity: configIds.affinity,
-      beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
-      habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
-    };
-  }
-
-  /**
-   * Get all deck configurations (resolves card IDs to cards)
-   */
-  export function getAllDeckConfigs(catalogManager: any): AffinityDeckConfig[] {
-    return Object.values(AFFINITY_DECK_CONFIG_IDS).map(configIds => ({
-      name: configIds.name,
-      affinity: configIds.affinity,
-      beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
-      habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
-    }));
-  }
-
-  // ==================== bloombeasts/common/engine/cards/index.ts ====================
-
-  /**
-   * Central card registry
-   */
-
-  // Re-export everything from config
-
-  // ==================== bloombeasts/common/engine/utils/deckBuilder.ts ====================
-
-  /**
-   * Deck Builder Utilities - Construct and manage decks
-   */
-
-
-  // Module-level catalog manager reference for deck builder
-  // Set via setCatalogManagerForDeckBuilder() which is called by BloomBeastsGame
-  let _deckBuilderCatalogManager: any = null;
-
-  /**
-   * Set the catalog manager instance for deck builder functions
-   * Called by BloomBeastsGame during construction
-   */
-  export function setCatalogManagerForDeckBuilder(catalogManager: any): void {
-    _deckBuilderCatalogManager = catalogManager;
-  }
-
-  export type DeckType = AffinityType;
-
-  export interface DeckList {
-    name: string;
-    affinity: DeckType;
-    cards: AnyCard[];
-    totalCards: number;
-  }
-
-  /**
-   * Expand cards based on quantity
-   */
-  function expandCards<T extends AnyCard>(cardQuantities: DeckCardEntry<T>[]): T[] {
-    const result: T[] = [];
-
-    for (const { card, quantity } of cardQuantities) {
-      for (let i = 0; i < quantity; i++) {
-        // Create a unique copy with an instance ID
-        result.push({
-          ...card,
-          instanceId: `${card.id}-${i + 1}`,
-        });
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Build a complete deck with shared cards and affinity-specific cards
-   */
-  function buildDeck(type: DeckType): DeckList {
-    if (!_deckBuilderCatalogManager) {
-      Logger.error('[deckBuilder] catalogManager not initialized');
-      return { name: '', affinity: type, cards: [], totalCards: 0 };
-    }
-
-    // Get deck configuration from centralized config
-    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
-
-    const sharedCards = expandCards(getSharedCoreCards(_deckBuilderCatalogManager));
-    const beasts = expandCards(deckConfig.beasts);
-    const habitats = expandCards(deckConfig.habitats);
-
-    const allCards = [...sharedCards, ...beasts, ...habitats];
-
-    return {
-      name: deckConfig.name,
-      affinity: type,
-      cards: allCards,
-      totalCards: allCards.length,
-    };
-  }
-
-  /**
-   * Build Forest starter deck
-   */
-  export function buildForestDeck(): DeckList {
-    return buildDeck('Forest');
-  }
-
-  /**
-   * Build Fire starter deck
-   */
-  export function buildFireDeck(): DeckList {
-    return buildDeck('Fire');
-  }
-
-  /**
-   * Build Water starter deck
-   */
-  export function buildWaterDeck(): DeckList {
-    return buildDeck('Water');
-  }
-
-  /**
-   * Build Sky starter deck
-   */
-  export function buildSkyDeck(): DeckList {
-    return buildDeck('Sky');
-  }
-
-  /**
-   * Get all starter decks
-   */
-  export function getAllStarterDecks(): DeckList[] {
-    return (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).map(buildDeck);
-  }
-
-  /**
-   * Get a specific starter deck by type
-   */
-  export function getStarterDeck(type: DeckType): DeckList {
-    // Use simple Forest starter deck
-    return buildDeck('Forest');
-  }
-
-  /**
-   * Get a quick win deck with just a few low-level beasts for fast testing
-   * This creates a minimal deck for quick victories in testing
-   */
-  export function quickWinDeck(type: DeckType): DeckList {
-    if (!_deckBuilderCatalogManager) {
-      Logger.error('[deckBuilder] catalogManager not initialized');
-      return { name: '', affinity: type, cards: [], totalCards: 0 };
-    }
-
-    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
-    const allCards: AnyCard[] = [];
-
-    // Add just a few level 1 beasts (3 total - easy to draw and summon quickly)
-    const beastEntry = deckConfig.beasts[0]; // Get the first beast type
-    if (beastEntry) {
-      for (let i = 1; i <= 3; i++) {
-        allCards.push({
-          ...beastEntry.card,
-          instanceId: `${beastEntry.card.id}-${i}`,
-        } as unknown as AnyCard);
-      }
-    }
-
-    // Add 27 Energy Blocks for fast summoning
-    const energyBlock = _deckBuilderCatalogManager.getCard('nectar-block');
-    if (energyBlock) {
-      for (let i = 1; i <= 27; i++) {
-        allCards.push({
-          ...energyBlock,
-          instanceId: `nectar-block-${i}`,
-        } as unknown as AnyCard);
-      }
-    }
-
-    return {
-      name: `${deckConfig.name} (Quick Win)`,
-      affinity: type,
-      cards: allCards,
-      totalCards: allCards.length,
-    };
-  }
-
-  /**
-   * Get a testing deck with 1 of each card (for easy testing)
-   * This includes 1 of every card in the game across all affinities
-   */
-  export function getTestingDeck(type: DeckType): DeckList {
-    if (!_deckBuilderCatalogManager) {
-      Logger.error('[deckBuilder] catalogManager not initialized');
-      return { name: '', affinity: type, cards: [], totalCards: 0 };
-    }
-
-    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
-
-    // Get 1 of each card from all affinities
-    const allCards: AnyCard[] = [];
-
-    // Add shared cards (Magic, Trap) - 1 of each
-    const sharedCards = getSharedCoreCards(_deckBuilderCatalogManager);
-    sharedCards.forEach(({ card }) => {
-      allCards.push({
-        ...card,
-        instanceId: `${card.id}-1`,
-      } as unknown as AnyCard);
-    });
-
-    // Add buff cards - 1 of each
-    const buffCards = _deckBuilderCatalogManager.getAllBuffCards();
-    buffCards.forEach((card: any) => {
-      allCards.push({
-        ...card,
-        instanceId: `${card.id}-1`,
-      } as unknown as AnyCard);
-    });
-
-    // Add all beasts from all affinities - 1 of each
-    (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).forEach(affinity => {
-      const affinityConfig = getDeckConfig(_deckBuilderCatalogManager, affinity);
-
-      // Add beasts
-      affinityConfig.beasts.forEach(({ card }) => {
-        allCards.push({
-          ...card,
-          instanceId: `${card.id}-1`,
-        } as unknown as AnyCard);
-      });
-
-      // Add habitats
-      affinityConfig.habitats.forEach(({ card }) => {
-        allCards.push({
-          ...card,
-          instanceId: `${card.id}-1`,
-        } as unknown as AnyCard);
-      });
-    });
-
-    return {
-      name: `${deckConfig.name} (Testing)`,
-      affinity: type,
-      cards: allCards,
-      totalCards: allCards.length,
-    };
-  }
-
-  /**
-   * Shuffle a deck
-   */
-  export function shuffleDeck(cards: AnyCard[]): AnyCard[] {
-    const shuffled = [...cards];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }
-
-  /**
-   * Validate deck (30 cards required)
-   */
-  export function validateDeck(cards: AnyCard[]): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
-    if (cards.length !== 30) {
-      errors.push(`Deck must contain exactly 30 cards. Current: ${cards.length}`);
-    }
-
-    return {
-      valid: errors.length === 0,
-      errors,
-    };
-  }
-
-  // ==================== bloombeasts/screens/missions/types.ts ====================
-
-  /**
-   * Mission System Type Definitions
-   */
-
-
-  export type MissionDifficulty = 'beginner' | 'easy' | 'normal' | 'hard' | 'expert';
-
-  export type CardPool = 'common' | 'uncommon' | 'rare' | 'affinity' | 'any';
-
-  export interface ItemReward {
-    itemId: string;               // Item ID from items.ts
-    minAmount: number;            // Minimum items to receive
-    maxAmount: number;            // Maximum items to receive
-    dropChance: number;           // Chance to receive (0-1)
-  }
-
-  export interface MissionRewards {
-    guaranteedXP: number;        // Minimum XP earned
-    bonusXPChance: number;        // Chance for bonus XP (0-1)
-    bonusXPAmount: number;        // Amount of bonus XP if triggered
-    cardRewards: CardReward[];    // Possible card rewards
-    coinRewards?: {               // Coin rewards
-      minAmount: number;
-      maxAmount: number;
-      dropChance: number;
-    };
-    itemRewards?: ItemReward[];   // Possible item rewards (serums, etc)
-  }
-
-  export interface CardReward {
-    cardPool: CardPool;
-    affinity?: Affinity;         // If cardPool is 'affinity'
-    minAmount: number;            // Minimum cards to receive
-    maxAmount: number;            // Maximum cards to receive
-    dropChance: number;           // Chance to receive (0-1)
-  }
-
-  export interface MissionObjective {
-    type: 'defeat-opponent' | 'survive-turns' | 'deal-damage' |
-          'summon-beasts' | 'use-abilities' | 'maintain-health';
-    target?: number;              // Target value for objective
-    description: string;
-  }
-
-  export interface Mission {
-    id: string;
-    name: string;
-    description: string;
-    storyText?: string;           // Lore/flavor text
-    difficulty: MissionDifficulty;
-    level: number;                // Mission level (1-10)
-    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss'; // Mission affinity for visuals
-    beastId: string;              // Beast card ID for mission image (e.g., 'Rootling')
-
-    // Battle configuration
-    playerDeck?: DeckList | (() => DeckList);        // Optional fixed deck for player (or factory function)
-    opponentDeck: DeckList | (() => DeckList);       // AI opponent's deck (or factory function)
-    opponentAI?: AIProfile;        // AI behavior profile (optional)
-
-    // Mission specifics (all optional now)
-    objectives?: MissionObjective[];
-    turnLimit?: number;           // Optional turn limit
-
-    // Rewards
-    rewards: MissionRewards;
-    firstTimeBonus?: MissionRewards; // Extra rewards for first completion
-
-    // Progress tracking
-    timesCompleted: number;
-    bestScore?: number;
-    lastPlayed?: Date;
-    unlocked: boolean;
-  }
-
-  export interface AIProfile {
-    name: string;
-    difficulty: MissionDifficulty;
-    personality: 'aggressive' | 'defensive' | 'balanced' | 'strategic' | 'chaotic';
-
-    // AI behavior weights (0-1)
-    aggressiveness: number;       // Likelihood to attack
-    resourceManagement: number;   // How well it manages energy
-    targetPriority: 'strongest' | 'weakest' | 'random' | 'strategic';
-    abilityUsage: number;        // Likelihood to use abilities
-
-    // Special AI behaviors
-    behaviors?: AIBehavior[];
-  }
-
-  export interface AIBehavior {
-    trigger: 'low-health' | 'high-energy' | 'empty-field' | 'turn-count';
-    condition?: number;
-    action: 'play-defensive' | 'all-out-attack' | 'summon-rush' | 'ability-spam';
-  }
-
-  export interface MissionResult {
-    missionId: string;
-    completed: boolean;
-    objectivesCompleted: string[];
-    turnsUsed: number;
-    damageDealt: number;
-    beastsDefeated: number;
-    score: number;
-
-    // Rewards earned
-    xpEarned: number;
-    cardsEarned: AnyCard[];
-    energyEarned: number;
-  }
-
-  export interface MissionProgress {
-    missionId: string;
-    attempts: number;
-    completions: number;
-    bestScore: number;
-    totalXPEarned: number;
-    totalCardsEarned: number;
-    averageCompletion: number;   // Average turns to complete
-    currentStreak: number;        // Consecutive completions
-  }
-
-  /**
-   * Helper to resolve a deck (handles both direct DeckList and factory functions)
-   */
-  export function resolveDeck(deckOrFactory: DeckList | (() => DeckList)): DeckList {
-    if (typeof deckOrFactory === 'function') {
-      return deckOrFactory();
-    }
-    return deckOrFactory;
-  }
-
-  // ==================== bloombeasts/screens/missions/definitions/mission01.ts ====================
-
-  /**
-   * Mission 01: Rootling
-   * Forest Affinity Mission
-   */
-
-
-  export const mission01: Mission = {
-    id: 'mission-01',
-    name: 'Rootling',
-    description: 'Battle the Rootling in the forest depths.',
-    difficulty: 'beginner',
-    level: 1,
-    affinity: 'Forest',
-    beastId: 'Rootling',
-
-    // Use a function to build the deck on demand (after catalogs are loaded)
-    opponentDeck: () => {
-      // Use the proper Forest starter deck builder for a balanced deck
-      const deck = buildForestDeck();
-
-      // Safety check - return empty deck if builder failed
-      if (!deck || deck.cards.length === 0) {
-        Logger.error('[mission01] Failed to build Forest deck');
-        return { name: 'Rootling Deck', affinity: 'Forest' as const, cards: [], totalCards: 0 };
-      }
-
-      // Override the name for tutorial context
-      return {
-        ...deck,
-        name: 'Rootling (Tutorial Deck)',
-      };
-    },
-
-    rewards: {
-      guaranteedXP: 50,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 25,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 1.0,
-        },
-      ],
-      coinRewards: {
-        minAmount: 50,
-        maxAmount: 150,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: true, // First mission is always unlocked
-  };
-
-  // ==================== bloombeasts/screens/missions/utils/deckBuilder.ts ====================
-
-  /**
-   * Mission Deck Builder Utilities
-   * Centralized deck construction for mission definitions
-   */
-
-
-  /**
-   * Card specification for deck building
-   */
-  export interface CardSpec {
-    cardId: string;
-    count: number;
-  }
-
-  /**
-   * Get catalog manager from global game instance
-   */
-  function getCatalogManager(): any {
-    const game = (globalThis as any).bloomBeastsGame;
-    if (!game?.catalogManager) {
-      Logger.error('[MissionDeckBuilder] Catalog manager not available');
-      return null;
-    }
-    return game.catalogManager;
-  }
-
-  /**
-   * Create a mission deck with specified cards
-   *
-   * @example
-   * createMissionDeck({
-   *   name: 'Mushroomancer Pack',
-   *   affinity: 'Forest',
-   *   cards: [{ cardId: 'mushroomancer', count: 20 }]
-   * })
-   */
-  export function createMissionDeck(config: {
-    name: string;
-    affinity: DeckType;
-    cards: CardSpec[];
-  }): DeckList {
-    const catalogManager = getCatalogManager();
-
-    if (!catalogManager) {
-      return {
-        name: config.name,
-        affinity: config.affinity,
-        cards: [],
-        totalCards: 0,
-      };
-    }
-
-    const deckCards: any[] = [];
-
-    for (const spec of config.cards) {
-      const cardDef = catalogManager.getCard(spec.cardId);
-
-      if (!cardDef) {
-        Logger.error(`[MissionDeckBuilder] Card not found: ${spec.cardId}`);
-        continue;
-      }
-
-      // Create multiple instances of this card
-      for (let i = 1; i <= spec.count; i++) {
-        deckCards.push({
-          ...cardDef,
-          instanceId: `${spec.cardId}-${i}`,
-        });
-      }
-    }
-
-    return {
-      name: config.name,
-      affinity: config.affinity,
-      cards: deckCards,
-      totalCards: deckCards.length,
-    };
-  }
-
-  /**
-   * Create a simple deck with just one card type (common for early missions)
-   */
-  export function createSimpleDeck(
-    deckName: string,
-    affinity: DeckType,
-    cardId: string,
-    count: number
-  ): DeckList {
-    return createMissionDeck({
-      name: deckName,
-      affinity,
-      cards: [{ cardId, count }],
-    });
-  }
-
-  // ==================== bloombeasts/screens/missions/definitions/mission02.ts ====================
-
-  /**
-   * Mission 02: Mosslet
-   * Forest Affinity Mission
-   */
-
-
-  export const mission02: Mission = {
-    id: 'mission-02',
-    name: 'Mushroomancer',
-    description: 'Face the mystical Mushroomancer among the trees.',
-    difficulty: 'beginner',
-    level: 2,
-    affinity: 'Forest',
-    beastId: 'Mushroomancer',
-
-    opponentDeck: () => createSimpleDeck('Mushroomancer Pack', 'Forest' as const, 'mushroomancer', 20),
-
-    rewards: {
-      guaranteedXP: 60,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 30,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.9,
-        },
-      ],
-      coinRewards: {
-        minAmount: 75,
-        maxAmount: 175,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission03.ts ====================
-
-  /**
-   * Mission 03: Mosslet
-   * Forest Affinity Mission
-   */
-
-
-  export const mission03: Mission = {
-    id: 'mission-03',
-    name: 'Mosslet',
-    description: 'Challenge the sturdy Mosslet in the mossy glen.',
-    difficulty: 'easy',
-    level: 3,
-    affinity: 'Forest',
-    beastId: 'Mosslet',
-
-    opponentDeck: () =>
-      createMissionDeck({
-        name: 'Forest Basics',
-        affinity: 'Forest' as const,
-        cards: [
-          { cardId: 'mosslet', count: 5 },
-          { cardId: 'rootling', count: 5 },
-          { cardId: 'nectar-block', count: 5 },
-        ],
-      }),
-
-    rewards: {
-      guaranteedXP: 70,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 35,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.8,
-        },
-      ],
-      coinRewards: {
-        minAmount: 100,
-        maxAmount: 200,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission04.ts ====================
-
-  /**
-   * Mission 04: Leaf Sprite
-   * Forest Affinity Mission
-   */
-
-
-  export const mission04: Mission = {
-    id: 'mission-04',
-    name: 'Leaf Sprite',
-    description: 'Test your skills against the agile Leaf Sprite.',
-    difficulty: 'easy',
-    level: 4,
-    affinity: 'Forest',
-    beastId: 'Leaf Sprite',
-
-    opponentDeck: () =>
-      createMissionDeck({
-        name: 'Forest Advancement',
-        affinity: 'Forest' as const,
-        cards: [
-          { cardId: 'leaf-sprite', count: 6 },
-          { cardId: 'mushroomancer', count: 6 },
-          { cardId: 'ancient-forest', count: 1 },
-          { cardId: 'nectar-block', count: 6 },
-          { cardId: 'power-up', count: 1 },
-        ],
-      }),
-
-    rewards: {
-      guaranteedXP: 80,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 40,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.8,
-        },
-      ],
-      coinRewards: {
-        minAmount: 125,
-        maxAmount: 225,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission05.ts ====================
-
-  /**
-   * Mission 05: Bubblefin
-   * Water Affinity Mission
-   */
-
-
-  export const mission05: Mission = {
-    id: 'mission-05',
-    name: 'Bubblefin',
-    description: 'Dive deep to battle the nimble Bubblefin.',
-    difficulty: 'normal',
-    level: 5,
-    affinity: 'Water',
-    beastId: 'Bubblefin',
-
-    opponentDeck: () => buildWaterDeck(),
-
-    rewards: {
-      guaranteedXP: 90,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 45,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-      ],
-      coinRewards: {
-        minAmount: 150,
-        maxAmount: 250,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission06.ts ====================
-
-  /**
-   * Mission 06: Dewdrop Drake
-   * Water Affinity Mission
-   */
-
-
-  export const mission06: Mission = {
-    id: 'mission-06',
-    name: 'Dewdrop Drake',
-    description: 'Confront the serene Dewdrop Drake by the waterfall.',
-    difficulty: 'normal',
-    level: 6,
-    affinity: 'Water',
-    beastId: 'Dewdrop Drake',
-
-    opponentDeck: () => buildWaterDeck(),
-
-    rewards: {
-      guaranteedXP: 100,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 50,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-      ],
-      coinRewards: {
-        minAmount: 175,
-        maxAmount: 275,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission07.ts ====================
-
-  /**
-   * Mission 07: Kelp Cub
-   * Water Affinity Mission
-   */
-
-
-  export const mission07: Mission = {
-    id: 'mission-07',
-    name: 'Kelp Cub',
-    description: 'Navigate the kelp forest to face the Kelp Cub.',
-    difficulty: 'normal',
-    level: 7,
-    affinity: 'Water',
-    beastId: 'Kelp Cub',
-
-    opponentDeck: () => buildWaterDeck(),
-
-    rewards: {
-      guaranteedXP: 110,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 55,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-      ],
-      coinRewards: {
-        minAmount: 200,
-        maxAmount: 300,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission08.ts ====================
-
-  /**
-   * Mission 08: Aqua Pebble
-   * Water Affinity Mission
-   */
-
-
-  export const mission08: Mission = {
-    id: 'mission-08',
-    name: 'Aqua Pebble',
-    description: 'Test your might against the resilient Aqua Pebble.',
-    difficulty: 'hard',
-    level: 8,
-    affinity: 'Water',
-    beastId: 'Aqua Pebble',
-
-    opponentDeck: () => buildWaterDeck(),
-
-    rewards: {
-      guaranteedXP: 120,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 60,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.4,
-        },
-      ],
-      coinRewards: {
-        minAmount: 225,
-        maxAmount: 325,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission09.ts ====================
-
-  /**
-   * Mission 09: Magmite
-   * Fire Affinity Mission
-   */
-
-
-  export const mission09: Mission = {
-    id: 'mission-09',
-    name: 'Magmite',
-    description: 'Brave the flames to challenge the fierce Magmite.',
-    difficulty: 'hard',
-    level: 9,
-    affinity: 'Fire',
-    beastId: 'Magmite',
-
-    opponentDeck: () => buildFireDeck(),
-
-    rewards: {
-      guaranteedXP: 130,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 65,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.5,
-        },
-      ],
-      coinRewards: {
-        minAmount: 250,
-        maxAmount: 350,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission10.ts ====================
-
-  /**
-   * Mission 10: Cinder Pup
-   * Fire Affinity Mission
-   */
-
-
-  export const mission10: Mission = {
-    id: 'mission-10',
-    name: 'Cinder Pup',
-    description: 'Face the energetic Cinder Pup in volcanic fields.',
-    difficulty: 'hard',
-    level: 10,
-    affinity: 'Fire',
-    beastId: 'Cinder Pup',
-
-    opponentDeck: () => buildFireDeck(),
-
-    rewards: {
-      guaranteedXP: 140,
-      bonusXPChance: 0.5,
-      bonusXPAmount: 70,
-      cardRewards: [
-        {
-          cardPool: 'common',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.5,
-        },
-      ],
-      coinRewards: {
-        minAmount: 275,
-        maxAmount: 375,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission11.ts ====================
-
-  /**
-   * Mission 11: Charcoil
-   * Fire Affinity Mission
-   */
-
-
-  export const mission11: Mission = {
-    id: 'mission-11',
-    name: 'Charcoil',
-    description: 'Battle the smoldering Charcoil in the ember wastes.',
-    difficulty: 'hard',
-    level: 11,
-    affinity: 'Fire',
-    beastId: 'Charcoil',
-
-    opponentDeck: () => buildFireDeck(),
-
-    rewards: {
-      guaranteedXP: 150,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 75,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-      ],
-      coinRewards: {
-        minAmount: 300,
-        maxAmount: 400,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission12.ts ====================
-
-  /**
-   * Mission 12: Blazefinch
-   * Fire Affinity Mission
-   */
-
-
-  export const mission12: Mission = {
-    id: 'mission-12',
-    name: 'Blazefinch',
-    description: 'Soar through the flames to face the swift Blazefinch.',
-    difficulty: 'expert',
-    level: 12,
-    affinity: 'Fire',
-    beastId: 'Blazefinch',
-
-    opponentDeck: () => buildFireDeck(),
-
-    rewards: {
-      guaranteedXP: 160,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 80,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.4,
-        },
-      ],
-      coinRewards: {
-        minAmount: 325,
-        maxAmount: 425,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission13.ts ====================
-
-  /**
-   * Mission 13: Cirrus Floof
-   * Sky Affinity Mission
-   */
-
-
-  export const mission13: Mission = {
-    id: 'mission-13',
-    name: 'Cirrus Floof',
-    description: 'Ascend to the clouds to meet the gentle Cirrus Floof.',
-    difficulty: 'expert',
-    level: 13,
-    affinity: 'Sky',
-    beastId: 'Cirrus Floof',
-
-    opponentDeck: () => buildSkyDeck(),
-
-    rewards: {
-      guaranteedXP: 170,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 85,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.4,
-        },
-      ],
-      coinRewards: {
-        minAmount: 350,
-        maxAmount: 450,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission14.ts ====================
-
-  /**
-   * Mission 14: Gale Glider
-   * Sky Affinity Mission
-   */
-
-
-  export const mission14: Mission = {
-    id: 'mission-14',
-    name: 'Gale Glider',
-    description: 'Race through the windstorm against the agile Gale Glider.',
-    difficulty: 'expert',
-    level: 14,
-    affinity: 'Sky',
-    beastId: 'Gale Glider',
-
-    opponentDeck: () => buildSkyDeck(),
-
-    rewards: {
-      guaranteedXP: 180,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 90,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.4,
-        },
-      ],
-      coinRewards: {
-        minAmount: 375,
-        maxAmount: 475,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission15.ts ====================
-
-  /**
-   * Mission 15: Star Bloom
-   * Sky Affinity Mission
-   */
-
-
-  export const mission15: Mission = {
-    id: 'mission-15',
-    name: 'Star Bloom',
-    description: 'Reach for the stars to challenge the mystical Star Bloom.',
-    difficulty: 'expert',
-    level: 15,
-    affinity: 'Sky',
-    beastId: 'Star Bloom',
-
-    opponentDeck: () => buildSkyDeck(),
-
-    rewards: {
-      guaranteedXP: 190,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 95,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.5,
-        },
-      ],
-      coinRewards: {
-        minAmount: 400,
-        maxAmount: 500,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/mission16.ts ====================
-
-  /**
-   * Mission 16: Aero Moth
-   * Sky Affinity Mission
-   */
-
-
-  export const mission16: Mission = {
-    id: 'mission-16',
-    name: 'Aero Moth',
-    description: 'Dance among the high winds with the elusive Aero Moth.',
-    difficulty: 'expert',
-    level: 16,
-    affinity: 'Sky',
-    beastId: 'Aero Moth',
-
-    opponentDeck: () => buildSkyDeck(),
-
-    rewards: {
-      guaranteedXP: 200,
-      bonusXPChance: 0.6,
-      bonusXPAmount: 100,
-      cardRewards: [
-        {
-          cardPool: 'uncommon',
-          minAmount: 2,
-          maxAmount: 2,
-          dropChance: 0.7,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 1,
-          dropChance: 0.5,
-        },
-      ],
-      coinRewards: {
-        minAmount: 425,
-        maxAmount: 525,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/common/engine/types/leveling.ts ====================
+  // ==================== bloombeasts\common\engine\types\leveling.ts ====================
 
   /**
    * Type definitions for the leveling and progression system
@@ -2187,7 +1411,7 @@ namespace BloomBeasts {
     turnsRemaining?: number;    // For temporary effects
   }
 
-  // ==================== bloombeasts/common/engine/types/runtime.ts ====================
+  // ==================== bloombeasts\common\engine\types\runtime.ts ====================
 
   /**
    * Runtime Card Types
@@ -2241,9 +1465,6 @@ namespace BloomBeasts {
     // - baseHealth: number
     // - abilities: Ability[]
     // - titleColor?: string
-
-    // Additional tracking (from BloomBeastInstance)
-    cardId: string;          // Base card ID (same as id, kept for compatibility)
 
     // Runtime combat stats (includes level scaling and modifiers)
     currentAttack: number;   // Current attack (base + level + modifiers)
@@ -2364,2296 +1585,7 @@ namespace BloomBeasts {
     return card.type === CardType.Habitat;
   }
 
-  // ==================== bloombeasts/screens/missions/definitions/mission17.ts ====================
-
-  /**
-   * Mission 17: Cluck Norris
-   * Boss Mission
-   */
-
-
-  // Get Cluck Norris deck - 3 level 9 Cluck Norris beasts
-  const getCluckNorrisDeck = (): DeckList => {
-    // This function will be called after catalogs are loaded
-    // Access the catalog manager through the global game instance
-    const game = (globalThis as any).bloomBeastsGame;
-    if (!game?.catalogManager) {
-      Logger.error('[mission17] Catalog manager not available');
-      return {
-        name: 'Cluck Norris Deck',
-        affinity: 'Forest',
-        cards: [],
-        totalCards: 0,
-      };
-    }
-
-    // Get the Cluck Norris card from the boss catalog
-    const cluckNorrisCard = game.catalogManager.getCard('cluck-norris') as BloomBeastCard;
-
-    if (!cluckNorrisCard) {
-      Logger.error('[mission17] Cluck Norris card not found in catalog');
-      return {
-        name: 'Cluck Norris Deck',
-        affinity: 'Forest',
-        cards: [],
-        totalCards: 0,
-      };
-    }
-
-    // Create 3 instances of Cluck Norris at level 9 as RuntimeBeast cards
-    const cluckNorrisCards: RuntimeBeast[] = [];
-    for (let i = 1; i <= 3; i++) {
-      cluckNorrisCards.push({
-        ...cluckNorrisCard,
-        instanceId: `cluck-norris-${i}`,
-        cardId: cluckNorrisCard.id,
-        currentXP: 25500, // Level 9 XP
-        level: 9,
-        currentLevel: 9 as any,
-        statusEffects: [],
-        // Keep base stats at 99/99 as defined in the catalog (already scaled for level 9)
-        currentAttack: cluckNorrisCard.baseAttack || 99,
-        currentHealth: cluckNorrisCard.baseHealth || 99,
-        maxHealth: cluckNorrisCard.baseHealth || 99,
-      });
-    }
-
-    return {
-      name: 'Cluck Norris Deck',
-      affinity: 'Forest',
-      cards: cluckNorrisCards,
-      totalCards: cluckNorrisCards.length,
-    };
-  };
-
-  export const mission17: Mission = {
-    id: 'mission-17',
-    name: 'Cluck Norris',
-    description: 'Face the legendary Cluck Norris, the ultimate rooster warrior!',
-    difficulty: 'expert',
-    level: 17,
-    affinity: 'Boss',
-    beastId: 'Cluck Norris',
-
-    opponentDeck: () => getCluckNorrisDeck(),
-
-    rewards: {
-      guaranteedXP: 500,
-      bonusXPChance: 0.9,
-      bonusXPAmount: 250,
-      cardRewards: [
-        {
-          cardPool: 'rare',
-          minAmount: 3,
-          maxAmount: 4,
-          dropChance: 0.9,
-        },
-        {
-          cardPool: 'rare',
-          minAmount: 1,
-          maxAmount: 2,
-          dropChance: 0.5,
-        },
-      ],
-      coinRewards: {
-        minAmount: 1000,
-        maxAmount: 1500,
-        dropChance: 1.0,
-      },
-    },
-
-    timesCompleted: 0,
-    unlocked: false,
-  };
-
-  // ==================== bloombeasts/screens/missions/definitions/index.ts ====================
-
-  /**
-   * Central export for all mission definitions
-   */
-
-
-  export const missions: Mission[] = [
-    mission01,
-    mission02,
-    mission03,
-    mission04,
-    mission05,
-    mission06,
-    mission07,
-    mission08,
-    mission09,
-    mission10,
-    mission11,
-    mission12,
-    mission13,
-    mission14,
-    mission15,
-    mission16,
-    mission17,
-  ];
-
-  export const getMissionById = (id: string): Mission | undefined => {
-    return missions.find(mission => mission.id === id);
-  };
-
-  export const getAvailableMissions = (playerLevel: number): Mission[] => {
-    // Return all missions - allow the UI to decide which ones are playable
-    // This ensures all 17 missions are visible in the mission select screen
-    return missions;
-  };
-
-  export const getCompletedMissions = (): Mission[] => {
-    return missions.filter(mission => mission.timesCompleted > 0);
-  };
-
-  // ==================== bloombeasts/common/utils/polyfills.ts ====================
-
-  /**
-   * Polyfills and type definitions for ES2020 compatibility
-   * This file provides alternatives to Map, Promise, and Array methods
-   */
-
-  /**
-   * Simple Map alternative using object storage
-   */
-  export class SimpleMap<K extends string | number, V> {
-    private storage: Record<string, V> = {};
-    private keyList: K[] = [];
-
-    constructor(entries?: Array<[K, V]>) {
-      if (entries) {
-        entries.forEach(([key, value]) => {
-          this.set(key, value);
-        });
-      }
-    }
-
-    set(key: K, value: V): this {
-      const keyStr = String(key);
-      if (!(keyStr in this.storage)) {
-        this.keyList.push(key);
-      }
-      this.storage[keyStr] = value;
-      return this;
-    }
-
-    get(key: K): V | undefined {
-      return this.storage[String(key)];
-    }
-
-    has(key: K): boolean {
-      return String(key) in this.storage;
-    }
-
-    delete(key: K): boolean {
-      const keyStr = String(key);
-      if (keyStr in this.storage) {
-        delete this.storage[keyStr];
-        const index = this.keyList.indexOf(key);
-        if (index > -1) {
-          this.keyList.splice(index, 1);
-        }
-        return true;
-      }
-      return false;
-    }
-
-    clear(): void {
-      this.storage = {};
-      this.keyList = [];
-    }
-
-    get size(): number {
-      return this.keyList.length;
-    }
-
-    keys(): K[] {
-      return [...this.keyList];
-    }
-
-    values(): V[] {
-      return this.keyList.map(key => this.storage[String(key)]);
-    }
-
-    entries(): Array<[K, V]> {
-      return this.keyList.map(key => [key, this.storage[String(key)]]);
-    }
-
-    forEach(callback: (value: V, key: K, map: SimpleMap<K, V>) => void): void {
-      this.keyList.forEach(key => {
-        callback(this.storage[String(key)], key, this);
-      });
-    }
-  }
-
-  // Export as global Map replacement if needed
-  export type MapPolyfill<K extends string | number, V> = SimpleMap<K, V>;
-
-  // ==================== bloombeasts/common/engine/types/game.ts ====================
-
-  /**
-   * Game state and player types
-   */
-
-
-  // Re-export for convenience
-
-  // Battle state enum for state-based battle flow
-  export enum BattlePhase {
-    Setup = 'Setup',
-    Player1StartOfTurn = 'Player1StartOfTurn',
-    Player1Playing = 'Player1Playing',
-    Player1EndOfTurn = 'Player1EndOfTurn',
-    Player2StartOfTurn = 'Player2StartOfTurn',
-    Player2Playing = 'Player2Playing',
-    Player2EndOfTurn = 'Player2EndOfTurn',
-    Finished = 'Finished'
-  }
-
-  export interface Player {
-    id?: string;
-    name: string;
-    health: number;
-    maxHealth?: number;
-    energy?: number;
-    permanentEnergy?: number;
-    temporaryEnergy?: number;
-    currentEnergy: number;  // Available energy this turn
-    summonsThisTurn: number; // Track summons for extra summon effects
-    deck: AnyCard[];
-    hand: AnyCard[];
-    discardPile?: AnyCard[];
-    graveyard: AnyCard[];  // Cards that have been destroyed
-    field: (RuntimeBeast | null)[]; // Nullable for empty slots
-    trapZone: (AnyCard | null)[]; // Face-down trap cards (max 3)
-    buffZone: (AnyCard | null)[]; // Active buff cards (max 2)
-  }
-
-  export interface GameState {
-    players: [Player, Player];
-    currentPlayerIndex?: 0 | 1;
-    activePlayer: 0 | 1;  // Current player's turn
-    habitatZone: HabitatCard | null;
-    turn: number;
-    battleState: BattlePhase;  // State-based battle flow
-    turnHistory: any[];  // History of actions taken
-    // Pending actions that need to be resolved
-    drawCardsQueued?: number;
-    drawForPlayerIndex?: 0 | 1;
-    pendingMove?: {
-      unit: RuntimeBeast;
-      destination: string;
-    };
-    pendingSearch?: {
-      searchFor: string;
-      quantity: number;
-      affinity?: string;
-    };
-  }
-
-  export interface GameAction {
-    type: string;
-    playerId: string;
-    timestamp: number;
-  }
-
-  export interface SummonAction extends GameAction {
-    type: 'SUMMON';
-    cardId: string;
-    slotIndex: number;
-  }
-
-  export interface AttackAction extends GameAction {
-    type: 'ATTACK';
-    attackerInstanceId: string;
-    targetInstanceId?: string; // undefined means attacking player directly
-  }
-
-  export interface PlayMagicAction extends GameAction {
-    type: 'PLAY_MAGIC';
-    cardId: string;
-    targetInstanceId?: string;
-  }
-
-  export interface GainXPAction extends GameAction {
-    type: 'GAIN_XP';
-    instanceId: string;
-    amount: number;
-    source: XPSource;
-  }
-
-  export interface HabitatShiftAction extends GameAction {
-    type: 'HABITAT_SHIFT';
-    habitatCardId: string;
-  }
-
-  // ==================== bloombeasts/screens/missions/MissionManager.ts ====================
-
-  /**
-   * Mission Manager - Handles mission progress, rewards, and completion
-   */
-
-
-  export interface MissionRunProgress {
-    missionId: string;
-    objectiveProgress: SimpleMap<string, number>;
-    turnCount: number;
-    isCompleted: boolean;
-    damageDealt: number;
-    beastsSummoned: number;
-    abilitiesUsed: number;
-    playerHealth: number;
-    opponentHealth: number;
-    startTime: number;           // Timestamp when mission started (milliseconds)
-    endTime?: number;             // Timestamp when mission ended (milliseconds)
-  }
-
-  export interface ItemRewardResult {
-    itemId: string;
-    quantity: number;
-  }
-
-  export interface RewardResult {
-    xpGained: number;
-    beastXP: number;              // XP earned by beasts
-    coinsReceived?: number;       // Coins earned
-    cardsReceived: (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[];
-    itemsReceived: ItemRewardResult[];
-    completionTimeSeconds: number; // Time taken to complete mission
-    bonusRewards?: string[];
-  }
-
-  export class MissionManager {
-    private catalogManager: any;
-    private currentMission: Mission | null = null;
-    private progress: MissionRunProgress | null = null;
-    private completedMissions: SimpleMap<string, number> = new SimpleMap();
-
-    constructor(catalogManager: any) {
-      this.catalogManager = catalogManager;
-    }
-
-    /**
-     * Start a mission
-     */
-    startMission(missionId: string): Mission | null {
-      const mission = getMissionById(missionId);
-      if (!mission) {
-        Logger.error(`Mission ${missionId} not found`);
-        return null;
-      }
-
-      this.currentMission = mission;
-      this.progress = {
-        missionId,
-        objectiveProgress: new SimpleMap(),
-        turnCount: 0,
-        isCompleted: false,
-        damageDealt: 0,
-        beastsSummoned: 0,
-        abilitiesUsed: 0,
-        playerHealth: 30,
-        opponentHealth: 30,
-        startTime: Date.now(),
-      };
-
-      // Initialize objective tracking (if objectives exist)
-      if (mission.objectives) {
-        mission.objectives.forEach(obj => {
-          const key = this.getObjectiveKey(obj);
-          this.progress!.objectiveProgress.set(key, 0);
-        });
-      }
-
-      return mission;
-    }
-
-    /**
-     * Update mission progress based on game events
-     */
-    updateProgress(event: string, data: any): void {
-      if (!this.progress || !this.currentMission) return;
-
-      switch (event) {
-        case 'turn-end':
-          this.progress.turnCount++;
-          this.checkTurnBasedObjectives();
-          break;
-
-        case 'damage-dealt':
-          this.progress.damageDealt += data.amount;
-          this.updateObjective('deal-damage', this.progress.damageDealt);
-          break;
-
-        case 'beast-summoned':
-          this.progress.beastsSummoned++;
-          this.updateObjective('summon-beasts', this.progress.beastsSummoned);
-          break;
-
-        case 'ability-used':
-          this.progress.abilitiesUsed++;
-          this.updateObjective('use-abilities', this.progress.abilitiesUsed);
-          break;
-
-        case 'opponent-defeated':
-          this.updateObjective('defeat-opponent', 1);
-          this.checkMissionCompletion();
-          break;
-
-        case 'health-update':
-          this.progress.playerHealth = data.playerHealth;
-          this.progress.opponentHealth = data.opponentHealth;
-          this.updateObjective('maintain-health', this.progress.playerHealth);
-          break;
-      }
-
-      this.checkMissionCompletion();
-    }
-
-    /**
-     * Check if all objectives are completed
-     */
-    private checkMissionCompletion(): void {
-      if (!this.currentMission || !this.progress) return;
-
-      // If no objectives, just check if opponent is defeated (default win condition)
-      if (!this.currentMission.objectives || this.currentMission.objectives.length === 0) {
-        // Mission complete when opponent health reaches 0
-        if (this.progress.opponentHealth <= 0) {
-          this.progress.isCompleted = true;
-        }
-        return;
-      }
-
-      const allObjectivesComplete = this.currentMission.objectives.every(obj => {
-        const key = this.getObjectiveKey(obj);
-        const progress = this.progress!.objectiveProgress.get(key) || 0;
-
-        switch (obj.type) {
-          case 'defeat-opponent':
-            return progress >= 1;
-          case 'deal-damage':
-          case 'summon-beasts':
-          case 'use-abilities':
-          case 'survive-turns':
-            return progress >= (obj.target || 0);
-          case 'maintain-health':
-            return this.progress!.playerHealth >= (obj.target || 0);
-          default:
-            return false;
-        }
-      });
-
-      if (allObjectivesComplete) {
-        this.progress.isCompleted = true;
-      }
-    }
-
-    /**
-     * Complete the mission and generate rewards
-     */
-    completeMission(): RewardResult | null {
-      if (!this.currentMission || !this.progress || !this.progress.isCompleted) {
-        return null;
-      }
-
-      // Mark mission end time
-      this.progress.endTime = Date.now();
-
-      const rewards = this.generateRewards(this.currentMission.rewards);
-
-      // Track completion
-      const timesCompleted = this.completedMissions.get(this.currentMission.id) || 0;
-      this.completedMissions.set(this.currentMission.id, timesCompleted + 1);
-      this.currentMission.timesCompleted = timesCompleted + 1;
-
-      // Unlock next mission
-      const nextMissionIndex = missions.indexOf(this.currentMission) + 1;
-      if (nextMissionIndex < missions.length) {
-        missions[nextMissionIndex].unlocked = true;
-      }
-
-      // Clear current mission
-      this.currentMission = null;
-      this.progress = null;
-
-      return rewards;
-    }
-
-    /**
-     * Generate rewards based on mission configuration
-     */
-    private generateRewards(rewardConfig: MissionRewards): RewardResult {
-      // Calculate completion time
-      const completionTimeMs = (this.progress!.endTime || Date.now()) - this.progress!.startTime;
-      const completionTimeSeconds = Math.floor(completionTimeMs / 1000);
-
-      // Calculate beast XP (same as player XP for now)
-      const beastXP = rewardConfig.guaranteedXP;
-
-      const result: RewardResult = {
-        xpGained: rewardConfig.guaranteedXP,
-        beastXP: beastXP,
-        cardsReceived: [],
-        itemsReceived: [],
-        completionTimeSeconds: completionTimeSeconds,
-        bonusRewards: [],
-      };
-
-      // Roll for bonus XP (applies to both player and beasts)
-      if (rewardConfig.bonusXPChance && Math.random() < rewardConfig.bonusXPChance) {
-        const bonusAmount = rewardConfig.bonusXPAmount || 0;
-        result.xpGained += bonusAmount;
-        result.beastXP += bonusAmount;
-        result.bonusRewards?.push(`Bonus XP: +${bonusAmount}`);
-      }
-
-      // Generate card rewards
-      if (rewardConfig.cardRewards) {
-        rewardConfig.cardRewards.forEach(cardReward => {
-          if (Math.random() < cardReward.dropChance) {
-            const amount = Math.floor(
-              Math.random() * (cardReward.maxAmount - cardReward.minAmount + 1) +
-              cardReward.minAmount
-            );
-
-            const cards = this.selectRandomCards(
-              cardReward.cardPool,
-              amount,
-              cardReward.affinity
-            );
-
-            result.cardsReceived.push(...cards);
-          }
-        });
-      }
-
-      // Generate coin rewards
-      if (rewardConfig.coinRewards) {
-        if (Math.random() < rewardConfig.coinRewards.dropChance) {
-          const amount = Math.floor(
-            Math.random() * (rewardConfig.coinRewards.maxAmount - rewardConfig.coinRewards.minAmount + 1) +
-            rewardConfig.coinRewards.minAmount
-          );
-
-          result.coinsReceived = amount;
-        }
-      }
-
-      // Generate item rewards
-      if (rewardConfig.itemRewards) {
-        rewardConfig.itemRewards.forEach(itemReward => {
-          if (Math.random() < itemReward.dropChance) {
-            const amount = Math.floor(
-              Math.random() * (itemReward.maxAmount - itemReward.minAmount + 1) +
-              itemReward.minAmount
-            );
-
-            result.itemsReceived.push({
-              itemId: itemReward.itemId,
-              quantity: amount,
-            });
-          }
-        });
-      }
-
-      return result;
-    }
-
-    /**
-     * Select random cards from the card pool
-     */
-    private selectRandomCards(
-      pool: CardPool,
-      amount: number,
-      affinity?: string
-    ): (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[] {
-      const allCards = this.catalogManager.getAllCardData();
-
-      // Filter by pool and affinity
-      let eligibleCards = allCards.filter((card: any) => {
-        if (affinity && 'affinity' in card && card.affinity !== affinity) {
-          return false;
-        }
-
-        // Filter by rarity based on pool
-        // Cards have rarity added dynamically by getAllCards
-        const cardWithRarity = card as any;
-        switch (pool) {
-          case 'common':
-            return !cardWithRarity.rarity || cardWithRarity.rarity === 'common';
-          case 'uncommon':
-            return cardWithRarity.rarity === 'uncommon';
-          case 'rare':
-            return cardWithRarity.rarity === 'rare';
-          case 'any':
-          case 'affinity':
-          default:
-            return true;
-        }
-      }) as (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[];
-
-      // Randomly select cards
-      const selected: (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[] = [];
-      for (let i = 0; i < amount && eligibleCards.length > 0; i++) {
-        const index = Math.floor(Math.random() * eligibleCards.length);
-        selected.push(eligibleCards[index]);
-        // Allow duplicates in rewards
-      }
-
-      return selected;
-    }
-
-    /**
-     * Helper methods
-     */
-    private getObjectiveKey(objective: MissionObjective): string {
-      return `${objective.type}-${objective.target || 0}`;
-    }
-
-    private updateObjective(type: string, value: number): void {
-      if (!this.progress) return;
-
-      this.progress.objectiveProgress.forEach((_, key) => {
-        if (key.startsWith(type)) {
-          this.progress!.objectiveProgress.set(key, value);
-        }
-      });
-    }
-
-    private checkTurnBasedObjectives(): void {
-      this.updateObjective('survive-turns', this.progress!.turnCount);
-    }
-
-    /**
-     * Get current mission status
-     */
-    getCurrentMission(): Mission | null {
-      return this.currentMission;
-    }
-
-    getProgress(): MissionRunProgress | null {
-      return this.progress;
-    }
-
-    getCompletedCount(missionId: string): number {
-      return this.completedMissions.get(missionId) || 0;
-    }
-
-    /**
-     * Load completed missions from saved data
-     */
-    loadCompletedMissions(completedMissionsData: { [missionId: string]: number }): void {
-      // Clear current data
-      this.completedMissions = new SimpleMap();
-
-      // Load saved completion data
-      for (const missionId in completedMissionsData) {
-        if (completedMissionsData.hasOwnProperty(missionId)) {
-          this.completedMissions.set(missionId, completedMissionsData[missionId]);
-        }
-      }
-
-      // Restore mission unlock state and completion counts from saved data
-      this.restoreMissionState();
-    }
-
-    /**
-     * Restore mission unlock state and completion counts from saved data
-     * This updates the mission definition objects to reflect saved progress
-     */
-    private restoreMissionState(): void {
-      missions.forEach((mission, index) => {
-        // Restore completion count
-        const completionCount = this.completedMissions.get(mission.id) || 0;
-        mission.timesCompleted = completionCount;
-
-
-        // If mission has been completed before, unlock it and the next mission
-        if (completionCount > 0) {
-          mission.unlocked = true;
-
-          // Also unlock the next mission when this one is completed
-          if (index + 1 < missions.length) {
-            missions[index + 1].unlocked = true;
-          }
-        }
-        // Otherwise, keep the mission's original unlocked state from the definition
-        // (e.g., mission-01 has unlocked: true in its definition)
-
-      });
-    }
-
-    /**
-     * Get all completed missions as a plain object for saving
-     */
-    getCompletedMissionsData(): { [missionId: string]: number } {
-      const data: { [missionId: string]: number } = {};
-      this.completedMissions.forEach((count, missionId) => {
-        data[missionId] = count;
-      });
-      return data;
-    }
-  }
-
-  // ==================== bloombeasts/core/interfaces/IMissionSelectionUI.ts ====================
-
-  /**
-   * IMissionSelectionUI - Interface for mission selection UI
-   * Breaks circular dependency between core and screens
-   */
-
-  /**
-   * Mission display data returned by the UI
-   */
-  export interface MissionDisplayData {
-    mission: any;  // TODO: Import Mission type when refactoring
-    isAvailable: boolean;
-    completionCount: number;
-    difficultyColor: string;
-    rewardPreview: string[];
-  }
-
-  /**
-   * Interface for mission selection UI operations
-   */
-  export interface IMissionSelectionUI {
-    /**
-     * Set the player's current level for mission filtering
-     */
-    setPlayerLevel(level: number): void;
-
-    /**
-     * Get all missions formatted for display
-     */
-    getMissionList(): MissionDisplayData[];
-  }
-
-  // ==================== bloombeasts/core/ColorPalette.ts ====================
-
-  /**
-   * Color Palette - Centralized color constants
-   * Eliminates hardcoded color values throughout the codebase
-   */
-
-  export const COLOR_PALETTE = {
-    /**
-     * Player-related colors
-     */
-    player: {
-      accent: '#4a8ec2',      // Player UI accent color
-      primary: '#fff',        // Primary text/elements
-    },
-
-    /**
-     * Opponent/danger colors
-     */
-    opponent: {
-      danger: '#ff6b6b',      // Opponent/danger indicators
-    },
-
-    /**
-     * Mission difficulty colors
-     */
-    difficulty: {
-      tutorial: '#90EE90',    // Light green
-      easy: '#87CEEB',        // Sky blue
-      normal: '#FFD700',      // Gold
-      hard: '#FF6347',        // Tomato red
-      expert: '#8B008B',      // Dark magenta
-      legendary: '#FF1493',   // Deep pink
-    },
-
-    /**
-     * Card type colors
-     */
-    cardType: {
-      habitat: '#4caf50',     // Habitat green
-      buff: '#FFD700',        // Buff gold
-      trap: '#ff6b6b',        // Trap red
-      magic: '#9c27b0',       // Magic purple
-    },
-
-    /**
-     * UI state colors
-     */
-    ui: {
-      disabled: '#666',       // Disabled elements
-      muted: '#888',          // Muted/inactive elements
-      background: '#333',     // Dark background
-      white: '#fff',          // White text
-      default: '#FFFFFF',     // Default color
-    },
-
-    /**
-     * Toggle/button state colors
-     */
-    toggle: {
-      on: '#4CAF50',          // Toggle on (green)
-      off: '#888',            // Toggle off (gray)
-    },
-
-    /**
-     * Button colors
-     */
-    button: {
-      green: '#4CAF50',
-      red: '#f44336',
-      default: '#666',
-    },
-  } as const;
-
-  /**
-   * Helper function to get difficulty color
-   */
-  export function getDifficultyColor(difficulty: string): string {
-    const difficultyMap: Record<string, string> = {
-      'tutorial': COLOR_PALETTE.difficulty.tutorial,
-      'easy': COLOR_PALETTE.difficulty.easy,
-      'normal': COLOR_PALETTE.difficulty.normal,
-      'hard': COLOR_PALETTE.difficulty.hard,
-      'expert': COLOR_PALETTE.difficulty.expert,
-      'legendary': COLOR_PALETTE.difficulty.legendary,
-    };
-    return difficultyMap[difficulty] || COLOR_PALETTE.ui.default;
-  }
-
-  // ==================== bloombeasts/screens/missions/MissionSelectionUI.ts ====================
-
-  /**
-   * Mission Selection UI - Display available missions and let players choose
-   */
-
-
-  export interface MissionDisplayData {
-    mission: Mission;
-    isAvailable: boolean;
-    completionCount: number;
-    difficultyColor: string;
-    rewardPreview: string[];
-  }
-
-  export class MissionSelectionUI implements IMissionSelectionUI {
-    private missionManager: MissionManager;
-    private currentPlayerLevel: number = 1;
-
-    constructor(missionManager: MissionManager) {
-      this.missionManager = missionManager;
-    }
-
-    /**
-     * Set the player's current level for mission filtering
-     */
-    setPlayerLevel(level: number): void {
-      this.currentPlayerLevel = level;
-    }
-
-    /**
-     * Get all missions formatted for display
-     */
-    getMissionList(): MissionDisplayData[] {
-      const availableMissions = getAvailableMissions(this.currentPlayerLevel);
-      const completedMissions = getCompletedMissions();
-
-      return availableMissions.map(mission => ({
-        mission,
-        isAvailable: this.isMissionPlayable(mission),
-        completionCount: this.missionManager.getCompletedCount(mission.id),
-        difficultyColor: this.getDifficultyColor(mission.difficulty),
-        rewardPreview: this.getRewardPreview(mission),
-      }));
-    }
-
-    /**
-     * Check if a mission can be played
-     */
-    private isMissionPlayable(mission: Mission): boolean {
-      // Check if mission has been completed before - if so, it's always playable (for replay)
-      const completionCount = this.missionManager.getCompletedCount(mission.id);
-      if (completionCount > 0) {
-        return true;
-      }
-
-      // First mission is always unlocked
-      if (mission.unlocked) {
-        return true;
-      }
-
-      // For uncompleted missions, check if previous mission is completed
-      const allMissions = getAvailableMissions(99); // Get all missions
-      const missionIndex = allMissions.findIndex(m => m.id === mission.id);
-
-      if (missionIndex > 0) {
-        const previousMission = allMissions[missionIndex - 1];
-        const previousCompletionCount = this.missionManager.getCompletedCount(previousMission.id);
-        if (previousCompletionCount === 0) {
-          return false;
-        }
-      }
-
-      // Check level requirements for uncompleted missions
-      const levelDifference = Math.abs(this.currentPlayerLevel - mission.level);
-      return levelDifference <= 3; // Allow missions within 3 levels
-    }
-
-    /**
-     * Get difficulty color for UI (now uses centralized color palette)
-     */
-    private getDifficultyColor(difficulty: string): string {
-      return getDifficultyColor(difficulty);
-    }
-
-    /**
-     * Generate reward preview text
-     */
-    private getRewardPreview(mission: Mission): string[] {
-      const preview: string[] = [];
-
-      // XP rewards
-      const totalPossibleXP = mission.rewards.guaranteedXP +
-                             (mission.rewards.bonusXPAmount || 0);
-      preview.push(`XP: ${mission.rewards.guaranteedXP}-${totalPossibleXP}`);
-
-      // Card rewards
-      if (mission.rewards.cardRewards && mission.rewards.cardRewards.length > 0) {
-        let minCards = 0;
-        let maxCards = 0;
-
-        mission.rewards.cardRewards.forEach(reward => {
-          if (reward.dropChance >= 0.7) {
-            minCards += reward.minAmount;
-          }
-          maxCards += reward.maxAmount;
-        });
-
-        preview.push(`Cards: ${minCards}-${maxCards}`);
-      }
-
-      return preview;
-    }
-
-    /**
-     * Get detailed mission info for display
-     */
-    getMissionDetails(missionId: string): string {
-      const availableMissions = getAvailableMissions(this.currentPlayerLevel);
-      const mission = availableMissions.find(m => m.id === missionId);
-
-      if (!mission) {
-        return 'Mission not found';
-      }
-
-      const details: string[] = [
-        `=== ${mission.name} ===`,
-        `Level: ${mission.level}`,
-        `Difficulty: ${mission.difficulty}`,
-        '',
-        '📖 Story:',
-        mission.storyText || 'No story available',
-        '',
-        '🎯 Objectives:',
-      ];
-
-      if (mission.objectives && mission.objectives.length > 0) {
-        mission.objectives.forEach(obj => {
-          details.push(`  • ${obj.description}`);
-        });
-      } else {
-        details.push(`  • Defeat the opponent`);
-      }
-
-
-      if (mission.turnLimit) {
-        details.push('');
-        details.push(`⏱️ Turn Limit: ${mission.turnLimit}`);
-      }
-
-      details.push('');
-      details.push('🏆 Rewards:');
-      this.getRewardPreview(mission).forEach(reward => {
-        details.push(`  • ${reward}`);
-      });
-
-      const completionCount = this.missionManager.getCompletedCount(mission.id);
-      if (completionCount > 0) {
-        details.push('');
-        details.push(`✅ Completed: ${completionCount} time(s)`);
-      }
-
-      return details.join('\n');
-    }
-
-    /**
-     * Start a selected mission
-     */
-    startMission(missionId: string): boolean {
-      const mission = this.missionManager.startMission(missionId);
-
-      if (!mission) {
-        Logger.error('Failed to start mission:', missionId);
-        return false;
-      }
-
-      Logger.debug(`Starting mission: ${mission.name}`);
-      if (mission.opponentAI) {
-        Logger.debug(`Opponent: ${mission.opponentAI.name}`);
-      }
-      Logger.debug(`Difficulty: ${mission.difficulty}`);
-
-      return true;
-    }
-
-    /**
-     * Get progress display for current mission
-     */
-    getCurrentMissionProgress(): string[] | null {
-      const mission = this.missionManager.getCurrentMission();
-      const progress = this.missionManager.getProgress();
-
-      if (!mission || !progress) {
-        return null;
-      }
-
-      const display: string[] = [
-        `Current Mission: ${mission.name}`,
-        `Turn: ${progress.turnCount}`,
-        '',
-        'Objectives Progress:',
-      ];
-
-      if (mission.objectives && mission.objectives.length > 0) {
-        mission.objectives.forEach(obj => {
-          const key = `${obj.type}-${obj.target || 0}`;
-          const currentProgress = progress.objectiveProgress.get(key) || 0;
-          const target = obj.target || 1;
-          const isComplete = currentProgress >= target;
-          const status = isComplete ? '✅' : '⬜';
-
-          display.push(`  ${status} ${obj.description} (${Math.min(currentProgress, target)}/${target})`);
-        });
-      } else {
-        display.push(`  ⬜ Defeat the opponent`);
-      }
-
-      if (mission.turnLimit) {
-        display.push('');
-        display.push(`Turns Remaining: ${mission.turnLimit - progress.turnCount}`);
-      }
-
-      return display;
-    }
-  }
-
-  // ==================== bloombeasts/AssetCatalog.ts ====================
-
-  /**
-   * Asset Catalog - Dynamically Generated Asset IDs
-   *
-   * This file generates asset IDs from game data (cards, etc.)
-   * Platforms must provide mappings for these IDs to actual assets.
-   *
-   * NO platform-specific code should be in this file!
-   */
-
-
-  /**
-   * Get all card IDs that need image assets
-   */
-  export function getCardImageAssetIds(catalogManager: any): string[] {
-    const cards = catalogManager.getAllCardData();
-    return cards.map((card: any) => card.id);
-  }
-
-  /**
-   * Get affinity icon asset IDs
-   */
-  export function getAffinityIconAssetIds(): string[] {
-    return ['Forest', 'Water', 'Fire', 'Sky'];
-  }
-
-  /**
-   * Get card template asset IDs
-   */
-  export function getCardTemplateAssetIds(): string[] {
-    return ['base-card', 'magic-card', 'trap-card', 'buff-card'];
-  }
-
-  /**
-   * Get card rendering asset IDs (for CardRenderer)
-   * These are the IDs that CardRenderer expects for rendering cards
-   */
-  export function getCardRenderingAssetIds(catalogManager: any): string[] {
-    const cards = catalogManager.getAllCardData();
-    const assetIds: string[] = [
-      'cardsContainer',  // Cards page background
-      'baseCard',        // Base card frame template
-      'magicCard',       // Magic card type overlay
-      'trapCard',        // Trap card type overlay
-      'buffCard',        // Buff card type overlay
-    ];
-
-    // Add individual card artwork for each card
-    for (const card of cards) {
-      if (card.type === CardType.Beast) {
-        // Beast cards use beast artwork
-        assetIds.push(`beast-${card.name}`);
-      } else {
-        // Other cards use card artwork
-        assetIds.push(`card-${card.name}`);
-      }
-    }
-
-    return assetIds;
-  }
-
-  /**
-   * Get habitat template asset IDs (affinity-specific)
-   */
-  export function getHabitatTemplateAssetIds(): string[] {
-    return ['forest-habitat', 'water-habitat', 'fire-habitat', 'sky-habitat'];
-  }
-
-  /**
-   * Get UI icon asset IDs
-   */
-  export function getUIIconAssetIds(): string[] {
-    return ['icon-play', 'icon-cards', 'icon-missions', 'icon-settings', 'icon-shop'];
-  }
-
-  /**
-   * Get UI element asset IDs (buttons, bars, menus, etc.)
-   */
-  export function getUIElementAssetIds(): string[] {
-    return [
-      'standardButton',
-      'greenButton',
-      'sideMenu',
-      'experienceBar',
-      // Menu animation frames (1-10)
-      ...Array.from({ length: 10 }, (_, i) => `menuFrame${i + 1}`)
-    ];
-  }
-
-  /**
-   * Get background image asset IDs
-   */
-  export function getBackgroundAssetIds(): string[] {
-    return ['background', 'menu-bg', 'cards-bg', 'mission-select-bg', 'menu'];
-  }
-
-  /**
-   * Get all image asset IDs
-   */
-  export function getAllImageAssetIds(catalogManager: any): string[] {
-    return [
-      ...getCardImageAssetIds(catalogManager),
-      ...getAffinityIconAssetIds(),
-      ...getCardTemplateAssetIds(),
-      ...getCardRenderingAssetIds(catalogManager),
-      ...getHabitatTemplateAssetIds(),
-      ...getUIIconAssetIds(),
-      ...getUIElementAssetIds(),
-      ...getBackgroundAssetIds()
-    ];
-  }
-
-  /**
-   * Sound Asset IDs - Enum for type safety
-   * These match the IDs in commonAssets.json
-   */
-  export enum SoundAssetIds {
-    // Music
-    BACKGROUND_MUSIC = 'music-background',
-    BATTLE_MUSIC = 'music-battle',
-
-    // SFX
-    MENU_BUTTON_SELECT = 'sfx-menu-button-select',
-    PLAY_CARD = 'sfx-play-card',
-    ATTACK = 'sfx-attack',
-    TRAP_ACTIVATED = 'sfx-trap-card-activated',
-    LOW_HEALTH = 'sfx-low-health',
-    WIN = 'sfx-win',
-    LOSE = 'sfx-lose',
-  }
-
-  /**
-   * Legacy sound ID mappings for backwards compatibility
-   * Maps old string IDs to new SoundAssetIds
-   */
-  export const LEGACY_SOUND_ID_MAP: Record<string, SoundAssetIds> = {
-    // Music (old format)
-    'BackgroundMusic.mp3': SoundAssetIds.BACKGROUND_MUSIC,
-    'BattleMusic.mp3': SoundAssetIds.BATTLE_MUSIC,
-
-    // SFX (old format with paths)
-    'sfx/menuButtonSelect.wav': SoundAssetIds.MENU_BUTTON_SELECT,
-    'sfx/playCard.wav': SoundAssetIds.PLAY_CARD,
-    'sfx/attack.wav': SoundAssetIds.ATTACK,
-    'sfx/trapCardActivated.wav': SoundAssetIds.TRAP_ACTIVATED,
-    'sfx/lowHealthSound.wav': SoundAssetIds.LOW_HEALTH,
-    'sfx/win.wav': SoundAssetIds.WIN,
-    'sfx/lose.wav': SoundAssetIds.LOSE,
-
-    // SFX (old format without extension/path)
-    'menuButtonSelect': SoundAssetIds.MENU_BUTTON_SELECT,
-    'playCard': SoundAssetIds.PLAY_CARD,
-    'attack': SoundAssetIds.ATTACK,
-  };
-
-  /**
-   * Get sound effect asset IDs
-   */
-  export function getSoundEffectAssetIds(): string[] {
-    return [
-      SoundAssetIds.MENU_BUTTON_SELECT,
-      SoundAssetIds.PLAY_CARD,
-      SoundAssetIds.ATTACK,
-      SoundAssetIds.TRAP_ACTIVATED,
-      SoundAssetIds.LOW_HEALTH,
-      SoundAssetIds.WIN,
-      SoundAssetIds.LOSE,
-    ];
-  }
-
-  /**
-   * Get music asset IDs
-   */
-  export function getMusicAssetIds(): string[] {
-    return [
-      SoundAssetIds.BACKGROUND_MUSIC,
-      SoundAssetIds.BATTLE_MUSIC,
-    ];
-  }
-
-  /**
-   * Get all sound asset IDs
-   */
-  export function getAllSoundAssetIds(): string[] {
-    return [
-      ...getSoundEffectAssetIds(),
-      ...getMusicAssetIds()
-    ];
-  }
-
-  /**
-   * Normalize a sound ID (convert legacy IDs to new format)
-   */
-  export function normalizeSoundId(soundId: string): string {
-    return LEGACY_SOUND_ID_MAP[soundId] || soundId;
-  }
-
-  // ==================== bloombeasts/AssetCatalogManager.ts ====================
-
-  /**
-   * Asset Catalog Manager - Centralized Asset Management System
-   *
-   * This replaces the dynamic asset ID generation with a JSON-based catalog system.
-   * All asset information (paths, Horizon IDs, metadata) is stored in JSON files
-   * organized by affinity and category.
-   *
-   * PLATFORM-SPECIFIC LOADING:
-   * - Web: See deployments/web/src/main.ts for fetch()-based loading
-   * - Horizon: See deployments/horizon/src/AssetCatalogLoader.ts for fetchAsData()-based loading
-   */
-
-  /**
-   * Type of asset reference (image, audio, animation)
-   */
-  export enum AssetReferenceType {
-    Image = 'image',
-    Audio = 'audio',
-    Animation = 'animation'
-  }
-
-  /**
-   * Type of asset entry (beast, buff, trap, magic, habitat, mission, ui)
-   */
-  export enum AssetEntryType {
-    Beast = 'beast',
-    Buff = 'buff',
-    Trap = 'trap',
-    Magic = 'magic',
-    Habitat = 'habitat',
-    Mission = 'mission',
-    UI = 'ui'
-  }
-
-  /**
-   * UI asset category types
-   */
-  export enum UICategory {
-    Frame = 'frame',
-    Button = 'button',
-    Background = 'background',
-    Icon = 'icon',
-    Chest = 'chest',
-    Container = 'container',
-    CardTemplate = 'card-template',
-    Upgrade = 'upgrade',
-    Other = 'other'
-  }
-
-  /**
-   * Catalog category types (for organizing asset catalogs)
-   */
-  export enum CatalogCategory {
-    Fire = 'fire',
-    Forest = 'forest',
-    Sky = 'sky',
-    Water = 'water',
-    Buff = 'buff',
-    Trap = 'trap',
-    Magic = 'magic',
-    Common = 'common',
-    Boss = 'boss'
-  }
-
-  /**
-   * Affinity types (lowercase for JSON compatibility)
-   * Maps to engine/types/core.ts Affinity enum
-   */
-  export enum AffinityLowercase {
-    Fire = 'fire',
-    Forest = 'forest',
-    Sky = 'sky',
-    Water = 'water',
-    Boss = 'boss'
-  }
-
-  export interface AssetReference {
-    type: AssetReferenceType;
-    horizonAssetId?: string; // Optional - only for Horizon deployment
-    path: string; // Relative path from project root
-    description?: string; // Optional description for documentation
-  }
-
-  export interface CardAssetEntry {
-    id: string;
-    type: AssetEntryType.Beast | AssetEntryType.Buff | AssetEntryType.Trap | AssetEntryType.Magic | AssetEntryType.Habitat;
-    cardType?: 'Beast' | 'Magic' | 'Trap' | 'Buff'; // Game engine card type
-    affinity?: AffinityLowercase; // For beasts and habitats
-    data: {
-      id: string;
-      name: string;
-      displayName?: string; // Display name if different from name
-      description?: string;
-      cost?: number;
-      attack?: number;
-      health?: number;
-      tier?: number;
-      // Allow any additional properties from card data
-      [key: string]: any;
-    };
-    assets: AssetReference[];
-  }
-
-  export interface MissionAssetEntry {
-    id: string;
-    type: AssetEntryType.Mission;
-    affinity?: AffinityLowercase;
-    name: string;
-    description: string;
-    assets: AssetReference[];
-  }
-
-  export interface UIAssetEntry {
-    id: string;
-    type: AssetEntryType.UI;
-    category: UICategory;
-    name: string;
-    description?: string;
-    assets: AssetReference[];
-  }
-
-  export interface AssetCatalog {
-    version: string;
-    category: CatalogCategory;
-    description: string;
-    data: (CardAssetEntry | MissionAssetEntry | UIAssetEntry)[];
-  }
-
-  // Note: AssetCatalogManager now uses enums for type safety while maintaining
-  // compatibility with JSON catalog files through string enum values.
-  // The catalogs use lowercase enums that map to the JSON structure.
-
-  /**
-   * AssetCatalogManager - Manages loading and querying of asset catalogs
-   * NOT a singleton - create instances as needed
-   */
-  export class AssetCatalogManager {
-    private catalogs: Map<string, AssetCatalog> = new Map();
-    private assetIndex: Map<string, CardAssetEntry | MissionAssetEntry | UIAssetEntry> = new Map();
-    private pathToIdMap: Map<string, string> = new Map(); // Maps asset paths to IDs
-    private horizonIdMap: Map<string, string> = new Map(); // Maps Horizon IDs to asset IDs
-
-    /**
-     * Load catalog from JSON object
-     * Platform-specific code should fetch/load the JSON and pass it here
-     */
-    loadCatalog(catalog: AssetCatalog): void {
-      const catalogKey = catalog.category;
-      this.catalogs.set(catalogKey, catalog);
-
-      // Index all assets by ID for quick lookup
-      catalog.data.forEach(entry => {
-        this.assetIndex.set(entry.id, entry);
-
-        // Create reverse mappings
-        entry.assets.forEach(asset => {
-          this.pathToIdMap.set(asset.path, entry.id);
-          if (asset.horizonAssetId) {
-            this.horizonIdMap.set(asset.horizonAssetId, entry.id);
-          }
-        });
-      });
-    }
-
-    /**
-     * Get asset entry by ID
-     */
-    getAsset(id: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
-      return this.assetIndex.get(id);
-    }
-
-    /**
-     * Get asset entry by path
-     */
-    getAssetByPath(path: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
-      const id = this.pathToIdMap.get(path);
-      return id ? this.assetIndex.get(id) : undefined;
-    }
-
-    /**
-     * Get asset entry by Horizon ID
-     */
-    getAssetByHorizonId(horizonId: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
-      const id = this.horizonIdMap.get(horizonId);
-      return id ? this.assetIndex.get(id) : undefined;
-    }
-
-    /**
-     * Get all assets of a specific type
-     */
-    getAssetsByType<T extends CardAssetEntry | MissionAssetEntry | UIAssetEntry>(
-      type: AssetEntryType
-    ): T[] {
-      const results: T[] = [];
-      this.assetIndex.forEach(entry => {
-        if (entry.type === type || (entry.type === AssetEntryType.UI && type === AssetEntryType.UI)) {
-          results.push(entry as T);
-        } else if (type !== AssetEntryType.Mission && type !== AssetEntryType.UI && (entry as CardAssetEntry).type === type) {
-          results.push(entry as T);
-        }
-      });
-      return results;
-    }
-
-    /**
-     * Get all cards by affinity
-     */
-    getCardsByAffinity(affinity: AffinityLowercase): CardAssetEntry[] {
-      const results: CardAssetEntry[] = [];
-      this.assetIndex.forEach(entry => {
-        if (entry.type === AssetEntryType.Beast || entry.type === AssetEntryType.Habitat) {
-          const card = entry as CardAssetEntry;
-          if (card.affinity === affinity) {
-            results.push(card);
-          }
-        }
-      });
-      return results;
-    }
-
-    /**
-     * Get Horizon asset ID for a given asset
-     */
-    getHorizonAssetId(assetId: string, assetType: AssetReferenceType = AssetReferenceType.Image): string | undefined {
-      const asset = this.getAsset(assetId);
-      if (!asset) return undefined;
-
-      const assetRef = asset.assets.find(a => a.type === assetType);
-      return assetRef?.horizonAssetId;
-    }
-
-    /**
-     * Get local path for a given asset
-     */
-    getAssetPath(assetId: string, assetType: AssetReferenceType = AssetReferenceType.Image): string | undefined {
-      const asset = this.getAsset(assetId);
-      if (!asset) return undefined;
-
-      const assetRef = asset.assets.find(a => a.type === assetType);
-      return assetRef?.path;
-    }
-
-    /**
-     * Get all assets for a catalog category
-     */
-    getCatalog(category: string): AssetCatalog | undefined {
-      return this.catalogs.get(category);
-    }
-
-    /**
-     * Build asset mappings for web platform
-     */
-    getWebAssetMappings(): {
-      images: Record<string, string>,
-      sounds: Record<string, string>
-    } {
-      const images: Record<string, string> = {};
-      const sounds: Record<string, string> = {};
-
-      this.assetIndex.forEach((entry, id) => {
-        entry.assets.forEach(asset => {
-          // Only use the first asset of each type for the entry
-          if (asset.type === AssetReferenceType.Image && !images[id]) {
-            images[id] = asset.path;
-          } else if (asset.type === AssetReferenceType.Audio && !sounds[id]) {
-            sounds[id] = asset.path;
-          }
-        });
-      });
-
-      return { images, sounds };
-    }
-
-    /**
-     * Build asset mappings for Horizon platform
-     */
-    getHorizonAssetMappings(): {
-      images: Record<string, string>,
-      sounds: Record<string, string>
-    } {
-      const images: Record<string, string> = {};
-      const sounds: Record<string, string> = {};
-
-      this.assetIndex.forEach((entry, id) => {
-        entry.assets.forEach(asset => {
-          if (asset.horizonAssetId) {
-            // Only use the first asset of each type for the entry
-            if (asset.type === AssetReferenceType.Image && !images[id]) {
-              images[id] = asset.horizonAssetId;
-            } else if (asset.type === AssetReferenceType.Audio && !sounds[id]) {
-              sounds[id] = asset.horizonAssetId;
-            }
-          }
-        });
-      });
-
-      return { images, sounds };
-    }
-
-    /**
-     * Get all loaded catalog categories
-     */
-    getLoadedCategories(): string[] {
-      return Array.from(this.catalogs.keys());
-    }
-
-    /**
-     * Get total number of indexed assets (for debugging)
-     */
-    getTotalIndexedAssets(): number {
-      return this.assetIndex.size;
-    }
-
-    /**
-     * Get all card data from loaded catalogs
-     * Returns the actual card definitions (data property) from all card entries
-     */
-    getAllCardData(): any[] {
-      const cards: any[] = [];
-
-      this.assetIndex.forEach(entry => {
-        // Only include card entries (beast, magic, trap, buff, habitat)
-        const isCardEntry = entry.type === AssetEntryType.Beast || entry.type === AssetEntryType.Magic ||
-            entry.type === AssetEntryType.Trap || entry.type === AssetEntryType.Buff || entry.type === AssetEntryType.Habitat;
-
-        if (isCardEntry) {
-          const cardEntry = entry as CardAssetEntry;
-          // Add rarity for reward system (same logic as old getAllCards)
-          const cardData: any = { ...cardEntry.data };
-
-          if (cardEntry.type === AssetEntryType.Beast) {
-            // Assign rarity based on energy cost
-            const cost = cardData.cost || 0;
-            if (cost >= 5) {
-              cardData.rarity = 'rare';
-            } else if (cost >= 3) {
-              cardData.rarity = 'uncommon';
-            } else {
-              cardData.rarity = 'common';
-            }
-          } else {
-            // Non-beast cards are common by default
-            cardData.rarity = 'common';
-          }
-
-          cards.push(cardData);
-        }
-      });
-
-      return cards;
-    }
-
-    /**
-     * Get a specific card by ID
-     */
-    getCard<T = any>(cardId: string): T | undefined {
-      const allCards = this.getAllCardData();
-      return allCards.find((card: any) => card.id === cardId) as T | undefined;
-    }
-
-    /**
-     * Get all buff cards from the catalog
-     */
-    getAllBuffCards(): any[] {
-      const buffEntries = this.getAssetsByType(AssetEntryType.Buff);
-      return buffEntries.map((entry: any) => entry.data);
-    }
-
-    /**
-     * Clear all loaded catalogs
-     */
-    clear(): void {
-      this.catalogs.clear();
-      this.assetIndex.clear();
-      this.pathToIdMap.clear();
-      this.horizonIdMap.clear();
-    }
-  }
-
-  // ==================== bloombeasts/common/ui/types/types/bindings.ts ====================
-
-  /**
-   * Binding Type Declarations
-   *
-   * These are type-only declarations for reactive data bindings.
-   * Actual implementations are provided by the platform via UIMethodMappings.
-   */
-
-  /**
-   * Base class for value bindings
-   */
-  declare class ValueBindingBase<T> {
-    protected _key: string;
-    protected _isInitialized: boolean;
-  }
-
-  /**
-   * Reactive data binding
-   * Matches Horizon's Binding API (no get() or subscribe() methods)
-   */
-  declare class Binding<T = any> extends ValueBindingBase<T> {
-    constructor(value: T);
-    set(value: T | ((prev: T) => T)): void;
-    derive<U>(fn: (value: T) => U): Binding<U>;
-    static derive<T extends any[], R>(
-      bindings: { [K in keyof T]: Binding<T[K]> },
-      deriveFn: (...values: T) => R
-    ): Binding<R>;
-  }
-
-  /**
-   * Platform async methods interface
-   * Provides setTimeout, setInterval, clearTimeout, clearInterval
-   *
-   * For web: Uses standard window.setTimeout, etc.
-   * For Horizon: Uses component.async.setTimeout, etc.
-   */
-  export interface AsyncMethods {
-    /**
-     * Sets a timer which executes a function once the timer expires
-     */
-    setTimeout: (callback: (...args: any[]) => void, timeout?: number) => number;
-
-    /**
-     * Cancels a timeout previously established by setTimeout
-     */
-    clearTimeout: (id: number) => void;
-
-    /**
-     * Repeatedly calls a function with a fixed time delay between calls
-     */
-    setInterval: (callback: (...args: any[]) => void, timeout?: number) => number;
-
-    /**
-     * Cancels a timed, repeating action established by setInterval
-     */
-    clearInterval: (id: number) => void;
-  }
-
-  // ==================== bloombeasts/common/ui/types/types/BindingManager.ts ====================
-
-  /**
-   * Centralized Binding Manager
-   * Horizon has a strict binding limit (~10 bindings total)
-   * This manager provides controlled access to all bindings in the app
-   */
-
-
-  export enum BindingType {
-    PlayerData = 'playerData',
-    CurrentScreen = 'currentScreen',
-    IntervaledBinding = 'intervaledBinding', // runs every 200ms to change the frame animation
-    Missions = 'missions',
-    LeaderboardData = 'leaderboardData',
-    BattleDisplay = 'battleDisplay',
-    MissionCompletePopup = 'missionCompletePopup',
-    ForfeitPopup = 'forfeitPopup',
-    CardDetailPopup = 'cardDetailPopup',
-    UIState = 'uiState', // Consolidated UI state (scroll, selected items, timers, etc.)
-  }
-
-  /**
-   * Consolidated UI State
-   * Replaces multiple screen-local bindings with single state object
-   */
-  export interface UIState {
-    // BattleScreen state
-    battle?: {
-      showHand: boolean;
-      handScrollOffset: number;
-      playerTimer: number;
-      opponentTimer: number;
-      selectedCardDetail: any | null;
-    };
-
-    // CardsScreen state
-    cards?: {
-      selectedCardId: string | null;
-      scrollOffset: number;
-    };
-
-    // MissionScreen state
-    missions?: {
-      scrollOffset?: number;
-    };
-
-    // UpgradeScreen state
-    upgrade?: {
-      selectedUpgradeId: string | null;
-    };
-  }
-
-  export interface BindingManagerInterface {
-    /**
-     * Create a derived value from one or more bindings
-     * This is the ONLY way to create derived bindings in the app
-     */
-    derive<T>(bindingTypes: BindingType[], deriveFn: (...values: any[]) => T): any;
-
-    /**
-     * Get a binding directly (for setting values)
-     */
-    setBinding(bindingType: BindingType, value: any): void;
-
-    /**
-     * Get a snapshot of the current value of a binding.
-     * Note: Use carefully, ideally only for on click events when you need to access the current value of a binding.
-     */
-    getSnapshot(bindingType: BindingType): any;
-
-    /**
-     * Get the raw binding object for a specific binding type
-     * Use this to call .derive() on a single binding
-     */
-    getBinding(bindingType: BindingType): any;
-
-    /**
-     * Legacy accessor for PlayerData binding
-     * @deprecated Use getBinding(BindingType.PlayerData) instead
-     */
-    readonly playerDataBinding: { binding: any };
-  }
-
-  export class BindingManager implements BindingManagerInterface {
-    private bindings: Map<BindingType, {
-      binding: any;
-      snapshot: any;
-    }>;
-    private BindingClass: any;
-    private async: AsyncMethods;
-
-    constructor(BindingClass: any, async: AsyncMethods) {
-      this.BindingClass = BindingClass;
-      this.async = async;
-      this.bindings = new Map();
-
-      // Initialize ALL bindings here (single source of truth)
-      // PlayerData binding - must start with valid structure due to Horizon limitation
-      this.bindings.set(BindingType.PlayerData, this.createBindingEntry({
-        name: '',
-        totalXP: 0,
-        coins: 0,
-        items: [],
-        cards: { collected: [], deck: [] },
-        missions: { completedMissions: {} },
-        boosts: {
-          'coin-boost': 0,
-          'exp-boost': 0,
-          'luck-boost': 0,
-          'rooster': 0
-        },
-        settings: { musicVolume: 10, sfxVolume: 50, musicEnabled: true, sfxEnabled: true }
-      }));
-
-      // Menu state binding - use a simple counter instead of timestamp
-      this.bindings.set(BindingType.IntervaledBinding, this.createBindingEntry(0));
-      let frameCounter = 0;
-      this.async.setInterval(() => {
-        frameCounter = (frameCounter + 1) % 1000; // Reset every 1000 to prevent overflow
-        this.setBinding(BindingType.IntervaledBinding, frameCounter);
-      }, 200);
-
-      // UI navigation binding
-      this.bindings.set(BindingType.CurrentScreen, this.createBindingEntry('loading'));
-
-      // Mission data binding
-      this.bindings.set(BindingType.Missions, this.createBindingEntry([]));
-
-      // Leaderboard data binding
-      this.bindings.set(BindingType.LeaderboardData, this.createBindingEntry());
-
-      // Battle display binding
-      this.bindings.set(BindingType.BattleDisplay, this.createBindingEntry());
-
-      // Popup bindings
-      this.bindings.set(BindingType.MissionCompletePopup, this.createBindingEntry());
-      this.bindings.set(BindingType.ForfeitPopup, this.createBindingEntry());
-      this.bindings.set(BindingType.CardDetailPopup, this.createBindingEntry());
-
-      // Consolidated UI state binding
-      this.bindings.set(BindingType.UIState, this.createBindingEntry({
-        battle: {
-          showHand: true,
-          handScrollOffset: 0,
-          playerTimer: 0,
-          opponentTimer: 0,
-          selectedCardDetail: null,
-        },
-        cards: {
-          selectedCardId: null,
-          scrollOffset: 0,
-        },
-        missions: {
-          scrollOffset: 0,
-        },
-        menu: {
-          displayedText: '',
-          frameAnimation: '',
-        },
-        upgrade: {
-          selectedUpgradeId: null,
-        },
-      }));
-
-    }
-
-    derive<T>(bindingTypes: BindingType[], deriveFn: (...values: any[]) => T): any {
-      // Get the actual binding objects
-      const actualBindings = bindingTypes.map(type => {
-        const binding = this.bindings.get(type);
-        if (!binding) {
-          throw new Error(`Binding not found: ${type}`);
-        }
-        return binding.binding;
-      });
-
-      if (actualBindings.length === 1) {
-        return actualBindings[0].derive(deriveFn);
-      }
-      return this.BindingClass.derive(actualBindings, deriveFn);
-    }
-
-    setBinding(bindingType: BindingType, value: any): void {
-      const binding = this.bindings.get(bindingType);
-      if (!binding) {
-        throw new Error(`Binding not found: ${bindingType}`);
-      }
-      binding.binding.set(value);
-      binding.snapshot = value;
-    }
-
-    getSnapshot(bindingType: BindingType): any {
-      const binding = this.bindings.get(bindingType);
-      if (!binding) {
-        throw new Error(`Binding not found: ${bindingType}`);
-      }
-      return binding.snapshot;
-    }
-
-    getBinding(bindingType: BindingType): any {
-      const binding = this.bindings.get(bindingType);
-      if (!binding) {
-        throw new Error(`Binding not found: ${bindingType}`);
-      }
-      return binding.binding;
-    }
-
-    /**
-     * Legacy accessor for PlayerData binding
-     * Returns an object with a 'binding' property for backwards compatibility
-     */
-    get playerDataBinding(): { binding: any } {
-      const binding = this.bindings.get(BindingType.PlayerData);
-      if (!binding) {
-        throw new Error(`PlayerData binding not found`);
-      }
-      return { binding: binding.binding };
-    }
-
-    private createBindingEntry(value: any = null): { binding: any, snapshot: any } {
-      return {
-        binding: new this.BindingClass(value),
-        snapshot: value,
-      };
-    }
-  }
-
-  // ==================== bloombeasts/core/GameConstants.ts ====================
-
-  /**
-   * Game Constants - Centralized configuration values
-   * Eliminates magic numbers and hardcoded values throughout the codebase
-   */
-
-  /**
-   * XP thresholds for player leveling (cumulative)
-   * Formula: XP = 100 * (2.0 ^ (level - 1))
-   */
-  export const XP_THRESHOLDS = [
-    0,      // Level 1
-    100,    // Level 2: 100 XP
-    300,    // Level 3: 300 XP total
-    700,    // Level 4: 700 XP total
-    1500,   // Level 5: 1500 XP total
-    3100,   // Level 6: 3100 XP total
-    6300,   // Level 7: 6300 XP total
-    12700,  // Level 8: 12700 XP total
-    25500,  // Level 9: 25500 XP total
-  ] as const;
-
-  /**
-   * Game balance constants
-   */
-  export const GAME_CONSTANTS = {
-    /** Maximum player level */
-    MAX_PLAYER_LEVEL: 9,
-
-    /** Maximum boost upgrade level */
-    MAX_BOOST_LEVEL: 6,
-
-    /** Starting player health */
-    STARTING_HEALTH: 30,
-
-    /** Maximum energy */
-    MAX_ENERGY: 10,
-
-    /** Turn timer in seconds */
-    TURN_TIMER_SECONDS: 300,
-
-    /** Starting hand size */
-    STARTING_HAND_SIZE: 3,
-
-    /** Mission ID for Cluck Norris (used in leaderboard) */
-    MISSION_CLUCK_NORRIS_ID: 'mission17',
-
-    /** Attack animation duration in milliseconds */
-    ATTACK_ANIMATION_DURATION_MS: 500,
-
-    /** Card detail popup display duration in milliseconds */
-    CARD_DETAIL_POPUP_DURATION_MS: 2000,
-
-    /** Deck size (maximum cards in deck) */
-    DECK_SIZE: 30,
-
-    /** Minimum deck size required to start a battle */
-    MIN_DECK_SIZE: 1,
-
-    /** Energy blocks per deck */
-    ENERGY_BLOCKS_PER_DECK: 27,
-
-    /** Stat increase per level (10% per level) */
-    STAT_INCREASE_PER_LEVEL: 0.1,
-
-    /** Max priority value for combat helpers */
-    MAX_PRIORITY_VALUE: 999,
-
-    /** Leaderboard max entries to display */
-    LEADERBOARD_MAX_ENTRIES: 10,
-
-    /** Percentage to decimal conversion divisor */
-    PERCENTAGE_TO_DECIMAL: 100,
-
-    /** Milliseconds per second */
-    MILLISECONDS_PER_SECOND: 1000,
-
-    /** Seconds per minute */
-    SECONDS_PER_MINUTE: 60,
-
-    /** Volume max value */
-    VOLUME_MAX: 100,
-  } as const;
-
-  /**
-   * Sound asset IDs - Type-safe references to all sound effects
-   */
-  export const SOUND_EFFECTS = {
-    MENU_BUTTON_SELECT: 'sfx-menu-button-select',
-    ATTACK: 'sfx-attack',
-    PLAY_CARD: 'sfx-play-card',
-    TRAP_ACTIVATED: 'sfx-trap-card-activated',
-    WIN: 'sfx-win',
-    LOSE: 'sfx-lose',
-    UPGRADE: 'sfx-upgrade',
-    UPGRADE_ROOSTER: 'sfx-upgrade-rooster',
-  } as const;
-
-  /**
-   * Music asset IDs - Type-safe references to all music tracks
-   */
-  export const MUSIC_TRACKS = {
-    BACKGROUND: 'music-background',
-    BATTLE: 'music-battle',
-  } as const;
-
-  /**
-   * Calculate player level from total XP (derived data)
-   */
-  export function getPlayerLevel(totalXP: number): number {
-    for (let level = GAME_CONSTANTS.MAX_PLAYER_LEVEL; level >= 1; level--) {
-      if (totalXP >= XP_THRESHOLDS[level - 1]) {
-        return level;
-      }
-    }
-    return 1;
-  }
-
-  // ==================== bloombeasts/common/ui/styles/styles/colors.ts ====================
-
-  /**
-   * Shared color palette for BloomBeasts
-   * Used across both Web and Horizon platforms
-   */
-
-  export const COLORS = {
-    // Primary colors
-    background: '#1a1a2e',
-    backgroundDark: '#0f0f1e',
-    primary: '#00d9ff',
-    primaryLight: '#3498db',
-
-    // Text colors
-    textPrimary: '#ffffff',
-    textSecondary: '#aaaaaa',
-    textMuted: '#666666',
-
-    // UI element colors
-    buttonPrimary: '#3498db',
-    buttonDanger: '#e74c3c',
-    buttonSuccess: '#27ae60',
-    buttonDisabled: '#555555',
-    surface: '#2c3e50',
-    disabled: '#555555',
-    error: '#e74c3c',
-
-    // Card/Panel colors
-    cardBackground: '#2c3e50',
-    panelBackground: '#1a1a1a',
-    overlayBackground: 'rgba(0, 0, 0, 0.8)',
-    overlayBackgroundDark: 'rgba(0, 0, 0, 0.9)',
-
-    // Borders
-    borderPrimary: '#00d9ff',
-    borderSuccess: '#27ae60',
-    borderDefault: '#3498db',
-    border: '#3a3a4a',
-
-    // Affinity colors
-    affinity: {
-      fire: '#e74c3c',
-      water: '#3498db',
-      forest: '#27ae60',
-      sky: '#9b59b6',
-      neutral: '#95a5a6',
-    },
-
-    // Status colors
-    success: '#27ae60',
-    warning: '#f39c12',
-    danger: '#e74c3c',
-    info: '#3498db',
-
-    // Rarity colors (for cards)
-    rarity: {
-      common: '#95a5a6',
-      uncommon: '#27ae60',
-      rare: '#3498db',
-      epic: '#9b59b6',
-      legendary: '#f39c12',
-    },
-  } as const;
-
-  // ==================== bloombeasts/common/ui/styles/styles/dimensions.ts ====================
-
-  /**
-   * Shared dimensions and spacing for BloomBeasts
-   * Used across both Web and Horizon platforms
-   */
-
-  export const DIMENSIONS = {
-    // Panel/Screen dimensions
-    panel: {
-      width: 1280,
-      height: 720,
-    },
-
-    // Button dimensions
-    button: {
-      height: 50,
-      minWidth: 200,
-      padding: 15,
-      borderRadius: 10,
-    },
-
-    buttonSmall: {
-      height: 40,
-      minWidth: 100,
-      padding: 10,
-      borderRadius: 8,
-    },
-
-    // Card dimensions
-    card: {
-      width: 150,
-      height: 200,
-      borderRadius: 10,
-      borderWidth: 2,
-      padding: 10,
-    },
-
-    // Mission card dimensions
-    missionCard: {
-      padding: 15,
-      borderRadius: 10,
-      borderWidth: 2,
-      minHeight: 80,
-    },
-
-    // Dialog/Modal dimensions
-    dialog: {
-      minWidth: 400,
-      maxWidth: 600,
-      padding: 30,
-      borderRadius: 15,
-    },
-
-    // Spacing scale
-    spacing: {
-      xs: 5,
-      sm: 10,
-      md: 15,
-      lg: 20,
-      xl: 30,
-      xxl: 40,
-    },
-
-    // Font sizes
-    fontSize: {
-      xs: 12,
-      sm: 14,
-      md: 18,
-      lg: 20,
-      xl: 24,
-      xxl: 28,
-      title: 36,
-      hero: 72,
-    },
-
-    // Border widths
-    borderWidth: {
-      thin: 1,
-      normal: 2,
-      thick: 3,
-    },
-
-    // Stat badge dimensions
-    statBadge: {
-      padding: 10,
-      borderRadius: 8,
-      borderWidth: 2,
-    },
-  } as const;
-
-  /**
-   * Battle-specific card dimensions
-   * These are larger/different from the generic DIMENSIONS.card for battle UI layout
-   */
-  export const standardCardDimensions = {
-    width: 210,
-    height: 280,
-  };
-
-  export const trapCardDimensions = {
-    width: 100,
-    height: 133,
-  };
-
-  export const buffCardDimensions = {
-    width: 100,
-    height: 133,
-  };
-
-  export const habitatShiftCardDimensions = {
-    width: 100,
-    height: 133,
-  };
-
-  /**
-   * Button dimensions (specific sizes for different contexts)
-   */
-  export const sideMenuButtonDimensions = {
-    width: 175,
-    height: 72,
-  };
-
-  export const longButtonDimensions = {
-    width: 201,
-    height: 35,
-  };
-
-  export const smallButtonDimensions = {
-    width: 89,
-    height: 89,
-  };
-
-  /**
-   * Mission-specific dimensions
-   */
-  export const missionCompleteCardDimensions = {
-    width: 550,
-    height: 330,
-  };
-
-  export const chestImageMissionCompleteDimensions = {
-    width: 160,
-    height: 180,
-  };
-
-  /**
-   * Common gaps for flexbox layouts
-   */
-  export const GAPS = {
-    cards: 15,
-    buttons: 3,
-    missions: 10,
-    stats: 20,
-    sections: 30,
-  } as const;
-
-  // ==================== bloombeasts/common/ui/ScreenUtils.ts ====================
+  // ==================== bloombeasts\common\ui\ScreenUtils.ts ====================
 
   /**
    * Utilities for screen components
@@ -4703,7 +1635,7 @@ namespace BloomBeasts {
    */
   function getCardEmoji(card: RuntimeCard): string {
     // Check if card has affinity property (Beast, Buff, Habitat cards)
-    const affinity = 'affinity' in card ? (card as any).affinity : undefined;
+    const affinity = 'affinity' in card && card.affinity ? card.affinity : undefined;
     switch (affinity?.toLowerCase()) {
       case 'fire':
         return '🔥';
@@ -4751,7 +1683,7 @@ namespace BloomBeasts {
     };
   }
 
-  // ==================== bloombeasts/common/ui/constants/positions.ts ====================
+  // ==================== bloombeasts\common\ui\constants\positions.ts ====================
 
   // Type definitions
   export interface SimplePosition {
@@ -4877,7 +1809,7 @@ namespace BloomBeasts {
     claimRewardButton: { x: 175, y: 271 },
   };
 
-  // ==================== bloombeasts/common/ui/components/common/Button.ts ====================
+  // ==================== bloombeasts\common\ui\components\common\Button.ts ====================
 
   /**
    * Common Button Component
@@ -5038,9 +1970,10 @@ namespace BloomBeasts {
   }
 
   // Export alias for backwards compatibility
-  { createButton as Button };
+  // Note: Export statement removed for namespace bundling - use createButton directly
+  // export { createButton as Button };
 
-  // ==================== bloombeasts/common/ui/screens/SideMenu.ts ====================
+  // ==================== bloombeasts\common\ui\screens\SideMenu.ts ====================
 
   /**
    * Common Side Menu Component
@@ -5260,7 +2193,7 @@ namespace BloomBeasts {
                       style: {
                           fontSize: sideMenuPositions.playerName.size,
                           color: COLORS.textPrimary,
-                          textAlign: sideMenuPositions.playerName.textAlign as any,
+                          textAlign: sideMenuPositions.playerName.textAlign as 'left' | 'center' | 'right' | undefined,
                       },
                   }),
               }),
@@ -5317,7 +2250,7 @@ namespace BloomBeasts {
   ): UINodeType {
       const amountText = typeof amount === 'number'
           ? `${emoji} ${amount}`
-          : (amount as any).derive((a: number) => `${emoji} ${a}`);
+          : (amount as Binding<number>).derive((a: number) => `${emoji} ${a}`);
 
       return ui.View({
           style: {
@@ -5334,7 +2267,205 @@ namespace BloomBeasts {
       });
   }
 
-  // ==================== bloombeasts/screens/common/BaseScreen.ts ====================
+  // ==================== bloombeasts\types\ui\UITypes.ts ====================
+
+  /**
+   * Core UI type definitions
+   *
+   * Fundamental UI types for the platform-agnostic UI system.
+   */
+
+  /**
+   * Base UI element (platform-specific implementation)
+   */
+  export type UIElement = any; // Platform-specific element type
+
+  /**
+   * Conditional UI node (from UINode.if)
+   */
+  export type ConditionalUINode = any; // Platform-specific conditional type
+
+  /**
+   * UINode type - represents a UI node returned by UI components
+   * Can be a single element, array of elements, null, or conditional rendering
+   */
+  export type UINode = UIElement | UIElement[] | null | ConditionalUINode;
+
+  // ==================== bloombeasts\types\ui\UIProps.ts ====================
+
+  /**
+   * UI component props definitions
+   *
+   * Platform-agnostic prop interfaces for all UI components.
+   */
+
+
+  /**
+   * Style properties - platform-agnostic style definitions
+   * These match Horizon's styling but work on web too
+   */
+  export interface StyleProps {
+    // Dimensions
+    width?: number | string; // Support '100%', 'auto', etc.
+    height?: number | string; // Support '100%', 'auto', etc.
+    maxWidth?: number | string; // Max width constraint
+    maxHeight?: number | string; // Max height constraint
+    aspectRatio?: number; // Width/height ratio
+
+    // Colors and visual
+    backgroundColor?: string;
+    color?: string; // Text/foreground color
+    opacity?: number;
+    borderRadius?: number;
+    borderWidth?: number;
+    borderTopWidth?: number;
+    borderBottomWidth?: number;
+    borderLeftWidth?: number;
+    borderRightWidth?: number;
+    borderColor?: string;
+    borderTopColor?: string;
+    borderBottomColor?: string;
+    borderLeftColor?: string;
+    borderRightColor?: string;
+    shadowColor?: string;
+    shadowRadius?: number;
+
+    // Spacing
+    padding?: number;
+    paddingTop?: number;
+    paddingBottom?: number;
+    paddingLeft?: number;
+    paddingRight?: number;
+    margin?: number;
+    marginTop?: number;
+    marginBottom?: number;
+    marginLeft?: number;
+    marginRight?: number;
+
+    // Layout
+    display?: 'flex' | 'block' | 'inline' | 'none' | any; // Allow any for platform-specific values
+    flex?: number; // Flex grow factor
+    flexDirection?: 'row' | 'column';
+    flexWrap?: 'nowrap' | 'wrap' | 'wrap-reverse';
+    justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
+    alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
+    gap?: number; // Gap between flex items
+    overflow?: 'visible' | 'hidden';
+
+    // Positioning
+    position?: 'relative' | 'absolute';
+    top?: number;
+    left?: number;
+    right?: number;
+    bottom?: number;
+
+    // Typography (for convenience in style)
+    fontSize?: number;
+    fontWeight?: 'normal' | 'bold' | number;
+    textAlign?: 'left' | 'center' | 'right'; // Text alignment
+    textAlignVertical?: 'top' | 'center' | 'bottom'; // Vertical text alignment
+    lineHeight?: number; // Line height for text
+    textShadowColor?: string; // Text shadow color
+    textShadowOffset?: { width: number; height: number }; // Text shadow offset
+    textShadowRadius?: number; // Text shadow blur radius
+
+    // Z-index for layering
+    zIndex?: number;
+
+    // Add more as needed
+  }
+
+  /**
+   * Common props for all UI components
+   */
+  export interface BaseUIProps {
+    style?: StyleProps;
+    children?: UINode | UINode[];
+  }
+
+  /**
+   * View component props
+   */
+  export interface ViewProps extends BaseUIProps {}
+
+  /**
+   * Text component props
+   */
+  export interface TextProps extends BaseUIProps {
+    text?: string | any; // Support both string and bindings (ValueBindingBase, ReadonlyBindingInterface)
+    fontSize?: number;
+    fontWeight?: 'normal' | 'bold';
+    color?: string;
+    textAlign?: 'left' | 'center' | 'right';
+    numberOfLines?: number; // Max number of lines before truncation
+  }
+
+  /**
+   * Image component props
+   */
+  export interface ImageProps extends BaseUIProps {
+    imageId?: string | any; // Single image asset ID (or binding)
+    source?: any; // Image source (platform-specific, can be URL, asset ID, or binding)
+    binding?: any; // BaseBinding<string> for animations, derived values, etc.
+    width?: number;
+    height?: number;
+  }
+
+  /**
+   * Pressable (button) component props
+   */
+  export interface PressableProps extends BaseUIProps {
+    onPress?: () => void;
+    onClick?: () => void; // Alias for onPress (web compatibility)
+    disabled?: boolean | any; // Whether the button is disabled (supports bindings)
+    id?: string;
+  }
+
+  /**
+   * ScrollView component props
+   */
+  export interface ScrollViewProps extends BaseUIProps {
+    horizontal?: boolean;
+    showsScrollIndicator?: boolean;
+  }
+
+  // ==================== bloombeasts\types\ui\UIMethodMappings.ts ====================
+
+  /**
+   * UI method mappings definition
+   *
+   * Platform-specific UI method implementations.
+   * Each platform provides its own implementation of these methods.
+   * Screens receive this object and use it to create UI elements.
+   */
+
+
+  /**
+   * Platform-specific UI method mappings
+   * Each platform provides its own implementation of these methods
+   * Screens receive this object and use it to create UI elements
+   */
+  export interface UIMethodMappings {
+    // Core UI components - return UIElement (platform-specific element)
+    View: (props: ViewProps) => UIElement;
+    Text: (props: TextProps) => UIElement;
+    Image: (props: ImageProps) => UIElement;
+    Pressable: (props: PressableProps) => UIElement;
+    ScrollView?: (props: ScrollViewProps) => UIElement;
+
+    // UINode utilities for conditional rendering
+    // Platform-specific type for conditional UI nodes (e.g., Horizon's ConditionalUINode)
+    UINode?: ConditionalUINode;
+
+    // Centralized binding manager - ONLY way to create/access bindings
+    bindingManager: BindingManager;
+
+    // Platform-specific helpers
+    // Returns platform-specific image source (ImageSource on Horizon, string on Web)
+    assetIdToImageSource?: (assetId: string) => unknown;
+  }
+
+  // ==================== bloombeasts\screens\common\BaseScreen.ts ====================
 
   /**
    * BaseScreen
@@ -5474,7 +2605,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/menu/MenuScreen.ts ====================
+  // ==================== bloombeasts\screens\menu\MenuScreen.ts ====================
 
   /**
    * Menu Screen
@@ -5791,7 +2922,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/common/ui/constants/emojis.ts ====================
+  // ==================== bloombeasts\common\ui\constants\emojis.ts ====================
 
   export const energyEmoji = '⚡';
   export const missionEmoji = '🎯';
@@ -5799,7 +2930,7 @@ namespace BloomBeasts {
   export const playerLevelEmoji = '💪';
   export const playerExperienceEmoji = '🧪';
 
-  // ==================== bloombeasts/screens/common/types.ts ====================
+  // ==================== bloombeasts\screens\common\types.ts ====================
 
   /**
    * Minimal card instance in player's collection
@@ -5811,7 +2942,7 @@ namespace BloomBeasts {
     currentXP: number;              // Only persistent data - everything else is derived
   }
 
-  // ==================== bloombeasts/common/engine/utils/abilityDescriptionGenerator.ts ====================
+  // ==================== bloombeasts\common\engine\utils\abilityDescriptionGenerator.ts ====================
 
   /**
    * Generates human-readable descriptions from ability effects
@@ -6139,7 +3270,7 @@ namespace BloomBeasts {
     return `${allButLast}, and ${last}`;
   }
 
-  // ==================== bloombeasts/common/engine/utils/cardDescriptionGenerator.ts ====================
+  // ==================== bloombeasts\common\engine\utils\cardDescriptionGenerator.ts ====================
 
   /**
    * Generates human-readable descriptions for all card types
@@ -6176,7 +3307,7 @@ namespace BloomBeasts {
     return card.description || '';
   }
 
-  // ==================== bloombeasts/common/engine/constants/leveling.ts ====================
+  // ==================== bloombeasts\common\engine\constants\leveling.ts ====================
 
   /**
    * Constants for the leveling and progression system
@@ -6208,7 +3339,7 @@ namespace BloomBeasts {
 
   export const ENERGY_XP_COST = 1;
 
-  // ==================== bloombeasts/common/utils/cardUtils.ts ====================
+  // ==================== bloombeasts\common\utils\cardUtils.ts ====================
 
   /**
    * Card utility functions for level/XP calculations and stat computation
@@ -6244,6 +3375,31 @@ namespace BloomBeasts {
 
   export function getXPThreshold(level: number): number {
     return CARD_XP_THRESHOLDS[level - 1];
+  }
+
+  /**
+   * Get XP threshold for progression display
+   * Returns the XP needed to reach the NEXT level
+   * For max level, returns the current level threshold
+   *
+   * @param currentLevel - Current card level (1-9)
+   * @returns XP threshold for next level progression
+   *
+   * @example
+   * // Level 2 card needs 300 XP to reach level 3
+   * getXPProgressionThreshold(2) // returns 300
+   *
+   * // Level 9 card is at max, show max threshold
+   * getXPProgressionThreshold(9) // returns 25500
+   */
+  export function getXPProgressionThreshold(currentLevel: number): number {
+    // For max level (9), show the threshold for level 9
+    if (currentLevel >= 9) {
+      return CARD_XP_THRESHOLDS[8]; // Level 9 threshold
+    }
+
+    // For levels 1-8, show the threshold for the NEXT level
+    return CARD_XP_THRESHOLDS[currentLevel]; // Next level threshold (current level index in array)
   }
 
   /**
@@ -6299,7 +3455,7 @@ namespace BloomBeasts {
     const level = getCardLevel(instance.currentXP);
 
     // For Beast cards, compute level-scaled stats
-    if (cardDef.type === CardTypeEnum.Beast && 'baseAttack' in cardDef && 'baseHealth' in cardDef) {
+    if (cardDef.type === CardType.Beast && 'baseAttack' in cardDef && 'baseHealth' in cardDef) {
       const beastCard = cardDef as BloomBeastCard;
       const scaledAttack = computeLeveledStat(beastCard.baseAttack, level);
       const scaledHealth = computeLeveledStat(beastCard.baseHealth, level);
@@ -6307,7 +3463,6 @@ namespace BloomBeasts {
       const runtimeBeast: RuntimeBeast = {
         ...beastCard,
         instanceId: instance.id,
-        cardId: beastCard.id,      // Base card ID (required by RuntimeBeast)
         currentXP: instance.currentXP,
         level,
         currentLevel: level as Level,  // Strongly-typed level (required by RuntimeBeast)
@@ -6402,7 +3557,350 @@ namespace BloomBeasts {
     cardInstances.push(cardInstance);
   }
 
-  // ==================== bloombeasts/common/ui/screens/CardRenderer.ts ====================
+  // ==================== bloombeasts\common\engine\constants\gameRules.ts ====================
+
+  /**
+   * Game Rules Constants
+   *
+   * Central location for all game rule constants to avoid magic numbers
+   * throughout the codebase.
+   */
+
+  // Field Configuration
+  export const FIELD_SIZE = 3;
+
+  // Deck Configuration
+  export const DECK_SIZE = 30;
+
+  // Health Configuration
+  export const STARTING_HEALTH = 30;
+  export const PLAYER_MAX_HEALTH = 30;
+
+  // Turn Configuration
+  export const TURN_TIME_LIMIT = 60; // seconds
+
+  // Battle Configuration
+  export const FIRST_PLAYER_DRAWS_ON_FIRST_TURN = false;
+
+  // ==================== bloombeasts\screens\battle\BattleDisplayManager.ts ====================
+
+  /**
+   * BattleDisplayManager - Handles battle UI rendering and display enrichment
+   * Manages battle state visualization, animations, and card popups
+   */
+
+
+  /**
+   * Options for creating battle display
+   */
+  export interface BattleDisplayOptions {
+    attackerPlayer?: 'player' | 'opponent';
+    attackerIndex?: number;
+    targetPlayer?: 'player' | 'opponent' | 'health';
+    targetIndex?: number;
+  }
+
+  export class BattleDisplayManager {
+    private catalogManager: any;
+
+    constructor(catalogManager: any) {
+      this.catalogManager = catalogManager;
+    }
+    /**
+     * Create a battle display object from battle state
+     */
+    createBattleDisplay(
+      battleUIState: any,
+      options?: BattleDisplayOptions
+    ): BattleDisplay | null {
+      // Handle new TURBO-based battle state structure
+      if (!battleUIState || !battleUIState.battleState || !battleUIState.battleState.turboState) {
+        return null;
+      }
+
+      const turboState = battleUIState.battleState.turboState;
+      const gameData = turboState.gameData;
+
+      // Extract players and field from TURBO state
+      const player = gameData.players[0];
+      const opponent = gameData.players[1];
+      const playerField = gameData.field.player1;
+      const opponentField = gameData.field.player2;
+
+      if (!player || !opponent) return null;
+
+      // Determine current turn player
+      const turnPlayer = turboState.turnInfo.currentPlayerId === 'player' ? 'player' : 'opponent';
+
+      // Convert to display format
+      const display: BattleDisplay = {
+        playerHealth: player.health,
+        playerMaxHealth: player.maxHealth || STARTING_HEALTH,
+        playerDeckCount: player.deck.length,
+        playerEnergy: player.energy,
+        playerHand: this.enrichHandCards(player.hand),
+        playerTrapZone: playerField.traps || [],
+        playerBuffZone: playerField.buffs || [],
+        opponentHealth: opponent.health,
+        opponentMaxHealth: opponent.maxHealth || STARTING_HEALTH,
+        opponentDeckCount: opponent.deck.length,
+        opponentEnergy: opponent.energy,
+        opponentField: this.enrichFieldBeasts(opponentField.beasts, turboState, 1),
+        opponentTrapZone: opponentField.traps || [],
+        opponentBuffZone: opponentField.buffs || [],
+        playerField: this.enrichFieldBeasts(playerField.beasts, turboState, 0),
+        currentTurn: turboState.turnInfo.turnNumber,
+        turnPlayer: turnPlayer,
+        turnTimeRemaining: TURN_TIME_LIMIT,
+        objectives: this.getObjectiveDisplay(battleUIState),
+        habitatZone: playerField.habitat || opponentField.habitat, // Use whichever has a habitat
+        attackAnimation: options,
+      };
+
+      return display;
+    }
+
+    /**
+     * Get objective display for current battle
+     */
+    private getObjectiveDisplay(battleState: any): ObjectiveDisplay[] {
+      if (!battleState.mission || !battleState.progress) {
+        return [];
+      }
+
+      // Check if mission has objectives defined
+      if (!battleState.mission.objectives || !Array.isArray(battleState.mission.objectives)) {
+        return [];
+      }
+
+      return battleState.mission.objectives.map((obj: any) => {
+        const key = `${obj.type}-${obj.target || 0}`;
+        const progress = battleState.progress.objectiveProgress.get(key) || 0;
+        const target = obj.target || 1;
+
+        return {
+          description: obj.description || 'Unknown objective',
+          progress: Math.min(progress, target),
+          target: target,
+          isComplete: progress >= target,
+        };
+      });
+    }
+
+    /**
+     * Return field beasts as RuntimeCard
+     * NOTE: Do NOT apply bonuses here - the engine's StatModifierManager already handles this!
+     */
+    private enrichFieldBeasts(field: RuntimeCard[], turboState?: any, playerIndex?: number): RuntimeCard[] {
+      return field.filter(beast => beast !== null);
+    }
+
+    /**
+     * Return hand cards as RuntimeCard
+     */
+    private enrichHandCards(hand: RuntimeCard[]): RuntimeCard[] {
+      return hand.filter(card => card !== null);
+    }
+
+  }
+
+  // ==================== bloombeasts\types\game\DisplayTypes.ts ====================
+
+  /**
+   * Display type definitions
+   *
+   * Types used for UI display and presentation.
+   * These are view models that aggregate game state for presentation.
+   */
+
+
+  /**
+   * Player statistics displayed in UI
+   */
+  export interface MenuStats {
+    playerLevel: number;
+    totalXP: number;
+    coins: number;
+    serums: number;
+  }
+
+  /**
+   * Sound settings for audio playback
+   */
+  export interface SoundSettings {
+    musicVolume: number; // 0-100
+    sfxVolume: number; // 0-100
+    musicEnabled: boolean;
+    sfxEnabled: boolean;
+  }
+
+  /**
+   * Mission information for display in mission selection
+   */
+  export interface MissionDisplay {
+    id: string;
+    name: string;
+    level: number;
+    difficulty: string;
+    isAvailable: boolean;
+    isCompleted: boolean;
+    description: string;
+    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
+    beastId?: string;
+  }
+
+  /**
+   * Card detail popup information
+   */
+  export interface CardDetailDisplay {
+    card: RuntimeCard;
+    buttons: string[];
+    isInDeck: boolean;
+  }
+
+  /**
+   * Mission objective progress for display
+   */
+  export interface ObjectiveDisplay {
+    description: string;
+    progress: number;
+    target: number;
+    isComplete: boolean;
+  }
+
+  /**
+   * Complete battle state for display in battle screen
+   */
+  export interface BattleDisplay {
+    playerHealth: number;
+    playerMaxHealth: number;
+    playerDeckCount: number;
+    playerEnergy: number;
+    playerHand: any[];
+    playerTrapZone: any[]; // Player's trap cards (face-down)
+    playerBuffZone: any[]; // Player's active buff cards
+    opponentHealth: number;
+    opponentMaxHealth: number;
+    opponentDeckCount: number;
+    opponentEnergy: number;
+    opponentField: any[];
+    opponentTrapZone: any[]; // Opponent's trap cards (face-down)
+    opponentBuffZone: any[]; // Opponent's active buff cards
+    playerField: any[];
+    currentTurn: number;
+    turnPlayer: string;
+    turnTimeRemaining: number;
+    objectives: ObjectiveDisplay[];
+    habitatZone: any | null; // Current habitat card
+    attackAnimation?: BattleDisplayOptions; // Attack animation state
+    cardPopup?: { // Card popup display (for magic/trap/buff cards)
+      card: any;
+      player: 'player' | 'opponent';
+      showCloseButton?: boolean; // Show close button for manual popups
+    } | null;
+  }
+
+  // ==================== bloombeasts\screens\battle\engine\utils\cardIdentifiers.ts ====================
+
+  /**
+   * Card Identifier Utilities
+   *
+   * Provides consistent ID matching across the battle system.
+   *
+   * Cards/beasts have two ID fields:
+   * - id: Base card ID (e.g., "forest-beast-1") - shared across all instances
+   * - instanceId: Unique instance ID (e.g., "forest-beast-1-123-456") - unique per instance
+   *
+   * Use these helpers instead of manual ID comparisons to ensure consistency.
+   */
+
+  /**
+   * Get the canonical identifier for a card/beast
+   * Prefers instanceId (unique) over id (shared across all instances of same card)
+   */
+  export function getCardIdentifier(card: { id: string; instanceId?: string }): string {
+    return card.instanceId || card.id;
+  }
+
+  /**
+   * Check if two cards/beasts match by their identifiers
+   * Compares canonical identifiers (prefers instanceId)
+   */
+  export function cardsMatch(
+    card1: { id: string; instanceId?: string },
+    card2: { id: string; instanceId?: string }
+  ): boolean {
+    const id1 = getCardIdentifier(card1);
+    const id2 = getCardIdentifier(card2);
+    return id1 === id2;
+  }
+
+  /**
+   * Check if a card matches a given identifier (either id or instanceId)
+   * Useful when searching with an ID that could be either base ID or instance ID
+   */
+  export function cardMatchesId(
+    card: { id: string; instanceId?: string },
+    searchId: string
+  ): boolean {
+    return card.id === searchId || card.instanceId === searchId;
+  }
+
+  // ==================== bloombeasts\types\game\PlayerTypes.ts ====================
+
+  /**
+   * Player data type definitions
+   *
+   * Core player data structures used throughout the game.
+   */
+
+
+  /**
+   * Player item in inventory
+   */
+  export interface PlayerItem {
+    itemId: string;
+    quantity: number;
+  }
+
+  /**
+   * Player data structure - persisted to platform storage
+   * This is the canonical save data format
+   *
+   * Note: Player level is derived from totalXP and not stored directly
+   */
+  export interface PlayerData {
+    // Identity and progression
+    name: string;
+    totalXP: number; // Level is derived from this via getPlayerLevel()
+
+    // Currency
+    coins: number;
+
+    // Card collection and deck (SINGLE SOURCE OF TRUTH)
+    cards: {
+      collected: CardInstance[]; // All owned card instances
+      deck: string[]; // Card instance IDs in player's deck
+    };
+
+    // Mission tracking
+    missions: {
+      completedMissions: { [missionId: string]: number }; // Mission ID -> completion count
+    };
+
+    // Item inventory (only special items like serums)
+    items: PlayerItem[];
+
+    // Boost upgrades (0-6 levels per boost)
+    boosts: {
+      [boostId: string]: number; // Boost ID -> upgrade level (0-6)
+    };
+
+    // UI preferences (not persisted on all platforms)
+    settings?: SoundSettings;
+  }
+
+  // ==================== bloombeasts\common\ui\screens\CardRenderer.ts ====================
 
   /**
    * Common Card Rendering Component
@@ -6469,7 +3967,16 @@ namespace BloomBeasts {
     const beastImageKey = baseId; // Beast images use the base card ID
 
     // Check if card has affinity property (Beast, Buff, Habitat cards)
-    const affinity = 'affinity' in card ? (card as any).affinity : undefined;
+    const affinity = 'affinity' in card && card.affinity ? card.affinity : undefined;
+
+    // Extract attack/health for Beast cards (with proper type narrowing)
+    let beastAttack: number | undefined;
+    let beastHealth: number | undefined;
+    if (card.type === CardType.Beast) {
+      const beastCard = card as RuntimeBeast;
+      beastAttack = beastCard.currentAttack ?? beastCard.baseAttack;
+      beastHealth = beastCard.currentHealth ?? beastCard.baseHealth;
+    }
 
     // Card frame key: Beast cards use base-card, others use type-specific frames
     let cardFrameKey = '';
@@ -6568,9 +4075,9 @@ namespace BloomBeasts {
         ] : []),
 
         // Attack and Health (for Beast cards)
-        ...(card.type === CardType.Beast && ((card as any).currentAttack !== undefined || (card as any).baseAttack !== undefined) ? [
+        ...(beastAttack !== undefined ? [
           ui.Text({
-            text: String((card as any).currentAttack ?? (card as any).baseAttack ?? 0),
+            text: String(beastAttack ?? 0),
             style: {
               position: 'absolute',
               top: positions.attack.y,
@@ -6583,9 +4090,9 @@ namespace BloomBeasts {
           })
         ] : []),
 
-        ...(card.type === CardType.Beast && ((card as any).currentHealth !== undefined || (card as any).baseHealth !== undefined) ? [
+        ...(beastHealth !== undefined ? [
           ui.Text({
-            text: String((card as any).currentHealth ?? (card as any).baseHealth ?? 0),
+            text: String(beastHealth ?? 0),
             style: {
               position: 'absolute',
               top: positions.health.y,
@@ -6601,7 +4108,7 @@ namespace BloomBeasts {
         // Level and Experience (for all cards with level)
         ...(card.level !== undefined ? [
           ui.Text({
-            text: `lvl ${card.level}. ${card.currentXP || 0}/${getXPThreshold(card.level)}`,
+            text: `lvl ${card.level}. ${card.currentXP || 0}/${getXPProgressionThreshold(card.level)}`,
             style: {
               position: 'absolute',
               top: positions.level.y,
@@ -6774,7 +4281,6 @@ namespace BloomBeasts {
         const cardId = uiState.cards?.selectedCardId;
         // ID-based mode: find card by ID
         if (!cardId) {
-          Logger.debug('[CardRenderer] selectedCard mode: no cardId in UIState');
           return null;
         }
         instance = cardInstances.find((c: CardInstance) => c.id === cardId) || null;
@@ -6857,7 +4363,7 @@ namespace BloomBeasts {
 
       // For all cards, show level and experience
       const exp = card.currentXP || 0;
-      return `lvl ${card.level}. ${exp}/${getXPThreshold(card.level)}`;
+      return `lvl ${card.level}. ${exp}/${getXPProgressionThreshold(card.level)}`;
     });
 
     const abilityTextBinding = ui.bindingManager.derive(bindingTypes, (...args: any[]) => {
@@ -7065,19 +4571,20 @@ namespace BloomBeasts {
       ...(showDeckIndicator && !isBattleMode && ui.UINode ? [ui.UINode.if(
         ui.bindingManager.derive([BindingType.UIState, BindingType.PlayerData], (uiState: UIState, playerData: PlayerData) => {
           const card = getCard(uiState, playerData, null);
-          return isCardInDeck(playerData, card?.id);
+          if (!card) return false;
+          return isCardInDeck(playerData, getCardIdentifier(card!));
         }),
         ui.View({
           style: {
             position: 'absolute',
-            top: 0,
+            top: -4,
             left: 0,
             width: cardWidth,
             height: cardHeight,
             borderWidth: 4,
             borderColor: COLORS.success,
             borderRadius: 8,
-            pointerEvents: 'none' as const, // Allow clicks to pass through
+            // pointerEvents: 'none' as const, // Allow clicks to pass through
           },
         })
       )] : []),
@@ -7129,7 +4636,7 @@ namespace BloomBeasts {
     imageHeight: 185,
   };
 
-  // ==================== bloombeasts/common/ui/components/common/Popup.ts ====================
+  // ==================== bloombeasts\common\ui\components\common\Popup.ts ====================
 
   /**
    * Common Popup Component
@@ -7336,7 +4843,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts/common/ui/screens/CardDetailPopup.ts ====================
+  // ==================== bloombeasts\common\ui\screens\CardDetailPopup.ts ====================
 
   /**
    * Card Detail Popup Component
@@ -7667,7 +5174,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts/screens/common/UIStateManager.ts ====================
+  // ==================== bloombeasts\screens\common\UIStateManager.ts ====================
 
   /**
    * UIStateManager
@@ -7677,9 +5184,25 @@ namespace BloomBeasts {
   export class UIStateManager<T = any> {
     constructor(
       private bindingManager: BindingManager,
-      private stateKey: string,
+      public readonly stateKey: string,
       private onRenderNeeded?: () => void
-    ) {}
+    ) {
+      // Initialize state if it doesn't exist
+      this.ensureStateInitialized();
+    }
+
+    /**
+     * Ensure the state key exists in UIState
+     */
+    private ensureStateInitialized(): void {
+      const currentState = this.bindingManager.getSnapshot(BindingType.UIState);
+      if (!currentState[this.stateKey]) {
+        this.bindingManager.setBinding(BindingType.UIState, {
+          ...currentState,
+          [this.stateKey]: {},
+        });
+      }
+    }
 
     /**
      * Update nested state and trigger render
@@ -7747,7 +5270,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/common/ScrollButtonFactory.ts ====================
+  // ==================== bloombeasts\screens\common\ScrollButtonFactory.ts ====================
 
   /**
    * ScrollButtonFactory - Eliminates scroll button duplication
@@ -7797,7 +5320,7 @@ namespace BloomBeasts {
       const getCurrentOffset = () => stateManager.getValue('scrollOffset') ?? 0;
 
       // Previous button
-      const prevButton = Button({
+      const prevButton = createButton({
         ui,
         label: ui.bindingManager.derive(
           [BindingType.UIState],
@@ -7836,7 +5359,7 @@ namespace BloomBeasts {
       });
 
       // Next button
-      const nextButton = Button({
+      const nextButton = createButton({
         ui,
         label: ui.bindingManager.derive(
           [BindingType.UIState],
@@ -7943,6 +5466,7 @@ namespace BloomBeasts {
       getTotalPages: () => number;
       playSfx?: (sfxId: string) => void;
       playerDataBinding?: boolean; // Whether to watch PlayerData binding for total pages
+      cardsPerPage?: number; // For calculating total pages from binding data
     }): SideMenuButton[] {
       const {
         ui,
@@ -7950,14 +5474,27 @@ namespace BloomBeasts {
         getTotalPages,
         playSfx,
         playerDataBinding = false,
+        cardsPerPage = 8,
       } = config;
 
       const getCurrentOffset = () => stateManager.getValue('scrollOffset') ?? 0;
+      const screenKey = stateManager.stateKey;
 
       // Determine which bindings to watch based on content type
       const bindings = playerDataBinding
         ? [BindingType.UIState, BindingType.PlayerData]
         : [BindingType.UIState, BindingType.Missions];
+
+      // Helper to calculate total pages from binding data instead of snapshot
+      const calculateTotalPages = (data: any): number => {
+        if (playerDataBinding) {
+          const cards = data?.cards?.collected || [];
+          return Math.ceil(cards.length / cardsPerPage);
+        } else {
+          // For missions, getTotalPages from config works fine
+          return getTotalPages();
+        }
+      };
 
       return [
         {
@@ -7969,9 +5506,18 @@ namespace BloomBeasts {
               stateManager.update({ scrollOffset: offset - 1 });
             }
           },
-          disabled: ui.bindingManager.derive([BindingType.UIState], () => getCurrentOffset() <= 0),
-          opacity: ui.bindingManager.derive([BindingType.UIState], () => getCurrentOffset() <= 0 ? 0.5 : 1.0),
-          textColor: ui.bindingManager.derive([BindingType.UIState], () => getCurrentOffset() <= 0 ? COLORS.textMuted : COLORS.textPrimary),
+          disabled: ui.bindingManager.derive([BindingType.UIState], (uiState: any) => {
+            const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+            return offset <= 0;
+          }),
+          opacity: ui.bindingManager.derive([BindingType.UIState], (uiState: any) => {
+            const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+            return offset <= 0 ? 0.5 : 1.0;
+          }),
+          textColor: ui.bindingManager.derive([BindingType.UIState], (uiState: any) => {
+            const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+            return offset <= 0 ? COLORS.textMuted : COLORS.textPrimary;
+          }),
           yOffset: 0,
         },
         {
@@ -7984,17 +5530,21 @@ namespace BloomBeasts {
               stateManager.update({ scrollOffset: offset + 1 });
             }
           },
-          disabled: ui.bindingManager.derive(bindings, () => {
-            const offset = getCurrentOffset();
-            return offset >= getTotalPages() - 1;
+          disabled: ui.bindingManager.derive(bindings, (uiState: any, otherData: any) => {
+            const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+            // Use binding value instead of snapshot for total pages calculation
+            const totalPages = calculateTotalPages(otherData);
+            return offset >= totalPages - 1;
           }),
-          opacity: ui.bindingManager.derive(bindings, () => {
-            const offset = getCurrentOffset();
-            return offset >= getTotalPages() - 1 ? 0.5 : 1.0;
+          opacity: ui.bindingManager.derive(bindings, (uiState: any, otherData: any) => {
+            const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+            const totalPages = calculateTotalPages(otherData);
+            return offset >= totalPages - 1 ? 0.5 : 1.0;
           }),
-          textColor: ui.bindingManager.derive(bindings, () => {
-            const offset = getCurrentOffset();
-            return offset >= getTotalPages() - 1 ? COLORS.textMuted : COLORS.textPrimary;
+          textColor: ui.bindingManager.derive(bindings, (uiState: any, otherData: any) => {
+            const offset = uiState?.[screenKey]?.scrollOffset ?? 0;
+            const totalPages = calculateTotalPages(otherData);
+            return offset >= totalPages - 1 ? COLORS.textMuted : COLORS.textPrimary;
           }),
           yOffset: sideMenuButtonDimensions.height + GAPS.buttons,
         },
@@ -8002,7 +5552,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/cards/CardsScreen.ts ====================
+  // ==================== bloombeasts\screens\cards\CardsScreen.ts ====================
 
   /**
    * Cards Screen - Refactored using BaseScreen and utilities
@@ -8041,6 +5591,8 @@ namespace BloomBeasts {
         'cards',
         this.onRenderNeeded
       );
+      // Initialize scrollOffset to 0
+      this.stateManager.update({ scrollOffset: 0 });
     }
 
     /**
@@ -8133,6 +5685,7 @@ namespace BloomBeasts {
         getTotalPages,
         playSfx: this.playSfx,
         playerDataBinding: true, // Cards screen watches PlayerData for card count
+        cardsPerPage, // Pass cardsPerPage so bindings can calculate total pages
       });
     }
 
@@ -8247,7 +5800,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/common/constants/upgrades.ts ====================
+  // ==================== bloombeasts\common\constants\upgrades.ts ====================
 
   /**
    * Upgrade Constants
@@ -8314,7 +5867,7 @@ namespace BloomBeasts {
     [ROOSTER.id]: ROOSTER.costs
   };
 
-  // ==================== bloombeasts/screens/upgrade/UpgradeScreen.ts ====================
+  // ==================== bloombeasts\screens\upgrade\UpgradeScreen.ts ====================
 
   /**
    * Upgrade Screen - Refactored using BaseScreen
@@ -8479,7 +6032,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/common/ui/screens/MissionRenderer.ts ====================
+  // ==================== bloombeasts\common\ui\screens\MissionRenderer.ts ====================
 
   /**
    * Mission Renderer Component
@@ -8685,7 +6238,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts/screens/missions/MissionScreen.ts ====================
+  // ==================== bloombeasts\screens\missions\MissionScreen.ts ====================
 
   /**
    * Mission Screen 
@@ -8723,6 +6276,8 @@ namespace BloomBeasts {
         'missions',
         this.onRenderNeeded
       );
+      // Initialize scrollOffset to 0
+      this.stateManager.update({ scrollOffset: 0 });
     }
 
     createUI(): UINodeType {
@@ -8868,7 +6423,188 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/common/engine/utils/fieldUtils.ts ====================
+  // ==================== bloombeasts\common\utils\polyfills.ts ====================
+
+  /**
+   * Polyfills and type definitions for ES2020 compatibility
+   * This file provides alternatives to Map, Promise, and Array methods
+   */
+
+  /**
+   * Simple Map alternative using object storage
+   */
+  export class SimpleMap<K extends string | number, V> {
+    private storage: Record<string, V> = {};
+    private keyList: K[] = [];
+
+    constructor(entries?: Array<[K, V]>) {
+      if (entries) {
+        entries.forEach(([key, value]) => {
+          this.set(key, value);
+        });
+      }
+    }
+
+    set(key: K, value: V): this {
+      const keyStr = String(key);
+      if (!(keyStr in this.storage)) {
+        this.keyList.push(key);
+      }
+      this.storage[keyStr] = value;
+      return this;
+    }
+
+    get(key: K): V | undefined {
+      return this.storage[String(key)];
+    }
+
+    has(key: K): boolean {
+      return String(key) in this.storage;
+    }
+
+    delete(key: K): boolean {
+      const keyStr = String(key);
+      if (keyStr in this.storage) {
+        delete this.storage[keyStr];
+        const index = this.keyList.indexOf(key);
+        if (index > -1) {
+          this.keyList.splice(index, 1);
+        }
+        return true;
+      }
+      return false;
+    }
+
+    clear(): void {
+      this.storage = {};
+      this.keyList = [];
+    }
+
+    get size(): number {
+      return this.keyList.length;
+    }
+
+    keys(): K[] {
+      return [...this.keyList];
+    }
+
+    values(): V[] {
+      return this.keyList.map(key => this.storage[String(key)]);
+    }
+
+    entries(): Array<[K, V]> {
+      return this.keyList.map(key => [key, this.storage[String(key)]]);
+    }
+
+    forEach(callback: (value: V, key: K, map: SimpleMap<K, V>) => void): void {
+      this.keyList.forEach(key => {
+        callback(this.storage[String(key)], key, this);
+      });
+    }
+  }
+
+  // Export as global Map replacement if needed
+  export type MapPolyfill<K extends string | number, V> = SimpleMap<K, V>;
+
+  // ==================== bloombeasts\common\engine\types\game.ts ====================
+
+  /**
+   * Game state and player types
+   */
+
+
+  // Re-export for convenience
+
+  // Battle state enum for state-based battle flow
+  export enum BattlePhase {
+    Setup = 'Setup',
+    Player1StartOfTurn = 'Player1StartOfTurn',
+    Player1Playing = 'Player1Playing',
+    Player1EndOfTurn = 'Player1EndOfTurn',
+    Player2StartOfTurn = 'Player2StartOfTurn',
+    Player2Playing = 'Player2Playing',
+    Player2EndOfTurn = 'Player2EndOfTurn',
+    Finished = 'Finished'
+  }
+
+  export interface Player {
+    id?: string;
+    name: string;
+    health: number;
+    maxHealth?: number;
+    energy?: number;
+    permanentEnergy?: number;
+    temporaryEnergy?: number;
+    currentEnergy: number;  // Available energy this turn
+    summonsThisTurn: number; // Track summons for extra summon effects
+    deck: AnyCard[];
+    hand: AnyCard[];
+    discardPile?: AnyCard[];
+    graveyard: AnyCard[];  // Cards that have been destroyed
+    field: (RuntimeBeast | null)[]; // Nullable for empty slots
+    trapZone: (AnyCard | null)[]; // Face-down trap cards (max 3)
+    buffZone: (AnyCard | null)[]; // Active buff cards (max 2)
+  }
+
+  export interface GameState {
+    players: [Player, Player];
+    currentPlayerIndex?: 0 | 1;
+    activePlayer: 0 | 1;  // Current player's turn
+    habitatZone: HabitatCard | null;
+    turn: number;
+    battleState: BattlePhase;  // State-based battle flow
+    turnHistory: any[];  // History of actions taken
+    // Pending actions that need to be resolved
+    drawCardsQueued?: number;
+    drawForPlayerIndex?: 0 | 1;
+    pendingMove?: {
+      unit: RuntimeBeast;
+      destination: string;
+    };
+    pendingSearch?: {
+      searchFor: string;
+      quantity: number;
+      affinity?: string;
+    };
+  }
+
+  export interface GameAction {
+    type: string;
+    playerId: string;
+    timestamp: number;
+  }
+
+  export interface SummonAction extends GameAction {
+    type: 'SUMMON';
+    cardId: string;
+    slotIndex: number;
+  }
+
+  export interface AttackAction extends GameAction {
+    type: 'ATTACK';
+    attackerInstanceId: string;
+    targetInstanceId?: string; // undefined means attacking player directly
+  }
+
+  export interface PlayMagicAction extends GameAction {
+    type: 'PLAY_MAGIC';
+    cardId: string;
+    targetInstanceId?: string;
+  }
+
+  export interface GainXPAction extends GameAction {
+    type: 'GAIN_XP';
+    instanceId: string;
+    amount: number;
+    source: XPSource;
+  }
+
+  export interface HabitatShiftAction extends GameAction {
+    type: 'HABITAT_SHIFT';
+    habitatCardId: string;
+  }
+
+  // ==================== bloombeasts\common\engine\utils\fieldUtils.ts ====================
 
   /**
    * Field Utilities
@@ -8926,7 +6662,7 @@ namespace BloomBeasts {
     return null;
   }
 
-  // ==================== bloombeasts/common/engine/utils/combatHelpers.ts ====================
+  // ==================== bloombeasts\common\engine\utils\combatHelpers.ts ====================
 
   /**
    * Combat Helper Utilities
@@ -8943,16 +6679,67 @@ namespace BloomBeasts {
   ): number {
     let damage = baseDamage;
 
-    // Check for damage amplification on attacker
+    // Check for damage amplification on attacker (from statusEffects)
     const ampEffect = attacker.statusEffects?.find(e => e.type === 'damage-amp');
     if (ampEffect) {
       damage = Math.floor(damage * (ampEffect.value || 1));
     }
 
-    // Check for damage reduction on defender
+    // Check for attack modification abilities on attacker
+    if (attacker.abilities) {
+      for (const ability of attacker.abilities) {
+        if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+          for (const effect of ability.effects) {
+            if (effect.type === 'attack-modification' && 'modification' in effect) {
+              const mod = effect.modification;
+              if (mod === 'double-damage') {
+                damage *= 2;
+              } else if (mod === 'triple-damage') {
+                damage *= 3;
+              } else if (mod === 'piercing') {
+                // Piercing damage ignores damage reduction (handled below)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Check for damage reduction on defender (from statusEffects)
     const reduction = defender.statusEffects?.find(e => e.type === 'damage-reduction');
     if (reduction) {
       damage = Math.max(0, damage - (reduction.value || 0));
+    }
+
+    // Check for damage reduction from WhileOnField abilities
+    let totalReduction = 0;
+    let isPiercing = false;
+
+    // Check if attacker has piercing
+    if (attacker.abilities) {
+      for (const ability of attacker.abilities) {
+        if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+          for (const effect of ability.effects) {
+            if (effect.type === 'attack-modification' && 'modification' in effect && effect.modification === 'piercing') {
+              isPiercing = true;
+            }
+          }
+        }
+      }
+    }
+
+    // Only apply damage reduction if not piercing
+    if (!isPiercing && defender.abilities) {
+      for (const ability of defender.abilities) {
+        if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+          for (const effect of ability.effects) {
+            if (effect.type === 'damage-reduction' && 'value' in effect) {
+              totalReduction += effect.value || 0;
+            }
+          }
+        }
+      }
+      damage = Math.max(0, damage - totalReduction);
     }
 
     return damage;
@@ -8962,17 +6749,38 @@ namespace BloomBeasts {
    * Check if a beast can attack
    */
   export function canAttack(beast: RuntimeBeast): boolean {
-    // Check summoning sickness
-    if (beast.summoningSickness) {
+    // Check summoning sickness (unless removed by ability)
+    let hasSummoningSickness = beast.summoningSickness;
+
+    // Check for RemoveSummoningSickness abilities
+    if (beast.abilities && hasSummoningSickness) {
+      for (const ability of beast.abilities) {
+        if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
+          for (const effect of ability.effects) {
+            if (effect.type === 'remove-summoning-sickness') {
+              hasSummoningSickness = false;
+            }
+          }
+        }
+      }
+    }
+
+    if (hasSummoningSickness) {
       return false;
     }
 
-    // Counter checks removed
-
-    // Check attack prevention effects
+    // Check attack prevention effects from statusEffects
     const preventAttack = beast.statusEffects?.find(e => e.type === 'prevent-attack');
     if (preventAttack) {
       return false;
+    }
+
+    // Check for preventions from abilities
+    if (beast.preventions) {
+      const hasAttackPrevention = beast.preventions.some(p => p.type === 'prevent-attack');
+      if (hasAttackPrevention) {
+        return false;
+      }
     }
 
     return true;
@@ -9043,15 +6851,15 @@ namespace BloomBeasts {
 
     // Check for immunity
     if (hasAbilityEffect(beast, 'immunity')) {
-      Logger.debug(`${beast.cardId} is immune to status effects`);
+      Logger.debug(`${beast.id} is immune to status effects`);
       return;
     }
 
     beast.statusEffects.push({
       type: effect.type,
-      value: (effect as any).value,
-      duration: (effect as any).duration,
-      turnsRemaining: getEffectDuration((effect as any).duration),
+      value: 'value' in effect ? effect.value : undefined,
+      duration: 'duration' in effect ? effect.duration : undefined,
+      turnsRemaining: 'duration' in effect && effect.duration ? getEffectDuration(effect.duration) : undefined,
     });
   }
 
@@ -9100,7 +6908,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts/common/engine/constants/battleConstants.ts ====================
+  // ==================== bloombeasts\common\engine\constants\battleConstants.ts ====================
 
   /**
    * Battle System Constants
@@ -9135,7 +6943,7 @@ namespace BloomBeasts {
    */
   export const LOW_HEALTH_THRESHOLD_PERCENT = 10;
 
-  // ==================== bloombeasts/screens/battle/ui/types.ts ====================
+  // ==================== bloombeasts\screens\battle\ui\types.ts ====================
 
   /**
    * Shared types and constants for Battle Screen components
@@ -9235,7 +7043,7 @@ namespace BloomBeasts {
   export interface InfoDisplaysProps extends BattleComponentProps {
   }
 
-  // ==================== bloombeasts/screens/battle/ui/BattleBackground.ts ====================
+  // ==================== bloombeasts\screens\battle\ui\BattleBackground.ts ====================
 
   /**
    * Battle background and playboard rendering
@@ -9282,7 +7090,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/ui/BeastField.ts ====================
+  // ==================== bloombeasts\screens\battle\ui\BeastField.ts ====================
 
   /**
    * Beast field rendering - 3 slots per player
@@ -9416,7 +7224,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/ui/TrapZone.ts ====================
+  // ==================== bloombeasts\screens\battle\ui\TrapZone.ts ====================
 
   /**
    * Trap zone rendering - 3 slots per player
@@ -9503,7 +7311,96 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/ui/BuffZone.ts ====================
+  // ==================== bloombeasts\core\ColorPalette.ts ====================
+
+  /**
+   * Color Palette - Centralized color constants
+   * Eliminates hardcoded color values throughout the codebase
+   */
+
+  export const COLOR_PALETTE = {
+    /**
+     * Player-related colors
+     */
+    player: {
+      accent: '#4a8ec2',      // Player UI accent color
+      primary: '#fff',        // Primary text/elements
+    },
+
+    /**
+     * Opponent/danger colors
+     */
+    opponent: {
+      danger: '#ff6b6b',      // Opponent/danger indicators
+    },
+
+    /**
+     * Mission difficulty colors
+     */
+    difficulty: {
+      tutorial: '#90EE90',    // Light green
+      easy: '#87CEEB',        // Sky blue
+      normal: '#FFD700',      // Gold
+      hard: '#FF6347',        // Tomato red
+      expert: '#8B008B',      // Dark magenta
+      legendary: '#FF1493',   // Deep pink
+    },
+
+    /**
+     * Card type colors
+     */
+    cardType: {
+      habitat: '#4caf50',     // Habitat green
+      buff: '#FFD700',        // Buff gold
+      trap: '#ff6b6b',        // Trap red
+      magic: '#9c27b0',       // Magic purple
+    },
+
+    /**
+     * UI state colors
+     */
+    ui: {
+      disabled: '#666',       // Disabled elements
+      muted: '#888',          // Muted/inactive elements
+      background: '#333',     // Dark background
+      white: '#fff',          // White text
+      default: '#FFFFFF',     // Default color
+    },
+
+    /**
+     * Toggle/button state colors
+     */
+    toggle: {
+      on: '#4CAF50',          // Toggle on (green)
+      off: '#888',            // Toggle off (gray)
+    },
+
+    /**
+     * Button colors
+     */
+    button: {
+      green: '#4CAF50',
+      red: '#f44336',
+      default: '#666',
+    },
+  } as const;
+
+  /**
+   * Helper function to get difficulty color
+   */
+  export function getDifficultyColor(difficulty: string): string {
+    const difficultyMap: Record<string, string> = {
+      'tutorial': COLOR_PALETTE.difficulty.tutorial,
+      'easy': COLOR_PALETTE.difficulty.easy,
+      'normal': COLOR_PALETTE.difficulty.normal,
+      'hard': COLOR_PALETTE.difficulty.hard,
+      'expert': COLOR_PALETTE.difficulty.expert,
+      'legendary': COLOR_PALETTE.difficulty.legendary,
+    };
+    return difficultyMap[difficulty] || COLOR_PALETTE.ui.default;
+  }
+
+  // ==================== bloombeasts\screens\battle\ui\BuffZone.ts ====================
 
   /**
    * Buff zone rendering - 3 slots per player
@@ -9628,7 +7525,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/ui/HabitatZone.ts ====================
+  // ==================== bloombeasts\screens\battle\ui\HabitatZone.ts ====================
 
   /**
    * Habitat zone rendering (center of board)
@@ -9730,7 +7627,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/ui/PlayerHand.ts ====================
+  // ==================== bloombeasts\screens\battle\ui\PlayerHand.ts ====================
 
   /**
    * Player hand overlay - 5 card slots with scroll and toggle
@@ -10079,7 +7976,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/ui/InfoDisplays.ts ====================
+  // ==================== bloombeasts\screens\battle\ui\InfoDisplays.ts ====================
 
   /**
    * Player and opponent info displays (health, energy, deck count, timer)
@@ -10263,7 +8160,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/ui/BattleSideMenu.ts ====================
+  // ==================== bloombeasts\screens\battle\ui\BattleSideMenu.ts ====================
 
   /**
    * Battle side menu - Turn counter, end turn button, forfeit
@@ -10433,7 +8330,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/ui/index.ts ====================
+  // ==================== bloombeasts\screens\battle\ui\index.ts ====================
 
   /**
    * Battle screen components - Modular, reactive battle UI
@@ -10447,7 +8344,7 @@ namespace BloomBeasts {
   // but not re-exported here to avoid namespace bundling issues.
   // Import them directly from './types' if needed externally.
 
-  // ==================== bloombeasts/screens/battle/BattleTimerManager.ts ====================
+  // ==================== bloombeasts\screens\battle\BattleTimerManager.ts ====================
 
   /**
    * Battle Timer Manager - Handles chess-clock style turn timers
@@ -10553,7 +8450,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/CardPopupManager.ts ====================
+  // ==================== bloombeasts\screens\battle\CardPopupManager.ts ====================
 
   /**
    * Card Popup Manager - Handles all card popup UI logic for BattleScreen
@@ -10758,7 +8655,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/BattleScreen.ts ====================
+  // ==================== bloombeasts\screens\battle\BattleScreen.ts ====================
 
   /**
    * Unified Battle Screen Component
@@ -10769,7 +8666,8 @@ namespace BloomBeasts {
 
   // Import modular battle components
 
-  interface BattleUIState {
+  // BattleUIState interface for local UI state tracking
+  interface LocalBattleUIState {
     battle: {
       showHand: boolean;
       handScrollOffset: number;
@@ -10807,7 +8705,7 @@ namespace BloomBeasts {
     private hasAttackableBeasts = false;
 
     // Track current UIState value for updates
-    private currentUIState: BattleUIState = {
+    private currentUIState: LocalBattleUIState = {
       battle: {
         showHand: true,
         handScrollOffset: 0,
@@ -11094,7 +8992,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/settings/SettingsScreen.ts ====================
+  // ==================== bloombeasts\screens\settings\SettingsScreen.ts ====================
 
   /**
    * Settings Screen - Refactored using BaseScreen
@@ -11129,13 +9027,6 @@ namespace BloomBeasts {
     sfxVolume?: number;
     musicEnabled?: boolean;
     sfxEnabled?: boolean;
-  }
-
-  /**
-   * Player data structure (subset for settings)
-   */
-  interface PlayerData {
-    settings?: Settings;
   }
 
   export interface SettingsScreenProps extends BaseScreenProps {
@@ -11229,7 +9120,7 @@ namespace BloomBeasts {
                     }),
                   }),
                   this.ui.Text({
-                    text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                    text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd) => {
                       return String(pd?.settings?.[settingKey] || VOLUME_DEFAULT);
                     }),
                     style: {
@@ -11307,13 +9198,13 @@ namespace BloomBeasts {
                   height: TOGGLE_HEIGHT,
                   justifyContent: 'center',
                   alignItems: 'center',
-                  backgroundColor: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                  backgroundColor: this.ui.bindingManager.derive([BindingType.PlayerData], (pd) => {
                     return (pd?.settings?.[settingKey] ?? true) ? TOGGLE_ON_COLOR : TOGGLE_OFF_COLOR;
                   }),
                   borderRadius: 20,
                 },
                 children: this.ui.Text({
-                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd: PlayerData) => {
+                  text: this.ui.bindingManager.derive([BindingType.PlayerData], (pd) => {
                     return (pd?.settings?.[settingKey] ?? true) ? 'ON' : 'OFF';
                   }),
                   style: {
@@ -11330,7 +9221,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/leaderboard/LeaderboardScreen.ts ====================
+  // ==================== bloombeasts\screens\leaderboard\LeaderboardScreen.ts ====================
 
   /**
    * Leaderboard Screen
@@ -11462,31 +9353,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/types/ui/UITypes.ts ====================
-
-  /**
-   * Core UI type definitions
-   *
-   * Fundamental UI types for the platform-agnostic UI system.
-   */
-
-  /**
-   * Base UI element (platform-specific implementation)
-   */
-  export type UIElement = any; // Platform-specific element type
-
-  /**
-   * Conditional UI node (from UINode.if)
-   */
-  export type ConditionalUINode = any; // Platform-specific conditional type
-
-  /**
-   * UINode type - represents a UI node returned by UI components
-   * Can be a single element, array of elements, null, or conditional rendering
-   */
-  export type UINode = UIElement | UIElement[] | null | ConditionalUINode;
-
-  // ==================== bloombeasts/types/ui/UIBindings.ts ====================
+  // ==================== bloombeasts\types\ui\UIBindings.ts ====================
 
   /**
    * Binding type definitions
@@ -11525,733 +9392,19 @@ namespace BloomBeasts {
     ): ReadonlyBindingInterface<R>;
   };
 
-  // ==================== bloombeasts/types/ui/UIProps.ts ====================
-
-  /**
-   * UI component props definitions
-   *
-   * Platform-agnostic prop interfaces for all UI components.
-   */
-
-
-  /**
-   * Style properties - platform-agnostic style definitions
-   * These match Horizon's styling but work on web too
-   */
-  export interface StyleProps {
-    // Dimensions
-    width?: number | string; // Support '100%', 'auto', etc.
-    height?: number | string; // Support '100%', 'auto', etc.
-    maxWidth?: number | string; // Max width constraint
-    maxHeight?: number | string; // Max height constraint
-    aspectRatio?: number; // Width/height ratio
-
-    // Colors and visual
-    backgroundColor?: string;
-    color?: string; // Text/foreground color
-    opacity?: number;
-    borderRadius?: number;
-    borderWidth?: number;
-    borderTopWidth?: number;
-    borderBottomWidth?: number;
-    borderLeftWidth?: number;
-    borderRightWidth?: number;
-    borderColor?: string;
-    borderTopColor?: string;
-    borderBottomColor?: string;
-    borderLeftColor?: string;
-    borderRightColor?: string;
-    shadowColor?: string;
-    shadowRadius?: number;
-
-    // Spacing
-    padding?: number;
-    paddingTop?: number;
-    paddingBottom?: number;
-    paddingLeft?: number;
-    paddingRight?: number;
-    margin?: number;
-    marginTop?: number;
-    marginBottom?: number;
-    marginLeft?: number;
-    marginRight?: number;
-
-    // Layout
-    display?: 'flex' | 'block' | 'inline' | 'none' | any; // Allow any for platform-specific values
-    flex?: number; // Flex grow factor
-    flexDirection?: 'row' | 'column';
-    flexWrap?: 'nowrap' | 'wrap' | 'wrap-reverse';
-    justifyContent?: 'flex-start' | 'center' | 'flex-end' | 'space-between' | 'space-around';
-    alignItems?: 'flex-start' | 'center' | 'flex-end' | 'stretch';
-    gap?: number; // Gap between flex items
-    overflow?: 'visible' | 'hidden';
-
-    // Positioning
-    position?: 'relative' | 'absolute';
-    top?: number;
-    left?: number;
-    right?: number;
-    bottom?: number;
-
-    // Typography (for convenience in style)
-    fontSize?: number;
-    fontWeight?: 'normal' | 'bold' | number;
-    textAlign?: 'left' | 'center' | 'right'; // Text alignment
-    textAlignVertical?: 'top' | 'center' | 'bottom'; // Vertical text alignment
-    lineHeight?: number; // Line height for text
-    textShadowColor?: string; // Text shadow color
-    textShadowOffset?: { width: number; height: number }; // Text shadow offset
-    textShadowRadius?: number; // Text shadow blur radius
-
-    // Z-index for layering
-    zIndex?: number;
-
-    // Add more as needed
-  }
-
-  /**
-   * Common props for all UI components
-   */
-  export interface BaseUIProps {
-    style?: StyleProps;
-    children?: UINode | UINode[];
-  }
-
-  /**
-   * View component props
-   */
-  export interface ViewProps extends BaseUIProps {}
-
-  /**
-   * Text component props
-   */
-  export interface TextProps extends BaseUIProps {
-    text?: string | any; // Support both string and bindings (ValueBindingBase, ReadonlyBindingInterface)
-    fontSize?: number;
-    fontWeight?: 'normal' | 'bold';
-    color?: string;
-    textAlign?: 'left' | 'center' | 'right';
-    numberOfLines?: number; // Max number of lines before truncation
-  }
-
-  /**
-   * Image component props
-   */
-  export interface ImageProps extends BaseUIProps {
-    imageId?: string | any; // Single image asset ID (or binding)
-    source?: any; // Image source (platform-specific, can be URL, asset ID, or binding)
-    binding?: any; // BaseBinding<string> for animations, derived values, etc.
-    width?: number;
-    height?: number;
-  }
-
-  /**
-   * Pressable (button) component props
-   */
-  export interface PressableProps extends BaseUIProps {
-    onPress?: () => void;
-    onClick?: () => void; // Alias for onPress (web compatibility)
-    disabled?: boolean | any; // Whether the button is disabled (supports bindings)
-    id?: string;
-  }
-
-  /**
-   * ScrollView component props
-   */
-  export interface ScrollViewProps extends BaseUIProps {
-    horizontal?: boolean;
-    showsScrollIndicator?: boolean;
-  }
-
-  // ==================== bloombeasts/types/ui/UIMethodMappings.ts ====================
-
-  /**
-   * UI method mappings definition
-   *
-   * Platform-specific UI method implementations.
-   * Each platform provides its own implementation of these methods.
-   * Screens receive this object and use it to create UI elements.
-   */
-
-
-  /**
-   * Platform-specific UI method mappings
-   * Each platform provides its own implementation of these methods
-   * Screens receive this object and use it to create UI elements
-   */
-  export interface UIMethodMappings {
-    // Core UI components - return UIElement (platform-specific element)
-    View: (props: ViewProps) => UIElement;
-    Text: (props: TextProps) => UIElement;
-    Image: (props: ImageProps) => UIElement;
-    Pressable: (props: PressableProps) => UIElement;
-    ScrollView?: (props: ScrollViewProps) => UIElement;
-
-    // UINode utilities for conditional rendering
-    // Platform-specific type for conditional UI nodes (e.g., Horizon's ConditionalUINode)
-    UINode?: ConditionalUINode;
-
-    // Centralized binding manager - ONLY way to create/access bindings
-    bindingManager: BindingManager;
-
-    // Platform-specific helpers
-    // Returns platform-specific image source (ImageSource on Horizon, string on Web)
-    assetIdToImageSource?: (assetId: string) => unknown;
-  }
-
-  // ==================== bloombeasts/types/ui/index.ts ====================
+  // ==================== bloombeasts\types\ui\index.ts ====================
 
   /**
    * UI types barrel export
    */
 
-  // ==================== bloombeasts/screens/battle/engine/types/actions.ts ====================
-
-  /**
-   * Typed Action System
-   *
-   * Replaces string-based action parsing with proper TypeScript discriminated unions.
-   * This provides type safety, better IDE support, and eliminates string parsing bugs.
-   *
-   * Migration from:
-   *   action = 'play-card-0-target-2'
-   * To:
-   *   action = { type: 'play-card', cardIndex: 0, targetIndex: 2 }
-   */
-
-
-  /**
-   * Base action that all battle actions extend
-   */
-  export interface BaseBattleAction {
-    type: string;
-    playerId?: string;
-    timestamp?: number;
-  }
-
-  /**
-   * Play a card from hand
-   */
-  export interface PlayCardAction extends BaseBattleAction {
-    type: 'play-card';
-    cardIndex: number;
-    cardId?: string;
-    targetIndex?: number; // For targeted cards like Magic
-    position?: number; // For beast placement
-  }
-
-  /**
-   * Attack with a beast
-   */
-  export interface AttackBeastAction extends BaseBattleAction {
-    type: 'attack-beast';
-    attackerId: string;
-    attackerIndex?: number;
-    targetId?: string;
-    targetIndex?: number;
-  }
-
-  /**
-   * Attack opponent player directly
-   */
-  export interface AttackPlayerAction extends BaseBattleAction {
-    type: 'attack-player';
-    attackerId: string;
-    attackerIndex?: number;
-  }
-
-  /**
-   * Use a beast's ability
-   */
-  export interface UseAbilityAction extends BaseBattleAction {
-    type: 'use-ability';
-    beastId: string;
-    beastIndex?: number;
-    abilityIndex: number;
-    targetId?: string;
-    targetIndex?: number;
-  }
-
-  /**
-   * End the current turn
-   */
-  export interface EndTurnAction extends BaseBattleAction {
-    type: 'end-turn';
-  }
-
-  /**
-   * Forfeit the battle
-   */
-  export interface ForfeitAction extends BaseBattleAction {
-    type: 'forfeit';
-  }
-
-  /**
-   * Timeout - player ran out of time
-   */
-  export interface TimeoutAction extends BaseBattleAction {
-    type: 'timeout';
-    timedOutPlayerId?: string; // Which player actually timed out
-  }
-
-  /**
-   * Auto-attack with all available beasts
-   */
-  export interface AutoAttackAllAction extends BaseBattleAction {
-    type: 'auto-attack-all';
-  }
-
-  /**
-   * Discriminated union of all possible battle actions
-   */
-  export type BattleAction =
-    | PlayCardAction
-    | AttackBeastAction
-    | AttackPlayerAction
-    | UseAbilityAction
-    | EndTurnAction
-    | ForfeitAction
-    | TimeoutAction
-    | AutoAttackAllAction;
-
-  /**
-   * Action creator functions for type-safe action construction
-   */
-  export const BattleActions = {
-    playCard: (cardIndex: number, options?: {
-      cardId?: string;
-      targetIndex?: number;
-      position?: number;
-      playerId?: string;
-    }): PlayCardAction => ({
-      type: 'play-card',
-      cardIndex,
-      ...options,
-      timestamp: Date.now(),
-    }),
-
-    attackBeast: (attackerId: string, options?: {
-      attackerIndex?: number;
-      targetId?: string;
-      targetIndex?: number;
-      playerId?: string;
-    }): AttackBeastAction => ({
-      type: 'attack-beast',
-      attackerId,
-      ...options,
-      timestamp: Date.now(),
-    }),
-
-    attackPlayer: (attackerId: string, options?: {
-      attackerIndex?: number;
-      playerId?: string;
-    }): AttackPlayerAction => ({
-      type: 'attack-player',
-      attackerId,
-      ...options,
-      timestamp: Date.now(),
-    }),
-
-    useAbility: (beastId: string, abilityIndex: number, options?: {
-      beastIndex?: number;
-      targetId?: string;
-      targetIndex?: number;
-      playerId?: string;
-    }): UseAbilityAction => ({
-      type: 'use-ability',
-      beastId,
-      abilityIndex,
-      ...options,
-      timestamp: Date.now(),
-    }),
-
-    endTurn: (playerId?: string): EndTurnAction => ({
-      type: 'end-turn',
-      playerId,
-      timestamp: Date.now(),
-    }),
-
-    forfeit: (playerId?: string): ForfeitAction => ({
-      type: 'forfeit',
-      playerId,
-      timestamp: Date.now(),
-    }),
-
-    timeout: (playerId?: string): TimeoutAction => ({
-      type: 'timeout',
-      playerId,
-      timestamp: Date.now(),
-    }),
-
-    autoAttackAll: (playerId?: string): AutoAttackAllAction => ({
-      type: 'auto-attack-all',
-      playerId,
-      timestamp: Date.now(),
-    }),
-  };
-
-  /**
-   * Parse legacy string-based actions into typed actions
-   * This function helps migrate from old string format to new typed format.
-   *
-   * Examples:
-   *   'play-card-0' -> { type: 'play-card', cardIndex: 0 }
-   *   'play-card-0-target-2' -> { type: 'play-card', cardIndex: 0, targetIndex: 2 }
-   *   'attack-beast-1-2' -> { type: 'attack-beast', attackerIndex: 1, targetIndex: 2 }
-   *   'end-turn' -> { type: 'end-turn' }
-   */
-  export function parseActionString(actionStr: string, playerId?: string): BattleAction | null {
-    // End turn
-    if (actionStr === 'end-turn') {
-      return BattleActions.endTurn(playerId);
-    }
-
-    // Forfeit
-    if (actionStr === 'forfeit') {
-      return BattleActions.forfeit(playerId);
-    }
-
-    // Auto attack all
-    if (actionStr === 'auto-attack-all') {
-      return BattleActions.autoAttackAll(playerId);
-    }
-
-    // Play card: 'play-card-0' or 'play-card-0-target-2'
-    if (actionStr.startsWith('play-card-')) {
-      const parts = actionStr.substring('play-card-'.length).split('-target-');
-      const cardIndex = parseInt(parts[0], 10);
-      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
-
-      if (isNaN(cardIndex)) return null;
-
-      return BattleActions.playCard(cardIndex, { targetIndex, playerId });
-    }
-
-    // Attack beast: 'attack-beast-1-2' (attacker index 1, target index 2)
-    if (actionStr.startsWith('attack-beast-')) {
-      const parts = actionStr.substring('attack-beast-'.length).split('-');
-      if (parts.length >= 2) {
-        const attackerIndex = parseInt(parts[0], 10);
-        const targetIndex = parseInt(parts[1], 10);
-
-        if (isNaN(attackerIndex) || isNaN(targetIndex)) return null;
-
-        return BattleActions.attackBeast(attackerIndex.toString(), {
-          attackerIndex,
-          targetIndex,
-          playerId,
-        });
-      }
-    }
-
-    // Attack player: 'attack-player-1' (attacker index 1)
-    if (actionStr.startsWith('attack-player-')) {
-      const attackerIndex = parseInt(actionStr.substring('attack-player-'.length), 10);
-
-      if (isNaN(attackerIndex)) return null;
-
-      return BattleActions.attackPlayer(attackerIndex.toString(), {
-        attackerIndex,
-        playerId,
-      });
-    }
-
-    // Use ability: 'use-ability-1' or 'use-ability-1-target-2'
-    if (actionStr.startsWith('use-ability-')) {
-      const parts = actionStr.substring('use-ability-'.length).split('-target-');
-      const beastIndex = parseInt(parts[0], 10);
-      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
-
-      if (isNaN(beastIndex)) return null;
-
-      return BattleActions.useAbility(beastIndex.toString(), 0, {
-        beastIndex,
-        targetIndex,
-        playerId,
-      });
-    }
-
-    // Unknown action
-    Logger.warn(`[ActionParser] Unknown action string: ${actionStr}`);
-    return null;
-  }
-
-  /**
-   * Convert typed action back to legacy string format
-   * Used during migration to maintain compatibility with old code.
-   */
-  export function actionToString(action: BattleAction): string {
-    switch (action.type) {
-      case 'play-card':
-        if (action.targetIndex !== undefined) {
-          return `play-card-${action.cardIndex}-target-${action.targetIndex}`;
-        }
-        return `play-card-${action.cardIndex}`;
-
-      case 'attack-beast':
-        return `attack-beast-${action.attackerIndex ?? action.attackerId}-${action.targetIndex ?? action.targetId}`;
-
-      case 'attack-player':
-        return `attack-player-${action.attackerIndex ?? action.attackerId}`;
-
-      case 'use-ability':
-        if (action.targetIndex !== undefined) {
-          return `use-ability-${action.beastIndex ?? action.beastId}-target-${action.targetIndex}`;
-        }
-        return `use-ability-${action.beastIndex ?? action.beastId}`;
-
-      case 'end-turn':
-        return 'end-turn';
-
-      case 'forfeit':
-        return 'forfeit';
-
-      case 'timeout':
-        return 'timeout';
-
-      case 'auto-attack-all':
-        return 'auto-attack-all';
-
-      default:
-        // Exhaustiveness check
-        const exhaustive: never = action;
-        throw new Error(`Unknown action type: ${(exhaustive as any).type}`);
-    }
-  }
-
-  /**
-   * Type guard to check if an object is a valid BattleAction
-   */
-  export function isBattleAction(obj: any): obj is BattleAction {
-    return obj && typeof obj === 'object' && typeof obj.type === 'string';
-  }
-
-  // ==================== bloombeasts/core/interfaces/IBattleUI.ts ====================
-
-  /**
-   * IBattleUI - Interface for battle UI operations
-   * Breaks circular dependency between core and screens
-   */
-
-
-  /**
-   * Battle state representation
-   */
-  export interface BattleState {
-    battleState: any;  // TODO: Type this properly when we have the full battle state type
-    isComplete: boolean;
-    rewards: any | null;  // TODO: Type this properly
-    winner: string | null;
-  }
-
-  /**
-   * Interface for battle UI operations
-   */
-  export interface IBattleUI {
-    /**
-     * Initialize a new battle
-     */
-    initializeBattle(playerDeckCards: RuntimeCard[], playerName: string): BattleState | null;
-
-    /**
-     * Get the current battle state
-     */
-    getCurrentBattle(): BattleState | null;
-
-    /**
-     * Process a battle action
-     */
-    processTypedAction(action: BattleAction, data?: any): Promise<void>;
-  }
-
-  // ==================== bloombeasts/core/interfaces/IBattleDisplayManager.ts ====================
-
-  /**
-   * IBattleDisplayManager - Interface for battle display management
-   * Breaks circular dependency between core and screens
-   */
-
-
-  /**
-   * Options for creating battle display
-   */
-  export interface BattleDisplayOptions {
-    attackerPlayer?: 'player' | 'opponent';
-    attackerIndex?: number;
-    targetPlayer?: 'player' | 'opponent' | 'health';
-    targetIndex?: number;
-  }
-
-  /**
-   * Interface for battle display manager
-   */
-  export interface IBattleDisplayManager {
-    /**
-     * Create a battle display from current state
-     */
-    createBattleDisplay(
-      battleState: BattleState | null,
-      options?: BattleDisplayOptions
-    ): any;  // TODO: Type this as BattleDisplay when we have the type
-  }
-
-  // ==================== bloombeasts/types/game/DisplayTypes.ts ====================
-
-  /**
-   * Display type definitions
-   *
-   * Types used for UI display and presentation.
-   * These are view models that aggregate game state for presentation.
-   */
-
-
-  /**
-   * Player statistics displayed in UI
-   */
-  export interface MenuStats {
-    playerLevel: number;
-    totalXP: number;
-    coins: number;
-    serums: number;
-  }
-
-  /**
-   * Sound settings for audio playback
-   */
-  export interface SoundSettings {
-    musicVolume: number; // 0-100
-    sfxVolume: number; // 0-100
-    musicEnabled: boolean;
-    sfxEnabled: boolean;
-  }
-
-  /**
-   * Mission information for display in mission selection
-   */
-  export interface MissionDisplay {
-    id: string;
-    name: string;
-    level: number;
-    difficulty: string;
-    isAvailable: boolean;
-    isCompleted: boolean;
-    description: string;
-    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss';
-    beastId?: string;
-  }
-
-  /**
-   * Card detail popup information
-   */
-  export interface CardDetailDisplay {
-    card: RuntimeCard;
-    buttons: string[];
-    isInDeck: boolean;
-  }
-
-  /**
-   * Mission objective progress for display
-   */
-  export interface ObjectiveDisplay {
-    description: string;
-    progress: number;
-    target: number;
-    isComplete: boolean;
-  }
-
-  /**
-   * Complete battle state for display in battle screen
-   */
-  export interface BattleDisplay {
-    playerHealth: number;
-    playerMaxHealth: number;
-    playerDeckCount: number;
-    playerEnergy: number;
-    playerHand: any[];
-    playerTrapZone: any[]; // Player's trap cards (face-down)
-    playerBuffZone: any[]; // Player's active buff cards
-    opponentHealth: number;
-    opponentMaxHealth: number;
-    opponentDeckCount: number;
-    opponentEnergy: number;
-    opponentField: any[];
-    opponentTrapZone: any[]; // Opponent's trap cards (face-down)
-    opponentBuffZone: any[]; // Opponent's active buff cards
-    playerField: any[];
-    currentTurn: number;
-    turnPlayer: string;
-    turnTimeRemaining: number;
-    objectives: ObjectiveDisplay[];
-    habitatZone: any | null; // Current habitat card
-    attackAnimation?: BattleDisplayOptions; // Attack animation state
-    cardPopup?: { // Card popup display (for magic/trap/buff cards)
-      card: any;
-      player: 'player' | 'opponent';
-      showCloseButton?: boolean; // Show close button for manual popups
-    } | null;
-  }
-
-  // ==================== bloombeasts/types/game/PlayerTypes.ts ====================
-
-  /**
-   * Player data type definitions
-   *
-   * Core player data structures used throughout the game.
-   */
-
-
-  /**
-   * Player item in inventory
-   */
-  export interface PlayerItem {
-    itemId: string;
-    quantity: number;
-  }
-
-  /**
-   * Player data structure - persisted to platform storage
-   * This is the canonical save data format
-   *
-   * Note: Player level is derived from totalXP and not stored directly
-   */
-  export interface PlayerData {
-    // Identity and progression
-    name: string;
-    totalXP: number; // Level is derived from this via getPlayerLevel()
-
-    // Currency
-    coins: number;
-
-    // Card collection and deck (SINGLE SOURCE OF TRUTH)
-    cards: {
-      collected: CardInstance[]; // All owned card instances
-      deck: string[]; // Card instance IDs in player's deck
-    };
-
-    // Mission tracking
-    missions: {
-      completedMissions: { [missionId: string]: number }; // Mission ID -> completion count
-    };
-
-    // Item inventory (only special items like serums)
-    items: PlayerItem[];
-
-    // Boost upgrades (0-6 levels per boost)
-    boosts: {
-      [boostId: string]: number; // Boost ID -> upgrade level (0-6)
-    };
-
-    // UI preferences (not persisted on all platforms)
-    settings?: SoundSettings;
-  }
-
-  // ==================== bloombeasts/types/game/index.ts ====================
+  // ==================== bloombeasts\types\game\index.ts ====================
 
   /**
    * Game types barrel export
    */
 
-  // ==================== bloombeasts/types/platform/IStorageProvider.ts ====================
+  // ==================== bloombeasts\types\platform\IStorageProvider.ts ====================
 
   /**
    * Storage Provider Interface
@@ -12307,7 +9460,7 @@ namespace BloomBeasts {
     getPlayerData: () => PlayerData | null;
   }
 
-  // ==================== bloombeasts/types/platform/IAssetProvider.ts ====================
+  // ==================== bloombeasts\types\platform\IAssetProvider.ts ====================
 
   /**
    * Asset Provider Interface
@@ -12359,7 +9512,7 @@ namespace BloomBeasts {
     catalogManager: any; // AssetCatalogManager instance
   }
 
-  // ==================== bloombeasts/types/platform/IUIProvider.ts ====================
+  // ==================== bloombeasts\types\platform\IUIProvider.ts ====================
 
   /**
    * UI Provider Interface
@@ -12449,7 +9602,7 @@ namespace BloomBeasts {
     render: (uiNode: UINode) => void;
   }
 
-  // ==================== bloombeasts/types/platform/IAudioProvider.ts ====================
+  // ==================== bloombeasts\types\platform\IAudioProvider.ts ====================
 
   /**
    * Audio Provider Interface
@@ -12571,7 +9724,7 @@ namespace BloomBeasts {
     setSfxEnabled?: (enabled: boolean) => void;
   }
 
-  // ==================== bloombeasts/types/platform/IWorldProvider.ts ====================
+  // ==================== bloombeasts\types\platform\IWorldProvider.ts ====================
 
   /**
    * World Provider Interface
@@ -12662,7 +9815,7 @@ namespace BloomBeasts {
     sendNetworkEvent?: (eventName: string, data: any) => void;
   }
 
-  // ==================== bloombeasts/types/platform/PlatformConfig.ts ====================
+  // ==================== bloombeasts\types\platform\PlatformConfig.ts ====================
 
   /**
    * Platform configuration interface
@@ -12743,7 +9896,7 @@ namespace BloomBeasts {
       IAudioProvider,
       IWorldProvider {}
 
-  // ==================== bloombeasts/types/platform/index.ts ====================
+  // ==================== bloombeasts\types\platform\index.ts ====================
 
   /**
    * Platform types barrel export
@@ -12756,7 +9909,7 @@ namespace BloomBeasts {
 
   // Individual provider interfaces (for granular implementations)
 
-  // ==================== bloombeasts/types/index.ts ====================
+  // ==================== bloombeasts\types\index.ts ====================
 
   /**
    * Main types barrel export
@@ -12770,7 +9923,7 @@ namespace BloomBeasts {
 
   // Platform types
 
-  // ==================== bloombeasts/core/ScreenFactory.ts ====================
+  // ==================== bloombeasts\core\ScreenFactory.ts ====================
 
   /**
    * ScreenFactory - Centralized screen creation
@@ -12898,11 +10051,2248 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/lib/Turbo-Standalone.ts ====================
+  // ==================== bloombeasts\common\engine\cards\deckConfig.ts ====================
+
+  /**
+   * Deck Configuration - Simplified deck building using card utilities
+   */
+
+
+  export type DeckCardEntry<T = AnyCard> = {
+    card: T;
+    quantity: number;
+  };
+
+  // Deck config that stores card IDs instead of card objects (for lazy loading)
+  export type DeckCardIdEntry = {
+    cardId: string;
+    quantity: number;
+  };
+
+  export type AffinityType = 'Forest' | 'Fire' | 'Water' | 'Sky';
+
+  /**
+   * Deck configuration for each affinity (with card IDs)
+   */
+  export interface AffinityDeckConfigIds {
+    name: string;
+    affinity: AffinityType;
+    beasts: DeckCardIdEntry[];
+    habitats: DeckCardIdEntry[];
+  }
+
+  /**
+   * Deck configuration for each affinity (with resolved cards)
+   */
+  export interface AffinityDeckConfig {
+    name: string;
+    affinity: AffinityType;
+    beasts: DeckCardEntry<BloomBeastCard>[];
+    habitats: DeckCardEntry<HabitatCard>[];
+  }
+
+  /**
+   * Static deck configurations using card IDs (no catalog dependency)
+   * These can be loaded at module initialization time
+   */
+  const AFFINITY_DECK_CONFIG_IDS: Record<AffinityType, AffinityDeckConfigIds> = {
+    Forest: {
+      name: 'Forest Starter: The Growth Deck',
+      affinity: 'Forest',
+      beasts: [
+        { cardId: 'mosslet', quantity: 4 },
+        { cardId: 'rootling', quantity: 4 },
+        { cardId: 'mushroomancer', quantity: 2 },
+        { cardId: 'leaf-sprite', quantity: 3 },
+      ],
+      habitats: [
+        { cardId: 'ancient-forest', quantity: 3 },
+      ],
+    },
+    Fire: {
+      name: 'Fire Starter: The Aggro Deck',
+      affinity: 'Fire',
+      beasts: [
+        { cardId: 'cinder-pup', quantity: 4 },
+        { cardId: 'blazefinch', quantity: 4 },
+        { cardId: 'magmite', quantity: 2 },
+        { cardId: 'charcoil', quantity: 3 },
+      ],
+      habitats: [
+        { cardId: 'volcanic-scar', quantity: 3 },
+      ],
+    },
+    Water: {
+      name: 'Water Starter: The Control Deck',
+      affinity: 'Water',
+      beasts: [
+        { cardId: 'bubblefin', quantity: 4 },
+        { cardId: 'aqua-pebble', quantity: 4 },
+        { cardId: 'dewdrop-drake', quantity: 2 },
+        { cardId: 'kelp-cub', quantity: 3 },
+      ],
+      habitats: [
+        { cardId: 'deep-sea-grotto', quantity: 3 },
+      ],
+    },
+    Sky: {
+      name: 'Sky Starter: The Utility Deck',
+      affinity: 'Sky',
+      beasts: [
+        { cardId: 'cirrus-floof', quantity: 4 },
+        { cardId: 'gale-glider', quantity: 4 },
+        { cardId: 'star-bloom', quantity: 2 },
+        { cardId: 'aero-moth', quantity: 3 },
+      ],
+      habitats: [
+        { cardId: 'clear-zenith', quantity: 3 },
+      ],
+    },
+  };
+
+  /**
+   * Shared core cards (card IDs) - Simplified for Forest starter deck
+   */
+  const SHARED_CORE_CARD_IDS: DeckCardIdEntry[] = [
+    // Basic resource generation
+    { cardId: 'nectar-block', quantity: 10 },
+    { cardId: 'nectar-surge', quantity: 2 },
+  ];
+
+  /**
+   * Resolve card IDs to card objects
+   */
+  function resolveCardIds<T = AnyCard>(catalogManager: any, cardIdEntries: DeckCardIdEntry[]): DeckCardEntry<T>[] {
+    if (!catalogManager) {
+      Logger.error('[deckConfig] catalogManager not provided');
+      return [];
+    }
+    return cardIdEntries.map(({ cardId, quantity }) => ({
+      card: catalogManager.getCard(cardId) as T,
+      quantity,
+    }));
+  }
+
+  /**
+   * Get shared core cards configuration (resolved from IDs)
+   */
+  export function getSharedCoreCards(catalogManager: any): DeckCardEntry<MagicCard | TrapCard>[] {
+    return resolveCardIds<MagicCard | TrapCard>(catalogManager, SHARED_CORE_CARD_IDS);
+  }
+
+  /**
+   * Get deck configuration for a specific affinity (resolves card IDs to cards)
+   */
+  export function getDeckConfig(catalogManager: any, affinity: AffinityType): AffinityDeckConfig {
+    const configIds = AFFINITY_DECK_CONFIG_IDS[affinity];
+
+    return {
+      name: configIds.name,
+      affinity: configIds.affinity,
+      beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
+      habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
+    };
+  }
+
+  /**
+   * Get all deck configurations (resolves card IDs to cards)
+   */
+  export function getAllDeckConfigs(catalogManager: any): AffinityDeckConfig[] {
+    return Object.values(AFFINITY_DECK_CONFIG_IDS).map(configIds => ({
+      name: configIds.name,
+      affinity: configIds.affinity,
+      beasts: resolveCardIds<BloomBeastCard>(catalogManager, configIds.beasts),
+      habitats: resolveCardIds<HabitatCard>(catalogManager, configIds.habitats),
+    }));
+  }
+
+  // ==================== bloombeasts\common\engine\cards\index.ts ====================
+
+  /**
+   * Central card registry
+   */
+
+  // Re-export everything from config
+
+  // ==================== bloombeasts\common\engine\utils\deckBuilder.ts ====================
+
+  /**
+   * Deck Builder Utilities - Construct and manage decks
+   */
+
+
+  // Module-level catalog manager reference for deck builder
+  // Set via setCatalogManagerForDeckBuilder() which is called by BloomBeastsGame
+  let _deckBuilderCatalogManager: any = null;
+
+  /**
+   * Set the catalog manager instance for deck builder functions
+   * Called by BloomBeastsGame during construction
+   */
+  export function setCatalogManagerForDeckBuilder(catalogManager: any): void {
+    _deckBuilderCatalogManager = catalogManager;
+  }
+
+  export type DeckType = AffinityType;
+
+  export interface DeckList {
+    name: string;
+    affinity: DeckType;
+    cards: AnyCard[];
+    totalCards: number;
+  }
+
+  /**
+   * Expand cards based on quantity
+   */
+  function expandCards<T extends AnyCard>(cardQuantities: DeckCardEntry<T>[]): T[] {
+    const result: T[] = [];
+
+    for (const { card, quantity } of cardQuantities) {
+      for (let i = 0; i < quantity; i++) {
+        // Create a unique copy with an instance ID
+        result.push({
+          ...card,
+          instanceId: `${card.id}-${i + 1}`,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Build a complete deck with shared cards and affinity-specific cards
+   */
+  function buildDeck(type: DeckType): DeckList {
+    if (!_deckBuilderCatalogManager) {
+      Logger.error('[deckBuilder] catalogManager not initialized');
+      return { name: '', affinity: type, cards: [], totalCards: 0 };
+    }
+
+    // Get deck configuration from centralized config
+    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
+
+    const sharedCards = expandCards(getSharedCoreCards(_deckBuilderCatalogManager));
+    const beasts = expandCards(deckConfig.beasts);
+    const habitats = expandCards(deckConfig.habitats);
+
+    const allCards = [...sharedCards, ...beasts, ...habitats];
+
+    return {
+      name: deckConfig.name,
+      affinity: type,
+      cards: allCards,
+      totalCards: allCards.length,
+    };
+  }
+
+  /**
+   * Build Forest starter deck
+   */
+  export function buildForestDeck(): DeckList {
+    return buildDeck('Forest');
+  }
+
+  /**
+   * Build Fire starter deck
+   */
+  export function buildFireDeck(): DeckList {
+    return buildDeck('Fire');
+  }
+
+  /**
+   * Build Water starter deck
+   */
+  export function buildWaterDeck(): DeckList {
+    return buildDeck('Water');
+  }
+
+  /**
+   * Build Sky starter deck
+   */
+  export function buildSkyDeck(): DeckList {
+    return buildDeck('Sky');
+  }
+
+  /**
+   * Get all starter decks
+   */
+  export function getAllStarterDecks(): DeckList[] {
+    return (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).map(buildDeck);
+  }
+
+  /**
+   * Get a specific starter deck by type
+   */
+  export function getStarterDeck(type: DeckType): DeckList {
+    // Use simple Forest starter deck
+    return buildDeck('Forest');
+  }
+
+  /**
+   * Get a quick win deck with just a few low-level beasts for fast testing
+   * This creates a minimal deck for quick victories in testing
+   */
+  export function quickWinDeck(type: DeckType): DeckList {
+    if (!_deckBuilderCatalogManager) {
+      Logger.error('[deckBuilder] catalogManager not initialized');
+      return { name: '', affinity: type, cards: [], totalCards: 0 };
+    }
+
+    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
+    const allCards: AnyCard[] = [];
+
+    // Add just a few level 1 beasts (3 total - easy to draw and summon quickly)
+    const beastEntry = deckConfig.beasts[0]; // Get the first beast type
+    if (beastEntry) {
+      for (let i = 1; i <= 3; i++) {
+        allCards.push({
+          ...beastEntry.card,
+          instanceId: `${beastEntry.card.id}-${i}`,
+        } as unknown as AnyCard);
+      }
+    }
+
+    // Add 27 Energy Blocks for fast summoning
+    const energyBlock = _deckBuilderCatalogManager.getCard('nectar-block');
+    if (energyBlock) {
+      for (let i = 1; i <= 27; i++) {
+        allCards.push({
+          ...energyBlock,
+          instanceId: `nectar-block-${i}`,
+        } as unknown as AnyCard);
+      }
+    }
+
+    return {
+      name: `${deckConfig.name} (Quick Win)`,
+      affinity: type,
+      cards: allCards,
+      totalCards: allCards.length,
+    };
+  }
+
+  /**
+   * Get a testing deck with 1 of each card (for easy testing)
+   * This includes 1 of every card in the game across all affinities
+   */
+  export function getTestingDeck(type: DeckType): DeckList {
+    if (!_deckBuilderCatalogManager) {
+      Logger.error('[deckBuilder] catalogManager not initialized');
+      return { name: '', affinity: type, cards: [], totalCards: 0 };
+    }
+
+    const deckConfig = getDeckConfig(_deckBuilderCatalogManager, type);
+
+    // Get 1 of each card from all affinities
+    const allCards: AnyCard[] = [];
+
+    // Add shared cards (Magic, Trap) - 1 of each
+    const sharedCards = getSharedCoreCards(_deckBuilderCatalogManager);
+    sharedCards.forEach(({ card }) => {
+      allCards.push({
+        ...card,
+        instanceId: `${card.id}-1`,
+      } as unknown as AnyCard);
+    });
+
+    // Add buff cards - 1 of each
+    const buffCards = _deckBuilderCatalogManager.getAllBuffCards();
+    buffCards.forEach((card: any) => {
+      allCards.push({
+        ...card,
+        instanceId: `${card.id}-1`,
+      } as unknown as AnyCard);
+    });
+
+    // Add all beasts from all affinities - 1 of each
+    (['Forest', 'Fire', 'Water', 'Sky'] as DeckType[]).forEach(affinity => {
+      const affinityConfig = getDeckConfig(_deckBuilderCatalogManager, affinity);
+
+      // Add beasts
+      affinityConfig.beasts.forEach(({ card }) => {
+        allCards.push({
+          ...card,
+          instanceId: `${card.id}-1`,
+        } as unknown as AnyCard);
+      });
+
+      // Add habitats
+      affinityConfig.habitats.forEach(({ card }) => {
+        allCards.push({
+          ...card,
+          instanceId: `${card.id}-1`,
+        } as unknown as AnyCard);
+      });
+    });
+
+    return {
+      name: `${deckConfig.name} (Testing)`,
+      affinity: type,
+      cards: allCards,
+      totalCards: allCards.length,
+    };
+  }
+
+  /**
+   * Shuffle a deck
+   */
+  export function shuffleDeck(cards: AnyCard[]): AnyCard[] {
+    const shuffled = [...cards];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  /**
+   * Validate deck (30 cards required)
+   */
+  export function validateDeck(cards: AnyCard[]): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    if (cards.length !== 30) {
+      errors.push(`Deck must contain exactly 30 cards. Current: ${cards.length}`);
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
+  }
+
+  // ==================== bloombeasts\screens\missions\types.ts ====================
+
+  /**
+   * Mission System Type Definitions
+   */
+
+
+  export type MissionDifficulty = 'beginner' | 'easy' | 'normal' | 'hard' | 'expert';
+
+  export type CardPool = 'common' | 'uncommon' | 'rare' | 'affinity' | 'any';
+
+  export interface ItemReward {
+    itemId: string;               // Item ID from items.ts
+    minAmount: number;            // Minimum items to receive
+    maxAmount: number;            // Maximum items to receive
+    dropChance: number;           // Chance to receive (0-1)
+  }
+
+  export interface MissionRewards {
+    guaranteedXP: number;        // Minimum XP earned
+    bonusXPChance: number;        // Chance for bonus XP (0-1)
+    bonusXPAmount: number;        // Amount of bonus XP if triggered
+    cardRewards: CardReward[];    // Possible card rewards
+    coinRewards?: {               // Coin rewards
+      minAmount: number;
+      maxAmount: number;
+      dropChance: number;
+    };
+    itemRewards?: ItemReward[];   // Possible item rewards (serums, etc)
+  }
+
+  export interface CardReward {
+    cardPool: CardPool;
+    affinity?: Affinity;         // If cardPool is 'affinity'
+    minAmount: number;            // Minimum cards to receive
+    maxAmount: number;            // Maximum cards to receive
+    dropChance: number;           // Chance to receive (0-1)
+  }
+
+  export interface MissionObjective {
+    type: 'defeat-opponent' | 'survive-turns' | 'deal-damage' |
+          'summon-beasts' | 'use-abilities' | 'maintain-health';
+    target?: number;              // Target value for objective
+    description: string;
+  }
+
+  export interface Mission {
+    id: string;
+    name: string;
+    description: string;
+    storyText?: string;           // Lore/flavor text
+    difficulty: MissionDifficulty;
+    level: number;                // Mission level (1-10)
+    affinity?: 'Forest' | 'Water' | 'Fire' | 'Sky' | 'Boss'; // Mission affinity for visuals
+    beastId: string;              // Beast card ID for mission image (e.g., 'Rootling')
+
+    // Battle configuration
+    playerDeck?: DeckList | (() => DeckList);        // Optional fixed deck for player (or factory function)
+    opponentDeck: DeckList | (() => DeckList);       // AI opponent's deck (or factory function)
+    opponentAI?: AIProfile;        // AI behavior profile (optional)
+
+    // Mission specifics (all optional now)
+    objectives?: MissionObjective[];
+    turnLimit?: number;           // Optional turn limit
+
+    // Rewards
+    rewards: MissionRewards;
+    firstTimeBonus?: MissionRewards; // Extra rewards for first completion
+
+    // Progress tracking
+    timesCompleted: number;
+    bestScore?: number;
+    lastPlayed?: Date;
+    unlocked: boolean;
+  }
+
+  export interface AIProfile {
+    name: string;
+    difficulty: MissionDifficulty;
+    personality: 'aggressive' | 'defensive' | 'balanced' | 'strategic' | 'chaotic';
+
+    // AI behavior weights (0-1)
+    aggressiveness: number;       // Likelihood to attack
+    resourceManagement: number;   // How well it manages energy
+    targetPriority: 'strongest' | 'weakest' | 'random' | 'strategic';
+    abilityUsage: number;        // Likelihood to use abilities
+
+    // Special AI behaviors
+    behaviors?: AIBehavior[];
+  }
+
+  export interface AIBehavior {
+    trigger: 'low-health' | 'high-energy' | 'empty-field' | 'turn-count';
+    condition?: number;
+    action: 'play-defensive' | 'all-out-attack' | 'summon-rush' | 'ability-spam';
+  }
+
+  export interface MissionResult {
+    missionId: string;
+    completed: boolean;
+    objectivesCompleted: string[];
+    turnsUsed: number;
+    damageDealt: number;
+    beastsDefeated: number;
+    score: number;
+
+    // Rewards earned
+    xpEarned: number;
+    cardsEarned: AnyCard[];
+    energyEarned: number;
+  }
+
+  export interface MissionProgress {
+    missionId: string;
+    attempts: number;
+    completions: number;
+    bestScore: number;
+    totalXPEarned: number;
+    totalCardsEarned: number;
+    averageCompletion: number;   // Average turns to complete
+    currentStreak: number;        // Consecutive completions
+  }
+
+  /**
+   * Helper to resolve a deck (handles both direct DeckList and factory functions)
+   */
+  export function resolveDeck(deckOrFactory: DeckList | (() => DeckList)): DeckList {
+    if (typeof deckOrFactory === 'function') {
+      return deckOrFactory();
+    }
+    return deckOrFactory;
+  }
+
+  // ==================== bloombeasts\screens\missions\definitions\mission01.ts ====================
+
+  /**
+   * Mission 01: Rootling
+   * Forest Affinity Mission
+   */
+
+
+  export const mission01: Mission = {
+    id: 'mission-01',
+    name: 'Rootling',
+    description: 'Battle the Rootling in the forest depths.',
+    difficulty: 'beginner',
+    level: 1,
+    affinity: 'Forest',
+    beastId: 'Rootling',
+
+    // Use a function to build the deck on demand (after catalogs are loaded)
+    opponentDeck: () => {
+      // Use the proper Forest starter deck builder for a balanced deck
+      const deck = buildForestDeck();
+
+      // Safety check - return empty deck if builder failed
+      if (!deck || deck.cards.length === 0) {
+        Logger.error('[mission01] Failed to build Forest deck');
+        return { name: 'Rootling Deck', affinity: 'Forest' as const, cards: [], totalCards: 0 };
+      }
+
+      // Override the name for tutorial context
+      return {
+        ...deck,
+        name: 'Rootling (Tutorial Deck)',
+      };
+    },
+
+    rewards: {
+      guaranteedXP: 50,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 25,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 1.0,
+        },
+      ],
+      coinRewards: {
+        minAmount: 50,
+        maxAmount: 150,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: true, // First mission is always unlocked
+  };
+
+  // ==================== bloombeasts\screens\missions\utils\deckBuilder.ts ====================
+
+  /**
+   * Mission Deck Builder Utilities
+   * Centralized deck construction for mission definitions
+   */
+
+
+  /**
+   * Card specification for deck building
+   */
+  export interface CardSpec {
+    cardId: string;
+    count: number;
+  }
+
+  // Module-level catalog manager reference
+  // Set via setCatalogManagerForMissions() which is called by CoreSystemsInitializer
+  let _missionDeckCatalogManager: any = null;
+
+  /**
+   * Set the catalog manager instance for mission deck builder
+   * Called during game initialization
+   */
+  export function setCatalogManagerForMissions(catalogManager: any): void {
+    _missionDeckCatalogManager = catalogManager;
+    Logger.info('[MissionDeckBuilder] Catalog manager initialized');
+  }
+
+  /**
+   * Get catalog manager (for internal use)
+   */
+  function getCatalogManager(): any {
+    if (!_missionDeckCatalogManager) {
+      Logger.error('[MissionDeckBuilder] Catalog manager not available - was setCatalogManagerForMissions called?');
+      return null;
+    }
+    return _missionDeckCatalogManager;
+  }
+
+  /**
+   * Get catalog manager (for external use - e.g., mission17 Cluck Norris)
+   * This allows mission definitions to access the catalog manager
+   */
+  export function getCatalogManagerForMissions(): any {
+    return _missionDeckCatalogManager;
+  }
+
+  /**
+   * Create a mission deck with specified cards
+   *
+   * @example
+   * createMissionDeck({
+   *   name: 'Mushroomancer Pack',
+   *   affinity: 'Forest',
+   *   cards: [{ cardId: 'mushroomancer', count: 20 }]
+   * })
+   */
+  export function createMissionDeck(config: {
+    name: string;
+    affinity: DeckType;
+    cards: CardSpec[];
+  }): DeckList {
+    const catalogManager = getCatalogManager();
+
+    if (!catalogManager) {
+      Logger.error(`[MissionDeckBuilder] CatalogManager is not available! Cannot build deck "${config.name}"`);
+      return {
+        name: config.name,
+        affinity: config.affinity,
+        cards: [],
+        totalCards: 0,
+      };
+    }
+
+    Logger.info(`[MissionDeckBuilder] Building deck "${config.name}" with ${config.cards.length} card types`);
+
+    const deckCards: any[] = [];
+
+    for (const spec of config.cards) {
+      const cardDef = catalogManager.getCard(spec.cardId);
+
+      if (!cardDef) {
+        Logger.error(`[MissionDeckBuilder] Card not found in catalog: ${spec.cardId}`);
+        continue;
+      }
+
+      Logger.debug(`[MissionDeckBuilder] Adding ${spec.count}x ${spec.cardId} to deck`);
+
+      // Create multiple instances of this card
+      for (let i = 1; i <= spec.count; i++) {
+        deckCards.push({
+          ...cardDef,
+          instanceId: `${spec.cardId}-${i}`,
+        });
+      }
+    }
+
+    return {
+      name: config.name,
+      affinity: config.affinity,
+      cards: deckCards,
+      totalCards: deckCards.length,
+    };
+  }
+
+  // ==================== bloombeasts\screens\missions\definitions\mission02.ts ====================
+
+  /**
+   * Mission 02: Mushroomancer
+   * Forest Affinity Mission
+   */
+
+
+  export const mission02: Mission = {
+    id: 'mission-02',
+    name: 'Mushroomancer',
+    description: 'Face the mystical Mushroomancer among the trees.',
+    difficulty: 'beginner',
+    level: 2,
+    affinity: 'Forest',
+    beastId: 'Mushroomancer',
+
+    opponentDeck: () =>
+      createMissionDeck({
+        name: 'Mushroom Grove',
+        affinity: 'Forest' as const,
+        cards: [
+          { cardId: 'mushroomancer', count: 6 },
+          { cardId: 'rootling', count: 4 },
+          { cardId: 'nectar-block', count: 5 },
+        ],
+      }),
+
+    rewards: {
+      guaranteedXP: 60,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 30,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.9,
+        },
+      ],
+      coinRewards: {
+        minAmount: 75,
+        maxAmount: 175,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission03.ts ====================
+
+  /**
+   * Mission 03: Mosslet
+   * Forest Affinity Mission
+   */
+
+
+  export const mission03: Mission = {
+    id: 'mission-03',
+    name: 'Mosslet',
+    description: 'Challenge the sturdy Mosslet in the mossy glen.',
+    difficulty: 'easy',
+    level: 3,
+    affinity: 'Forest',
+    beastId: 'Mosslet',
+
+    opponentDeck: () =>
+      createMissionDeck({
+        name: 'Forest Basics',
+        affinity: 'Forest' as const,
+        cards: [
+          { cardId: 'mosslet', count: 5 },
+          { cardId: 'rootling', count: 5 },
+          { cardId: 'nectar-block', count: 5 },
+        ],
+      }),
+
+    rewards: {
+      guaranteedXP: 70,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 35,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.8,
+        },
+      ],
+      coinRewards: {
+        minAmount: 100,
+        maxAmount: 200,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission04.ts ====================
+
+  /**
+   * Mission 04: Leaf Sprite
+   * Forest Affinity Mission
+   */
+
+
+  export const mission04: Mission = {
+    id: 'mission-04',
+    name: 'Leaf Sprite',
+    description: 'Test your skills against the agile Leaf Sprite.',
+    difficulty: 'easy',
+    level: 4,
+    affinity: 'Forest',
+    beastId: 'Leaf Sprite',
+
+    opponentDeck: () =>
+      createMissionDeck({
+        name: 'Forest Advancement',
+        affinity: 'Forest' as const,
+        cards: [
+          { cardId: 'leaf-sprite', count: 6 },
+          { cardId: 'mushroomancer', count: 6 },
+          { cardId: 'ancient-forest', count: 1 },
+          { cardId: 'nectar-block', count: 6 },
+          { cardId: 'power-up', count: 1 },
+        ],
+      }),
+
+    rewards: {
+      guaranteedXP: 80,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 40,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.8,
+        },
+      ],
+      coinRewards: {
+        minAmount: 125,
+        maxAmount: 225,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission05.ts ====================
+
+  /**
+   * Mission 05: Bubblefin
+   * Water Affinity Mission
+   */
+
+
+  export const mission05: Mission = {
+    id: 'mission-05',
+    name: 'Bubblefin',
+    description: 'Dive deep to battle the nimble Bubblefin.',
+    difficulty: 'normal',
+    level: 5,
+    affinity: 'Water',
+    beastId: 'Bubblefin',
+
+    opponentDeck: () => buildWaterDeck(),
+
+    rewards: {
+      guaranteedXP: 90,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 45,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+      ],
+      coinRewards: {
+        minAmount: 150,
+        maxAmount: 250,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission06.ts ====================
+
+  /**
+   * Mission 06: Dewdrop Drake
+   * Water Affinity Mission
+   */
+
+
+  export const mission06: Mission = {
+    id: 'mission-06',
+    name: 'Dewdrop Drake',
+    description: 'Confront the serene Dewdrop Drake by the waterfall.',
+    difficulty: 'normal',
+    level: 6,
+    affinity: 'Water',
+    beastId: 'Dewdrop Drake',
+
+    opponentDeck: () => buildWaterDeck(),
+
+    rewards: {
+      guaranteedXP: 100,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 50,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+      ],
+      coinRewards: {
+        minAmount: 175,
+        maxAmount: 275,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission07.ts ====================
+
+  /**
+   * Mission 07: Kelp Cub
+   * Water Affinity Mission
+   */
+
+
+  export const mission07: Mission = {
+    id: 'mission-07',
+    name: 'Kelp Cub',
+    description: 'Navigate the kelp forest to face the Kelp Cub.',
+    difficulty: 'normal',
+    level: 7,
+    affinity: 'Water',
+    beastId: 'Kelp Cub',
+
+    opponentDeck: () => buildWaterDeck(),
+
+    rewards: {
+      guaranteedXP: 110,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 55,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+      ],
+      coinRewards: {
+        minAmount: 200,
+        maxAmount: 300,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission08.ts ====================
+
+  /**
+   * Mission 08: Aqua Pebble
+   * Water Affinity Mission
+   */
+
+
+  export const mission08: Mission = {
+    id: 'mission-08',
+    name: 'Aqua Pebble',
+    description: 'Test your might against the resilient Aqua Pebble.',
+    difficulty: 'hard',
+    level: 8,
+    affinity: 'Water',
+    beastId: 'Aqua Pebble',
+
+    opponentDeck: () => buildWaterDeck(),
+
+    rewards: {
+      guaranteedXP: 120,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 60,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.4,
+        },
+      ],
+      coinRewards: {
+        minAmount: 225,
+        maxAmount: 325,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission09.ts ====================
+
+  /**
+   * Mission 09: Magmite
+   * Fire Affinity Mission
+   */
+
+
+  export const mission09: Mission = {
+    id: 'mission-09',
+    name: 'Magmite',
+    description: 'Brave the flames to challenge the fierce Magmite.',
+    difficulty: 'hard',
+    level: 9,
+    affinity: 'Fire',
+    beastId: 'Magmite',
+
+    opponentDeck: () => buildFireDeck(),
+
+    rewards: {
+      guaranteedXP: 130,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 65,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.5,
+        },
+      ],
+      coinRewards: {
+        minAmount: 250,
+        maxAmount: 350,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission10.ts ====================
+
+  /**
+   * Mission 10: Cinder Pup
+   * Fire Affinity Mission
+   */
+
+
+  export const mission10: Mission = {
+    id: 'mission-10',
+    name: 'Cinder Pup',
+    description: 'Face the energetic Cinder Pup in volcanic fields.',
+    difficulty: 'hard',
+    level: 10,
+    affinity: 'Fire',
+    beastId: 'Cinder Pup',
+
+    opponentDeck: () => buildFireDeck(),
+
+    rewards: {
+      guaranteedXP: 140,
+      bonusXPChance: 0.5,
+      bonusXPAmount: 70,
+      cardRewards: [
+        {
+          cardPool: 'common',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.5,
+        },
+      ],
+      coinRewards: {
+        minAmount: 275,
+        maxAmount: 375,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission11.ts ====================
+
+  /**
+   * Mission 11: Charcoil
+   * Fire Affinity Mission
+   */
+
+
+  export const mission11: Mission = {
+    id: 'mission-11',
+    name: 'Charcoil',
+    description: 'Battle the smoldering Charcoil in the ember wastes.',
+    difficulty: 'hard',
+    level: 11,
+    affinity: 'Fire',
+    beastId: 'Charcoil',
+
+    opponentDeck: () => buildFireDeck(),
+
+    rewards: {
+      guaranteedXP: 150,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 75,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+      ],
+      coinRewards: {
+        minAmount: 300,
+        maxAmount: 400,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission12.ts ====================
+
+  /**
+   * Mission 12: Blazefinch
+   * Fire Affinity Mission
+   */
+
+
+  export const mission12: Mission = {
+    id: 'mission-12',
+    name: 'Blazefinch',
+    description: 'Soar through the flames to face the swift Blazefinch.',
+    difficulty: 'expert',
+    level: 12,
+    affinity: 'Fire',
+    beastId: 'Blazefinch',
+
+    opponentDeck: () => buildFireDeck(),
+
+    rewards: {
+      guaranteedXP: 160,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 80,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.4,
+        },
+      ],
+      coinRewards: {
+        minAmount: 325,
+        maxAmount: 425,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission13.ts ====================
+
+  /**
+   * Mission 13: Cirrus Floof
+   * Sky Affinity Mission
+   */
+
+
+  export const mission13: Mission = {
+    id: 'mission-13',
+    name: 'Cirrus Floof',
+    description: 'Ascend to the clouds to meet the gentle Cirrus Floof.',
+    difficulty: 'expert',
+    level: 13,
+    affinity: 'Sky',
+    beastId: 'Cirrus Floof',
+
+    opponentDeck: () => buildSkyDeck(),
+
+    rewards: {
+      guaranteedXP: 170,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 85,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.4,
+        },
+      ],
+      coinRewards: {
+        minAmount: 350,
+        maxAmount: 450,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission14.ts ====================
+
+  /**
+   * Mission 14: Gale Glider
+   * Sky Affinity Mission
+   */
+
+
+  export const mission14: Mission = {
+    id: 'mission-14',
+    name: 'Gale Glider',
+    description: 'Race through the windstorm against the agile Gale Glider.',
+    difficulty: 'expert',
+    level: 14,
+    affinity: 'Sky',
+    beastId: 'Gale Glider',
+
+    opponentDeck: () => buildSkyDeck(),
+
+    rewards: {
+      guaranteedXP: 180,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 90,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.4,
+        },
+      ],
+      coinRewards: {
+        minAmount: 375,
+        maxAmount: 475,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission15.ts ====================
+
+  /**
+   * Mission 15: Star Bloom
+   * Sky Affinity Mission
+   */
+
+
+  export const mission15: Mission = {
+    id: 'mission-15',
+    name: 'Star Bloom',
+    description: 'Reach for the stars to challenge the mystical Star Bloom.',
+    difficulty: 'expert',
+    level: 15,
+    affinity: 'Sky',
+    beastId: 'Star Bloom',
+
+    opponentDeck: () => buildSkyDeck(),
+
+    rewards: {
+      guaranteedXP: 190,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 95,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.5,
+        },
+      ],
+      coinRewards: {
+        minAmount: 400,
+        maxAmount: 500,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission16.ts ====================
+
+  /**
+   * Mission 16: Aero Moth
+   * Sky Affinity Mission
+   */
+
+
+  export const mission16: Mission = {
+    id: 'mission-16',
+    name: 'Aero Moth',
+    description: 'Dance among the high winds with the elusive Aero Moth.',
+    difficulty: 'expert',
+    level: 16,
+    affinity: 'Sky',
+    beastId: 'Aero Moth',
+
+    opponentDeck: () => buildSkyDeck(),
+
+    rewards: {
+      guaranteedXP: 200,
+      bonusXPChance: 0.6,
+      bonusXPAmount: 100,
+      cardRewards: [
+        {
+          cardPool: 'uncommon',
+          minAmount: 2,
+          maxAmount: 2,
+          dropChance: 0.7,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.5,
+        },
+      ],
+      coinRewards: {
+        minAmount: 425,
+        maxAmount: 525,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\mission17.ts ====================
+
+  /**
+   * Mission 17: Cluck Norris
+   * Boss Mission
+   */
+
+
+  // Get Cluck Norris deck - 3 level 9 Cluck Norris beasts
+  const getCluckNorrisDeck = (): DeckList => {
+    // This function will be called after catalogs are loaded
+    const catalogManager = getCatalogManagerForMissions();
+    if (!catalogManager) {
+      Logger.error('[mission17] Catalog manager not available');
+      return {
+        name: 'Cluck Norris Deck',
+        affinity: 'Forest',
+        cards: [],
+        totalCards: 0,
+      };
+    }
+
+    // Get the Cluck Norris card from the boss catalog
+    const cluckNorrisCard = catalogManager.getCard('cluck-norris') as BloomBeastCard;
+
+    if (!cluckNorrisCard) {
+      Logger.error('[mission17] Cluck Norris card not found in catalog');
+      return {
+        name: 'Cluck Norris Deck',
+        affinity: 'Forest',
+        cards: [],
+        totalCards: 0,
+      };
+    }
+
+    // Create 3 instances of Cluck Norris at level 9 as RuntimeBeast cards
+    const cluckNorrisCards: RuntimeBeast[] = [];
+    for (let i = 1; i <= 3; i++) {
+      cluckNorrisCards.push({
+        ...cluckNorrisCard,
+        instanceId: `cluck-norris-${i}`,
+        currentXP: 25500, // Level 9 XP
+        level: 9,
+        currentLevel: 9 as any,
+        statusEffects: [],
+        // Keep base stats at 99/99 as defined in the catalog (already scaled for level 9)
+        currentAttack: cluckNorrisCard.baseAttack || 99,
+        currentHealth: cluckNorrisCard.baseHealth || 99,
+        maxHealth: cluckNorrisCard.baseHealth || 99,
+      });
+    }
+
+    return {
+      name: 'Cluck Norris Deck',
+      affinity: 'Forest',
+      cards: cluckNorrisCards,
+      totalCards: cluckNorrisCards.length,
+    };
+  };
+
+  export const mission17: Mission = {
+    id: 'mission-17',
+    name: 'Cluck Norris',
+    description: 'Face the legendary Cluck Norris, the ultimate rooster warrior!',
+    difficulty: 'expert',
+    level: 17,
+    affinity: 'Boss',
+    beastId: 'Cluck Norris',
+
+    opponentDeck: () => getCluckNorrisDeck(),
+
+    rewards: {
+      guaranteedXP: 500,
+      bonusXPChance: 0.9,
+      bonusXPAmount: 250,
+      cardRewards: [
+        {
+          cardPool: 'rare',
+          minAmount: 3,
+          maxAmount: 4,
+          dropChance: 0.9,
+        },
+        {
+          cardPool: 'rare',
+          minAmount: 1,
+          maxAmount: 2,
+          dropChance: 0.5,
+        },
+      ],
+      coinRewards: {
+        minAmount: 1000,
+        maxAmount: 1500,
+        dropChance: 1.0,
+      },
+    },
+
+    timesCompleted: 0,
+    unlocked: false,
+  };
+
+  // ==================== bloombeasts\screens\missions\definitions\index.ts ====================
+
+  /**
+   * Central export for all mission definitions
+   */
+
+
+  export const missions: Mission[] = [
+    mission01,
+    mission02,
+    mission03,
+    mission04,
+    mission05,
+    mission06,
+    mission07,
+    mission08,
+    mission09,
+    mission10,
+    mission11,
+    mission12,
+    mission13,
+    mission14,
+    mission15,
+    mission16,
+    mission17,
+  ];
+
+  export const getMissionById = (id: string): Mission | undefined => {
+    return missions.find(mission => mission.id === id);
+  };
+
+  export const getAvailableMissions = (playerLevel: number): Mission[] => {
+    // Return all missions - allow the UI to decide which ones are playable
+    // This ensures all 17 missions are visible in the mission select screen
+    return missions;
+  };
+
+  export const getCompletedMissions = (): Mission[] => {
+    return missions.filter(mission => mission.timesCompleted > 0);
+  };
+
+  // ==================== bloombeasts\screens\missions\MissionManager.ts ====================
+
+  /**
+   * Mission Manager - Handles mission progress, rewards, and completion
+   */
+
+
+  export interface MissionRunProgress {
+    missionId: string;
+    objectiveProgress: SimpleMap<string, number>;
+    turnCount: number;
+    isCompleted: boolean;
+    damageDealt: number;
+    beastsSummoned: number;
+    abilitiesUsed: number;
+    playerHealth: number;
+    opponentHealth: number;
+    startTime: number;           // Timestamp when mission started (milliseconds)
+    endTime?: number;             // Timestamp when mission ended (milliseconds)
+  }
+
+  export interface ItemRewardResult {
+    itemId: string;
+    quantity: number;
+  }
+
+  export interface RewardResult {
+    xpGained: number;
+    beastXP: number;              // XP earned by beasts
+    coinsReceived?: number;       // Coins earned
+    cardsReceived: (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[];
+    itemsReceived: ItemRewardResult[];
+    completionTimeSeconds: number; // Time taken to complete mission
+    bonusRewards?: string[];
+  }
+
+  export class MissionManager {
+    private catalogManager: any;
+    private currentMission: Mission | null = null;
+    private progress: MissionRunProgress | null = null;
+    private completedMissions: SimpleMap<string, number> = new SimpleMap();
+
+    constructor(catalogManager: any) {
+      this.catalogManager = catalogManager;
+    }
+
+    /**
+     * Start a mission
+     */
+    startMission(missionId: string): Mission | null {
+      const mission = getMissionById(missionId);
+      if (!mission) {
+        Logger.error(`Mission ${missionId} not found`);
+        return null;
+      }
+
+      this.currentMission = mission;
+      this.progress = {
+        missionId,
+        objectiveProgress: new SimpleMap(),
+        turnCount: 0,
+        isCompleted: false,
+        damageDealt: 0,
+        beastsSummoned: 0,
+        abilitiesUsed: 0,
+        playerHealth: 30,
+        opponentHealth: 30,
+        startTime: Date.now(),
+      };
+
+      // Initialize objective tracking (if objectives exist)
+      if (mission.objectives) {
+        mission.objectives.forEach(obj => {
+          const key = this.getObjectiveKey(obj);
+          this.progress!.objectiveProgress.set(key, 0);
+        });
+      }
+
+      return mission;
+    }
+
+    /**
+     * Update mission progress based on game events
+     */
+    updateProgress(event: string, data: any): void {
+      Logger.info(`[MissionManager] updateProgress called with event: ${event}`);
+      Logger.info(`[MissionManager] Has progress: ${!!this.progress}, Has currentMission: ${!!this.currentMission}`);
+
+      if (!this.progress || !this.currentMission) {
+        Logger.warn('[MissionManager] updateProgress returning early - no progress or mission');
+        return;
+      }
+
+      switch (event) {
+        case 'turn-end':
+          this.progress.turnCount++;
+          this.checkTurnBasedObjectives();
+          break;
+
+        case 'damage-dealt':
+          this.progress.damageDealt += data.amount;
+          this.updateObjective('deal-damage', this.progress.damageDealt);
+          break;
+
+        case 'beast-summoned':
+          this.progress.beastsSummoned++;
+          this.updateObjective('summon-beasts', this.progress.beastsSummoned);
+          break;
+
+        case 'ability-used':
+          this.progress.abilitiesUsed++;
+          this.updateObjective('use-abilities', this.progress.abilitiesUsed);
+          break;
+
+        case 'opponent-defeated':
+          Logger.info('[MissionManager] Processing opponent-defeated event');
+          this.updateObjective('defeat-opponent', 1);
+          Logger.info(`[MissionManager] After update, defeat-opponent progress: ${this.progress.objectiveProgress.get('defeat-opponent')}`);
+          this.checkMissionCompletion();
+          break;
+
+        case 'health-update':
+          this.progress.playerHealth = data.playerHealth;
+          this.progress.opponentHealth = data.opponentHealth;
+          this.updateObjective('maintain-health', this.progress.playerHealth);
+          break;
+      }
+
+      this.checkMissionCompletion();
+    }
+
+    /**
+     * Check if all objectives are completed
+     */
+    private checkMissionCompletion(): void {
+      if (!this.currentMission || !this.progress) return;
+
+      Logger.debug(`[MissionManager] Checking mission completion for ${this.currentMission.id}`);
+      Logger.debug(`[MissionManager] Has objectives: ${!!this.currentMission.objectives}, Length: ${this.currentMission.objectives?.length || 0}`);
+
+      // If no objectives, just check if opponent is defeated (default win condition)
+      if (!this.currentMission.objectives || this.currentMission.objectives.length === 0) {
+        // Mission complete when opponent is defeated (health reaches 0 OR deck-out)
+        const defeatOpponentProgress = this.progress.objectiveProgress.get('defeat-opponent') || 0;
+        Logger.debug(`[MissionManager] Default win condition check - OpponentHP: ${this.progress.opponentHealth}, DefeatProgress: ${defeatOpponentProgress}`);
+
+        if (this.progress.opponentHealth <= 0 || defeatOpponentProgress >= 1) {
+          this.progress.isCompleted = true;
+          Logger.info('[MissionManager] Mission marked as completed (opponent defeated)');
+        } else {
+          Logger.debug('[MissionManager] Mission NOT completed yet');
+        }
+        return;
+      }
+
+      const allObjectivesComplete = this.currentMission.objectives.every(obj => {
+        const key = this.getObjectiveKey(obj);
+        const progress = this.progress!.objectiveProgress.get(key) || 0;
+
+        switch (obj.type) {
+          case 'defeat-opponent':
+            return progress >= 1;
+          case 'deal-damage':
+          case 'summon-beasts':
+          case 'use-abilities':
+          case 'survive-turns':
+            return progress >= (obj.target || 0);
+          case 'maintain-health':
+            return this.progress!.playerHealth >= (obj.target || 0);
+          default:
+            return false;
+        }
+      });
+
+      if (allObjectivesComplete) {
+        this.progress.isCompleted = true;
+      }
+    }
+
+    /**
+     * Complete the mission and generate rewards
+     */
+    completeMission(): RewardResult | null {
+      Logger.info('[MissionManager] completeMission() called');
+      Logger.info(`[MissionManager] currentMission: ${!!this.currentMission}, progress: ${!!this.progress}, isCompleted: ${this.progress?.isCompleted}`);
+
+      if (!this.currentMission || !this.progress || !this.progress.isCompleted) {
+        Logger.warn('[MissionManager] completeMission() returning null - mission not completed');
+        return null;
+      }
+
+      // Mark mission end time
+      this.progress.endTime = Date.now();
+
+      const rewards = this.generateRewards(this.currentMission.rewards);
+
+      // Track completion
+      const timesCompleted = this.completedMissions.get(this.currentMission.id) || 0;
+      this.completedMissions.set(this.currentMission.id, timesCompleted + 1);
+      this.currentMission.timesCompleted = timesCompleted + 1;
+
+      // Unlock next mission
+      const nextMissionIndex = missions.indexOf(this.currentMission) + 1;
+      if (nextMissionIndex < missions.length) {
+        missions[nextMissionIndex].unlocked = true;
+      }
+
+      // Clear current mission
+      this.currentMission = null;
+      this.progress = null;
+
+      return rewards;
+    }
+
+    /**
+     * Generate rewards based on mission configuration
+     */
+    private generateRewards(rewardConfig: MissionRewards): RewardResult {
+      // Calculate completion time
+      const completionTimeMs = (this.progress!.endTime || Date.now()) - this.progress!.startTime;
+      const completionTimeSeconds = Math.floor(completionTimeMs / 1000);
+
+      // Calculate beast XP (same as player XP for now)
+      const beastXP = rewardConfig.guaranteedXP;
+
+      const result: RewardResult = {
+        xpGained: rewardConfig.guaranteedXP,
+        beastXP: beastXP,
+        cardsReceived: [],
+        itemsReceived: [],
+        completionTimeSeconds: completionTimeSeconds,
+        bonusRewards: [],
+      };
+
+      // Roll for bonus XP (applies to both player and beasts)
+      if (rewardConfig.bonusXPChance && Math.random() < rewardConfig.bonusXPChance) {
+        const bonusAmount = rewardConfig.bonusXPAmount || 0;
+        result.xpGained += bonusAmount;
+        result.beastXP += bonusAmount;
+        result.bonusRewards?.push(`Bonus XP: +${bonusAmount}`);
+      }
+
+      // Generate card rewards
+      if (rewardConfig.cardRewards) {
+        rewardConfig.cardRewards.forEach(cardReward => {
+          if (Math.random() < cardReward.dropChance) {
+            const amount = Math.floor(
+              Math.random() * (cardReward.maxAmount - cardReward.minAmount + 1) +
+              cardReward.minAmount
+            );
+
+            const cards = this.selectRandomCards(
+              cardReward.cardPool,
+              amount,
+              cardReward.affinity
+            );
+
+            result.cardsReceived.push(...cards);
+          }
+        });
+      }
+
+      // Generate coin rewards
+      if (rewardConfig.coinRewards) {
+        if (Math.random() < rewardConfig.coinRewards.dropChance) {
+          const amount = Math.floor(
+            Math.random() * (rewardConfig.coinRewards.maxAmount - rewardConfig.coinRewards.minAmount + 1) +
+            rewardConfig.coinRewards.minAmount
+          );
+
+          result.coinsReceived = amount;
+        }
+      }
+
+      // Generate item rewards
+      if (rewardConfig.itemRewards) {
+        rewardConfig.itemRewards.forEach(itemReward => {
+          if (Math.random() < itemReward.dropChance) {
+            const amount = Math.floor(
+              Math.random() * (itemReward.maxAmount - itemReward.minAmount + 1) +
+              itemReward.minAmount
+            );
+
+            result.itemsReceived.push({
+              itemId: itemReward.itemId,
+              quantity: amount,
+            });
+          }
+        });
+      }
+
+      return result;
+    }
+
+    /**
+     * Select random cards from the card pool
+     */
+    private selectRandomCards(
+      pool: CardPool,
+      amount: number,
+      affinity?: string
+    ): (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[] {
+      const allCards = this.catalogManager.getAllCardData();
+
+      // Filter by pool and affinity
+      let eligibleCards = allCards.filter((card: any) => {
+        if (affinity && 'affinity' in card && card.affinity !== affinity) {
+          return false;
+        }
+
+        // Filter by rarity based on pool
+        // Cards have rarity added dynamically by getAllCards
+        const cardWithRarity = card as any;
+        switch (pool) {
+          case 'common':
+            return !cardWithRarity.rarity || cardWithRarity.rarity === 'common';
+          case 'uncommon':
+            return cardWithRarity.rarity === 'uncommon';
+          case 'rare':
+            return cardWithRarity.rarity === 'rare';
+          case 'any':
+          case 'affinity':
+          default:
+            return true;
+        }
+      }) as (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[];
+
+      // Randomly select cards
+      const selected: (BloomBeastCard | HabitatCard | TrapCard | MagicCard)[] = [];
+      for (let i = 0; i < amount && eligibleCards.length > 0; i++) {
+        const index = Math.floor(Math.random() * eligibleCards.length);
+        selected.push(eligibleCards[index]);
+        // Allow duplicates in rewards
+      }
+
+      return selected;
+    }
+
+    /**
+     * Helper methods
+     */
+    private getObjectiveKey(objective: MissionObjective): string {
+      return `${objective.type}-${objective.target || 0}`;
+    }
+
+    private updateObjective(type: string, value: number): void {
+      if (!this.progress) return;
+
+      // Set the objective value directly (don't require it to pre-exist in the map)
+      this.progress.objectiveProgress.set(type, value);
+      Logger.debug(`[MissionManager] Set objective ${type} = ${value}`);
+    }
+
+    private checkTurnBasedObjectives(): void {
+      this.updateObjective('survive-turns', this.progress!.turnCount);
+    }
+
+    /**
+     * Get current mission status
+     */
+    getCurrentMission(): Mission | null {
+      return this.currentMission;
+    }
+
+    getProgress(): MissionRunProgress | null {
+      return this.progress;
+    }
+
+    getCompletedCount(missionId: string): number {
+      return this.completedMissions.get(missionId) || 0;
+    }
+
+    /**
+     * Load completed missions from saved data
+     */
+    loadCompletedMissions(completedMissionsData: { [missionId: string]: number }): void {
+      // Clear current data
+      this.completedMissions = new SimpleMap();
+
+      // Load saved completion data
+      for (const missionId in completedMissionsData) {
+        if (completedMissionsData.hasOwnProperty(missionId)) {
+          this.completedMissions.set(missionId, completedMissionsData[missionId]);
+        }
+      }
+
+      // Restore mission unlock state and completion counts from saved data
+      this.restoreMissionState();
+    }
+
+    /**
+     * Restore mission unlock state and completion counts from saved data
+     * This updates the mission definition objects to reflect saved progress
+     */
+    private restoreMissionState(): void {
+      missions.forEach((mission, index) => {
+        // Restore completion count
+        const completionCount = this.completedMissions.get(mission.id) || 0;
+        mission.timesCompleted = completionCount;
+
+
+        // If mission has been completed before, unlock it and the next mission
+        if (completionCount > 0) {
+          mission.unlocked = true;
+
+          // Also unlock the next mission when this one is completed
+          if (index + 1 < missions.length) {
+            missions[index + 1].unlocked = true;
+          }
+        }
+        // Otherwise, keep the mission's original unlocked state from the definition
+        // (e.g., mission-01 has unlocked: true in its definition)
+
+      });
+    }
+
+    /**
+     * Get all completed missions as a plain object for saving
+     */
+    getCompletedMissionsData(): { [missionId: string]: number } {
+      const data: { [missionId: string]: number } = {};
+      this.completedMissions.forEach((count, missionId) => {
+        data[missionId] = count;
+      });
+      return data;
+    }
+  }
+
+  // ==================== bloombeasts\core\interfaces\IMissionSelectionUI.ts ====================
+
+  /**
+   * IMissionSelectionUI - Interface for mission selection UI
+   * Breaks circular dependency between core and screens
+   */
+
+
+  /**
+   * Mission display data returned by the UI
+   */
+  export interface MissionDisplayData {
+    mission: Mission;
+    isAvailable: boolean;
+    completionCount: number;
+    difficultyColor: string;
+    rewardPreview: string[];
+  }
+
+  /**
+   * Interface for mission selection UI operations
+   */
+  export interface IMissionSelectionUI {
+    /**
+     * Set the player's current level for mission filtering
+     */
+    setPlayerLevel(level: number): void;
+
+    /**
+     * Get all missions formatted for display
+     */
+    getMissionList(): MissionDisplayData[];
+  }
+
+  // ==================== bloombeasts\screens\missions\MissionSelectionUI.ts ====================
+
+  /**
+   * Mission Selection UI - Display available missions and let players choose
+   */
+
+
+  export class MissionSelectionUI implements IMissionSelectionUI {
+    private missionManager: MissionManager;
+    private currentPlayerLevel: number = 1;
+
+    constructor(missionManager: MissionManager) {
+      this.missionManager = missionManager;
+    }
+
+    /**
+     * Set the player's current level for mission filtering
+     */
+    setPlayerLevel(level: number): void {
+      this.currentPlayerLevel = level;
+    }
+
+    /**
+     * Get all missions formatted for display
+     */
+    getMissionList(): MissionDisplayData[] {
+      const availableMissions = getAvailableMissions(this.currentPlayerLevel);
+      const completedMissions = getCompletedMissions();
+
+      return availableMissions.map(mission => ({
+        mission,
+        isAvailable: this.isMissionPlayable(mission),
+        completionCount: this.missionManager.getCompletedCount(mission.id),
+        difficultyColor: this.getDifficultyColor(mission.difficulty),
+        rewardPreview: this.getRewardPreview(mission),
+      }));
+    }
+
+    /**
+     * Check if a mission can be played
+     */
+    private isMissionPlayable(mission: Mission): boolean {
+      // Check if mission has been completed before - if so, it's always playable (for replay)
+      const completionCount = this.missionManager.getCompletedCount(mission.id);
+      if (completionCount > 0) {
+        return true;
+      }
+
+      // First mission is always unlocked
+      if (mission.unlocked) {
+        return true;
+      }
+
+      // For uncompleted missions, check if previous mission is completed
+      const allMissions = getAvailableMissions(99); // Get all missions
+      const missionIndex = allMissions.findIndex(m => m.id === mission.id);
+
+      if (missionIndex > 0) {
+        const previousMission = allMissions[missionIndex - 1];
+        const previousCompletionCount = this.missionManager.getCompletedCount(previousMission.id);
+        if (previousCompletionCount === 0) {
+          return false;
+        }
+      }
+
+      // Check level requirements for uncompleted missions
+      const levelDifference = Math.abs(this.currentPlayerLevel - mission.level);
+      return levelDifference <= 3; // Allow missions within 3 levels
+    }
+
+    /**
+     * Get difficulty color for UI (now uses centralized color palette)
+     */
+    private getDifficultyColor(difficulty: string): string {
+      return getDifficultyColor(difficulty);
+    }
+
+    /**
+     * Generate reward preview text
+     */
+    private getRewardPreview(mission: Mission): string[] {
+      const preview: string[] = [];
+
+      // XP rewards
+      const totalPossibleXP = mission.rewards.guaranteedXP +
+                             (mission.rewards.bonusXPAmount || 0);
+      preview.push(`XP: ${mission.rewards.guaranteedXP}-${totalPossibleXP}`);
+
+      // Card rewards
+      if (mission.rewards.cardRewards && mission.rewards.cardRewards.length > 0) {
+        let minCards = 0;
+        let maxCards = 0;
+
+        mission.rewards.cardRewards.forEach(reward => {
+          if (reward.dropChance >= 0.7) {
+            minCards += reward.minAmount;
+          }
+          maxCards += reward.maxAmount;
+        });
+
+        preview.push(`Cards: ${minCards}-${maxCards}`);
+      }
+
+      return preview;
+    }
+
+    /**
+     * Get detailed mission info for display
+     */
+    getMissionDetails(missionId: string): string {
+      const availableMissions = getAvailableMissions(this.currentPlayerLevel);
+      const mission = availableMissions.find(m => m.id === missionId);
+
+      if (!mission) {
+        return 'Mission not found';
+      }
+
+      const details: string[] = [
+        `=== ${mission.name} ===`,
+        `Level: ${mission.level}`,
+        `Difficulty: ${mission.difficulty}`,
+        '',
+        '📖 Story:',
+        mission.storyText || 'No story available',
+        '',
+        '🎯 Objectives:',
+      ];
+
+      if (mission.objectives && mission.objectives.length > 0) {
+        mission.objectives.forEach(obj => {
+          details.push(`  • ${obj.description}`);
+        });
+      } else {
+        details.push(`  • Defeat the opponent`);
+      }
+
+
+      if (mission.turnLimit) {
+        details.push('');
+        details.push(`⏱️ Turn Limit: ${mission.turnLimit}`);
+      }
+
+      details.push('');
+      details.push('🏆 Rewards:');
+      this.getRewardPreview(mission).forEach(reward => {
+        details.push(`  • ${reward}`);
+      });
+
+      const completionCount = this.missionManager.getCompletedCount(mission.id);
+      if (completionCount > 0) {
+        details.push('');
+        details.push(`✅ Completed: ${completionCount} time(s)`);
+      }
+
+      return details.join('\n');
+    }
+
+    /**
+     * Start a selected mission
+     */
+    startMission(missionId: string): boolean {
+      const mission = this.missionManager.startMission(missionId);
+
+      if (!mission) {
+        Logger.error('Failed to start mission:', missionId);
+        return false;
+      }
+
+      Logger.debug(`Starting mission: ${mission.name}`);
+      if (mission.opponentAI) {
+        Logger.debug(`Opponent: ${mission.opponentAI.name}`);
+      }
+      Logger.debug(`Difficulty: ${mission.difficulty}`);
+
+      return true;
+    }
+
+    /**
+     * Get progress display for current mission
+     */
+    getCurrentMissionProgress(): string[] | null {
+      const mission = this.missionManager.getCurrentMission();
+      const progress = this.missionManager.getProgress();
+
+      if (!mission || !progress) {
+        return null;
+      }
+
+      const display: string[] = [
+        `Current Mission: ${mission.name}`,
+        `Turn: ${progress.turnCount}`,
+        '',
+        'Objectives Progress:',
+      ];
+
+      if (mission.objectives && mission.objectives.length > 0) {
+        mission.objectives.forEach(obj => {
+          const key = `${obj.type}-${obj.target || 0}`;
+          const currentProgress = progress.objectiveProgress.get(key) || 0;
+          const target = obj.target || 1;
+          const isComplete = currentProgress >= target;
+          const status = isComplete ? '✅' : '⬜';
+
+          display.push(`  ${status} ${obj.description} (${Math.min(currentProgress, target)}/${target})`);
+        });
+      } else {
+        display.push(`  ⬜ Defeat the opponent`);
+      }
+
+      if (mission.turnLimit) {
+        display.push('');
+        display.push(`Turns Remaining: ${mission.turnLimit - progress.turnCount}`);
+      }
+
+      return display;
+    }
+  }
+
+  // ==================== bloombeasts\lib\Turbo-Standalone.ts ====================
 
   /**
    * TURBO - TURn-Based Operations
-   * Standalone TypeScript Bundle
+   * Standalone TypeScript Bundle (https://github.com/suppers-ai/turbo)
    *
    * This file contains the complete Turbo library in a single standalone TypeScript file.
    * All code is wrapped in the Turbo namespace to avoid global scope pollution.
@@ -12913,7 +12303,7 @@ namespace BloomBeasts {
    *   const ai = new Turbo.RandomAI(config);
    *
    * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
-   * Generated: 2025-11-05T20:11:51.717Z
+   * Generated: 2025-11-10T08:09:57.402Z
    * Files: 16
    *
    * @version 2.0.0
@@ -13203,6 +12593,17 @@ namespace BloomBeasts {
     }
 
     /**
+     * Platform async methods interface
+     * Provides setTimeout, setInterval, clearTimeout, clearInterval
+     */
+    export interface AsyncMethods {
+      setTimeout: (callback: (...args: any[]) => void, timeout?: number) => number;
+      clearTimeout: (id: number) => void;
+      setInterval: (callback: (...args: any[]) => void, timeout?: number) => number;
+      clearInterval: (id: number) => void;
+    }
+
+    /**
      * AI difficulty levels
      */
     export enum AILevel {
@@ -13225,6 +12626,7 @@ namespace BloomBeasts {
       randomSeed?: string;
       maxDepth?: number;
       evaluationFunction?: (state: IGameState) => number;
+      async?: AsyncMethods;
     }
 
     /**
@@ -13246,23 +12648,10 @@ namespace BloomBeasts {
     // ==================== src\utils\deepClone.ts ====================
 
     /**
-     * Efficient deep cloning utility using structured cloning when available
-     */
-
-    /**
-     * Deep clone an object using the most efficient method available
+     * Deep clone an object using manual cloning for consistency across all platforms
+     * (Avoids structuredClone to ensure compatibility with all environments)
      */
     export function deepClone<T>(obj: T): T {
-      // Use structured cloning if available (Node 17+ and modern browsers)
-      if (typeof structuredClone === 'function') {
-        try {
-          return structuredClone(obj);
-        } catch {
-          // Fall back to manual cloning if structuredClone fails
-        }
-      }
-
-      // Manual deep clone for older environments
       return manualDeepClone(obj);
     }
 
@@ -13276,24 +12665,24 @@ namespace BloomBeasts {
       }
 
       // Handle circular references
-      if (visited.has(obj as object)) {
-        return visited.get(obj as object) as T;
+      if (visited.has(obj as unknown as object)) {
+        return visited.get(obj as unknown as object) as T;
       }
 
       // Handle Date
       if (obj instanceof Date) {
-        return new Date(obj.getTime()) as T;
+        return new Date(obj.getTime()) as unknown as T;
       }
 
       // Handle RegExp
       if (obj instanceof RegExp) {
-        return new RegExp(obj.source, obj.flags) as T;
+        return new RegExp(obj.source, obj.flags) as unknown as T;
       }
 
       // Handle Array
       if (Array.isArray(obj)) {
         const cloned: unknown[] = [];
-        visited.set(obj, cloned as T);
+        visited.set(obj, cloned as unknown as T);
 
         for (let i = 0; i < obj.length; i++) {
           cloned[i] = manualDeepClone(obj[i], visited);
@@ -13305,7 +12694,7 @@ namespace BloomBeasts {
       // Handle Map
       if (obj instanceof Map) {
         const cloned = new Map();
-        visited.set(obj, cloned as T);
+        visited.set(obj, cloned as unknown as T);
 
         obj.forEach((value, key) => {
           cloned.set(
@@ -13320,7 +12709,7 @@ namespace BloomBeasts {
       // Handle Set
       if (obj instanceof Set) {
         const cloned = new Set();
-        visited.set(obj, cloned as T);
+        visited.set(obj, cloned as unknown as T);
 
         obj.forEach(value => {
           cloned.add(manualDeepClone(value, visited));
@@ -13331,7 +12720,7 @@ namespace BloomBeasts {
 
       // Handle plain objects
       const cloned: Record<string, unknown> = {};
-      visited.set(obj as object, cloned as T);
+      visited.set(obj as unknown as object, cloned as unknown as T);
 
       for (const key in obj) {
         if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -13681,8 +13070,8 @@ namespace BloomBeasts {
         const onceHandlers = this.onceListeners.get(event);
 
         const allHandlers = [
-          ...(handlers || []),
-          ...(onceHandlers || []),
+          ...(handlers ? Array.from(handlers) : []),
+          ...(onceHandlers ? Array.from(onceHandlers) : []),
         ];
 
         await Promise.all(
@@ -14100,12 +13489,14 @@ namespace BloomBeasts {
       protected difficulty: AILevel;
       protected thinkingTime: { min: number; max: number };
       protected randomSeed?: string;
+      protected async?: AsyncMethods;
 
       constructor(config: IAIConfig) {
         this.playerId = config.playerId;
         this.difficulty = config.difficulty;
         this.thinkingTime = config.thinkingTime || this.getDefaultThinkingTime(config.difficulty);
         this.randomSeed = config.randomSeed;
+        this.async = config.async;
       }
 
       abstract chooseAction(
@@ -14126,12 +13517,18 @@ namespace BloomBeasts {
 
       /**
        * Simulate thinking delay for better UX
+       * Requires async methods to be provided in config
        */
       protected async simulateThinking(): Promise<void> {
+        if (!this.async) {
+          // No async methods provided - skip delay
+          return Promise.resolve();
+        }
+
         const delay = this.thinkingTime.min +
           Math.random() * (this.thinkingTime.max - this.thinkingTime.min);
 
-        return new Promise(resolve => setTimeout(resolve, delay));
+        return new Promise(resolve => this.async!.setTimeout(resolve, delay));
       }
 
       /**
@@ -14854,20 +14251,337 @@ namespace BloomBeasts {
   }
 
   // Export the namespace as a module
-  { Turbo };
 
   // Make Turbo available globally
   if (typeof globalThis !== 'undefined') {
     (globalThis as any).Turbo = Turbo;
   }
 
-  // ==================== bloombeasts/screens/battle/engine/types/index.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\types\actions.ts ====================
+
+  /**
+   * Typed Action System
+   *
+   * Replaces string-based action parsing with proper TypeScript discriminated unions.
+   * This provides type safety, better IDE support, and eliminates string parsing bugs.
+   *
+   * Migration from:
+   *   action = 'play-card-0-target-2'
+   * To:
+   *   action = { type: 'play-card', cardIndex: 0, targetIndex: 2 }
+   */
+
+
+  /**
+   * Base action that all battle actions extend
+   */
+  export interface BaseBattleAction {
+    type: string;
+    playerId?: string;
+    timestamp?: number;
+  }
+
+  /**
+   * Play a card from hand
+   */
+  export interface PlayCardAction extends BaseBattleAction {
+    type: 'play-card';
+    cardIndex: number;
+    cardId?: string;
+    targetIndex?: number; // For targeted cards like Magic
+    position?: number; // For beast placement
+  }
+
+  /**
+   * Attack with a beast
+   */
+  export interface AttackBeastAction extends BaseBattleAction {
+    type: 'attack-beast';
+    attackerId: string;
+    attackerIndex?: number;
+    targetId?: string;
+    targetIndex?: number;
+  }
+
+  /**
+   * Attack opponent player directly
+   */
+  export interface AttackPlayerAction extends BaseBattleAction {
+    type: 'attack-player';
+    attackerId: string;
+    attackerIndex?: number;
+  }
+
+  /**
+   * Use a beast's ability
+   */
+  export interface UseAbilityAction extends BaseBattleAction {
+    type: 'use-ability';
+    beastIndex: number;      // Slot index (0-2) - always reliable
+    abilityIndex: number;
+    targetId?: string;
+    targetIndex?: number;
+  }
+
+  /**
+   * End the current turn
+   */
+  export interface EndTurnAction extends BaseBattleAction {
+    type: 'end-turn';
+  }
+
+  /**
+   * Forfeit the battle
+   */
+  export interface ForfeitAction extends BaseBattleAction {
+    type: 'forfeit';
+  }
+
+  /**
+   * Timeout - player ran out of time
+   */
+  export interface TimeoutAction extends BaseBattleAction {
+    type: 'timeout';
+    timedOutPlayerId?: string; // Which player actually timed out
+  }
+
+  /**
+   * Auto-attack with all available beasts
+   */
+  export interface AutoAttackAllAction extends BaseBattleAction {
+    type: 'auto-attack-all';
+  }
+
+  /**
+   * Discriminated union of all possible battle actions
+   */
+  export type BattleAction =
+    | PlayCardAction
+    | AttackBeastAction
+    | AttackPlayerAction
+    | UseAbilityAction
+    | EndTurnAction
+    | ForfeitAction
+    | TimeoutAction
+    | AutoAttackAllAction;
+
+  /**
+   * Action creator functions for type-safe action construction
+   */
+  export const BattleActions = {
+    playCard: (cardIndex: number, options?: {
+      cardId?: string;
+      targetIndex?: number;
+      position?: number;
+      playerId?: string;
+    }): PlayCardAction => ({
+      type: 'play-card',
+      cardIndex,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    attackBeast: (attackerId: string, options?: {
+      attackerIndex?: number;
+      targetId?: string;
+      targetIndex?: number;
+      playerId?: string;
+    }): AttackBeastAction => ({
+      type: 'attack-beast',
+      attackerId,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    attackPlayer: (attackerId: string, options?: {
+      attackerIndex?: number;
+      playerId?: string;
+    }): AttackPlayerAction => ({
+      type: 'attack-player',
+      attackerId,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    useAbility: (beastIndex: number, abilityIndex: number, options?: {
+      targetId?: string;
+      targetIndex?: number;
+      playerId?: string;
+    }): UseAbilityAction => ({
+      type: 'use-ability',
+      beastIndex,
+      abilityIndex,
+      ...options,
+      timestamp: Date.now(),
+    }),
+
+    endTurn: (playerId?: string): EndTurnAction => ({
+      type: 'end-turn',
+      playerId,
+      timestamp: Date.now(),
+    }),
+
+    forfeit: (playerId?: string): ForfeitAction => ({
+      type: 'forfeit',
+      playerId,
+      timestamp: Date.now(),
+    }),
+
+    timeout: (playerId?: string): TimeoutAction => ({
+      type: 'timeout',
+      playerId,
+      timestamp: Date.now(),
+    }),
+
+    autoAttackAll: (playerId?: string): AutoAttackAllAction => ({
+      type: 'auto-attack-all',
+      playerId,
+      timestamp: Date.now(),
+    }),
+  };
+
+  /**
+   * Parse legacy string-based actions into typed actions
+   * This function helps migrate from old string format to new typed format.
+   *
+   * Examples:
+   *   'play-card-0' -> { type: 'play-card', cardIndex: 0 }
+   *   'play-card-0-target-2' -> { type: 'play-card', cardIndex: 0, targetIndex: 2 }
+   *   'attack-beast-1-2' -> { type: 'attack-beast', attackerIndex: 1, targetIndex: 2 }
+   *   'end-turn' -> { type: 'end-turn' }
+   */
+  export function parseActionString(actionStr: string, playerId?: string): BattleAction | null {
+    // End turn
+    if (actionStr === 'end-turn') {
+      return BattleActions.endTurn(playerId);
+    }
+
+    // Forfeit
+    if (actionStr === 'forfeit') {
+      return BattleActions.forfeit(playerId);
+    }
+
+    // Auto attack all
+    if (actionStr === 'auto-attack-all') {
+      return BattleActions.autoAttackAll(playerId);
+    }
+
+    // Play card: 'play-card-0' or 'play-card-0-target-2'
+    if (actionStr.startsWith('play-card-')) {
+      const parts = actionStr.substring('play-card-'.length).split('-target-');
+      const cardIndex = parseInt(parts[0], 10);
+      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
+
+      if (isNaN(cardIndex)) return null;
+
+      return BattleActions.playCard(cardIndex, { targetIndex, playerId });
+    }
+
+    // Attack beast: 'attack-beast-1-2' (attacker index 1, target index 2)
+    if (actionStr.startsWith('attack-beast-')) {
+      const parts = actionStr.substring('attack-beast-'.length).split('-');
+      if (parts.length >= 2) {
+        const attackerIndex = parseInt(parts[0], 10);
+        const targetIndex = parseInt(parts[1], 10);
+
+        if (isNaN(attackerIndex) || isNaN(targetIndex)) return null;
+
+        return BattleActions.attackBeast(attackerIndex.toString(), {
+          attackerIndex,
+          targetIndex,
+          playerId,
+        });
+      }
+    }
+
+    // Attack player: 'attack-player-1' (attacker index 1)
+    if (actionStr.startsWith('attack-player-')) {
+      const attackerIndex = parseInt(actionStr.substring('attack-player-'.length), 10);
+
+      if (isNaN(attackerIndex)) return null;
+
+      return BattleActions.attackPlayer(attackerIndex.toString(), {
+        attackerIndex,
+        playerId,
+      });
+    }
+
+    // Use ability: 'use-ability-1' or 'use-ability-1-target-2'
+    if (actionStr.startsWith('use-ability-')) {
+      const parts = actionStr.substring('use-ability-'.length).split('-target-');
+      const beastIndex = parseInt(parts[0], 10);
+      const targetIndex = parts.length > 1 ? parseInt(parts[1], 10) : undefined;
+
+      if (isNaN(beastIndex)) return null;
+
+      return BattleActions.useAbility(beastIndex, 0, {
+        targetIndex,
+        playerId,
+      });
+    }
+
+    // Unknown action
+    Logger.warn(`[ActionParser] Unknown action string: ${actionStr}`);
+    return null;
+  }
+
+  /**
+   * Convert typed action back to legacy string format
+   * Used during migration to maintain compatibility with old code.
+   */
+  export function actionToString(action: BattleAction): string {
+    switch (action.type) {
+      case 'play-card':
+        if (action.targetIndex !== undefined) {
+          return `play-card-${action.cardIndex}-target-${action.targetIndex}`;
+        }
+        return `play-card-${action.cardIndex}`;
+
+      case 'attack-beast':
+        return `attack-beast-${action.attackerIndex ?? action.attackerId}-${action.targetIndex ?? action.targetId}`;
+
+      case 'attack-player':
+        return `attack-player-${action.attackerIndex ?? action.attackerId}`;
+
+      case 'use-ability':
+        if (action.targetIndex !== undefined) {
+          return `use-ability-${action.beastIndex}-target-${action.targetIndex}`;
+        }
+        return `use-ability-${action.beastIndex}`;
+
+      case 'end-turn':
+        return 'end-turn';
+
+      case 'forfeit':
+        return 'forfeit';
+
+      case 'timeout':
+        return 'timeout';
+
+      case 'auto-attack-all':
+        return 'auto-attack-all';
+
+      default:
+        // Exhaustiveness check
+        const exhaustive: never = action;
+        throw new Error(`Unknown action type: ${(exhaustive as any).type}`);
+    }
+  }
+
+  /**
+   * Type guard to check if an object is a valid BattleAction
+   */
+  export function isBattleAction(obj: any): obj is BattleAction {
+    return obj && typeof obj === 'object' && typeof obj.type === 'string';
+  }
+
+  // ==================== bloombeasts\screens\battle\engine\types\index.ts ====================
 
   /**
    * Battle Engine Types - Re-exports
    */
 
-  // ==================== bloombeasts/common/engine/utils/random.ts ====================
+  // ==================== bloombeasts\common\engine\utils\random.ts ====================
 
   /**
    * Random Utilities
@@ -14888,7 +14602,7 @@ namespace BloomBeasts {
     return array;
   }
 
-  // ==================== bloombeasts/screens/battle/engine/actions/ActionHandler.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\actions\ActionHandler.ts ====================
 
   /**
    * Action Handler Interface
@@ -14936,6 +14650,11 @@ namespace BloomBeasts {
      * Process magic card effects
      */
     processMagicCard?: (card: MagicCard, state: Turbo.IGameState<BloomBeastsState>) => void;
+
+    /**
+     * Check and trigger traps based on action type
+     */
+    checkTraps?: (state: BloomBeastsState, playerId: string, triggerType: string, trapContext?: any) => void;
   }
 
   /**
@@ -15089,10 +14808,10 @@ namespace BloomBeasts {
 
     /**
      * Helper: Clone state (deep copy)
-     * Uses structuredClone for proper handling of Sets, Maps, Dates, etc.
+     * Uses Turbo.deepClone for proper handling of Sets, Maps, Dates, etc.
      */
     protected cloneState(state: Turbo.IGameState<BloomBeastsState>): Turbo.IGameState<BloomBeastsState> {
-      return structuredClone(state) as Turbo.IGameState<BloomBeastsState>;
+      return Turbo.deepClone(state);
     }
 
     /**
@@ -15112,7 +14831,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/actions/DrawCardActionHandler.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\actions\DrawCardActionHandler.ts ====================
 
   /**
    * Draw Card Action Handler
@@ -15185,7 +14904,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/actions/PlayCardActionHandler.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\actions\PlayCardActionHandler.ts ====================
 
   /**
    * Play Card Action Handler
@@ -15213,7 +14932,7 @@ namespace BloomBeasts {
       const player = state.gameData.players[playerIndex];
 
       // Find the card in hand
-      const card = player.hand.find(c => c.id === actionData.cardId);
+      const card = player.hand.find(c => cardMatchesId(c, actionData.cardId));
       if (!card) {
         return { valid: false, reason: 'Card not in hand' };
       }
@@ -15282,7 +15001,7 @@ namespace BloomBeasts {
       const player = newState.gameData.players[playerIndex];
 
       // Find and remove card from hand
-      const cardIndex = player.hand.findIndex(c => c.id === actionData.cardId);
+      const cardIndex = player.hand.findIndex(c => cardMatchesId(c, actionData.cardId));
       if (cardIndex === -1) {
         throw new Error('Card not found in hand');
       }
@@ -15340,9 +15059,24 @@ namespace BloomBeasts {
       // Update turn tracking
       newState.gameData.currentTurnActions.cardsPlayed++;
 
+      // Check for traps BEFORE processing card effects
+      if (context?.checkTraps) {
+        let trapTriggerType = '';
+        if (card.type === CardType.Beast) trapTriggerType = 'beast_play';
+        else if (card.type === 'Magic') trapTriggerType = 'magic_play';
+        else if (card.type === 'Habitat') trapTriggerType = 'habitat_play';
+
+        if (trapTriggerType) {
+          context.checkTraps(newState.gameData, playerId, trapTriggerType, { card });
+        }
+      }
+
       // Process OnSummon triggers for Beast cards
       if (card.type === CardType.Beast && context?.processTriggers) {
         context.processTriggers('on_action', newState, { action: 'summon', card });
+
+        // Notify other allies about this summon (for OnAllySummon triggers)
+        context.processTriggers('on_action', newState, { action: 'ally_summon', summonedCard: card });
       }
 
       // Process WhileOnField effects for cards that have them
@@ -15371,7 +15105,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/actions/AttackActionHandler.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\actions\AttackActionHandler.ts ====================
 
   /**
    * Attack Action Handler
@@ -15424,7 +15158,7 @@ namespace BloomBeasts {
       const opponentField = playerIndex === 0 ? state.gameData.field.player2 : state.gameData.field.player1;
 
       // Find the slot index of the attacking beast
-      const slotIndex = currentField.beasts.findIndex(b => b?.id === actionData.cardId);
+      const slotIndex = currentField.beasts.findIndex(b => b && cardMatchesId(b, actionData.cardId));
       if (slotIndex === -1) {
         return { valid: false, reason: 'Attacker not found on field' };
       }
@@ -15435,7 +15169,7 @@ namespace BloomBeasts {
 
       if (opponentBeast) {
         // Beast in opposite slot - must attack that beast
-        validTargetId = opponentBeast.id;
+        validTargetId = getCardIdentifier(opponentBeast);
       } else {
         // No beast in opposite slot - must attack player
         validTargetId = opponent.id;
@@ -15476,9 +15210,12 @@ namespace BloomBeasts {
           throw new Error('Target not found');
         }
 
-        // Both creatures deal damage to each other
-        target.currentHealth -= attacker.currentAttack;
-        attacker.currentHealth -= target.currentAttack;
+        // Both creatures deal damage to each other (with damage modifiers applied)
+        const damageToTarget = calculateDamage(attacker.currentAttack, attacker, target);
+        const damageToAttacker = calculateDamage(target.currentAttack, target, attacker);
+
+        target.currentHealth -= damageToTarget;
+        attacker.currentHealth -= damageToAttacker;
 
         // Check for defeats
         if (target.currentHealth <= 0) {
@@ -15516,7 +15253,7 @@ namespace BloomBeasts {
     ): RuntimeBeast | null {
       for (const field of [state.gameData.field.player1, state.gameData.field.player2]) {
         for (const beast of field.beasts) {
-          if (beast?.id === beastId) {
+          if (beast && cardMatchesId(beast, beastId)) {
             return beast;
           }
         }
@@ -15526,25 +15263,29 @@ namespace BloomBeasts {
 
     /**
      * Remove a defeated beast from the field and add to graveyard
+     * NOTE: Does NOT reposition beasts - that happens at end of turn
      */
     private destroyBeast(beast: RuntimeBeast, state: Turbo.IGameState<BloomBeastsState>): void {
       // Remove from field
       for (let playerIdx = 0; playerIdx < 2; playerIdx++) {
         const field = playerIdx === 0 ? state.gameData.field.player1 : state.gameData.field.player2;
-        const index = field.beasts.findIndex(b => b?.id === beast.id);
+        const beastId = getCardIdentifier(beast);
+        const index = field.beasts.findIndex(b => b && cardMatchesId(b, beastId));
         if (index !== -1) {
-          field.beasts[index] = null;
-
-          // Add to graveyard
+          // Add to graveyard before removing
           const owner = state.gameData.players[playerIdx];
           owner.graveyard.push(beast);
+
+          // Set to null in place - repositioning happens at end of turn
+          field.beasts[index] = null;
+
           break;
         }
       }
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/actions/EndTurnActionHandler.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\actions\EndTurnActionHandler.ts ====================
 
   /**
    * End Turn Action Handler
@@ -15588,6 +15329,9 @@ namespace BloomBeasts {
 
       // Clear temporary effects
       this.clearTemporaryEffects(newState);
+
+      // Reposition beasts (remove dead beasts and shift remaining beasts left)
+      this.repositionFields(newState);
 
       // Switch to next player
       const nextPlayerIndex = (currentPlayerIndex + 1) % players.length;
@@ -15666,9 +15410,28 @@ namespace BloomBeasts {
         }
       }
     }
+
+    /**
+     * Reposition beasts on both fields
+     * Removes null entries (dead beasts) and shifts remaining beasts left
+     */
+    private repositionFields(state: Turbo.IGameState<BloomBeastsState>): void {
+      for (const field of [state.gameData.field.player1, state.gameData.field.player2]) {
+        // Filter out nulls and collect living beasts
+        const livingBeasts = field.beasts.filter(beast => beast !== null);
+
+        // Clear the array
+        field.beasts = [null, null, null];
+
+        // Place living beasts starting from left
+        for (let i = 0; i < livingBeasts.length; i++) {
+          field.beasts[i] = livingBeasts[i];
+        }
+      }
+    }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/actions/TimeoutActionHandler.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\actions\TimeoutActionHandler.ts ====================
 
   /**
    * Timeout Action Handler
@@ -15726,7 +15489,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/actions/ForfeitActionHandler.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\actions\ForfeitActionHandler.ts ====================
 
   /**
    * Forfeit Action Handler
@@ -15780,13 +15543,13 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/actions/index.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\actions\index.ts ====================
 
   /**
    * Action Handlers - Exports all game action handlers
    */
 
-  // ==================== bloombeasts/screens/battle/engine/core/WinConditionChecker.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\core\WinConditionChecker.ts ====================
 
   /**
    * WinConditionChecker - Determines battle end conditions and winners
@@ -15896,7 +15659,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/BloomBeastsGame.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\BloomBeastsGame.ts ====================
 
   /**
    * BloomBeasts game implementation using the TURBO library
@@ -15925,8 +15688,8 @@ namespace BloomBeasts {
       state: Turbo.IGameState<TState>,
       context?: TriggerContext
     ): { success: boolean; newState?: Turbo.IGameState<TState> } {
-      // Clone state to avoid mutating the original - use structuredClone to preserve Sets, Maps, etc.
-      const newState = structuredClone(state) as Turbo.IGameState<TState>;
+      // Clone state to avoid mutating the original - use Turbo.deepClone to preserve Sets, Maps, etc.
+      const newState = Turbo.deepClone(state);
       const bloomState = newState.gameData as unknown as BloomBeastsState;
 
       // Handle OnSummon triggers
@@ -15938,9 +15701,15 @@ namespace BloomBeasts {
           for (const ability of card.abilities) {
             // Type guard: check if this is a StructuredAbility with trigger and effects
             if ('trigger' in ability && ability.trigger === 'OnSummon' && 'effects' in ability && ability.effects) {
-              // Process each effect
+              // Process each effect (check conditions on individual effects)
               for (const effect of ability.effects) {
-                this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId);
+                // Check effect condition if present
+                if (!effect.condition || this.evaluateCondition(effect.condition, card, bloomState, newState.turnInfo!.currentPlayerId)) {
+                  this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId, {
+                    sourceCard: card,
+                    playedCard: card
+                  });
+                }
               }
             }
           }
@@ -15958,7 +15727,106 @@ namespace BloomBeasts {
             if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
               // Process each effect
               for (const effect of ability.effects) {
-                this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId);
+                // Check condition if present
+                if (!effect.condition || this.evaluateCondition(effect.condition, card, bloomState, newState.turnInfo!.currentPlayerId)) {
+                  this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId, {
+                    sourceCard: card
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Handle OnAllySummon triggers (notify other allies that a beast was summoned)
+      if (timing === TriggerTiming.ON_ACTION && context?.action === 'ally_summon' && context.summonedCard) {
+        const summonedCard = context.summonedCard as RuntimeCard;
+        const currentPlayerIndex = bloomState.players.findIndex(p => p.id === newState.turnInfo!.currentPlayerId);
+        const field = currentPlayerIndex === 0 ? bloomState.field.player1 : bloomState.field.player2;
+
+        // Check all allied beasts (except the summoned one) for OnAllySummon abilities
+        for (const beast of field.beasts) {
+          if (beast && 'id' in summonedCard && beast.id !== summonedCard.id && beast.abilities) {
+            for (const ability of beast.abilities) {
+              if ('trigger' in ability && ability.trigger === 'OnAllySummon' && 'effects' in ability && ability.effects) {
+                for (const effect of ability.effects) {
+                  // Check condition on the summoned card (e.g., affinity match)
+                  if (!effect.condition || this.evaluateCondition(effect.condition, summonedCard, bloomState, newState.turnInfo!.currentPlayerId)) {
+                    this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId, {
+                      sourceCard: beast,
+                      summonedCard: summonedCard
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Handle OnAttack triggers
+      if (timing === TriggerTiming.ON_ACTION && context?.action === 'attack' && context.card) {
+        const attackerCard = context.card;
+
+        // Check attacker for OnAttack abilities
+        if (attackerCard.abilities && attackerCard.abilities.length > 0) {
+          for (const ability of attackerCard.abilities) {
+            if ('trigger' in ability && ability.trigger === 'OnAttack' && 'effects' in ability && ability.effects) {
+              for (const effect of ability.effects) {
+                // Check condition if present
+                if (!effect.condition || this.evaluateCondition(effect.condition, attackerCard, bloomState, newState.turnInfo!.currentPlayerId)) {
+                  this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId, {
+                    sourceCard: attackerCard,
+                    targetCard: context.targetCard,
+                    attackerCard: attackerCard
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Handle OnDamage triggers
+      if (timing === TriggerTiming.ON_ACTION && context?.action === 'damage' && context.card) {
+        const damagedCard = context.card;
+
+        // Check damaged card for OnDamage abilities
+        if (damagedCard.abilities && damagedCard.abilities.length > 0) {
+          for (const ability of damagedCard.abilities) {
+            if ('trigger' in ability && ability.trigger === 'OnDamage' && 'effects' in ability && ability.effects) {
+              for (const effect of ability.effects) {
+                // Check condition if present
+                if (!effect.condition || this.evaluateCondition(effect.condition, damagedCard, bloomState, newState.turnInfo!.currentPlayerId)) {
+                  this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId, {
+                    sourceCard: damagedCard,
+                    attackerCard: context.attackerCard,
+                    damagedCard: damagedCard
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Handle OnDestroy triggers
+      if (timing === TriggerTiming.ON_ACTION && context?.action === 'destroy' && context.card) {
+        const destroyedCard = context.card;
+
+        // Check destroyed card for OnDestroy abilities
+        if (destroyedCard.abilities && destroyedCard.abilities.length > 0) {
+          for (const ability of destroyedCard.abilities) {
+            if ('trigger' in ability && ability.trigger === 'OnDestroy' && 'effects' in ability && ability.effects) {
+              for (const effect of ability.effects) {
+                // Check condition if present
+                if (!effect.condition || this.evaluateCondition(effect.condition, destroyedCard, bloomState, newState.turnInfo!.currentPlayerId)) {
+                  this.processEffect(effect, bloomState, newState.turnInfo!.currentPlayerId, {
+                    sourceCard: destroyedCard,
+                    destroyedCard: destroyedCard
+                  });
+                }
               }
             }
           }
@@ -15979,9 +15847,16 @@ namespace BloomBeasts {
       return { success: true, newState };
     }
 
-    private processEffect(effect: any, state: BloomBeastsState, currentPlayerId: string): void {
+    private processEffect(
+      effect: any,
+      state: BloomBeastsState,
+      currentPlayerId: string,
+      context?: any
+    ): void {
       const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
       const currentPlayer = state.players[currentPlayerIndex];
+      const opponentIndex = 1 - currentPlayerIndex;
+      const opponent = state.players[opponentIndex];
 
       switch (effect.type) {
         case 'draw-cards':
@@ -15997,53 +15872,567 @@ namespace BloomBeasts {
 
         case 'modify-stats':
           // Modify stats of target beasts
-          this.processStatModification(effect, state, currentPlayerIndex);
+          this.processStatModification(effect, state, currentPlayerId, context);
           break;
 
         case 'gain-resource':
-          // Gain resources (already handled in processMagicCard)
+          // Gain resources
           if (effect.resource === 'energy') {
             const value = effect.value || 0;
             currentPlayer.energy = Math.min(currentPlayer.energy + value, 10); // maxEnergy = 10
           }
           break;
+
+        case 'deal-damage': {
+          // Deal damage to targets
+          const targets = this.resolveTargets(effect.target, state, currentPlayerId, context);
+          const damageValue = typeof effect.value === 'number' ? effect.value :
+                             effect.value === 'attack-value' && context?.sourceCard ?
+                             context.sourceCard.currentAttack : 0;
+
+          for (const target of targets) {
+            if ('currentHealth' in target) {
+              // Target is a beast
+              target.currentHealth = Math.max(0, target.currentHealth - damageValue);
+              // Check if beast should be destroyed
+              if (target.currentHealth <= 0) {
+                this.destroyBeast(target, state);
+              }
+            } else if ('health' in target) {
+              // Target is a player
+              target.health = Math.max(0, target.health - damageValue);
+            }
+          }
+          break;
+        }
+
+        case 'heal': {
+          // Heal targets
+          const targets = this.resolveTargets(effect.target, state, currentPlayerId, context);
+          for (const target of targets) {
+            if ('currentHealth' in target && 'maxHealth' in target) {
+              // Target is a beast
+              const healValue = effect.value === 'full' ? target.maxHealth : effect.value;
+              target.currentHealth = Math.min(target.maxHealth, target.currentHealth + healValue);
+            } else if ('health' in target && 'maxHealth' in target) {
+              // Target is a player
+              const healValue = effect.value === 'full' ? target.maxHealth : effect.value;
+              target.health = Math.min(target.maxHealth, target.health + healValue);
+            }
+          }
+          break;
+        }
+
+        case 'retaliation': {
+          // Deal retaliatory damage to attacker
+          const targets = this.resolveTargets(effect.target, state, currentPlayerId, context);
+          const damageValue = effect.value === 'reflected' && context?.damagedCard ?
+                             context.damagedCard.currentHealth : effect.value;
+
+          for (const target of targets) {
+            if ('currentHealth' in target) {
+              target.currentHealth = Math.max(0, target.currentHealth - damageValue);
+              if (target.currentHealth <= 0) {
+                this.destroyBeast(target, state);
+              }
+            }
+          }
+          break;
+        }
+
+        case 'damage-reduction':
+          // Damage reduction is handled during combat, not here
+          // We'll implement this in Phase 6 (Attack Modifications)
+          break;
+
+        case 'remove-summoning-sickness': {
+          // Remove summoning sickness from targets
+          const targets = this.resolveTargets(effect.target, state, currentPlayerId, context);
+          for (const target of targets) {
+            if ('summoningSickness' in target) {
+              target.summoningSickness = false;
+            }
+          }
+          break;
+        }
+
+        case 'cannot-be-targeted':
+          // Cannot be targeted is a passive effect checked during targeting
+          // We'll track this in a future phase
+          break;
+
+        case 'attack-modification':
+          // Attack modifications are handled during combat
+          // We'll implement this in Phase 6
+          break;
+
+        case 'prevent-attack': {
+          // Prevent beast from attacking
+          const targets = this.resolveTargets(effect.target, state, currentPlayerId, context);
+          for (const target of targets) {
+            if ('preventions' in target) {
+              if (!target.preventions) {
+                target.preventions = [];
+              }
+              target.preventions.push({
+                type: 'prevent-attack',
+                duration: effect.duration || 'permanent',
+                source: context?.sourceCard?.id || 'unknown'
+              });
+            }
+          }
+          break;
+        }
+
+        case 'prevent-abilities': {
+          // Prevent beast from using abilities
+          const targets = this.resolveTargets(effect.target, state, currentPlayerId, context);
+          for (const target of targets) {
+            if ('preventions' in target) {
+              if (!target.preventions) {
+                target.preventions = [];
+              }
+              target.preventions.push({
+                type: 'prevent-abilities',
+                duration: effect.duration || 'permanent',
+                source: context?.sourceCard?.id || 'unknown'
+              });
+            }
+          }
+          break;
+        }
+
+        case 'return-to-hand': {
+          // Return units to hand
+          const targets = this.resolveTargets(effect.target, state, currentPlayerId, context);
+          const numToReturn = effect.value || targets.length;
+
+          for (let i = 0; i < Math.min(numToReturn, targets.length); i++) {
+            const target = targets[i];
+            if ('id' in target && 'type' in target && 'instanceId' in target) {
+              // Target is a RuntimeCard
+              const field = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
+              const beastIndex = field.beasts.findIndex(b => b && cardsMatch(b, target));
+              if (beastIndex !== -1) {
+                field.beasts[beastIndex] = null;
+                // Add to hand if space available
+                if (currentPlayer.hand.length < currentPlayer.maxHandSize) {
+                  currentPlayer.hand.push(target as RuntimeCard);
+                } else {
+                  // Discard if hand is full
+                  currentPlayer.graveyard.push(target as RuntimeCard);
+                }
+              }
+            }
+          }
+          break;
+        }
+
+        case 'destroy': {
+          // Destroy target units
+          const targets = this.resolveTargets(effect.target, state, currentPlayerId, context);
+          for (const target of targets) {
+            if ('currentHealth' in target) {
+              this.destroyBeast(target, state);
+            }
+          }
+          break;
+        }
+
+        case 'discard-cards': {
+          // Discard cards from hand
+          const numToDiscard = Math.min(effect.value || 1, currentPlayer.hand.length);
+          for (let i = 0; i < numToDiscard; i++) {
+            const card = currentPlayer.hand.pop();
+            if (card) {
+              currentPlayer.graveyard.push(card);
+            }
+          }
+          break;
+        }
+
+        case 'nullify-effect':
+          // Nullify effect prevents the card from being played
+          // This is handled in trap activation
+          break;
+
+        case 'temporary-hp': {
+          // Grant temporary HP (shield)
+          const targets = this.resolveTargets(effect.target, state, currentPlayerId, context);
+          for (const target of targets) {
+            if ('temporaryHP' in target) {
+              target.temporaryHP = (target.temporaryHP || 0) + effect.value;
+            }
+          }
+          break;
+        }
+
+        case 'immunity':
+        case 'swap-positions':
+        case 'move-unit':
+        case 'copy-ability':
+        case 'redirect-damage':
+          // These are advanced effects that can be implemented later
+          console.warn(`[EffectSystem] Effect type '${effect.type}' not yet implemented`);
+          break;
+
+        default:
+          console.warn(`[EffectSystem] Unknown effect type: ${effect.type}`);
       }
     }
 
-    private processStatModification(effect: any, state: BloomBeastsState, currentPlayerIndex: number): void {
+    /**
+     * Remove a beast from the field and add to graveyard
+     */
+    private destroyBeast(beast: RuntimeBeast, state: BloomBeastsState): void {
+      // Find which field and remove
+      for (let playerIdx = 0; playerIdx < 2; playerIdx++) {
+        const field = playerIdx === 0 ? state.field.player1 : state.field.player2;
+        const index = field.beasts.findIndex(b => b && cardsMatch(b, beast));
+        if (index !== -1) {
+          field.beasts[index] = null;
+          // Add to graveyard
+          const owner = state.players[playerIdx];
+          owner.graveyard.push(beast);
+          break;
+        }
+      }
+    }
+
+    /**
+     * Evaluate whether a condition is met
+     */
+    private evaluateCondition(condition: any, target: any, state: BloomBeastsState, currentPlayerId: string): boolean {
+      if (!condition) return true; // No condition means always true
+
+      const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
       const field = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
-      const targets = this.resolveTargets(effect.target, field, state);
+
+      switch (condition.type) {
+        case 'health-below':
+          if ('currentHealth' in target) {
+            const comparison = condition.comparison || 'less';
+            const value = condition.value || 0;
+            if (comparison === 'less') return target.currentHealth < value;
+            if (comparison === 'less-equal') return target.currentHealth <= value;
+          }
+          return false;
+
+        case 'health-above':
+          if ('currentHealth' in target) {
+            const comparison = condition.comparison || 'greater';
+            const value = condition.value || 0;
+            if (comparison === 'greater') return target.currentHealth > value;
+            if (comparison === 'greater-equal') return target.currentHealth >= value;
+          }
+          return false;
+
+        case 'cost-below':
+        case 'CostBelow':
+          if ('cost' in target) {
+            return target.cost < (condition.value || 0);
+          }
+          return false;
+
+        case 'cost-above':
+        case 'CostAbove':
+          if ('cost' in target) {
+            return target.cost > (condition.value || 0);
+          }
+          return false;
+
+        case 'affinity-matches':
+        case 'AffinityMatches':
+          if ('affinity' in target) {
+            return target.affinity === condition.value;
+          }
+          return false;
+
+        case 'affinity-not-matches':
+          if ('affinity' in target) {
+            return target.affinity !== condition.value;
+          }
+          return false;
+
+        case 'is-damaged':
+        case 'IsDamaged':
+          if ('currentHealth' in target && 'maxHealth' in target) {
+            return target.currentHealth < target.maxHealth;
+          }
+          return false;
+
+        case 'is-wilting':
+        case 'IsWilting':
+          if ('currentHealth' in target) {
+            return target.currentHealth === 1;
+          }
+          return false;
+
+        case 'turn-count':
+        case 'TurnCount':
+          // Check current turn number
+          return false; // Need to add turn tracking
+
+        case 'units-on-field':
+        case 'UnitsOnField':
+          // Count units on current player's field
+          const unitCount = field.beasts.filter(b => b !== null).length;
+          const comparison = condition.comparison || 'equal';
+          const value = condition.value || 0;
+
+          if (comparison === 'equal' || comparison === 'Equal') return unitCount === value;
+          if (comparison === 'greater' || comparison === 'Greater') return unitCount > value;
+          if (comparison === 'less' || comparison === 'Less') return unitCount < value;
+          if (comparison === 'greater-equal' || comparison === 'GreaterEqual') return unitCount >= value;
+          if (comparison === 'less-equal' || comparison === 'LessEqual') return unitCount <= value;
+          return false;
+
+        case 'resource-available':
+        case 'ResourceAvailable':
+          const currentPlayer = state.players[currentPlayerIndex];
+          if (condition.resource === 'energy') {
+            return currentPlayer.energy >= (condition.value || 0);
+          }
+          return false;
+
+        default:
+          console.warn(`[EffectSystem] Unknown condition type: ${condition.type}`);
+          return true; // Default to true for unknown conditions
+      }
+    }
+
+    private processStatModification(
+      effect: any,
+      state: BloomBeastsState,
+      currentPlayerId: string,
+      context?: any
+    ): void {
+      const targets = this.resolveTargets(effect.target, state, currentPlayerId, context);
 
       for (const target of targets) {
-        if (effect.stat === 'attack' || effect.stat === 'both') {
-          target.currentAttack = Math.max(0, target.currentAttack + effect.value);
-        }
-        if (effect.stat === 'health' || effect.stat === 'both') {
-          target.currentHealth = Math.max(0, target.currentHealth + effect.value);
-          // Also increase maxHealth for permanent buffs
-          if (effect.duration === 'permanent' && effect.value > 0) {
-            target.maxHealth += effect.value;
+        // Only process if target is a beast (has stat properties)
+        if ('currentAttack' in target && 'currentHealth' in target) {
+          if (effect.stat === 'attack' || effect.stat === 'both') {
+            target.currentAttack = Math.max(0, target.currentAttack + effect.value);
+          }
+          if (effect.stat === 'health' || effect.stat === 'both') {
+            target.currentHealth = Math.max(0, target.currentHealth + effect.value);
+            // Also increase maxHealth for permanent buffs
+            if (effect.duration === 'permanent' && effect.value > 0) {
+              target.maxHealth += effect.value;
+            }
           }
         }
       }
     }
 
-    private resolveTargets(targetType: string, field: any, state: BloomBeastsState): RuntimeBeast[] {
-      const targets: RuntimeBeast[] = [];
+    /**
+     * Resolve targets for an ability effect
+     * Returns array of targets (beasts, players, or cards) based on target type
+     */
+    private resolveTargets(
+      targetType: string,
+      state: BloomBeastsState,
+      currentPlayerId: string,
+      context?: {
+        sourceCard?: RuntimeBeast | RuntimeHabitat | RuntimeBuff | RuntimeTrap;
+        attackerCard?: RuntimeBeast;
+        targetCard?: RuntimeBeast | RuntimeCard;
+        damagedCard?: RuntimeBeast;
+        destroyedCard?: RuntimeBeast;
+        playedCard?: RuntimeCard;
+      }
+    ): any[] {
+      const targets: any[] = [];
+      const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
+      const opponentIndex = 1 - currentPlayerIndex;
+      const currentField = currentPlayerIndex === 0 ? state.field.player1 : state.field.player2;
+      const opponentField = currentPlayerIndex === 0 ? state.field.player2 : state.field.player1;
 
       switch (targetType) {
+        case 'self':
+          if (context?.sourceCard) {
+            targets.push(context.sourceCard);
+          }
+          break;
+
         case 'all-allies':
-          // Get all allied beasts on the field
-          for (const beast of field.beasts) {
+          // All allied beasts on the field
+          for (const beast of currentField.beasts) {
             if (beast !== null) {
               targets.push(beast);
             }
           }
           break;
-        case 'self':
-          // Would need context to know which beast is self
+
+        case 'all-enemies':
+          // All enemy beasts on the field
+          for (const beast of opponentField.beasts) {
+            if (beast !== null) {
+              targets.push(beast);
+            }
+          }
           break;
-        // Add more target types as needed
+
+        case 'all-units':
+          // All beasts on both fields
+          for (const beast of currentField.beasts) {
+            if (beast !== null) targets.push(beast);
+          }
+          for (const beast of opponentField.beasts) {
+            if (beast !== null) targets.push(beast);
+          }
+          break;
+
+        case 'adjacent-allies':
+          // Adjacent allied beasts (to sourceCard)
+          if (context?.sourceCard) {
+            const index = currentField.beasts.findIndex(b => b && cardsMatch(b, context.sourceCard!));
+            if (index !== -1) {
+              if (index > 0 && currentField.beasts[index - 1]) {
+                targets.push(currentField.beasts[index - 1]);
+              }
+              if (index < currentField.beasts.length - 1 && currentField.beasts[index + 1]) {
+                targets.push(currentField.beasts[index + 1]);
+              }
+            }
+          }
+          break;
+
+        case 'adjacent-enemies':
+          // Adjacent enemy beasts (opposite to sourceCard)
+          if (context?.sourceCard) {
+            const index = currentField.beasts.findIndex(b => b && cardsMatch(b, context.sourceCard!));
+            if (index !== -1) {
+              if (opponentField.beasts[index]) {
+                targets.push(opponentField.beasts[index]);
+              }
+            }
+          }
+          break;
+
+        case 'other-ally':
+          // Another allied beast (not self)
+          for (const beast of currentField.beasts) {
+            if (beast !== null && beast.id !== context?.sourceCard?.id) {
+              targets.push(beast);
+            }
+          }
+          break;
+
+        case 'random-ally':
+          // Random allied beast
+          const allies = currentField.beasts.filter(b => b !== null);
+          if (allies.length > 0) {
+            const randomIndex = Math.floor(Math.random() * allies.length);
+            targets.push(allies[randomIndex]);
+          }
+          break;
+
+        case 'random-enemy':
+          // Random enemy beast
+          const enemies = opponentField.beasts.filter(b => b !== null);
+          if (enemies.length > 0) {
+            const randomIndex = Math.floor(Math.random() * enemies.length);
+            targets.push(enemies[randomIndex]);
+          }
+          break;
+
+        case 'player':
+          // Current player
+          targets.push(state.players[currentPlayerIndex]);
+          break;
+
+        case 'opponent':
+          // Opponent player
+          targets.push(state.players[opponentIndex]);
+          break;
+
+        case 'attacker':
+          // The beast that attacked (from context)
+          if (context?.attackerCard) {
+            targets.push(context.attackerCard);
+          }
+          break;
+
+        case 'attacked-enemy':
+          // The enemy that was attacked (from context)
+          if (context?.targetCard) {
+            targets.push(context.targetCard);
+          }
+          break;
+
+        case 'damaged-enemies':
+          // All damaged enemy beasts
+          for (const beast of opponentField.beasts) {
+            if (beast !== null && beast.currentHealth < beast.maxHealth) {
+              targets.push(beast);
+            }
+          }
+          break;
+
+        case 'wilting-enemies':
+          // Enemy beasts at 1 HP
+          for (const beast of opponentField.beasts) {
+            if (beast !== null && beast.currentHealth === 1) {
+              targets.push(beast);
+            }
+          }
+          break;
+
+        case 'highest-attack-enemy':
+          // Enemy with highest attack
+          let highestAttack = -1;
+          let highestAttackBeast: RuntimeBeast | null = null;
+          for (const beast of opponentField.beasts) {
+            if (beast !== null && beast.currentAttack > highestAttack) {
+              highestAttack = beast.currentAttack;
+              highestAttackBeast = beast;
+            }
+          }
+          if (highestAttackBeast) {
+            targets.push(highestAttackBeast);
+          }
+          break;
+
+        case 'lowest-health-enemy':
+          // Enemy with lowest health
+          let lowestHealth = Infinity;
+          let lowestHealthBeast: RuntimeBeast | null = null;
+          for (const beast of opponentField.beasts) {
+            if (beast !== null && beast.currentHealth < lowestHealth) {
+              lowestHealth = beast.currentHealth;
+              lowestHealthBeast = beast;
+            }
+          }
+          if (lowestHealthBeast) {
+            targets.push(lowestHealthBeast);
+          }
+          break;
+
+        case 'summoned-unit':
+          // The unit that was just summoned (from context)
+          if (context?.sourceCard) {
+            targets.push(context.sourceCard);
+          }
+          break;
+
+        case 'destroyed-unit':
+          // The unit that was just destroyed (from context)
+          if (context?.destroyedCard) {
+            targets.push(context.destroyedCard);
+          }
+          break;
+
+        case 'played-card':
+          // The card that was just played (for trap responses)
+          if (context?.playedCard) {
+            targets.push(context.playedCard);
+          }
+          break;
+
+        default:
+          console.warn(`[EffectSystem] Unknown target type: ${targetType}`);
       }
 
       return targets;
@@ -16059,7 +16448,12 @@ namespace BloomBeasts {
           for (const ability of beast.abilities) {
             if ('trigger' in ability && ability.trigger === 'OnOwnStartOfTurn' && 'effects' in ability && ability.effects) {
               for (const effect of ability.effects) {
-                this.processEffect(effect, state, currentPlayerId);
+                // Check condition if present
+                if (!effect.condition || this.evaluateCondition(effect.condition, beast, state, currentPlayerId)) {
+                  this.processEffect(effect, state, currentPlayerId, {
+                    sourceCard: beast
+                  });
+                }
               }
             }
           }
@@ -16077,7 +16471,12 @@ namespace BloomBeasts {
           for (const ability of beast.abilities) {
             if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
               for (const effect of ability.effects) {
-                this.processEffect(effect, state, currentPlayerId);
+                // Check condition if present
+                if (!effect.condition || this.evaluateCondition(effect.condition, beast, state, currentPlayerId)) {
+                  this.processEffect(effect, state, currentPlayerId, {
+                    sourceCard: beast
+                  });
+                }
               }
             }
           }
@@ -16089,7 +16488,12 @@ namespace BloomBeasts {
         for (const ability of field.habitat.abilities) {
           if ('trigger' in ability && ability.trigger === 'WhileOnField' && 'effects' in ability && ability.effects) {
             for (const effect of ability.effects) {
-              this.processEffect(effect, state, currentPlayerId);
+              // Check condition if present
+              if (!effect.condition || this.evaluateCondition(effect.condition, field.habitat, state, currentPlayerId)) {
+                this.processEffect(effect, state, currentPlayerId, {
+                  sourceCard: field.habitat
+                });
+              }
             }
           }
         }
@@ -16106,7 +16510,12 @@ namespace BloomBeasts {
           for (const ability of beast.abilities) {
             if ('trigger' in ability && ability.trigger === 'OnOwnEndOfTurn' && 'effects' in ability && ability.effects) {
               for (const effect of ability.effects) {
-                this.processEffect(effect, state, currentPlayerId);
+                // Check condition if present
+                if (!effect.condition || this.evaluateCondition(effect.condition, beast, state, currentPlayerId)) {
+                  this.processEffect(effect, state, currentPlayerId, {
+                    sourceCard: beast
+                  });
+                }
               }
             }
           }
@@ -16117,9 +16526,113 @@ namespace BloomBeasts {
     clearExpiredEffects(state: Turbo.IGameState<TState>): void {
       // Stub implementation - clear temporary effects here
     }
+
+    /**
+     * Check and trigger traps based on action type
+     * Returns list of triggered trap IDs for removal
+     */
+    public checkAndTriggerTraps(
+      state: BloomBeastsState,
+      currentPlayerId: string,
+      triggerType: string,
+      context?: any
+    ): string[] {
+      const triggeredTrapIds: string[] = [];
+      const currentPlayerIndex = state.players.findIndex(p => p.id === currentPlayerId);
+      const opponentIndex = 1 - currentPlayerIndex;
+
+      // Check opponent's traps (traps trigger against the current player's actions)
+      const opponentField = opponentIndex === 0 ? state.field.player1 : state.field.player2;
+
+      for (const trap of opponentField.traps) {
+        if (!trap || !trap.activation) continue;
+
+        let shouldTrigger = false;
+
+        // Check if trap activation matches the trigger type
+        switch (trap.activation.trigger) {
+          case 'OnAttack':
+            shouldTrigger = triggerType === 'attack';
+            break;
+
+          case 'OnBeastPlay':
+            if (triggerType === 'beast_play' && context?.card) {
+              // Check activation condition (e.g., cost threshold)
+              if (trap.activation.condition) {
+                shouldTrigger = this.evaluateCondition(trap.activation.condition, context.card, state, currentPlayerId);
+              } else {
+                shouldTrigger = true;
+              }
+            }
+            break;
+
+          case 'OnMagicPlay':
+            shouldTrigger = triggerType === 'magic_play';
+            break;
+
+          case 'OnHabitatPlay':
+            shouldTrigger = triggerType === 'habitat_play';
+            break;
+
+          case 'OnDestroy':
+            shouldTrigger = triggerType === 'beast_destroyed';
+            break;
+
+          default:
+            console.warn(`[TrapSystem] Unknown trap trigger: ${trap.activation.trigger}`);
+        }
+
+        if (shouldTrigger) {
+          // Trigger trap abilities
+          if (trap.abilities) {
+            for (const ability of trap.abilities) {
+              if ('trigger' in ability && ability.trigger === 'OnSummon' && 'effects' in ability && ability.effects) {
+                for (const effect of ability.effects) {
+                  // Traps are controlled by opponent, so use opponent's player ID
+                  const opponentPlayerId = state.players[opponentIndex].id;
+                  this.processEffect(effect, state, opponentPlayerId, {
+                    sourceCard: trap,
+                    playedCard: context?.card,
+                    attackerCard: context?.attacker,
+                    targetCard: context?.target
+                  });
+                }
+              }
+            }
+          }
+
+          // Mark trap for removal
+          triggeredTrapIds.push(trap.id);
+        }
+      }
+
+      return triggeredTrapIds;
+    }
+
+    /**
+     * Remove triggered traps from the field
+     */
+    public removeTriggeredTraps(state: BloomBeastsState, opponentIndex: number, trapIds: string[]): void {
+      if (trapIds.length === 0) return;
+
+      const opponentField = opponentIndex === 0 ? state.field.player1 : state.field.player2;
+      const opponent = state.players[opponentIndex];
+
+      // Remove traps and add to graveyard
+      opponentField.traps = opponentField.traps.filter(trap => {
+        if (trap && trapIds.includes(trap.id)) {
+          opponent.graveyard.push(trap);
+          return false;
+        }
+        return true;
+      });
+    }
   }
 
   // Types are defined in ./types.ts to avoid circular dependencies
+  // Note: Export statements removed for namespace bundling - types are available via imports
+  // export type { BloomBeastsState, BloomBeastsActionData, BloomBeastsPlayer, RuntimeBeast, RuntimeCard } from './types';
+  // export { BloomBeastsActionType } from './types';
 
   /**
    * BloomBeasts game configuration
@@ -16299,6 +16812,14 @@ namespace BloomBeasts {
           processMagicCard: (card: MagicCard, newState: Turbo.IGameState<BloomBeastsState>) => {
             this.processMagicCard(card, newState);
           },
+          checkTraps: (state: BloomBeastsState, playerId: string, triggerType: string, trapContext?: any) => {
+            const triggeredTrapIds = this.effectSystem.checkAndTriggerTraps(state, playerId, triggerType, trapContext);
+            if (triggeredTrapIds.length > 0) {
+              const playerIndex = state.players.findIndex(p => p.id === playerId);
+              const opponentIndex = 1 - playerIndex;
+              this.effectSystem.removeTriggeredTraps(state, opponentIndex, triggeredTrapIds);
+            }
+          },
         };
 
         // Execute the action - handler returns full result with events
@@ -16389,19 +16910,22 @@ namespace BloomBeasts {
       // Attack actions
       const field = this.getCurrentPlayerIndex(state) === 0 ? state.gameData!.field.player1 : state.gameData!.field.player2;
       field.beasts.forEach(beast => {
-        if (beast && !beast.summoningSickness && !state.gameData!.currentTurnActions.hasAttacked.has(beast.id)) {
-          const targets = this.getValidAttackTargets(beast, state);
-          targets.forEach(targetId => {
-            actions.push({
-              type: 'game_action',
-              playerId: currentPlayer.id,
-              data: {
-                type: BloomBeastsActionType.ATTACK,
-                cardId: beast.id,
-                targetId,
-              },
+        if (beast && !beast.summoningSickness) {
+          const beastId = getCardIdentifier(beast);
+          if (!state.gameData!.currentTurnActions.hasAttacked.has(beastId)) {
+            const targets = this.getValidAttackTargets(beast, state);
+            targets.forEach(targetId => {
+              actions.push({
+                type: 'game_action',
+                playerId: currentPlayer.id,
+                data: {
+                  type: BloomBeastsActionType.ATTACK,
+                  cardId: beastId,
+                  targetId,
+                },
+              });
             });
-          });
+          }
         }
       });
 
@@ -16492,7 +17016,7 @@ namespace BloomBeasts {
     private findBeastOnField(beastId: string, state: Turbo.IGameState<BloomBeastsState>): RuntimeBeast | null {
       for (const field of [state.gameData!.field.player1, state.gameData!.field.player2]) {
         for (const beast of field.beasts) {
-          if (beast?.id === beastId) {
+          if (beast && cardMatchesId(beast, beastId)) {
             return beast;
           }
         }
@@ -16507,7 +17031,7 @@ namespace BloomBeasts {
       const opponentField = currentPlayerIndex === 0 ? state.gameData!.field.player2 : state.gameData!.field.player1;
 
       // Find the slot index of the attacking beast
-      const slotIndex = currentField.beasts.findIndex(b => b?.id === beast.id);
+      const slotIndex = currentField.beasts.findIndex(b => b && cardsMatch(b, beast));
       if (slotIndex === -1) {
         return targets; // Beast not found on field
       }
@@ -16516,7 +17040,7 @@ namespace BloomBeasts {
       const opponentBeast = opponentField.beasts[slotIndex];
       if (opponentBeast) {
         // Attack the beast in the opposite slot
-        targets.push(opponentBeast.id);
+        targets.push(getCardIdentifier(opponentBeast));
       } else {
         // No beast in opposite slot, attack the player
         const opponentPlayer = state.gameData!.players[1 - currentPlayerIndex];
@@ -16597,7 +17121,10 @@ namespace BloomBeasts {
     return new Turbo.GameController(rules);
   }
 
-  // ==================== bloombeasts/screens/battle/engine/BloomBeastsAI.ts ====================
+  // Export types for regular module bundling (web deployment)
+  // Note: These exports are fine for namespace bundling too
+
+  // ==================== bloombeasts\screens\battle\engine\BloomBeastsAI.ts ====================
 
   /**
    * BloomBeasts AI implementation using the TURBO library
@@ -16915,7 +17442,7 @@ namespace BloomBeasts {
 
     private findBeast(id: string, field: PlayerField): RuntimeBeast | null {
       for (const beast of field.beasts) {
-        if (beast?.id === id) {
+        if (beast && cardMatchesId(beast, id)) {
           return beast;
         }
       }
@@ -16943,7 +17470,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/core/AIManager.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\core\AIManager.ts ====================
 
   /**
    * AIManager - Manages AI players and their turn execution
@@ -16959,10 +17486,15 @@ namespace BloomBeasts {
   export class AIManager {
     private game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>;
     private aiPlayers: Set<string>;
+    private async?: AsyncMethods;
 
-    constructor(game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>) {
+    constructor(
+      game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>,
+      asyncMethods?: AsyncMethods
+    ) {
       this.game = game;
       this.aiPlayers = new Set();
+      this.async = asyncMethods;
     }
 
     /**
@@ -16973,7 +17505,8 @@ namespace BloomBeasts {
         const difficulty = this.mapStrategyToDifficulty(config.player1.aiStrategy);
         const ai = new BloomBeastsGreedyAI({
           playerId: config.player1.id,
-          difficulty
+          difficulty,
+          async: this.async
         });
         this.game.registerAI(config.player1.id, ai);
         this.aiPlayers.add(config.player1.id);
@@ -16984,7 +17517,8 @@ namespace BloomBeasts {
         const difficulty = this.mapStrategyToDifficulty(config.player2.aiStrategy);
         const ai = new BloomBeastsGreedyAI({
           playerId: config.player2.id,
-          difficulty
+          difficulty,
+          async: this.async
         });
         this.game.registerAI(config.player2.id, ai);
         this.aiPlayers.add(config.player2.id);
@@ -17054,7 +17588,18 @@ namespace BloomBeasts {
         }
 
         if (actionCount >= maxActions) {
-          Logger.warn('[AIManager] AI reached maximum action limit');
+          Logger.warn('[AIManager] AI reached maximum action limit, forcing END_TURN');
+
+          // Force end turn when max actions reached
+          const finalState = this.game.getState();
+          if (finalState.turnInfo.currentPlayerId === currentPlayerId) {
+            this.game.performAction({
+              type: 'game_action',
+              playerId: currentPlayerId,
+              data: { type: BloomBeastsActionType.END_TURN }
+            });
+            Logger.info('[AIManager] Forced turn end after max actions');
+          }
         }
 
         Logger.info('[AIManager] AI turn execution completed');
@@ -17088,7 +17633,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/core/ActionProcessor.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\core\ActionProcessor.ts ====================
 
   /**
    * ActionProcessor - Processes player actions
@@ -17236,10 +17781,10 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/core/BattleOrchestrator.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\core\BattleOrchestrator.ts ====================
 
   /**
-   * BattleOrchestrator - Orchestrates battle lifecycle and coordinates subsystems
+   * TurboBattleOrchestrator - Orchestrates Turbo-based battle lifecycle and coordinates subsystems
    *
    * Responsibilities:
    * - Initialize battles
@@ -17250,7 +17795,7 @@ namespace BloomBeasts {
 
 
 
-  export class BattleOrchestrator {
+  export class TurboBattleOrchestrator {
     private async: AsyncMethods;
     private game: Turbo.GameController<BloomBeastsState, BloomBeastsActionData>;
     private config: BattleConfig | null = null;
@@ -17265,7 +17810,7 @@ namespace BloomBeasts {
       this.game = createBloomBeastsGame();
 
       // Initialize subsystems
-      this.ai = new AIManager(this.game);
+      this.ai = new AIManager(this.game, this.async);
       this.actions = new ActionProcessor(this.game);
       this.winChecker = new WinConditionChecker();
     }
@@ -17275,6 +17820,15 @@ namespace BloomBeasts {
      */
     initializeBattle(config: BattleConfig): BattleState {
       Logger.info('[BattleOrchestrator] Initializing battle with TURBO engine');
+      Logger.info(`[BattleOrchestrator] Player 1 deck size: ${config.player1.deck.length}`);
+      Logger.info(`[BattleOrchestrator] Player 2 deck size: ${config.player2.deck.length}`);
+
+      if (config.player1.deck.length === 0) {
+        Logger.error('[BattleOrchestrator] WARNING: Player 1 deck is EMPTY!');
+      }
+      if (config.player2.deck.length === 0) {
+        Logger.error('[BattleOrchestrator] WARNING: Player 2 deck is EMPTY!');
+      }
 
       this.config = config;
 
@@ -17307,9 +17861,16 @@ namespace BloomBeasts {
       // Register AI players
       this.ai.registerAIPlayers(config);
 
-      Logger.info('[BattleOrchestrator] Battle initialized successfully');
+      const initialState = this.getState();
+      const p1 = initialState.turboState.gameData.players[0];
+      const p2 = initialState.turboState.gameData.players[1];
 
-      return this.getState();
+      Logger.info('[BattleOrchestrator] Battle initialized successfully');
+      Logger.info(`[BattleOrchestrator] Player 1 final state - Deck: ${p1.deck.length}, Hand: ${p1.hand.length}, Health: ${p1.health}`);
+      Logger.info(`[BattleOrchestrator] Player 2 final state - Deck: ${p2.deck.length}, Hand: ${p2.hand.length}, Health: ${p2.health}`);
+      Logger.info(`[BattleOrchestrator] Game complete: ${initialState.turboState.isComplete}`);
+
+      return initialState;
     }
 
     /**
@@ -17381,7 +17942,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/engine/core/BattleController.ts ====================
+  // ==================== bloombeasts\screens\battle\engine\core\BattleController.ts ====================
 
   /**
    * BattleController - Thin facade for battle management
@@ -17401,10 +17962,10 @@ namespace BloomBeasts {
 
 
   export class BattleController {
-    private orchestrator: BattleOrchestrator;
+    private orchestrator: TurboBattleOrchestrator;
 
     constructor(async: AsyncMethods) {
-      this.orchestrator = new BattleOrchestrator(async);
+      this.orchestrator = new TurboBattleOrchestrator(async);
     }
 
     /**
@@ -17528,6 +18089,29 @@ namespace BloomBeasts {
     }
 
     /**
+     * Setup a test scenario by modifying the game state
+     * This is only for testing purposes and bypasses normal game rules
+     *
+     * @internal Use only in tests
+     */
+    setupTestScenario(modifier: (state: Turbo.IGameState<BloomBeastsState>) => void): void {
+      const gameController = this.orchestrator.getGameController();
+      const currentState = gameController.getState();
+
+      // Apply the modifier function to the state
+      modifier(currentState);
+
+      // Use the internal state manager to set the modified state
+      // This is the proper way for testing as it goes through TURBO's state management
+      const stateManager = (gameController as any).stateManager;
+      if (stateManager && typeof stateManager.setState === 'function') {
+        stateManager.setState(currentState);
+      } else {
+        throw new Error('Unable to set test state - stateManager not available');
+      }
+    }
+
+    /**
      * Dispose battle resources
      */
     dispose(): void {
@@ -17535,7 +18119,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/screens/battle/BattleUI.ts ====================
+  // ==================== bloombeasts\screens\battle\BattleUI.ts ====================
 
   /**
    * Battle UI - Manages battle state and connects missions to the battle system
@@ -17591,13 +18175,9 @@ namespace BloomBeasts {
    * Helper: Extract a unique identifier from a RuntimeBeast on field
    * Tries instanceId first, then id, then falls back to provided fallback
    */
-  function getBeastId(beast: RuntimeBeast, fallback: string): string {
-    if (beast.instanceId) return beast.instanceId;
-    if (beast.id) return beast.id;
-    return fallback;
-  }
+  // Removed: getBeastId - now using getCardIdentifier from cardIdentifiers utility
 
-  export class BattleUI implements IBattleUI {
+  export class BattleUI {
     private missionManager: MissionManager;
     // private gameEngine: GameEngine;
     private async: AsyncMethods;
@@ -17666,8 +18246,16 @@ namespace BloomBeasts {
       // Resolve the opponent deck
       const opponentDeck = resolveDeck(mission.opponentDeck);
 
+      // Log opponent deck info for debugging
+      Logger.info(`[BattleUI] Opponent deck for ${mission.id}: ${opponentDeck.cards.length} cards`);
+      if (opponentDeck.cards.length === 0) {
+        Logger.error(`[BattleUI] Opponent deck is EMPTY for mission ${mission.id}! This will cause immediate game end.`);
+      }
+
       // Convert opponent deck cards to RuntimeCards (level 1)
       const opponentRuntimeCards = convertDeckToRuntimeCards(opponentDeck.cards);
+
+      Logger.info(`[BattleUI] Converted opponent runtime cards: ${opponentRuntimeCards.length}`);
 
       // Configure opponent health (mission 1 has reduced health for tutorial)
       const opponentHealth = mission.id === 'mission-01' ? 1 : 30;
@@ -17769,8 +18357,8 @@ namespace BloomBeasts {
           // Get the card from player's hand
           const card = player.hand[action.cardIndex];
           if (card) {
-            // Use the actual card ID from the card object
-            const cardId = (card as any).id || (card as any).instanceId;
+            // Use the canonical card identifier (prefers instanceId)
+            const cardId = getCardIdentifier(card);
 
             // For Beast and Buff cards, find an empty position if not specified
             let position = action.position || action.targetIndex;
@@ -17803,12 +18391,13 @@ namespace BloomBeasts {
         }
 
         case 'use-ability': {
+          // Use beastIndex to find the beast on the field
           const beastIndex = action.beastIndex;
           if (beastIndex !== undefined) {
             const playerField = this.getPlayerField();
             const beast = playerField?.beasts[beastIndex];
             if (beast) {
-              const beastId = action.beastId || getBeastId(beast, beastIndex.toString());
+              const beastId = getCardIdentifier(beast);
               result.success = this.battleController.useAbility(beastId, null, playerId);
             }
           }
@@ -17913,12 +18502,12 @@ namespace BloomBeasts {
 
         if (opposingBeast) {
           if (onAttackAnimation) await onAttackAnimation(i, 'beast', i);
-          const attackerId = getBeastId(attackerBeast, i.toString());
-          const targetId = getBeastId(opposingBeast, i.toString());
+          const attackerId = getCardIdentifier(attackerBeast);
+          const targetId = getCardIdentifier(opposingBeast);
           success = this.battleController.attackBeast(attackerId, targetId, playerId);
         } else {
           if (onAttackAnimation) await onAttackAnimation(i, 'health');
-          const attackerId = getBeastId(attackerBeast, i.toString());
+          const attackerId = getCardIdentifier(attackerBeast);
           success = this.battleController.attackPlayer(attackerId, playerId);
         }
 
@@ -18094,9 +18683,16 @@ namespace BloomBeasts {
 
       // Calculate rewards based on winner
       if (battleResult.winner === 'player1') {
-        // Player won!
-        Logger.info('[BattleUI] Player 1 won! Awarding rewards.');
+        // Player won! Mark opponent as defeated for mission progress
+        Logger.info('[BattleUI] Player 1 won! Marking opponent as defeated.');
+        Logger.info(`[BattleUI] About to call updateProgress. MissionManager exists: ${!!this.missionManager}`);
+
+        this.missionManager.updateProgress('opponent-defeated', {});
+        Logger.info('[BattleUI] updateProgress called successfully');
+
+        // Now complete the mission and award rewards
         this.currentBattle.rewards = this.missionManager.completeMission();
+        Logger.info(`[BattleUI] Rewards generated: ${this.currentBattle.rewards !== null}`);
         this.battleController.completeBattle('player1');
       } else if (battleResult.winner === 'player2') {
         // Player lost
@@ -18130,144 +18726,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/common/engine/constants/gameRules.ts ====================
-
-  /**
-   * Game Rules Constants
-   *
-   * Central location for all game rule constants to avoid magic numbers
-   * throughout the codebase.
-   */
-
-  // Field Configuration
-  export const FIELD_SIZE = 3;
-
-  // Deck Configuration
-  export const DECK_SIZE = 30;
-
-  // Health Configuration
-  export const STARTING_HEALTH = 30;
-  export const PLAYER_MAX_HEALTH = 30;
-
-  // Turn Configuration
-  export const TURN_TIME_LIMIT = 60; // seconds
-
-  // Battle Configuration
-  export const FIRST_PLAYER_DRAWS_ON_FIRST_TURN = false;
-
-  // ==================== bloombeasts/screens/battle/BattleDisplayManager.ts ====================
-
-  /**
-   * BattleDisplayManager - Handles battle UI rendering and display enrichment
-   * Manages battle state visualization, animations, and card popups
-   */
-
-
-  export class BattleDisplayManager implements IBattleDisplayManager {
-    private catalogManager: any;
-
-    constructor(catalogManager: any) {
-      this.catalogManager = catalogManager;
-    }
-    /**
-     * Create a battle display object from battle state
-     */
-    createBattleDisplay(
-      battleUIState: any,
-      options?: BattleDisplayOptions
-    ): BattleDisplay | null {
-      // Handle new TURBO-based battle state structure
-      if (!battleUIState || !battleUIState.battleState || !battleUIState.battleState.turboState) {
-        return null;
-      }
-
-      const turboState = battleUIState.battleState.turboState;
-      const gameData = turboState.gameData;
-
-      // Extract players and field from TURBO state
-      const player = gameData.players[0];
-      const opponent = gameData.players[1];
-      const playerField = gameData.field.player1;
-      const opponentField = gameData.field.player2;
-
-      if (!player || !opponent) return null;
-
-      // Determine current turn player
-      const turnPlayer = turboState.turnInfo.currentPlayerId === 'player' ? 'player' : 'opponent';
-
-      // Convert to display format
-      const display: BattleDisplay = {
-        playerHealth: player.health,
-        playerMaxHealth: player.maxHealth || STARTING_HEALTH,
-        playerDeckCount: player.deck.length,
-        playerEnergy: player.energy,
-        playerHand: this.enrichHandCards(player.hand),
-        playerTrapZone: playerField.traps || [],
-        playerBuffZone: playerField.buffs || [],
-        opponentHealth: opponent.health,
-        opponentMaxHealth: opponent.maxHealth || STARTING_HEALTH,
-        opponentDeckCount: opponent.deck.length,
-        opponentEnergy: opponent.energy,
-        opponentField: this.enrichFieldBeasts(opponentField.beasts, turboState, 1),
-        opponentTrapZone: opponentField.traps || [],
-        opponentBuffZone: opponentField.buffs || [],
-        playerField: this.enrichFieldBeasts(playerField.beasts, turboState, 0),
-        currentTurn: turboState.turnInfo.turnNumber,
-        turnPlayer: turnPlayer,
-        turnTimeRemaining: TURN_TIME_LIMIT,
-        objectives: this.getObjectiveDisplay(battleUIState),
-        habitatZone: playerField.habitat || opponentField.habitat, // Use whichever has a habitat
-        attackAnimation: options,
-      };
-
-      return display;
-    }
-
-    /**
-     * Get objective display for current battle
-     */
-    private getObjectiveDisplay(battleState: any): ObjectiveDisplay[] {
-      if (!battleState.mission || !battleState.progress) {
-        return [];
-      }
-
-      // Check if mission has objectives defined
-      if (!battleState.mission.objectives || !Array.isArray(battleState.mission.objectives)) {
-        return [];
-      }
-
-      return battleState.mission.objectives.map((obj: any) => {
-        const key = `${obj.type}-${obj.target || 0}`;
-        const progress = battleState.progress.objectiveProgress.get(key) || 0;
-        const target = obj.target || 1;
-
-        return {
-          description: obj.description || 'Unknown objective',
-          progress: Math.min(progress, target),
-          target: target,
-          isComplete: progress >= target,
-        };
-      });
-    }
-
-    /**
-     * Return field beasts as RuntimeCard
-     * NOTE: Do NOT apply bonuses here - the engine's StatModifierManager already handles this!
-     */
-    private enrichFieldBeasts(field: RuntimeCard[], turboState?: any, playerIndex?: number): RuntimeCard[] {
-      return field.filter(beast => beast !== null);
-    }
-
-    /**
-     * Return hand cards as RuntimeCard
-     */
-    private enrichHandCards(hand: RuntimeCard[]): RuntimeCard[] {
-      return hand.filter(card => card !== null);
-    }
-
-  }
-
-  // ==================== bloombeasts/core/GameStateManager.ts ====================
+  // ==================== bloombeasts\core\GameStateManager.ts ====================
 
   /**
    * GameStateManager - Manages player data mutations and game state
@@ -18542,7 +19001,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/core/SoundManager.ts ====================
+  // ==================== bloombeasts\core\SoundManager.ts ====================
 
   /**
    * SoundManager - Handles all audio/sound operations
@@ -18727,7 +19186,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/core/BattleRewardCalculator.ts ====================
+  // ==================== bloombeasts\core\BattleRewardCalculator.ts ====================
 
   /**
    * BattleRewardCalculator - Calculates and applies battle rewards with boost multipliers
@@ -18818,7 +19277,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/core/UICoordinator.ts ====================
+  // ==================== bloombeasts\core\UICoordinator.ts ====================
 
   /**
    * UICoordinator - Manages UI bindings and screen navigation
@@ -19034,7 +19493,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/core/ValidationHelpers.ts ====================
+  // ==================== bloombeasts\core\ValidationHelpers.ts ====================
 
   /**
    * ValidationHelpers - Validation utilities for critical operations
@@ -19246,7 +19705,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/core/BattleOrchestrator.ts ====================
+  // ==================== bloombeasts\core\BattleOrchestrator.ts ====================
 
   /**
    * BattleOrchestrator - Manages battle actions, state, and completion
@@ -19258,8 +19717,8 @@ namespace BloomBeasts {
    * Orchestrates all battle-related operations
    */
   export class BattleOrchestrator {
-    private battleUI: IBattleUI;
-    private battleDisplayManager: IBattleDisplayManager;
+    private battleUI: BattleUI;
+    private battleDisplayManager: BattleDisplayManager;
     private gameStateManager: GameStateManager;
     private rewardCalculator: BattleRewardCalculator;
     private uiCoordinator: UICoordinator;
@@ -19270,8 +19729,8 @@ namespace BloomBeasts {
     private battleStartTime: number | null = null;
 
     constructor(
-      battleUI: IBattleUI,
-      battleDisplayManager: IBattleDisplayManager,
+      battleUI: BattleUI,
+      battleDisplayManager: BattleDisplayManager,
       gameStateManager: GameStateManager,
       rewardCalculator: BattleRewardCalculator,
       uiCoordinator: UICoordinator,
@@ -19662,7 +20121,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/core/CoreSystemsInitializer.ts ====================
+  // ==================== bloombeasts\core\CoreSystemsInitializer.ts ====================
 
   /**
    * CoreSystemsInitializer - Centralized core system initialization
@@ -19704,6 +20163,7 @@ namespace BloomBeasts {
       // Initialize catalog manager for utilities
       setCatalogManagerForUtils(platform.catalogManager);
       setCatalogManagerForDeckBuilder(platform.catalogManager);
+      setCatalogManagerForMissions(platform.catalogManager);
 
       // Mission systems
       const missionManager = new MissionManager(platform.catalogManager);
@@ -19744,7 +20204,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/core/ActionHandler.ts ====================
+  // ==================== bloombeasts\core\ActionHandler.ts ====================
 
   /**
    * ActionHandler - Handles all user actions and events
@@ -19910,7 +20370,7 @@ namespace BloomBeasts {
             if (currentBattle && !currentBattle.isComplete) {
               const updatedDisplay = this.systems.battleDisplayManager.createBattleDisplay(
                 currentBattle,
-                null
+                undefined
               );
               if (updatedDisplay) {
                 this.systems.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, updatedDisplay);
@@ -19921,7 +20381,7 @@ namespace BloomBeasts {
           // Create battle display from battle state
           const battleDisplay = this.systems.battleDisplayManager.createBattleDisplay(
             battleState,
-            null
+            undefined
           );
 
           // Update battle display binding and navigate
@@ -20034,6 +20494,12 @@ namespace BloomBeasts {
         const updatedBattle = this.systems.battleUI.getCurrentBattle();
         if (!wasComplete && updatedBattle?.isComplete) {
           battleScreen.cleanup();
+
+          // Save game data and refresh bindings when battle completes
+          // This ensures mission list shows newly unlocked missions
+          await this.saveGameData();
+          await this.updateBindingsFromGameState();
+          return;
         }
       } else {
         await this.systems.battleOrchestrator.handleBattleAction(action);
@@ -20044,7 +20510,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/core/DataManager.ts ====================
+  // ==================== bloombeasts\core\DataManager.ts ====================
 
   /**
    * DataManager - Handles all data persistence and state synchronization
@@ -20234,7 +20700,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/common/ui/screens/MissionCompletePopup.ts ====================
+  // ==================== bloombeasts\common\ui\screens\MissionCompletePopup.ts ====================
 
   /**
    * Unified Mission Complete Popup Component
@@ -20606,7 +21072,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts/common/ui/screens/ButtonPopup.ts ====================
+  // ==================== bloombeasts\common\ui\screens\ButtonPopup.ts ====================
 
   /**
    * Button Popup Component
@@ -20687,7 +21153,7 @@ namespace BloomBeasts {
     });
   }
 
-  // ==================== bloombeasts/core/UIBuilder.ts ====================
+  // ==================== bloombeasts\core\UIBuilder.ts ====================
 
   /**
    * UIBuilder - Creates the main UI tree structure
@@ -20774,25 +21240,9 @@ namespace BloomBeasts {
         style: {
           width: '100%',
           height: '100%',
-          backgroundColor: 'black',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
+          position: 'relative',
         },
-        children: [
-          // Inner container with aspect ratio that scales content
-          View({
-            style: {
-              width: '100%',
-              height: 'auto',
-              maxWidth: '100%',
-              maxHeight: '100%',
-              position: 'relative',
-              aspectRatio: gameDimensions.panelWidth / gameDimensions.panelHeight,
-            },
-            children,
-          })
-        ],
+        children,
       });
     }
 
@@ -20835,7 +21285,7 @@ namespace BloomBeasts {
     }
   }
 
-  // ==================== bloombeasts/BloomBeastsGame.ts ====================
+  // ==================== bloombeasts\BloomBeastsGame.ts ====================
 
   /**
    * BloomBeastsGame - Unified Game Controller
@@ -20854,28 +21304,8 @@ namespace BloomBeasts {
 
   // Import and re-export all types from organized type directory
 
-  export type {
-    // UI types
-    UINode,
-    UIElement,
-    ConditionalUINode,
-    ReadonlyBindingInterface,
-    BindingInterface,
-    BindingConstructor,
-    StyleProps,
-    BaseUIProps,
-    ViewProps,
-    TextProps,
-    ImageProps,
-    PressableProps,
-    ScrollViewProps,
-    UIMethodMappings,
-    // Game types
-    PlayerData,
-    PlayerItem,
-    // Platform types
-    PlatformConfig,
-  } from './types';
+  // Export types for regular module bundling (web deployment)
+  // Note: These exports are fine for namespace bundling too
 
   /**
    * Main game class - handles all game logic and UI orchestration
@@ -21062,6 +21492,3228 @@ namespace BloomBeasts {
       this.screens.menuScreen.dispose();
     }
   }
+
+  // ==================== bloombeasts\common\utils\createDefaultPlayerData.ts ====================
+
+  /**
+   * Utility to create default PlayerData structure
+   * Used by platforms when initializing new players
+   */
+
+
+  /**
+   * Create default player data structure
+   * @param name - Player's display name
+   * @returns Default PlayerData with the given name
+   */
+  export function createDefaultPlayerData(name: string): PlayerData {
+    return {
+      name: name,
+      totalXP: 0,
+      coins: 1000, // Starting coins
+      items: [],
+      cards: {
+        collected: [],
+        deck: []
+      },
+      missions: {
+        completedMissions: {}
+      },
+      boosts: {
+        [COIN_BOOST.id]: 0,
+        [EXP_BOOST.id]: 0,
+        [LUCK_BOOST.id]: 0,
+        [ROOSTER.id]: 0
+      },
+      settings: {
+        musicVolume: 10,
+        sfxVolume: 50,
+        musicEnabled: true,
+        sfxEnabled: true
+      }
+    };
+  }
+
+  // ==================== bloombeasts\AssetCatalog.ts ====================
+
+  /**
+   * Asset Catalog - Dynamically Generated Asset IDs
+   *
+   * This file generates asset IDs from game data (cards, etc.)
+   * Platforms must provide mappings for these IDs to actual assets.
+   *
+   * NO platform-specific code should be in this file!
+   */
+
+
+  /**
+   * Get all card IDs that need image assets
+   */
+  export function getCardImageAssetIds(catalogManager: any): string[] {
+    const cards = catalogManager.getAllCardData();
+    return cards.map((card: any) => card.id);
+  }
+
+  /**
+   * Get affinity icon asset IDs
+   */
+  export function getAffinityIconAssetIds(): string[] {
+    return ['Forest', 'Water', 'Fire', 'Sky'];
+  }
+
+  /**
+   * Get card template asset IDs
+   */
+  export function getCardTemplateAssetIds(): string[] {
+    return ['base-card', 'magic-card', 'trap-card', 'buff-card'];
+  }
+
+  /**
+   * Get card rendering asset IDs (for CardRenderer)
+   * These are the IDs that CardRenderer expects for rendering cards
+   */
+  export function getCardRenderingAssetIds(catalogManager: any): string[] {
+    const cards = catalogManager.getAllCardData();
+    const assetIds: string[] = [
+      'cardsContainer',  // Cards page background
+      'baseCard',        // Base card frame template
+      'magicCard',       // Magic card type overlay
+      'trapCard',        // Trap card type overlay
+      'buffCard',        // Buff card type overlay
+    ];
+
+    // Add individual card artwork for each card
+    for (const card of cards) {
+      if (card.type === CardType.Beast) {
+        // Beast cards use beast artwork
+        assetIds.push(`beast-${card.name}`);
+      } else {
+        // Other cards use card artwork
+        assetIds.push(`card-${card.name}`);
+      }
+    }
+
+    return assetIds;
+  }
+
+  /**
+   * Get habitat template asset IDs (affinity-specific)
+   */
+  export function getHabitatTemplateAssetIds(): string[] {
+    return ['forest-habitat', 'water-habitat', 'fire-habitat', 'sky-habitat'];
+  }
+
+  /**
+   * Get UI icon asset IDs
+   */
+  export function getUIIconAssetIds(): string[] {
+    return ['icon-play', 'icon-cards', 'icon-missions', 'icon-settings', 'icon-shop'];
+  }
+
+  /**
+   * Get UI element asset IDs (buttons, bars, menus, etc.)
+   */
+  export function getUIElementAssetIds(): string[] {
+    return [
+      'standardButton',
+      'greenButton',
+      'sideMenu',
+      'experienceBar',
+      // Menu animation frames (1-10)
+      ...Array.from({ length: 10 }, (_, i) => `menuFrame${i + 1}`)
+    ];
+  }
+
+  /**
+   * Get background image asset IDs
+   */
+  export function getBackgroundAssetIds(): string[] {
+    return ['background', 'menu-bg', 'cards-bg', 'mission-select-bg', 'menu'];
+  }
+
+  /**
+   * Get all image asset IDs
+   */
+  export function getAllImageAssetIds(catalogManager: any): string[] {
+    return [
+      ...getCardImageAssetIds(catalogManager),
+      ...getAffinityIconAssetIds(),
+      ...getCardTemplateAssetIds(),
+      ...getCardRenderingAssetIds(catalogManager),
+      ...getHabitatTemplateAssetIds(),
+      ...getUIIconAssetIds(),
+      ...getUIElementAssetIds(),
+      ...getBackgroundAssetIds()
+    ];
+  }
+
+  /**
+   * Sound Asset IDs - Enum for type safety
+   * These match the IDs in commonAssets.json
+   */
+  export enum SoundAssetIds {
+    // Music
+    BACKGROUND_MUSIC = 'music-background',
+    BATTLE_MUSIC = 'music-battle',
+
+    // SFX
+    MENU_BUTTON_SELECT = 'sfx-menu-button-select',
+    PLAY_CARD = 'sfx-play-card',
+    ATTACK = 'sfx-attack',
+    TRAP_ACTIVATED = 'sfx-trap-card-activated',
+    LOW_HEALTH = 'sfx-low-health',
+    WIN = 'sfx-win',
+    LOSE = 'sfx-lose',
+  }
+
+  /**
+   * Legacy sound ID mappings for backwards compatibility
+   * Maps old string IDs to new SoundAssetIds
+   */
+  export const LEGACY_SOUND_ID_MAP: Record<string, SoundAssetIds> = {
+    // Music (old format)
+    'BackgroundMusic.mp3': SoundAssetIds.BACKGROUND_MUSIC,
+    'BattleMusic.mp3': SoundAssetIds.BATTLE_MUSIC,
+
+    // SFX (old format with paths)
+    'sfx/menuButtonSelect.wav': SoundAssetIds.MENU_BUTTON_SELECT,
+    'sfx/playCard.wav': SoundAssetIds.PLAY_CARD,
+    'sfx/attack.wav': SoundAssetIds.ATTACK,
+    'sfx/trapCardActivated.wav': SoundAssetIds.TRAP_ACTIVATED,
+    'sfx/lowHealthSound.wav': SoundAssetIds.LOW_HEALTH,
+    'sfx/win.wav': SoundAssetIds.WIN,
+    'sfx/lose.wav': SoundAssetIds.LOSE,
+
+    // SFX (old format without extension/path)
+    'menuButtonSelect': SoundAssetIds.MENU_BUTTON_SELECT,
+    'playCard': SoundAssetIds.PLAY_CARD,
+    'attack': SoundAssetIds.ATTACK,
+  };
+
+  /**
+   * Get sound effect asset IDs
+   */
+  export function getSoundEffectAssetIds(): string[] {
+    return [
+      SoundAssetIds.MENU_BUTTON_SELECT,
+      SoundAssetIds.PLAY_CARD,
+      SoundAssetIds.ATTACK,
+      SoundAssetIds.TRAP_ACTIVATED,
+      SoundAssetIds.LOW_HEALTH,
+      SoundAssetIds.WIN,
+      SoundAssetIds.LOSE,
+    ];
+  }
+
+  /**
+   * Get music asset IDs
+   */
+  export function getMusicAssetIds(): string[] {
+    return [
+      SoundAssetIds.BACKGROUND_MUSIC,
+      SoundAssetIds.BATTLE_MUSIC,
+    ];
+  }
+
+  /**
+   * Get all sound asset IDs
+   */
+  export function getAllSoundAssetIds(): string[] {
+    return [
+      ...getSoundEffectAssetIds(),
+      ...getMusicAssetIds()
+    ];
+  }
+
+  /**
+   * Normalize a sound ID (convert legacy IDs to new format)
+   */
+  export function normalizeSoundId(soundId: string): string {
+    return LEGACY_SOUND_ID_MAP[soundId] || soundId;
+  }
+
+  // ==================== bloombeasts\AssetCatalogManager.ts ====================
+
+  /**
+   * Asset Catalog Manager - Centralized Asset Management System
+   *
+   * This replaces the dynamic asset ID generation with a JSON-based catalog system.
+   * All asset information (paths, Horizon IDs, metadata) is stored in JSON files
+   * organized by affinity and category.
+   *
+   * PLATFORM-SPECIFIC LOADING:
+   * - Web: See deployments/web/src/main.ts for fetch()-based loading
+   * - Horizon: See deployments/horizon/src/AssetCatalogLoader.ts for fetchAsData()-based loading
+   */
+
+  /**
+   * Type of asset reference (image, audio, animation)
+   */
+  export enum AssetReferenceType {
+    Image = 'image',
+    Audio = 'audio',
+    Animation = 'animation'
+  }
+
+  /**
+   * Type of asset entry (beast, buff, trap, magic, habitat, mission, ui)
+   */
+  export enum AssetEntryType {
+    Beast = 'beast',
+    Buff = 'buff',
+    Trap = 'trap',
+    Magic = 'magic',
+    Habitat = 'habitat',
+    Mission = 'mission',
+    UI = 'ui'
+  }
+
+  /**
+   * UI asset category types
+   */
+  export enum UICategory {
+    Frame = 'frame',
+    Button = 'button',
+    Background = 'background',
+    Icon = 'icon',
+    Chest = 'chest',
+    Container = 'container',
+    CardTemplate = 'card-template',
+    Upgrade = 'upgrade',
+    Other = 'other'
+  }
+
+  /**
+   * Catalog category types (for organizing asset catalogs)
+   */
+  export enum CatalogCategory {
+    Fire = 'fire',
+    Forest = 'forest',
+    Sky = 'sky',
+    Water = 'water',
+    Buff = 'buff',
+    Trap = 'trap',
+    Magic = 'magic',
+    Common = 'common',
+    Boss = 'boss'
+  }
+
+  /**
+   * Affinity types (lowercase for JSON compatibility)
+   * Maps to engine/types/core.ts Affinity enum
+   */
+  export enum AffinityLowercase {
+    Fire = 'fire',
+    Forest = 'forest',
+    Sky = 'sky',
+    Water = 'water',
+    Boss = 'boss'
+  }
+
+  export interface AssetReference {
+    type: AssetReferenceType;
+    horizonAssetId?: string; // Optional - only for Horizon deployment
+    path: string; // Relative path from project root
+    description?: string; // Optional description for documentation
+  }
+
+  export interface CardAssetEntry {
+    id: string;
+    type: AssetEntryType.Beast | AssetEntryType.Buff | AssetEntryType.Trap | AssetEntryType.Magic | AssetEntryType.Habitat;
+    cardType?: 'Beast' | 'Magic' | 'Trap' | 'Buff'; // Game engine card type
+    affinity?: AffinityLowercase; // For beasts and habitats
+    data: {
+      id: string;
+      name: string;
+      displayName?: string; // Display name if different from name
+      description?: string;
+      cost?: number;
+      attack?: number;
+      health?: number;
+      tier?: number;
+      // Allow any additional properties from card data
+      [key: string]: any;
+    };
+    assets: AssetReference[];
+  }
+
+  export interface MissionAssetEntry {
+    id: string;
+    type: AssetEntryType.Mission;
+    affinity?: AffinityLowercase;
+    name: string;
+    description: string;
+    assets: AssetReference[];
+  }
+
+  export interface UIAssetEntry {
+    id: string;
+    type: AssetEntryType.UI;
+    category: UICategory;
+    name: string;
+    description?: string;
+    assets: AssetReference[];
+  }
+
+  export interface AssetCatalog {
+    version: string;
+    category: CatalogCategory;
+    description: string;
+    data: (CardAssetEntry | MissionAssetEntry | UIAssetEntry)[];
+  }
+
+  // Note: AssetCatalogManager now uses enums for type safety while maintaining
+  // compatibility with JSON catalog files through string enum values.
+  // The catalogs use lowercase enums that map to the JSON structure.
+
+  /**
+   * AssetCatalogManager - Manages loading and querying of asset catalogs
+   * NOT a singleton - create instances as needed
+   */
+  export class AssetCatalogManager {
+    private catalogs: Map<string, AssetCatalog> = new Map();
+    private assetIndex: Map<string, CardAssetEntry | MissionAssetEntry | UIAssetEntry> = new Map();
+    private pathToIdMap: Map<string, string> = new Map(); // Maps asset paths to IDs
+    private horizonIdMap: Map<string, string> = new Map(); // Maps Horizon IDs to asset IDs
+
+    /**
+     * Load catalog from JSON object
+     * Platform-specific code should fetch/load the JSON and pass it here
+     */
+    loadCatalog(catalog: AssetCatalog): void {
+      const catalogKey = catalog.category;
+      this.catalogs.set(catalogKey, catalog);
+
+      // Index all assets by ID for quick lookup
+      catalog.data.forEach(entry => {
+        this.assetIndex.set(entry.id, entry);
+
+        // Create reverse mappings
+        entry.assets.forEach(asset => {
+          this.pathToIdMap.set(asset.path, entry.id);
+          if (asset.horizonAssetId) {
+            this.horizonIdMap.set(asset.horizonAssetId, entry.id);
+          }
+        });
+      });
+    }
+
+    /**
+     * Get asset entry by ID
+     */
+    getAsset(id: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
+      return this.assetIndex.get(id);
+    }
+
+    /**
+     * Get asset entry by path
+     */
+    getAssetByPath(path: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
+      const id = this.pathToIdMap.get(path);
+      return id ? this.assetIndex.get(id) : undefined;
+    }
+
+    /**
+     * Get asset entry by Horizon ID
+     */
+    getAssetByHorizonId(horizonId: string): CardAssetEntry | MissionAssetEntry | UIAssetEntry | undefined {
+      const id = this.horizonIdMap.get(horizonId);
+      return id ? this.assetIndex.get(id) : undefined;
+    }
+
+    /**
+     * Get all assets of a specific type
+     */
+    getAssetsByType<T extends CardAssetEntry | MissionAssetEntry | UIAssetEntry>(
+      type: AssetEntryType
+    ): T[] {
+      const results: T[] = [];
+      this.assetIndex.forEach(entry => {
+        if (entry.type === type || (entry.type === AssetEntryType.UI && type === AssetEntryType.UI)) {
+          results.push(entry as T);
+        } else if (type !== AssetEntryType.Mission && type !== AssetEntryType.UI && (entry as CardAssetEntry).type === type) {
+          results.push(entry as T);
+        }
+      });
+      return results;
+    }
+
+    /**
+     * Get all cards by affinity
+     */
+    getCardsByAffinity(affinity: AffinityLowercase): CardAssetEntry[] {
+      const results: CardAssetEntry[] = [];
+      this.assetIndex.forEach(entry => {
+        if (entry.type === AssetEntryType.Beast || entry.type === AssetEntryType.Habitat) {
+          const card = entry as CardAssetEntry;
+          if (card.affinity === affinity) {
+            results.push(card);
+          }
+        }
+      });
+      return results;
+    }
+
+    /**
+     * Get Horizon asset ID for a given asset
+     */
+    getHorizonAssetId(assetId: string, assetType: AssetReferenceType = AssetReferenceType.Image): string | undefined {
+      const asset = this.getAsset(assetId);
+      if (!asset) return undefined;
+
+      const assetRef = asset.assets.find(a => a.type === assetType);
+      return assetRef?.horizonAssetId;
+    }
+
+    /**
+     * Get local path for a given asset
+     */
+    getAssetPath(assetId: string, assetType: AssetReferenceType = AssetReferenceType.Image): string | undefined {
+      const asset = this.getAsset(assetId);
+      if (!asset) return undefined;
+
+      const assetRef = asset.assets.find(a => a.type === assetType);
+      return assetRef?.path;
+    }
+
+    /**
+     * Get all assets for a catalog category
+     */
+    getCatalog(category: string): AssetCatalog | undefined {
+      return this.catalogs.get(category);
+    }
+
+    /**
+     * Build asset mappings for web platform
+     */
+    getWebAssetMappings(): {
+      images: Record<string, string>,
+      sounds: Record<string, string>
+    } {
+      const images: Record<string, string> = {};
+      const sounds: Record<string, string> = {};
+
+      this.assetIndex.forEach((entry, id) => {
+        entry.assets.forEach(asset => {
+          // Only use the first asset of each type for the entry
+          if (asset.type === AssetReferenceType.Image && !images[id]) {
+            images[id] = asset.path;
+          } else if (asset.type === AssetReferenceType.Audio && !sounds[id]) {
+            sounds[id] = asset.path;
+          }
+        });
+      });
+
+      return { images, sounds };
+    }
+
+    /**
+     * Build asset mappings for Horizon platform
+     */
+    getHorizonAssetMappings(): {
+      images: Record<string, string>,
+      sounds: Record<string, string>
+    } {
+      const images: Record<string, string> = {};
+      const sounds: Record<string, string> = {};
+
+      this.assetIndex.forEach((entry, id) => {
+        entry.assets.forEach(asset => {
+          if (asset.horizonAssetId) {
+            // Only use the first asset of each type for the entry
+            if (asset.type === AssetReferenceType.Image && !images[id]) {
+              images[id] = asset.horizonAssetId;
+            } else if (asset.type === AssetReferenceType.Audio && !sounds[id]) {
+              sounds[id] = asset.horizonAssetId;
+            }
+          }
+        });
+      });
+
+      return { images, sounds };
+    }
+
+    /**
+     * Get all loaded catalog categories
+     */
+    getLoadedCategories(): string[] {
+      return Array.from(this.catalogs.keys());
+    }
+
+    /**
+     * Get total number of indexed assets (for debugging)
+     */
+    getTotalIndexedAssets(): number {
+      return this.assetIndex.size;
+    }
+
+    /**
+     * Get all card data from loaded catalogs
+     * Returns the actual card definitions (data property) from all card entries
+     */
+    getAllCardData(): any[] {
+      const cards: any[] = [];
+
+      this.assetIndex.forEach(entry => {
+        // Only include card entries (beast, magic, trap, buff, habitat)
+        const isCardEntry = entry.type === AssetEntryType.Beast || entry.type === AssetEntryType.Magic ||
+            entry.type === AssetEntryType.Trap || entry.type === AssetEntryType.Buff || entry.type === AssetEntryType.Habitat;
+
+        if (isCardEntry) {
+          const cardEntry = entry as CardAssetEntry;
+          // Add rarity for reward system (same logic as old getAllCards)
+          const cardData: any = { ...cardEntry.data };
+
+          if (cardEntry.type === AssetEntryType.Beast) {
+            // Assign rarity based on energy cost
+            const cost = cardData.cost || 0;
+            if (cost >= 5) {
+              cardData.rarity = 'rare';
+            } else if (cost >= 3) {
+              cardData.rarity = 'uncommon';
+            } else {
+              cardData.rarity = 'common';
+            }
+          } else {
+            // Non-beast cards are common by default
+            cardData.rarity = 'common';
+          }
+
+          cards.push(cardData);
+        }
+      });
+
+      return cards;
+    }
+
+    /**
+     * Get a specific card by ID
+     */
+    getCard<T = any>(cardId: string): T | undefined {
+      const allCards = this.getAllCardData();
+      return allCards.find((card: any) => card.id === cardId) as T | undefined;
+    }
+
+    /**
+     * Get all buff cards from the catalog
+     */
+    getAllBuffCards(): any[] {
+      const buffEntries = this.getAssetsByType(AssetEntryType.Buff);
+      return buffEntries.map((entry: any) => entry.data);
+    }
+
+    /**
+     * Clear all loaded catalogs
+     */
+    clear(): void {
+      this.catalogs.clear();
+      this.assetIndex.clear();
+      this.pathToIdMap.clear();
+      this.horizonIdMap.clear();
+    }
+  }
+
+  // ==================== bloombeasts\screens\battle\engine\types.ts ====================
+
+  /**
+   * Battle System Types
+   *
+   * Core type definitions for the generic battle system.
+   * This system works with any two players (human vs AI, human vs human, AI vs AI).
+   */
+
+
+  /**
+   * Result of a battle action
+   */
+  export interface BattleActionResult {
+    success: boolean;
+    message?: string;
+    damage?: number;
+    isTrap?: boolean;
+  }
+
+  /**
+   * Battle configuration - passed when initializing a battle
+   */
+  export interface BattleConfig {
+    player1: PlayerConfig;
+    player2: PlayerConfig;
+  }
+
+  /**
+   * Configuration for a player in a battle
+   */
+  export interface PlayerConfig {
+    id: string;
+    name: string;
+    deck: RuntimeCard[];
+    health?: number;
+    maxHealth?: number;
+    isAI?: boolean;
+    aiStrategy?: 'default' | 'aggressive' | 'defensive' | 'custom';
+  }
+
+  /**
+   * Current state of an active battle
+   * Uses TURBO's IGameState directly (no conversion layer)
+   */
+  export interface BattleState {
+    /** TURBO game state (contains gameData with players and field) */
+    turboState: Turbo.IGameState<BloomBeastsState>;
+  }
+
+  /**
+   * Result of a completed battle
+   */
+  export interface BattleResult {
+    winner: 'player1' | 'player2' | null;
+    turns: number;
+    player1Health: number;
+    player2Health: number;
+  }
+
+  /**
+   * Re-export runtime types
+   * These are the unified runtime card types used throughout the battle system
+   */
+
+  /**
+   * BloomBeasts Game State Types
+   *
+   * These types are used by both the game engine (BloomBeastsGame.ts) and action handlers.
+   * They're defined here to avoid circular dependencies.
+   */
+
+  /**
+   * BloomBeasts action types
+   */
+  export enum BloomBeastsActionType {
+    DRAW_CARD = 'draw_card',
+    PLAY_CARD = 'play_card',
+    ATTACK = 'attack',
+    USE_ABILITY = 'use_ability',
+    END_TURN = 'end_turn',
+    TIMEOUT = 'timeout',
+    FORFEIT = 'forfeit',
+  }
+
+  /**
+   * BloomBeasts action data
+   */
+  export interface BloomBeastsActionData extends Record<string, unknown> {
+    type: BloomBeastsActionType;
+    cardId?: string;
+    targetId?: string;
+    position?: number;
+    abilityId?: string;
+  }
+
+  /**
+   * BloomBeasts player data
+   */
+  export interface BloomBeastsPlayer {
+    id: string;
+    name: string;
+    health: number;
+    energy: number;
+    deck: RuntimeCard[];
+    hand: RuntimeCard[];
+    graveyard: RuntimeCard[];
+    maxHandSize: number;
+    maxHealth: number;
+  }
+
+  /**
+   * BloomBeasts specific game state
+   */
+  export interface BloomBeastsState extends Record<string, unknown> {
+    players: BloomBeastsPlayer[];
+    field: {
+      player1: {
+        beasts: (RuntimeBeast | null)[];
+        buffs: (RuntimeBuff | null)[];
+        habitat: RuntimeHabitat | null;
+        traps: RuntimeTrap[];
+      };
+      player2: {
+        beasts: (RuntimeBeast | null)[];
+        buffs: (RuntimeBuff | null)[];
+        habitat: RuntimeHabitat | null;
+        traps: RuntimeTrap[];
+      };
+    };
+    currentTurnActions: {
+      hasDrawnCard: boolean;
+      cardsPlayed: number;
+      hasAttacked: Set<string>;
+    };
+    /** Set when a game ends suddenly (timeout, forfeit, disconnect) - causes immediate game end */
+    suddenEnd?: {
+      playerId: string;
+      reason: SuddenEndReason;
+    };
+  }
+
+  /**
+   * Reasons for sudden game end
+   */
+  export enum SuddenEndReason {
+    TIMEOUT = 'timeout',
+    FORFEIT = 'forfeit',
+    DISCONNECT = 'disconnect',
+  }
+
+  // ==================== bloombeasts\common\catalogs\catalogBuilder.ts ====================
+
+  /**
+   * Catalog Builder - Eliminates duplication across asset catalog files
+   *
+   * This utility provides a clean API for building asset catalogs without
+   * repeating the same wrapper structure in every file.
+   */
+
+
+  /**
+   * Simplified card definition - just the data without wrapper boilerplate
+   */
+  export interface CardDefinition {
+    id: string;
+    cardData: BloomBeastCard | MagicCard | TrapCard | BuffCard | HabitatCard;
+    imagePath: string;
+    horizonAssetId?: string;
+  }
+
+  /**
+   * Get catalog category from affinity
+   */
+  function getCategoryFromAffinity(affinity: Affinity): CatalogCategory {
+    const categoryMap: Partial<Record<Affinity, CatalogCategory>> = {
+      [Affinity.Fire]: CatalogCategory.Fire,
+      [Affinity.Water]: CatalogCategory.Water,
+      [Affinity.Forest]: CatalogCategory.Forest,
+      [Affinity.Sky]: CatalogCategory.Sky,
+      [Affinity.Generic]: CatalogCategory.Common,
+      [Affinity.Boss]: CatalogCategory.Boss,
+    };
+    return categoryMap[affinity] || CatalogCategory.Common;
+  }
+
+  /**
+   * Get lowercase affinity string from Affinity enum
+   */
+  function getAffinityLowercase(affinity: Affinity): AffinityLowercase {
+    const affinityMap: Partial<Record<Affinity, AffinityLowercase>> = {
+      [Affinity.Fire]: AffinityLowercase.Fire,
+      [Affinity.Water]: AffinityLowercase.Water,
+      [Affinity.Forest]: AffinityLowercase.Forest,
+      [Affinity.Sky]: AffinityLowercase.Sky,
+      [Affinity.Generic]: AffinityLowercase.Boss,
+      [Affinity.Boss]: AffinityLowercase.Boss,
+    };
+    return affinityMap[affinity] || AffinityLowercase.Boss;
+  }
+
+  /**
+   * Get asset entry type from card type
+   */
+  function getAssetEntryType(cardType: CardType): AssetEntryType {
+    const typeMap: Record<CardType, AssetEntryType> = {
+      [CardType.Beast]: AssetEntryType.Beast,
+      [CardType.Magic]: AssetEntryType.Magic,
+      [CardType.Trap]: AssetEntryType.Trap,
+      [CardType.Buff]: AssetEntryType.Buff,
+      [CardType.Habitat]: AssetEntryType.Habitat,
+    };
+    return typeMap[cardType];
+  }
+
+  /**
+   * Get card type string from CardType enum
+   */
+  function getCardTypeString(cardType: CardType): string {
+    return CardType[cardType];
+  }
+
+  /**
+   * Build a catalog entry from a card definition
+   */
+  function buildCatalogEntry(card: CardDefinition): CardAssetEntry {
+    const cardData = card.cardData;
+    // Get affinity - Beast cards have affinity, others might not
+    const affinity = 'affinity' in cardData && cardData.affinity !== undefined
+      ? getAffinityLowercase(cardData.affinity as Affinity)
+      : undefined;
+
+    return {
+      id: card.id,
+      type: getAssetEntryType(cardData.type),
+      cardType: getCardTypeString(cardData.type),
+      affinity,
+      data: cardData,
+      assets: [
+        {
+          type: AssetReferenceType.Image,
+          ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
+          path: card.imagePath,
+        }
+      ]
+    } as CardAssetEntry;
+  }
+
+  /**
+   * Create an asset catalog from card definitions
+   *
+   * @param affinity - The affinity/category for this catalog
+   * @param cards - Array of simplified card definitions
+   * @param version - Catalog version (defaults to "1.0.0")
+   * @returns Complete AssetCatalog ready to export
+   *
+   * @example
+   * export const fireAssets = createCatalog(Affinity.Fire, [
+   *   {
+   *     id: "blazefinch",
+   *     cardData: { ...card definition... },
+   *     imagePath: "assets/images/cards_fire_blazefinch.png",
+   *     horizonAssetId: "3218250765004566"
+   *   },
+   *   // ... more cards
+   * ]);
+   */
+  export function createCatalog(
+    affinity: Affinity,
+    cards: CardDefinition[],
+    version: string = "1.0.0"
+  ): AssetCatalog {
+    const category = getCategoryFromAffinity(affinity);
+    const affinityName = Affinity[affinity];
+
+    return {
+      version,
+      category,
+      description: (affinity === Affinity.Generic || affinity === Affinity.Boss)
+        ? "Common cards and assets"
+        : `${affinityName} affinity cards and assets`,
+      data: cards.map(buildCatalogEntry)
+    };
+  }
+
+  /**
+   * Create a card definition helper
+   * Reduces boilerplate when defining cards
+   */
+  export function defineCard(
+    id: string,
+    cardData: BloomBeastCard | MagicCard | TrapCard | BuffCard | HabitatCard,
+    imagePath: string,
+    horizonAssetId?: string
+  ): CardDefinition {
+    return {
+      id,
+      cardData,
+      imagePath,
+      horizonAssetId
+    };
+  }
+
+  // ==================== bloombeasts\common\catalogs\bossAssets.ts ====================
+
+  /**
+   * Boss Assets Catalog - Refactored using catalogBuilder
+   *
+   * This file uses the catalog builder utility to eliminate boilerplate.
+   * Edit card definitions below, and the builder handles all the wrapper structure.
+   */
+
+
+  /**
+   * Boss card definitions
+   */
+  const bossCards = [
+    defineCard(
+      "cluck-norris",
+      {
+        id: "cluck-norris",
+        name: "Cluck Norris",
+        type: CardType.Beast,
+        affinity: Affinity.Boss,
+        cost: 0,
+        baseAttack: 99,
+        baseHealth: 99,
+        abilities: [
+          {
+            name: "Legendary Rooster",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.ModifyStats,
+                target: AbilityTarget.Self,
+                stat: StatType.Attack,
+                value: 10,
+                duration: EffectDuration.WhileOnField
+              },
+              {
+                type: EffectType.ModifyStats,
+                target: AbilityTarget.Self,
+                stat: StatType.Health,
+                value: 10,
+                duration: EffectDuration.WhileOnField
+              }
+            ]
+          }
+        ]
+      } as BloomBeastCard,
+      "assets/images/cards_boss_cluck-norris.png",
+      "1358389912362012"
+    ),
+  ];
+
+  /**
+   * Build the catalog from cards using the builder
+   */
+  const bossCatalog = createCatalog(Affinity.Boss, bossCards);
+
+  /**
+   * Add UI assets
+   */
+  export const bossAssets: AssetCatalog = {
+    ...bossCatalog,
+    data: [
+      ...bossCatalog.data,
+
+      // UI Assets
+      {
+        id: "boss-icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
+        name: "Boss Icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "808398125136052",
+            path: "assets/images/affinity_boss-icon.png"
+          }
+        ]
+      },
+      {
+        id: "boss-mission",
+        type: AssetEntryType.Mission,
+        affinity: AffinityLowercase.Boss,
+        name: "Cluck Norris",
+        description: "Boss mission",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1358389912362012",
+            path: "assets/images/cards_boss-mission.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\common\catalogs\buffAssets.ts ====================
+
+  /**
+   * Buff Assets Catalog - Refactored using catalogBuilder
+   *
+   * This file uses the catalog builder utility to eliminate boilerplate.
+   * Edit card definitions below, and the builder handles all the wrapper structure.
+   */
+
+
+  /**
+   * Buff card definitions
+   */
+  const buffCards = [
+    defineCard(
+      "battle-fury",
+      {
+        id: "battle-fury",
+        name: "Battle Fury",
+        type: CardType.Buff,
+        cost: 3,
+        abilities: [
+          {
+            name: "Battle Fury",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.ModifyStats,
+                target: AbilityTarget.AllAllies,
+                stat: StatType.Attack,
+                value: 2,
+                duration: EffectDuration.WhileOnField
+              }
+            ]
+          }
+        ]
+      } as BuffCard,
+      "assets/images/cards_buff_battle-fury.png",
+      "1514404306279605"
+    ),
+
+    defineCard(
+      "mystic-shield",
+      {
+        id: "mystic-shield",
+        name: "Mystic Shield",
+        type: CardType.Buff,
+        cost: 3,
+        abilities: [
+          {
+            name: "Mystic Shield",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.ModifyStats,
+                target: AbilityTarget.AllAllies,
+                stat: StatType.Health,
+                value: 2,
+                duration: EffectDuration.WhileOnField
+              }
+            ]
+          }
+        ]
+      } as BuffCard,
+      "assets/images/cards_buff_mystic-shield.png",
+      "787965707330770"
+    ),
+
+    defineCard(
+      "natures-blessing",
+      {
+        id: "natures-blessing",
+        name: "Nature's Blessing",
+        type: CardType.Buff,
+        affinity: Affinity.Forest,
+        cost: 4,
+        abilities: [
+          {
+            name: "Nature's Blessing",
+            trigger: AbilityTrigger.OnOwnStartOfTurn,
+            effects: [
+              {
+                type: EffectType.Heal,
+                target: AbilityTarget.AllAllies,
+                value: 1
+              }
+            ]
+          }
+        ]
+      } as BuffCard,
+      "assets/images/cards_buff_natures-blessing.png",
+      "4100038783597004"
+    ),
+
+    defineCard(
+      "swift-wind",
+      {
+        id: "swift-wind",
+        name: "Swift Wind",
+        type: CardType.Buff,
+        affinity: Affinity.Sky,
+        cost: 2,
+        abilities: [
+          {
+            name: "Swift Wind",
+            trigger: AbilityTrigger.OnOwnStartOfTurn,
+            effects: [
+              {
+                type: EffectType.GainResource,
+                target: AbilityTarget.Player,
+                resource: ResourceType.Energy,
+                value: 1
+              }
+            ]
+          }
+        ]
+      } as BuffCard,
+      "assets/images/cards_buff_swift-wind.png",
+      "657351040536713"
+    ),
+  ];
+
+  /**
+   * Build the catalog manually since Buff cards don't have a single affinity
+   */
+  export const buffAssets: AssetCatalog = {
+    version: "1.0.0",
+    category: CatalogCategory.Buff,
+    description: "Buff cards and assets",
+    data: buffCards.map((card) => {
+      const cardData = card.cardData;
+      const affinity = 'affinity' in cardData && cardData.affinity !== undefined
+        ? (() => {
+            // Map Affinity enum to AffinityLowercase enum
+            const affinityMap: Partial<Record<Affinity, AffinityLowercase>> = {
+              [Affinity.Fire]: AffinityLowercase.Fire,
+              [Affinity.Water]: AffinityLowercase.Water,
+              [Affinity.Forest]: AffinityLowercase.Forest,
+              [Affinity.Sky]: AffinityLowercase.Sky,
+              [Affinity.Boss]: AffinityLowercase.Boss,
+            };
+            return affinityMap[cardData.affinity as Affinity];
+          })()
+        : undefined;
+
+      return {
+        id: card.id,
+        type: AssetEntryType.Buff,
+        cardType: "Buff",
+        ...(affinity ? { affinity } : {}),
+        data: cardData,
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
+            path: card.imagePath,
+          }
+        ]
+      };
+    })
+  };
+
+  // ==================== bloombeasts\common\catalogs\commonAssets.ts ====================
+
+  /**
+   * Common Assets Catalog
+   * Source of truth for UI elements, backgrounds, and shared assets
+   * Edit this file directly to add/modify assets
+   */
+
+
+  export const commonAssets: AssetCatalog = {
+    version: "1.0.0",
+    category: CatalogCategory.Common,
+    description: "Common UI elements, backgrounds, and shared assets",
+    data: [
+      {
+        id: "background",
+        type: AssetEntryType.UI,
+        category: UICategory.Background,
+        name: "Main Background",
+        description: "Main game background",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1341821670869568",
+            path: "assets/images/bg_background.png"
+          }
+        ]
+      },
+      {
+        id: "menu",
+        type: AssetEntryType.UI,
+        category: UICategory.Background,
+        name: "Menu Background",
+        description: "Menu screen background",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1341821670869568",
+            path: "assets/images/misc_menu.png"
+          }
+        ]
+      },
+      {
+        id: "playboard",
+        type: AssetEntryType.UI,
+        category: UICategory.Background,
+        name: "Playboard",
+        description: "Battle playboard background",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "802255839066806",
+            path: "assets/images/misc_playboard.png"
+          }
+        ]
+      },
+      {
+        id: "cards-container",
+        type: AssetEntryType.UI,
+        category: UICategory.Container,
+        name: "Cards Container",
+        description: "Cards collection screen container",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1360422829007789",
+            path: "assets/images/misc_cards-container.png"
+          }
+        ]
+      },
+      {
+        id: "mission-container",
+        type: AssetEntryType.UI,
+        category: UICategory.Container,
+        name: "Mission Container",
+        description: "Mission selection container",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "828431839717203",
+            path: "assets/images/misc_mission-container.png"
+          }
+        ]
+      },
+      {
+        id: "standard-button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
+        name: "Standard Button",
+        description: "Default button style (175x72)",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1976060856578244",
+            path: "assets/images/ui_button_standard_default.png"
+          }
+        ]
+      },
+      {
+        id: "green-button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
+        name: "Green Button",
+        description: "Green variant button (175x72)",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "3694695314172287",
+            path: "assets/images/ui_button_standard_green.png"
+          }
+        ]
+      },
+      {
+        id: "red-button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
+        name: "Red Button",
+        description: "Red variant button (175x72)",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1607838330179321",
+            path: "assets/images/ui_button_standard_red.png"
+          }
+        ]
+      },
+      {
+        id: "yellow-button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
+        name: "Yellow Button",
+        description: "Yellow variant button (175x72)",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1977156269826109",
+            path: "assets/images/ui_button_standard_yellow.png"
+          }
+        ]
+      },
+      {
+        id: "long-green-button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
+        name: "Long Green Button",
+        description: "Long green button variant",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1842026620010613",
+            path: "assets/images/misc_long-green-button.png"
+          }
+        ]
+      },
+      {
+        id: "small-button",
+        type: AssetEntryType.UI,
+        category: UICategory.Button,
+        name: "Small Button",
+        description: "Small button variant (89x89)",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "726833263789403",
+            path: "assets/images/ui_button_small_default.png"
+          }
+        ]
+      },
+      {
+        id: "container-side-menu",
+        type: AssetEntryType.UI,
+        category: UICategory.Container,
+        name: "Side Menu Container",
+        description: "Side menu panel container (225x497)",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "4238983773013268",
+            path: "assets/images/ui_container_side-menu.png"
+          }
+        ]
+      },
+      {
+        id: "player-stats-container",
+        type: AssetEntryType.UI,
+        category: UICategory.Container,
+        name: "Player Stats Container",
+        description: "Container for player stats display",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "2596874604027595",
+            path: "assets/images/ui_container_player-stats.png"
+          }
+        ]
+      },
+      {
+        id: "experience-bar",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Experience Bar",
+        description: "XP progress bar",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1151343029773719",
+            path: "assets/images/cards_experience-bar.png"
+          }
+        ]
+      },
+      {
+        id: "base-card",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Base Card Frame",
+        description: "Default card frame template",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1549655239820199",
+            path: "assets/images/cards_base-card.png"
+          }
+        ]
+      },
+      {
+        id: "magic-card",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Magic Card Frame",
+        description: "Magic card frame template",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "2581420452257174",
+            path: "assets/images/cards_magic-card.png"
+          }
+        ]
+      },
+      {
+        id: "magic-card-playboard",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Magic Card Playboard",
+        description: "Magic card on playboard",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "2991234734402522",
+            path: "assets/images/cards_magic-card-playboard.png"
+          }
+        ]
+      },
+      {
+        id: "trap-card",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Trap Card Frame",
+        description: "Trap card frame template",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "3122347641277336",
+            path: "assets/images/cards_trap-card.png"
+          }
+        ]
+      },
+      {
+        id: "trap-card-playboard",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Trap Card Playboard",
+        description: "Trap card on playboard",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1724877334843483",
+            path: "assets/images/cards_trap-card-playboard.png"
+          }
+        ]
+      },
+      {
+        id: "buff-card",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Buff Card Frame",
+        description: "Buff card frame template",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "3182045765293902",
+            path: "assets/images/cards_buff-card.png"
+          }
+        ]
+      },
+      {
+        id: "buff-card-playboard",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Buff Card Playboard",
+        description: "Buff card on playboard",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "2628573627486992",
+            path: "assets/images/cards_buff-card-playboard.png"
+          }
+        ]
+      },
+      {
+        id: "menu-frame-1",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Menu Frame 1",
+        description: "Menu animation frame 1",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1186506656766961",
+            path: "assets/images/menu_frame-1.png"
+          }
+        ]
+      },
+      {
+        id: "menu-frame-2",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Menu Frame 2",
+        description: "Menu animation frame 2",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "816845231314389",
+            path: "assets/images/menu_frame-2.png"
+          }
+        ]
+      },
+      {
+        id: "menu-frame-3",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Menu Frame 3",
+        description: "Menu animation frame 3",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "2012665279305528",
+            path: "assets/images/menu_frame-3.png"
+          }
+        ]
+      },
+      {
+        id: "menu-frame-4",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Menu Frame 4",
+        description: "Menu animation frame 4",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "803392912558689",
+            path: "assets/images/menu_frame-4.png"
+          }
+        ]
+      },
+      {
+        id: "menu-frame-5",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Menu Frame 5",
+        description: "Menu animation frame 5",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1141897134114548",
+            path: "assets/images/menu_frame-5.png"
+          }
+        ]
+      },
+      {
+        id: "menu-frame-6",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Menu Frame 6",
+        description: "Menu animation frame 6",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1962288661350650",
+            path: "assets/images/menu_frame-6.png"
+          }
+        ]
+      },
+      {
+        id: "menu-frame-7",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Menu Frame 7",
+        description: "Menu animation frame 7",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "781356411339489",
+            path: "assets/images/menu_frame-7.png"
+          }
+        ]
+      },
+      {
+        id: "menu-frame-8",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Menu Frame 8",
+        description: "Menu animation frame 8",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "844985438202497",
+            path: "assets/images/menu_frame-8.png"
+          }
+        ]
+      },
+      {
+        id: "menu-frame-9",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Menu Frame 9",
+        description: "Menu animation frame 9",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1340487887747224",
+            path: "assets/images/menu_frame-9.png"
+          }
+        ]
+      },
+      {
+        id: "menu-frame-10",
+        type: AssetEntryType.UI,
+        category: UICategory.Frame,
+        name: "Menu Frame 10",
+        description: "Menu animation frame 10",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1866001547625853",
+            path: "assets/images/menu_frame-10.png"
+          }
+        ]
+      },
+      {
+        id: "icon-attack",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
+        name: "Attack Icon",
+        description: "Attack indicator icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "818969787355942",
+            path: "assets/images/icon_attack.png"
+          }
+        ]
+      },
+      {
+        id: "icon-coin",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
+        name: "Coin Icon",
+        description: "Coin currency icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "4103662979871750",
+            path: "assets/images/icon_coin.png"
+          }
+        ]
+      },
+      {
+        id: "icon-serum",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
+        name: "Serum Icon",
+        description: "Serum item icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1152818320384366",
+            path: "assets/images/icon_serum.png"
+          }
+        ]
+      },
+      // Counter icons removed - counter system deprecated
+      {
+        id: "lose-image",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Lose Image",
+        description: "Game over/lose screen image",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "2155452308310801",
+            path: "assets/images/misc_lose-image.png"
+          }
+        ]
+      },
+      {
+        id: "sfx-menu-button-select",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Menu Button Select SFX",
+        description: "Sound for menu button selection",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "3481449071995903",
+            path: "assets/audio/sfx_menu-button-select.wav"
+          }
+        ]
+      },
+      {
+        id: "sfx-play-card",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Play Card SFX",
+        description: "Sound for playing a card",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "673115269189210",
+            path: "assets/audio/sfx_play-card.wav"
+          }
+        ]
+      },
+      {
+        id: "sfx-attack",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Attack SFX",
+        description: "Sound for attack action",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "1718962638781724",
+            path: "assets/audio/sfx_attack.wav"
+          }
+        ]
+      },
+      {
+        id: "sfx-trap-card-activated",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Trap Activated SFX",
+        description: "Sound for trap activation",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "1180175093968172",
+            path: "assets/audio/sfx_trap-card-activated.wav"
+          }
+        ]
+      },
+      {
+        id: "sfx-low-health",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Low Health SFX",
+        description: "Warning sound for low health",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "828372796357589",
+            path: "assets/audio/sfx_low-health.wav"
+          }
+        ]
+      },
+      {
+        id: "sfx-win",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Win SFX",
+        description: "Victory sound effect",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "4241684452770634",
+            path: "assets/audio/sfx_win.wav"
+          }
+        ]
+      },
+      {
+        id: "sfx-lose",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Lose SFX",
+        description: "Defeat sound effect",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "1323050035978393",
+            path: "assets/audio/sfx_lose.wav"
+          }
+        ]
+      },
+      {
+        id: "sfx-upgrade",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Upgrade SFX",
+        description: "Sound for purchasing upgrades",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "PLACEHOLDER_ID",
+            path: "assets/audio/sfx_upgrade.wav"
+          }
+        ]
+      },
+      {
+        id: "sfx-upgrade-rooster",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Upgrade Rooster SFX",
+        description: "Sound for purchasing rooster upgrade",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "PLACEHOLDER_ID",
+            path: "assets/audio/sfx_upgrade_rooster.wav"
+          }
+        ]
+      },
+      {
+        id: "music-background",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Background Music",
+        description: "Main background music",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "802288129374217",
+            path: "assets/audio/music_background.mp3"
+          }
+        ]
+      },
+      {
+        id: "music-battle",
+        type: AssetEntryType.UI,
+        category: UICategory.Other,
+        name: "Battle Music",
+        description: "Battle scene music",
+        assets: [
+          {
+            type: AssetReferenceType.Audio,
+            horizonAssetId: "668023946362739",
+            path: "assets/audio/music_battle.mp3"
+          }
+        ]
+      },
+      {
+        id: "upgrade-coin-boost",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
+        name: "Coin Boost Upgrade",
+        description: "Coin boost upgrade icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1059820639487262",
+            path: "assets/images/upgrade_coin-boost.png"
+          }
+        ]
+      },
+      {
+        id: "upgrade-container-card",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
+        name: "Container Card Upgrade",
+        description: "Container card upgrade icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "3158472954326260",
+            path: "assets/images/upgrade_container-card.png"
+          }
+        ]
+      },
+      {
+        id: "upgrade-exp-boost",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
+        name: "Experience Boost Upgrade",
+        description: "Experience boost upgrade icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "662687460055242",
+            path: "assets/images/upgrade_exp-boost.png"
+          }
+        ]
+      },
+      {
+        id: "upgrade-luck-boost",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
+        name: "Luck Boost Upgrade",
+        description: "Luck boost upgrade icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "2054672501734665",
+            path: "assets/images/upgrade_luck-boost.png"
+          }
+        ]
+      },
+      {
+        id: "upgrade-rooster",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
+        name: "Rooster Upgrade",
+        description: "Rooster upgrade icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1504708944108154",
+            path: "assets/images/upgrade_rooster.png"
+          }
+        ]
+      },
+      {
+        id: "upgrade-upgraded-box",
+        type: AssetEntryType.UI,
+        category: UICategory.Upgrade,
+        name: "Upgraded Box",
+        description: "Upgraded box icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "814844064745019",
+            path: "assets/images/upgrade_upgraded-box.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\common\catalogs\fireAssets.ts ====================
+
+  /**
+   * Fire Affinity Assets - Refactored using catalogBuilder
+   *
+   * This file is now ~60% smaller thanks to the catalog builder utility.
+   * Edit card definitions below, and the builder handles all the boilerplate.
+   */
+
+
+  /**
+   * Card definitions - Just the data, no boilerplate
+   */
+  const fireCards = [
+    defineCard(
+      "blazefinch",
+      {
+        id: "blazefinch",
+        name: "Blazefinch",
+        type: CardType.Beast,
+        affinity: Affinity.Fire,
+        cost: 1,
+        baseAttack: 1,
+        baseHealth: 2,
+        abilities: [
+          {
+            name: "Quick Strike",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.RemoveSummoningSickness,
+                target: AbilityTarget.Self
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_fire_blazefinch.png",
+      "3218250765004566"
+    ),
+
+    defineCard(
+      "cinder-pup",
+      {
+        id: "cinder-pup",
+        name: "Cinder Pup",
+        type: CardType.Beast,
+        affinity: Affinity.Fire,
+        cost: 2,
+        baseAttack: 2,
+        baseHealth: 3,
+        abilities: [
+          {
+            name: "Burning Passion",
+            trigger: AbilityTrigger.OnAttack,
+            effects: [
+              {
+                type: EffectType.DealDamage,
+                target: AbilityTarget.AttackedEnemy,
+                value: 1
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_fire_cinder-pup.png",
+      "913214814369510"
+    ),
+
+    defineCard(
+      "charcoil",
+      {
+        id: "charcoil",
+        name: "Charcoil",
+        type: CardType.Beast,
+        affinity: Affinity.Fire,
+        cost: 2,
+        baseAttack: 3,
+        baseHealth: 4,
+        abilities: [
+          {
+            name: "Flame Retaliation",
+            trigger: AbilityTrigger.OnDamage,
+            effects: [
+              {
+                type: EffectType.Retaliation,
+                target: AbilityTarget.Attacker,
+                value: 1
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_fire_charcoil.png",
+      "785856391096811"
+    ),
+
+    defineCard(
+      "magmite",
+      {
+        id: "magmite",
+        name: "Magmite",
+        type: CardType.Beast,
+        affinity: Affinity.Fire,
+        cost: 3,
+        baseAttack: 4,
+        baseHealth: 6,
+        abilities: [
+          {
+            name: "Hardened Shell",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.DamageReduction,
+                target: AbilityTarget.Self,
+                value: 1,
+                duration: EffectDuration.WhileOnField
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_fire_magmite.png",
+      "25339017082348952"
+    ),
+  ];
+
+  /**
+   * Build the catalog from cards using the builder
+   * This eliminates ~100 lines of boilerplate!
+   */
+  const fireCatalog = createCatalog(Affinity.Fire, fireCards);
+
+  /**
+   * Add special assets (Habitat with multiple images, UI elements)
+   * These don't fit the simple card pattern, so we add them manually
+   */
+  export const fireAssets: AssetCatalog = {
+    ...fireCatalog,
+    data: [
+      ...fireCatalog.data,
+
+      // Habitat card with multiple asset images
+      {
+        id: "volcanic-scar",
+        type: AssetEntryType.Habitat,
+        affinity: AffinityLowercase.Fire,
+        data: {
+          id: "volcanic-scar",
+          name: "Volcanic Scar",
+          type: CardType.Habitat,
+          affinity: Affinity.Fire,
+          cost: 1,
+          abilities: [
+            {
+              name: "Volcanic Eruption",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
+                {
+                  type: EffectType.DealDamage,
+                  target: AbilityTarget.AllUnits,
+                  value: 1,
+                  condition: {
+                    type: ConditionType.AffinityNotMatches,
+                    value: "Fire"
+                  }
+                }
+              ]
+            }
+          ]
+        } as HabitatCard,
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1878791053043603",
+            path: "assets/images/cards_fire_volcanic-scar.png"
+          },
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1574158663591082",
+            path: "assets/images/cards_fire_habitat-card.png"
+          },
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1863280224222620",
+            path: "assets/images/cards_fire_habitat-card-playboard.png"
+          }
+        ]
+      },
+
+      // UI Assets
+      {
+        id: "fire-mission",
+        type: AssetEntryType.Mission,
+        affinity: AffinityLowercase.Fire,
+        name: "Fire Mission",
+        description: "Fire affinity mission",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "795064546836933",
+            path: "assets/images/cards_fire_fire-mission.png"
+          }
+        ]
+      },
+      {
+        id: "fire-chest-closed",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
+        name: "Fire Chest Closed",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1168387145201364",
+            path: "assets/images/chest_fire-chest-closed.png"
+          }
+        ]
+      },
+      {
+        id: "fire-chest-opened",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
+        name: "Fire Chest Opened",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "3716217982005558",
+            path: "assets/images/chest_fire-chest-opened.png"
+          }
+        ]
+      },
+      {
+        id: "fire-icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
+        name: "Fire Icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "2011015256402906",
+            path: "assets/images/affinity_fire-icon.png"
+          }
+        ]
+      },
+      {
+        id: "fire-habitat",
+        type: AssetEntryType.UI,
+        category: UICategory.CardTemplate,
+        name: "Fire Habitat Card Template",
+        description: "Template overlay for fire habitat cards",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1574158663591082",
+            path: "assets/images/cards_fire_habitat-card.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\common\catalogs\forestAssets.ts ====================
+
+  /**
+   * Forest Affinity Assets - Refactored using catalogBuilder
+   *
+   * This file is now ~60% smaller thanks to the catalog builder utility.
+   * Edit card definitions below, and the builder handles all the boilerplate.
+   */
+
+
+  /**
+   * Card definitions - Just the data, no boilerplate
+   */
+  const forestCards = [
+    defineCard(
+      "rootling",
+      {
+        id: "rootling",
+        name: "Rootling",
+        displayName: "Rootling",
+        type: CardType.Beast,
+        affinity: Affinity.Forest,
+        cost: 1,
+        baseAttack: 1,
+        baseHealth: 3,
+        abilities: [
+          {
+            name: "Deep Roots",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.CannotBeTargeted,
+                target: AbilityTarget.Self,
+                by: [
+                  "magic"
+                ]
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_forest_rootling.png",
+      "1170317305016635"
+    ),
+
+    defineCard(
+      "leaf-sprite",
+      {
+        id: "leaf-sprite",
+        name: "Leaf Sprite",
+        displayName: "Leaf Sprite",
+        type: CardType.Beast,
+        affinity: Affinity.Forest,
+        cost: 1,
+        baseAttack: 1,
+        baseHealth: 2,
+        abilities: [
+          {
+            name: "Nimble",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
+              {
+                type: EffectType.DrawCards,
+                target: AbilityTarget.Player,
+                value: 1
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_forest_leaf-sprite.png",
+      "1733091247346351"
+    ),
+
+    defineCard(
+      "mosslet",
+      {
+        id: "mosslet",
+        name: "Mosslet",
+        displayName: "Mosslet",
+        type: CardType.Beast,
+        affinity: Affinity.Forest,
+        cost: 2,
+        baseAttack: 2,
+        baseHealth: 2,
+        abilities: [
+          {
+            name: "Growth",
+            trigger: AbilityTrigger.OnOwnEndOfTurn,
+            effects: [
+              {
+                type: EffectType.ModifyStats,
+                target: AbilityTarget.Self,
+                stat: StatType.Both,
+                value: 1,
+                duration: EffectDuration.Permanent
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_forest_mosslet.png",
+      "1344114090714721"
+    ),
+
+    defineCard(
+      "mushroomancer",
+      {
+        id: "mushroomancer",
+        name: "Mushroomancer",
+        displayName: "Mushroomancer",
+        type: CardType.Beast,
+        affinity: Affinity.Forest,
+        cost: 3,
+        baseAttack: 3,
+        baseHealth: 4,
+        abilities: [
+          {
+            name: "Sporogenesis",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
+              {
+                type: EffectType.DealDamage,
+                target: AbilityTarget.AllEnemies,
+                value: 2
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_forest_mushroomancer.png",
+      "1393693032328550"
+    ),
+  ];
+
+  /**
+   * Build the catalog from cards using the builder
+   * This eliminates ~100 lines of boilerplate!
+   */
+  const forestCatalog = createCatalog(Affinity.Forest, forestCards);
+
+  /**
+   * Add special assets (Habitat with multiple images, UI elements)
+   * These don't fit the simple card pattern, so we add them manually
+   */
+  export const forestAssets: AssetCatalog = {
+    ...forestCatalog,
+    data: [
+      ...forestCatalog.data,
+
+      // Habitat card with multiple asset images
+      {
+        id: "ancient-forest",
+        type: AssetEntryType.Habitat,
+        affinity: AffinityLowercase.Forest,
+        data: {
+          id: "ancient-forest",
+          name: "Ancient Forest",
+          displayName: "Ancient Forest",
+          type: CardType.Habitat,
+          affinity: Affinity.Forest,
+          cost: 0,
+          abilities: [
+            {
+              name: "Forest Sanctuary",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
+                {
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.AllAllies,
+                  stat: StatType.Health,
+                  value: 1,
+                  duration: EffectDuration.WhileOnField
+                }
+              ]
+            }
+          ]
+        } as HabitatCard,
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1625867191715184",
+            path: "assets/images/cards_forest_ancient-forest.png",
+            description: "Ancient Forest habitat card artwork"
+          },
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "715084184317947",
+            path: "assets/images/cards_forest_habitat-card.png",
+            description: "Forest habitat card template"
+          },
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "805969505504149",
+            path: "assets/images/cards_forest_habitat-card-playboard.png",
+            description: "Forest habitat card playboard"
+          }
+        ]
+      },
+
+      // UI Assets
+      {
+        id: "forest-mission",
+        type: AssetEntryType.Mission,
+        affinity: AffinityLowercase.Forest,
+        name: "Forest Mission",
+        description: "Forest affinity mission",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1351984712974001",
+            path: "assets/images/cards_forest_forest-mission.png",
+            description: "Forest mission card"
+          }
+        ]
+      },
+      {
+        id: "forest-chest-closed",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
+        name: "Forest Chest Closed",
+        description: "Forest chest in closed state",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "678586941962889",
+            path: "assets/images/chest_forest-chest-closed.png"
+          }
+        ]
+      },
+      {
+        id: "forest-chest-opened",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
+        name: "Forest Chest Opened",
+        description: "Forest chest in opened state",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1859963367965524",
+            path: "assets/images/chest_forest-chest-opened.png"
+          }
+        ]
+      },
+      {
+        id: "forest-icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
+        name: "Forest Icon",
+        description: "Forest affinity icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1869425844004279",
+            path: "assets/images/affinity_forest-icon.png"
+          }
+        ]
+      },
+      {
+        id: "forest-habitat",
+        type: AssetEntryType.UI,
+        category: UICategory.CardTemplate,
+        name: "Forest Habitat Card Template",
+        description: "Template overlay for forest habitat cards",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "715084184317947",
+            path: "assets/images/cards_forest_habitat-card.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\common\catalogs\magicAssets.ts ====================
+
+  /**
+   * Magic Assets Catalog - Refactored using catalogBuilder
+   *
+   * This file uses the catalog builder utility to eliminate boilerplate.
+   * Edit card definitions below, and the builder handles all the wrapper structure.
+   */
+
+
+  /**
+   * Magic card definitions
+   */
+  const magicCards = [
+    defineCard("aether-swap", {
+      id: "aether-swap", name: "Aether Swap", type: CardType.Magic, cost: 1, targetRequired: false,
+      abilities: [{ name: "Aether Swap", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.ReturnToHand, target: AbilityTarget.AllAllies, value: 1 }] }]
+    } as MagicCard, "assets/images/cards_magic_aether-swap.png", "1846483789630405"),
+
+    defineCard("cleansing-downpour", {
+      id: "cleansing-downpour", name: "Cleansing Downpour", type: CardType.Magic, cost: 2, targetRequired: false,
+      abilities: [{ name: "Cleansing Downpour", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.DrawCards, target: AbilityTarget.Player, value: 1 }] }]
+    } as MagicCard, "assets/images/cards_magic_cleansing-downpour.png", "710755475386192"),
+
+    defineCard("elemental-burst", {
+      id: "elemental-burst", name: "Elemental Burst", type: CardType.Magic, cost: 3, targetRequired: false,
+      abilities: [{ name: "Elemental Burst", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.DealDamage, target: AbilityTarget.AllEnemies, value: 2 }] }]
+    } as MagicCard, "assets/images/cards_magic_elemental-burst.png", "1585232092889726"),
+
+    defineCard("lightning-strike", {
+      id: "lightning-strike", name: "Lightning Strike", type: CardType.Magic, cost: 2, targetRequired: false,
+      abilities: [{ name: "Lightning Strike", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.DealDamage, target: AbilityTarget.LowestHealthEnemy, value: 5, piercing: true }] }]
+    } as MagicCard, "assets/images/cards_magic_lightning-strike.png", "1155953239812167"),
+
+    defineCard("nectar-block", {
+      id: "nectar-block", name: "Energy Block", type: CardType.Magic, cost: 0, targetRequired: false,
+      abilities: [{ name: "Energy Block", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.GainResource, target: AbilityTarget.Player, resource: ResourceType.Energy, value: 2, duration: EffectDuration.ThisTurn }] }]
+    } as MagicCard, "assets/images/cards_magic_energy-block.png", "1092559439363693"),
+
+    defineCard("nectar-drain", {
+      id: "nectar-drain", name: "Energy Drain", type: CardType.Magic, cost: 1, targetRequired: false,
+      abilities: [{ name: "Energy Drain", trigger: AbilityTrigger.OnSummon,
+        effects: [
+          { type: EffectType.GainResource, target: AbilityTarget.Player, resource: ResourceType.Energy, value: 2, duration: EffectDuration.ThisTurn },
+          { type: EffectType.DrawCards, target: AbilityTarget.Player, value: 1 }
+        ] }]
+    } as MagicCard, "assets/images/cards_magic_energy-drain.png", "1754732031852523"),
+
+    defineCard("nectar-surge", {
+      id: "nectar-surge", name: "Energy Surge", type: CardType.Magic, cost: 1, targetRequired: false,
+      abilities: [{ name: "Energy Surge", trigger: AbilityTrigger.OnSummon,
+        effects: [
+          { type: EffectType.GainResource, target: AbilityTarget.Player, resource: ResourceType.Energy, value: 3, duration: EffectDuration.ThisTurn },
+          { type: EffectType.DrawCards, target: AbilityTarget.Player, value: 1 }
+        ] }]
+    } as MagicCard, "assets/images/cards_magic_energy-surge.png", "1379310950488534"),
+
+    defineCard("overgrowth", {
+      id: "overgrowth", name: "Overgrowth", type: CardType.Magic, cost: 3, targetRequired: false,
+      abilities: [{ name: "Overgrowth", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.ModifyStats, target: AbilityTarget.AllAllies, stat: StatType.Both, value: 2, duration: EffectDuration.Permanent }] }]
+    } as MagicCard, "assets/images/cards_magic_overgrowth.png", "1489977038895297"),
+
+    defineCard("power-up", {
+      id: "power-up", name: "Power Up", type: CardType.Magic, cost: 2, targetRequired: false,
+      abilities: [{ name: "Power Up", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.ModifyStats, target: AbilityTarget.RandomAlly, stat: StatType.Both, value: 3, duration: EffectDuration.Permanent }] }]
+    } as MagicCard, "assets/images/cards_magic_power-up.png", "1140750044697552"),
+
+    defineCard("purify", {
+      id: "purify", name: "Purify", type: CardType.Magic, cost: 1, targetRequired: false,
+      abilities: [{ name: "Purify", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.Heal, target: AbilityTarget.RandomAlly, value: 3 }] }]
+    } as MagicCard, "assets/images/cards_magic_purify.png", "681285418362907"),
+  ];
+
+  /**
+   * Build the catalog manually since Magic cards don't have affinity
+   */
+  export const magicAssets: AssetCatalog = {
+    version: "1.0.0",
+    category: CatalogCategory.Magic,
+    description: "Magic cards and assets",
+    data: magicCards.map((card) => ({
+      id: card.id,
+      type: AssetEntryType.Magic,
+      cardType: "Magic",
+      data: card.cardData,
+      assets: [{
+        type: AssetReferenceType.Image,
+        ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
+        path: card.imagePath,
+      }]
+    }))
+  };
+
+  // ==================== bloombeasts\common\catalogs\skyAssets.ts ====================
+
+  /**
+   * Sky Affinity Assets - Refactored using catalogBuilder
+   *
+   * This file is now ~60% smaller thanks to the catalog builder utility.
+   * Edit card definitions below, and the builder handles all the boilerplate.
+   */
+
+
+  /**
+   * Card definitions - Just the data, no boilerplate
+   */
+  const skyCards = [
+    defineCard(
+      "aero-moth",
+      {
+        id: "aero-moth",
+        name: "Aero Moth",
+        type: CardType.Beast,
+        affinity: Affinity.Sky,
+        cost: 2,
+        baseAttack: 3,
+        baseHealth: 3,
+        abilities: [
+          {
+            name: "Wing Flutter",
+            trigger: AbilityTrigger.OnSummon,
+            effects: [
+              {
+                type: EffectType.DrawCards,
+                target: AbilityTarget.Player,
+                value: 1
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_sky_aero-moth.png",
+      "1857788838498496"
+    ),
+
+    defineCard(
+      "cirrus-floof",
+      {
+        id: "cirrus-floof",
+        name: "Cirrus Floof",
+        type: CardType.Beast,
+        affinity: Affinity.Sky,
+        cost: 2,
+        baseAttack: 1,
+        baseHealth: 6,
+        abilities: [
+          {
+            name: "Lightness",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.CannotBeTargeted,
+                target: AbilityTarget.Self,
+                by: [
+                  "high-cost-units"
+                ],
+                costThreshold: 3
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_sky_cirrus-floof.png",
+      "849446287592530"
+    ),
+
+    defineCard(
+      "gale-glider",
+      {
+        id: "gale-glider",
+        name: "Gale Glider",
+        type: CardType.Beast,
+        affinity: Affinity.Sky,
+        cost: 1,
+        baseAttack: 2,
+        baseHealth: 2,
+        abilities: [
+          {
+            name: "First Wind",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.AttackModification,
+                target: AbilityTarget.Self,
+                modification: "attack-first"
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_sky_gale-glider.png",
+      "1854780382097596"
+    ),
+
+    defineCard(
+      "star-bloom",
+      {
+        id: "star-bloom",
+        name: "Star Bloom",
+        type: CardType.Beast,
+        affinity: Affinity.Sky,
+        cost: 3,
+        baseAttack: 4,
+        baseHealth: 5,
+        abilities: [
+          {
+            name: "Aura",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.ModifyStats,
+                target: AbilityTarget.AllAllies,
+                stat: StatType.Attack,
+                value: 1,
+                duration: EffectDuration.WhileOnField
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_sky_star-bloom.png",
+      "737222956003560"
+    ),
+  ];
+
+  /**
+   * Build the catalog from cards using the builder
+   * This eliminates ~100 lines of boilerplate!
+   */
+  const skyCatalog = createCatalog(Affinity.Sky, skyCards);
+
+  /**
+   * Add special assets (Habitat with multiple images, UI elements)
+   * These don't fit the simple card pattern, so we add them manually
+   */
+  export const skyAssets: AssetCatalog = {
+    ...skyCatalog,
+    data: [
+      ...skyCatalog.data,
+
+      // Habitat card with multiple asset images
+      {
+        id: "clear-zenith",
+        type: AssetEntryType.Habitat,
+        affinity: AffinityLowercase.Sky,
+        data: {
+          id: "clear-zenith",
+          name: "Clear Zenith",
+          type: CardType.Habitat,
+          affinity: Affinity.Sky,
+          cost: 1,
+          titleColor: "#000000",
+          abilities: [
+            {
+              name: "Sky Vision",
+              trigger: AbilityTrigger.OnSummon,
+              effects: [
+                {
+                  type: EffectType.DrawCards,
+                  target: AbilityTarget.Player,
+                  value: 1
+                }
+              ]
+            }
+          ]
+        } as HabitatCard,
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1941325056416004",
+            path: "assets/images/cards_sky_clear-zenith.png"
+          },
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "724533667339482",
+            path: "assets/images/cards_sky_habitat-card.png"
+          },
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "674037762415336",
+            path: "assets/images/cards_sky_habitat-card-playboard.png"
+          }
+        ]
+      },
+
+      // UI Assets
+      {
+        id: "sky-mission",
+        type: AssetEntryType.Mission,
+        affinity: AffinityLowercase.Sky,
+        name: "Sky Mission",
+        description: "Sky affinity mission",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1076415204381099",
+            path: "assets/images/cards_sky_sky-mission.png"
+          }
+        ]
+      },
+      {
+        id: "sky-chest-closed",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
+        name: "Sky Chest Closed",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1988442925266143",
+            path: "assets/images/chest_sky-chest-closed.png"
+          }
+        ]
+      },
+      {
+        id: "sky-chest-opened",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
+        name: "Sky Chest Opened",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "766596743048030",
+            path: "assets/images/chest_sky-chest-opened.png"
+          }
+        ]
+      },
+      {
+        id: "sky-icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
+        name: "Sky Icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "2078365889573892",
+            path: "assets/images/affinity_sky-icon.png"
+          }
+        ]
+      },
+      {
+        id: "sky-habitat",
+        type: AssetEntryType.UI,
+        category: UICategory.CardTemplate,
+        name: "Sky Habitat Card Template",
+        description: "Template overlay for sky habitat cards",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "724533667339482",
+            path: "assets/images/cards_sky_habitat-card.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\common\catalogs\trapAssets.ts ====================
+
+  /**
+   * Trap Assets Catalog - Refactored using catalogBuilder
+   *
+   * This file uses the catalog builder utility to eliminate boilerplate.
+   * Edit card definitions below, and the builder handles all the wrapper structure.
+   */
+
+
+  /**
+   * Trap card definitions
+   */
+  const trapCards = [
+    defineCard("bear-trap", {
+      id: "bear-trap", name: "Bear Trap", type: CardType.Trap, cost: 1,
+      activation: { trigger: TrapTrigger.OnAttack },
+      abilities: [{ name: "Bear Trap", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.DealDamage, target: AbilityTarget.Attacker, value: 3 }] }]
+    } as TrapCard, "assets/images/cards_trap_bear-trap.png", "1518992622460625"),
+
+    defineCard("emergency-bloom", {
+      id: "emergency-bloom", name: "Emergency Bloom", type: CardType.Trap, cost: 1,
+      activation: { trigger: TrapTrigger.OnDestroy },
+      abilities: [{ name: "Emergency Bloom", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.DrawCards, target: AbilityTarget.Player, value: 2 }] }]
+    } as TrapCard, "assets/images/cards_trap_emergency-bloom.png", "2247657455738264"),
+
+    defineCard("habitat-lock", {
+      id: "habitat-lock", name: "Habitat Lock", type: CardType.Trap, cost: 1,
+      activation: { trigger: TrapTrigger.OnHabitatPlay },
+      abilities: [{ name: "Habitat Lock", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.NullifyEffect, target: AbilityTarget.PlayedCard }] }]
+    } as TrapCard, "assets/images/cards_trap_habitat-lock.png", "609610328807674"),
+
+    defineCard("habitat-shield", {
+      id: "habitat-shield", name: "Habitat Shield", type: CardType.Trap, cost: 2,
+      activation: { trigger: TrapTrigger.OnHabitatPlay },
+      abilities: [{ name: "Habitat Shield", trigger: AbilityTrigger.OnSummon,
+        effects: [
+          { type: EffectType.NullifyEffect, target: AbilityTarget.PlayedCard },
+          { type: EffectType.DrawCards, target: AbilityTarget.Player, value: 1 }
+        ] }]
+    } as TrapCard, "assets/images/cards_trap_habitat-shield.png", "1362245262078336"),
+
+    defineCard("magic-shield", {
+      id: "magic-shield", name: "Magic Shield", type: CardType.Trap, cost: 1,
+      activation: { trigger: TrapTrigger.OnMagicPlay },
+      abilities: [{ name: "Magic Shield", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.NullifyEffect, target: AbilityTarget.PlayedCard }] }]
+    } as TrapCard, "assets/images/cards_trap_magic-sheild.png", "1239098601311749"),
+
+    defineCard("thorn-snare", {
+      id: "thorn-snare", name: "Thorn Snare", type: CardType.Trap, cost: 2,
+      activation: { trigger: TrapTrigger.OnAttack },
+      abilities: [{ name: "Thorn Snare", trigger: AbilityTrigger.OnSummon,
+        effects: [
+          { type: EffectType.PreventAttack, target: AbilityTarget.Attacker, duration: EffectDuration.Instant },
+          { type: EffectType.DealDamage, target: AbilityTarget.Attacker, value: 2 }
+        ] }]
+    } as TrapCard, "assets/images/cards_trap_thorn-snare.png", "4210265565909373"),
+
+    defineCard("vaporize", {
+      id: "vaporize", name: "Vaporize", type: CardType.Trap, cost: 2,
+      activation: { trigger: TrapTrigger.OnBeastPlay, condition: { type: TrapConditionType.CostBelow, value: 4 } },
+      abilities: [{ name: "Vaporize", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.Destroy, target: AbilityTarget.PlayedCard }] }]
+    } as TrapCard, "assets/images/cards_trap_vaporize.png", "1903759173890506"),
+
+    defineCard("xp-harvest", {
+      id: "xp-harvest", name: "XP Harvest", type: CardType.Trap, cost: 1,
+      activation: { trigger: TrapTrigger.OnDestroy },
+      abilities: [{ name: "XP Harvest", trigger: AbilityTrigger.OnSummon,
+        effects: [{ type: EffectType.DealDamage, target: AbilityTarget.Attacker, value: 2 }] }]
+    } as TrapCard, "assets/images/cards_trap_xpharvest.png", "807213335392971"),
+  ];
+
+  /**
+   * Build the catalog manually since Trap cards don't have affinity
+   */
+  export const trapAssets: AssetCatalog = {
+    version: "1.0.0",
+    category: CatalogCategory.Trap,
+    description: "Trap cards and assets",
+    data: trapCards.map((card) => ({
+      id: card.id,
+      type: AssetEntryType.Trap,
+      cardType: "Trap",
+      data: card.cardData,
+      assets: [{
+        type: AssetReferenceType.Image,
+        ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
+        path: card.imagePath,
+      }]
+    }))
+  };
+
+  // ==================== bloombeasts\common\catalogs\waterAssets.ts ====================
+
+  /**
+   * Water Affinity Assets - Refactored using catalogBuilder
+   *
+   * This file is now ~60% smaller thanks to the catalog builder utility.
+   * Edit card definitions below, and the builder handles all the boilerplate.
+   */
+
+
+  /**
+   * Card definitions - Just the data, no boilerplate
+   */
+  const waterCards = [
+    defineCard(
+      "aqua-pebble",
+      {
+        id: "aqua-pebble",
+        name: "Aqua Pebble",
+        type: CardType.Beast,
+        affinity: Affinity.Water,
+        cost: 1,
+        baseAttack: 1,
+        baseHealth: 4,
+        abilities: [
+          {
+            name: "Tide Flow",
+            trigger: AbilityTrigger.OnAllySummon,
+            effects: [
+              {
+                type: EffectType.ModifyStats,
+                target: AbilityTarget.Self,
+                stat: StatType.Attack,
+                value: 1,
+                duration: EffectDuration.EndOfTurn,
+                condition: {
+                  type: ConditionType.AffinityMatches,
+                  value: "Water"
+                }
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_water_aqua-pebble.png",
+      "2542562209453452"
+    ),
+
+    defineCard(
+      "bubblefin",
+      {
+        id: "bubblefin",
+        name: "Bubblefin",
+        type: CardType.Beast,
+        affinity: Affinity.Water,
+        cost: 2,
+        baseAttack: 2,
+        baseHealth: 5,
+        abilities: [
+          {
+            name: "Emerge",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.CannotBeTargeted,
+                target: AbilityTarget.Self,
+                by: [
+                  "trap"
+                ]
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_water_bubblefin.png",
+      "2957682524429594"
+    ),
+
+    defineCard(
+      "dewdrop-drake",
+      {
+        id: "dewdrop-drake",
+        name: "Dewdrop Drake",
+        type: CardType.Beast,
+        affinity: Affinity.Water,
+        cost: 3,
+        baseAttack: 3,
+        baseHealth: 6,
+        abilities: [
+          {
+            name: "Mist Screen",
+            trigger: AbilityTrigger.WhileOnField,
+            effects: [
+              {
+                type: EffectType.AttackModification,
+                target: AbilityTarget.Self,
+                modification: "attack-first",
+                condition: {
+                  type: ConditionType.UnitsOnField,
+                  value: 1,
+                  comparison: Comparison.Equal
+                }
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_water_dewdrop-drake.png",
+      "1232407695362881"
+    ),
+
+    defineCard(
+      "kelp-cub",
+      {
+        id: "kelp-cub",
+        name: "Kelp Cub",
+        type: CardType.Beast,
+        affinity: Affinity.Water,
+        cost: 2,
+        baseAttack: 3,
+        baseHealth: 3,
+        abilities: [
+          {
+            name: "Entangle",
+            trigger: AbilityTrigger.OnAttack,
+            effects: [
+              {
+                type: EffectType.PreventAttack,
+                target: AbilityTarget.AttackedEnemy,
+                duration: EffectDuration.StartOfNextTurn
+              }
+            ]
+          }
+        ],
+      } as BloomBeastCard,
+      "assets/images/cards_water_kelp-cub.png",
+      "2278603722605464"
+    ),
+  ];
+
+  /**
+   * Build the catalog from cards using the builder
+   * This eliminates ~100 lines of boilerplate!
+   */
+  const waterCatalog = createCatalog(Affinity.Water, waterCards);
+
+  /**
+   * Add special assets (Habitat with multiple images, UI elements)
+   * These don't fit the simple card pattern, so we add them manually
+   */
+  export const waterAssets: AssetCatalog = {
+    ...waterCatalog,
+    data: [
+      ...waterCatalog.data,
+
+      // Habitat card with multiple asset images
+      {
+        id: "deep-sea-grotto",
+        type: AssetEntryType.Habitat,
+        affinity: AffinityLowercase.Water,
+        data: {
+          id: "deep-sea-grotto",
+          name: "Deep Sea Grotto",
+          type: CardType.Habitat,
+          affinity: Affinity.Water,
+          cost: 1,
+          abilities: [
+            {
+              name: "Aquatic Empowerment",
+              trigger: AbilityTrigger.WhileOnField,
+              effects: [
+                {
+                  type: EffectType.ModifyStats,
+                  target: AbilityTarget.AllAllies,
+                  stat: StatType.Attack,
+                  value: 1,
+                  duration: EffectDuration.WhileOnField,
+                  condition: {
+                    type: ConditionType.AffinityMatches,
+                    value: "Water"
+                  }
+                }
+              ]
+            }
+          ]
+        } as HabitatCard,
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "594002380404766",
+            path: "assets/images/cards_water_deep-sea-grotto.png"
+          },
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1356075539231203",
+            path: "assets/images/cards_water_habitat-card.png"
+          },
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "805465575687502",
+            path: "assets/images/cards_water_habitat-card-playboard.png"
+          }
+        ]
+      },
+
+      // UI Assets
+      {
+        id: "water-mission",
+        type: AssetEntryType.Mission,
+        affinity: AffinityLowercase.Water,
+        name: "Water Mission",
+        description: "Water affinity mission",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1204438218330106",
+            path: "assets/images/cards_water_water-mission.png"
+          }
+        ]
+      },
+      {
+        id: "water-chest-closed",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
+        name: "Water Chest Closed",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1502977104283894",
+            path: "assets/images/chest_water-chest-closed.png"
+          }
+        ]
+      },
+      {
+        id: "water-chest-opened",
+        type: AssetEntryType.UI,
+        category: UICategory.Chest,
+        name: "Water Chest Opened",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "817919940747617",
+            path: "assets/images/chest_water-chest-opened.png"
+          }
+        ]
+      },
+      {
+        id: "water-icon",
+        type: AssetEntryType.UI,
+        category: UICategory.Icon,
+        name: "Water Icon",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "803389222302576",
+            path: "assets/images/affinity_water-icon.png"
+          }
+        ]
+      },
+      {
+        id: "water-habitat",
+        type: AssetEntryType.UI,
+        category: UICategory.CardTemplate,
+        name: "Water Habitat Card Template",
+        description: "Template overlay for water habitat cards",
+        assets: [
+          {
+            type: AssetReferenceType.Image,
+            horizonAssetId: "1356075539231203",
+            path: "assets/images/cards_water_habitat-card.png"
+          }
+        ]
+      }
+    ]
+  };
+
+  // ==================== bloombeasts\common\catalogs\index.ts ====================
+
+  /**
+   * Catalogs - Re-exports all card definitions
+   */
+
+
+  // Import all catalogs
+
+  // Export array of all catalogs for easy iteration
+  export const allCatalogs = [
+    bossAssets,
+    buffAssets,
+    commonAssets,
+    fireAssets,
+    forestAssets,
+    magicAssets,
+    skyAssets,
+    trapAssets,
+    waterAssets,
+  ];
 
 }
 

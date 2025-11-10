@@ -60,8 +60,8 @@ class EffectSystem<TState extends Record<string, unknown>> {
     state: Turbo.IGameState<TState>,
     context?: TriggerContext
   ): { success: boolean; newState?: Turbo.IGameState<TState> } {
-    // Clone state to avoid mutating the original - use structuredClone to preserve Sets, Maps, etc.
-    const newState = structuredClone(state) as Turbo.IGameState<TState>;
+    // Clone state to avoid mutating the original - use Turbo.deepClone to preserve Sets, Maps, etc.
+    const newState = Turbo.deepClone(state);
     const bloomState = newState.gameData as unknown as BloomBeastsState;
 
     // Handle OnSummon triggers
@@ -1002,8 +1002,9 @@ class EffectSystem<TState extends Record<string, unknown>> {
 }
 
 // Types are defined in ./types.ts to avoid circular dependencies
-export type { BloomBeastsState, BloomBeastsActionData, BloomBeastsPlayer, RuntimeBeast, RuntimeCard } from './types';
-export { BloomBeastsActionType } from './types';
+// Note: Export statements removed for namespace bundling - types are available via imports
+// export type { BloomBeastsState, BloomBeastsActionData, BloomBeastsPlayer, RuntimeBeast, RuntimeCard } from './types';
+// export { BloomBeastsActionType } from './types';
 
 /**
  * BloomBeasts game configuration
@@ -1491,3 +1492,17 @@ export function createBloomBeastsGame(config?: Partial<BloomBeastsConfig>): Turb
   const rules = new BloomBeastsRules(config);
   return new Turbo.GameController(rules);
 }
+
+// Export types for regular module bundling (web deployment)
+// Note: These exports are fine for namespace bundling too
+export type {
+  BloomBeastsState,
+  BloomBeastsActionData,
+  BloomBeastsPlayer,
+  RuntimeBeast,
+  RuntimeCard,
+  RuntimeHabitat,
+  RuntimeBuff,
+  RuntimeTrap,
+} from './types';
+export { BloomBeastsActionType } from './types';

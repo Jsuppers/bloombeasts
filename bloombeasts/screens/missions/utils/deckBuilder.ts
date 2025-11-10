@@ -14,16 +14,36 @@ export interface CardSpec {
   count: number;
 }
 
+// Module-level catalog manager reference
+// Set via setCatalogManagerForMissions() which is called by CoreSystemsInitializer
+let _missionDeckCatalogManager: any = null;
+
 /**
- * Get catalog manager from global game instance
+ * Set the catalog manager instance for mission deck builder
+ * Called during game initialization
+ */
+export function setCatalogManagerForMissions(catalogManager: any): void {
+  _missionDeckCatalogManager = catalogManager;
+  Logger.info('[MissionDeckBuilder] Catalog manager initialized');
+}
+
+/**
+ * Get catalog manager (for internal use)
  */
 function getCatalogManager(): any {
-  const game = (globalThis as any).bloomBeastsGame;
-  if (!game?.catalogManager) {
-    Logger.error('[MissionDeckBuilder] Catalog manager not available');
+  if (!_missionDeckCatalogManager) {
+    Logger.error('[MissionDeckBuilder] Catalog manager not available - was setCatalogManagerForMissions called?');
     return null;
   }
-  return game.catalogManager;
+  return _missionDeckCatalogManager;
+}
+
+/**
+ * Get catalog manager (for external use - e.g., mission17 Cluck Norris)
+ * This allows mission definitions to access the catalog manager
+ */
+export function getCatalogManagerForMissions(): any {
+  return _missionDeckCatalogManager;
 }
 
 /**
@@ -44,6 +64,7 @@ export function createMissionDeck(config: {
   const catalogManager = getCatalogManager();
 
   if (!catalogManager) {
+    Logger.error(`[MissionDeckBuilder] CatalogManager is not available! Cannot build deck "${config.name}"`);
     return {
       name: config.name,
       affinity: config.affinity,
@@ -52,15 +73,19 @@ export function createMissionDeck(config: {
     };
   }
 
+  Logger.info(`[MissionDeckBuilder] Building deck "${config.name}" with ${config.cards.length} card types`);
+
   const deckCards: any[] = [];
 
   for (const spec of config.cards) {
     const cardDef = catalogManager.getCard(spec.cardId);
 
     if (!cardDef) {
-      Logger.error(`[MissionDeckBuilder] Card not found: ${spec.cardId}`);
+      Logger.error(`[MissionDeckBuilder] Card not found in catalog: ${spec.cardId}`);
       continue;
     }
+
+    Logger.debug(`[MissionDeckBuilder] Adding ${spec.count}x ${spec.cardId} to deck`);
 
     // Create multiple instances of this card
     for (let i = 1; i <= spec.count; i++) {
@@ -77,20 +102,4 @@ export function createMissionDeck(config: {
     cards: deckCards,
     totalCards: deckCards.length,
   };
-}
-
-/**
- * Create a simple deck with just one card type (common for early missions)
- */
-export function createSimpleDeck(
-  deckName: string,
-  affinity: DeckType,
-  cardId: string,
-  count: number
-): DeckList {
-  return createMissionDeck({
-    name: deckName,
-    affinity,
-    cards: [{ cardId, count }],
-  });
 }

@@ -5,8 +5,8 @@
 
 import { COLORS } from '../styles/styles/colors';
 import { DIMENSIONS } from '../styles/styles/dimensions';
-import type { UIMethodMappings } from '../../../../bloombeasts/BloomBeastsGame';
-import type { MissionDisplay } from '../../../../bloombeasts/gameManager';
+import type { UIMethodMappings } from '../../../types/ui/UIMethodMappings';
+import type { MissionDisplay } from '../../../types/game/DisplayTypes';
 import type { UINodeType } from '../ScreenUtils';
 import { BindingType, UIState } from '../types/types/BindingManager';
 

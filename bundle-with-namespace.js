@@ -92,18 +92,18 @@ function removeImportsAndExports(content) {
       continue;
     }
 
-    // Skip export {...} from statements (multi-line)
-    if (trimmed.startsWith('export {')) {
-      const nextLine = lines[i + 1]?.trim() || '';
-      if (!trimmed.includes('}') || nextLine.startsWith('from ')) {
-        inExportBlock = true;
-        continue;
+    // Skip export {...} from statements (multi-line) - including "export type {"
+    if (trimmed.startsWith('export {') || trimmed.startsWith('export type {')) {
+      inExportBlock = true;
+      // Check if it's a single-line statement
+      if (trimmed.includes(';')) {
+        inExportBlock = false;
       }
-      // Single-line export {} without from - keep but remove export keyword
+      continue;
     }
 
     if (inExportBlock) {
-      if (trimmed.includes(';') || (trimmed.includes('}') && !lines[i + 1]?.trim().startsWith('from'))) {
+      if (trimmed.includes(';')) {
         inExportBlock = false;
       }
       continue;
@@ -123,13 +123,12 @@ function removeImportsAndExports(content) {
     // Handle export keyword
     let processedLine = line;
     if (trimmed.startsWith('export ')) {
-      // Keep export for class, interface, type, const, function, enum declarations
-      // Inside a namespace, exports become namespace members
-      if (trimmed.match(/^export\s+(class|interface|type|const|let|var|function|enum|abstract\s+class)\s/)) {
-        processedLine = line; // Keep the export
-      } else if (trimmed.startsWith('export default ')) {
-        // Skip export default statements entirely (they're re-exports)
+      if (trimmed.startsWith('export default ')) {
+        // Skip export default statements entirely
         continue;
+      } else if (trimmed.match(/^export\s+(class|interface|type|const|let|var|function|enum|abstract\s+class|declare\s+)/)) {
+        // Keep export for actual declarations - these become accessible as namespace members
+        processedLine = line;
       } else {
         // For other exports, remove the export keyword
         processedLine = line.replace(/^(\s*)export\s+/, '$1');
@@ -194,7 +193,7 @@ processFile(entryPoint);
 
 // Process core game logic
 processFile(path.resolve(__dirname, './bloombeasts/gameManager.ts'));
-processFile(path.resolve(__dirname, './bloombeasts/utils/createDefaultPlayerData.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/common/utils/createDefaultPlayerData.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/systems/CardCollectionManager.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/systems/SoundManager.ts'));
 processFile(path.resolve(__dirname, './bloombeasts/systems/BattleDisplayManager.ts'));
@@ -211,8 +210,11 @@ processFile(path.resolve(__dirname, './bloombeasts/AssetCatalogManager.ts'));
 // Process BloomBeastsGame (main game controller)
 processFile(path.resolve(__dirname, './bloombeasts/BloomBeastsGame.ts'));
 
+// Process Turbo battle engine types
+processFile(path.resolve(__dirname, './bloombeasts/screens/battle/engine/types.ts'));
+
 // Process asset catalogs (TypeScript files - bundled like any other source file)
-processFile(path.resolve(__dirname, './bloombeasts/catalogs/index.ts'));
+processFile(path.resolve(__dirname, './bloombeasts/common/catalogs/index.ts'));
 
 // Handle duplicate const declarations
 // Don't rename - namespaces already provide isolation
