@@ -14,6 +14,7 @@ export const COLORS = {
   textPrimary: '#ffffff',
   textSecondary: '#aaaaaa',
   textMuted: '#666666',
+  textBlack: '#000000',
 
   // UI element colors
   buttonPrimary: '#3498db',

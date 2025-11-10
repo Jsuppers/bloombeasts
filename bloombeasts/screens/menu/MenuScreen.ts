@@ -279,7 +279,7 @@ export class MenuScreen extends BaseScreen {
               text: coinsBinding,
               style: {
                 fontSize: DIMENSIONS.fontSize.lg,
-                color: COLORS.textPrimary,
+                color: COLORS.textBlack,
                 fontWeight: 'bold',
                 marginLeft: COINS_TEXT_MARGIN,
               },
@@ -309,7 +309,7 @@ export class MenuScreen extends BaseScreen {
               text: serumsBinding,
               style: {
                 fontSize: DIMENSIONS.fontSize.lg,
-                color: COLORS.textPrimary,
+                color: COLORS.textBlack,
                 fontWeight: 'bold',
                 marginLeft: SERUMS_TEXT_MARGIN,
               },

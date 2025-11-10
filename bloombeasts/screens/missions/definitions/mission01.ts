@@ -6,6 +6,7 @@
 import { Mission } from '../types';
 import { buildForestDeck, DeckList } from '../../../common/engine/utils/deckBuilder';
 import { Logger } from '../../../common/engine/utils/Logger';
+import { Affinity } from '../../../common/engine';
 
 export const mission01: Mission = {
   id: 'mission-01',
@@ -44,6 +45,7 @@ export const mission01: Mission = {
         minAmount: 1,
         maxAmount: 2,
         dropChance: 1.0,
+        affinity: Affinity.Forest,
       },
     ],
     coinRewards: {

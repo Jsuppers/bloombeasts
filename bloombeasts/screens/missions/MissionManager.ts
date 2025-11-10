@@ -221,8 +221,12 @@ export class MissionManager {
    */
   private generateRewards(rewardConfig: MissionRewards): RewardResult {
     // Calculate completion time
-    const completionTimeMs = (this.progress!.endTime || Date.now()) - this.progress!.startTime;
-    const completionTimeSeconds = Math.floor(completionTimeMs / 1000);
+    const startTime = this.progress!.startTime || Date.now();
+    const endTime = this.progress!.endTime || Date.now();
+    const completionTimeMs = endTime - startTime;
+    const completionTimeSeconds = Math.max(0, Math.floor(completionTimeMs / 1000));
+
+    Logger.info(`[MissionManager] generateRewards - startTime: ${startTime}, endTime: ${endTime}, completionTime: ${completionTimeSeconds}s`);
 
     // Calculate beast XP (same as player XP for now)
     const beastXP = rewardConfig.guaranteedXP;

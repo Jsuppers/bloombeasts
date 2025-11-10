@@ -192,7 +192,7 @@ export function createAffinityUIAssets(
     icon: string;
     habitatTemplate: string;
   }
-): CardAssetEntry[] {
+): any[] {
   const affinityLower = getAffinityLowercase(affinity);
   const affinityName = Affinity[affinity];
 
@@ -259,5 +259,5 @@ export function createAffinityUIAssets(
         path: `assets/images/cards_${affinityLower}_habitat-card.png`
       }]
     }
-  ] as CardAssetEntry[];
+  ];
 }

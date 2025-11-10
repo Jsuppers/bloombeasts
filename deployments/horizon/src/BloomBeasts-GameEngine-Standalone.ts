@@ -10,8 +10,8 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-11-10T08:48:13.075Z
- * Files: 148
+ * Generated: 2025-11-10T10:43:02.833Z
+ * Files: 150
  *
  * @version 1.0.0
  * @license MIT
@@ -584,6 +584,7 @@ namespace BloomBeasts {
     textPrimary: '#ffffff',
     textSecondary: '#aaaaaa',
     textMuted: '#666666',
+    textBlack: '#000000',
 
     // UI element colors
     buttonPrimary: '#3498db',
@@ -2880,7 +2881,7 @@ namespace BloomBeasts {
                 text: coinsBinding,
                 style: {
                   fontSize: DIMENSIONS.fontSize.lg,
-                  color: COLORS.textPrimary,
+                  color: COLORS.textBlack,
                   fontWeight: 'bold',
                   marginLeft: COINS_TEXT_MARGIN,
                 },
@@ -2910,7 +2911,7 @@ namespace BloomBeasts {
                 text: serumsBinding,
                 style: {
                   fontSize: DIMENSIONS.fontSize.lg,
-                  color: COLORS.textPrimary,
+                  color: COLORS.textBlack,
                   fontWeight: 'bold',
                   marginLeft: SERUMS_TEXT_MARGIN,
                 },
@@ -3610,15 +3611,16 @@ namespace BloomBeasts {
      * Create a battle display object from battle state
      */
     createBattleDisplay(
-      battleUIState: any,
-      options?: BattleDisplayOptions
+      battleState: any,
+      options?: BattleDisplayOptions,
+      mission?: any,
+      progress?: any
     ): BattleDisplay | null {
-      // Handle new TURBO-based battle state structure
-      if (!battleUIState || !battleUIState.battleState || !battleUIState.battleState.turboState) {
+      if (!battleState?.turboState) {
         return null;
       }
 
-      const turboState = battleUIState.battleState.turboState;
+      const turboState = battleState.turboState;
       const gameData = turboState.gameData;
 
       // Extract players and field from TURBO state
@@ -3652,7 +3654,7 @@ namespace BloomBeasts {
         currentTurn: turboState.turnInfo.turnNumber,
         turnPlayer: turnPlayer,
         turnTimeRemaining: TURN_TIME_LIMIT,
-        objectives: this.getObjectiveDisplay(battleUIState),
+        objectives: this.getObjectiveDisplay(mission, progress),
         habitatZone: playerField.habitat || opponentField.habitat, // Use whichever has a habitat
         attackAnimation: options,
       };
@@ -3663,26 +3665,26 @@ namespace BloomBeasts {
     /**
      * Get objective display for current battle
      */
-    private getObjectiveDisplay(battleState: any): ObjectiveDisplay[] {
-      if (!battleState.mission || !battleState.progress) {
+    private getObjectiveDisplay(mission: any, progress: any): ObjectiveDisplay[] {
+      if (!mission || !progress) {
         return [];
       }
 
       // Check if mission has objectives defined
-      if (!battleState.mission.objectives || !Array.isArray(battleState.mission.objectives)) {
+      if (!mission.objectives || !Array.isArray(mission.objectives)) {
         return [];
       }
 
-      return battleState.mission.objectives.map((obj: any) => {
+      return mission.objectives.map((obj: any) => {
         const key = `${obj.type}-${obj.target || 0}`;
-        const progress = battleState.progress.objectiveProgress.get(key) || 0;
+        const progressValue = progress.objectiveProgress.get(key) || 0;
         const target = obj.target || 1;
 
         return {
           description: obj.description || 'Unknown objective',
-          progress: Math.min(progress, target),
+          progress: Math.min(progressValue, target),
           target: target,
-          isComplete: progress >= target,
+          isComplete: progressValue >= target,
         };
       });
     }
@@ -10596,6 +10598,73 @@ namespace BloomBeasts {
     return deckOrFactory;
   }
 
+  // ==================== bloombeasts\common\engine\utils\cardHelpers.ts ====================
+
+  /**
+   * Card Helper Utilities - Query and filter cards
+   */
+
+
+  /**
+   * Check if a card is a Beast
+   */
+  export function isBloomBeast(card: AnyCard): card is BloomBeastCard {
+    return card.type === CardType.Beast;
+  }
+
+  /**
+   * Filter cards by type (simplified)
+   */
+  export function filterByType(cards: AnyCard[], type: CardType): AnyCard[] {
+    return cards.filter((card) => card.type === type);
+  }
+
+  /**
+   * Filter Beasts by affinity
+   */
+  export function filterByAffinity(cards: AnyCard[], affinity: Affinity): BloomBeastCard[] {
+    return cards.filter((card): card is BloomBeastCard => isBloomBeast(card) && card.affinity === affinity);
+  }
+
+  /**
+   * Get all Beasts from a card list
+   */
+  export function getBloomBeasts(cards: AnyCard[]): BloomBeastCard[] {
+    return cards.filter(isBloomBeast);
+  }
+
+  /**
+   * Find a card by ID
+   */
+  export function findCardById(cards: AnyCard[], id: string): AnyCard | undefined {
+    return cards.find((card) => card.id === id);
+  }
+
+  /**
+   * Get card by name
+   */
+  export function findCardByName(cards: AnyCard[], name: string): AnyCard | undefined {
+    return cards.find((card) => card.name.toLowerCase() === name.toLowerCase());
+  }
+
+  // ==================== bloombeasts\common\engine\index.ts ====================
+
+  /**
+   * Bloom Beasts Card Game - Main Export Index
+   *
+   * A comprehensive card game system with leveling, ability evolution, and strategic gameplay.
+   */
+
+  // Types
+
+  // Systems
+
+  // Cards
+
+  // Constants
+
+  // Utilities
+
   // ==================== bloombeasts\screens\missions\definitions\mission01.ts ====================
 
   /**
@@ -10641,6 +10710,7 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 1.0,
+          affinity: Affinity.Forest,
         },
       ],
       coinRewards: {
@@ -10798,6 +10868,7 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.9,
+          affinity: Affinity.Forest,
         },
       ],
       coinRewards: {
@@ -10849,6 +10920,7 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.8,
+          affinity: Affinity.Forest,
         },
       ],
       coinRewards: {
@@ -10902,6 +10974,14 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.8,
+          affinity: Affinity.Forest,
+        },
+        {
+          cardPool: 'uncommon',
+          minAmount: 1,
+          maxAmount: 1,
+          dropChance: 0.4,
+          affinity: Affinity.Forest,
         },
       ],
       coinRewards: {
@@ -10944,6 +11024,7 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Water,
         },
       ],
       coinRewards: {
@@ -10986,6 +11067,7 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Water,
         },
       ],
       coinRewards: {
@@ -11028,6 +11110,7 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Water,
         },
       ],
       coinRewards: {
@@ -11070,12 +11153,14 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Water,
         },
         {
           cardPool: 'uncommon',
           minAmount: 1,
           maxAmount: 1,
           dropChance: 0.4,
+          affinity: Affinity.Water,
         },
       ],
       coinRewards: {
@@ -11118,12 +11203,14 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Fire,
         },
         {
           cardPool: 'uncommon',
           minAmount: 1,
           maxAmount: 1,
           dropChance: 0.5,
+          affinity: Affinity.Fire,
         },
       ],
       coinRewards: {
@@ -11166,12 +11253,14 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Fire,
         },
         {
           cardPool: 'uncommon',
           minAmount: 1,
           maxAmount: 1,
           dropChance: 0.5,
+          affinity: Affinity.Fire,
         },
       ],
       coinRewards: {
@@ -11214,6 +11303,7 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Fire,
         },
       ],
       coinRewards: {
@@ -11256,12 +11346,14 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Fire,
         },
         {
           cardPool: 'rare',
           minAmount: 1,
           maxAmount: 1,
           dropChance: 0.4,
+          affinity: Affinity.Fire,
         },
       ],
       coinRewards: {
@@ -11304,12 +11396,14 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Sky,
         },
         {
           cardPool: 'rare',
           minAmount: 1,
           maxAmount: 1,
           dropChance: 0.4,
+          affinity: Affinity.Sky,
         },
       ],
       coinRewards: {
@@ -11352,12 +11446,14 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Sky,
         },
         {
           cardPool: 'rare',
           minAmount: 1,
           maxAmount: 1,
           dropChance: 0.4,
+          affinity: Affinity.Sky,
         },
       ],
       coinRewards: {
@@ -11400,12 +11496,14 @@ namespace BloomBeasts {
           minAmount: 1,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Sky,
         },
         {
           cardPool: 'rare',
           minAmount: 1,
           maxAmount: 1,
           dropChance: 0.5,
+          affinity: Affinity.Sky,
         },
       ],
       coinRewards: {
@@ -11448,12 +11546,14 @@ namespace BloomBeasts {
           minAmount: 2,
           maxAmount: 2,
           dropChance: 0.7,
+          affinity: Affinity.Sky,
         },
         {
           cardPool: 'rare',
           minAmount: 1,
           maxAmount: 1,
           dropChance: 0.5,
+          affinity: Affinity.Sky,
         },
       ],
       coinRewards: {
@@ -11827,8 +11927,12 @@ namespace BloomBeasts {
      */
     private generateRewards(rewardConfig: MissionRewards): RewardResult {
       // Calculate completion time
-      const completionTimeMs = (this.progress!.endTime || Date.now()) - this.progress!.startTime;
-      const completionTimeSeconds = Math.floor(completionTimeMs / 1000);
+      const startTime = this.progress!.startTime || Date.now();
+      const endTime = this.progress!.endTime || Date.now();
+      const completionTimeMs = endTime - startTime;
+      const completionTimeSeconds = Math.max(0, Math.floor(completionTimeMs / 1000));
+
+      Logger.info(`[MissionManager] generateRewards - startTime: ${startTime}, endTime: ${endTime}, completionTime: ${completionTimeSeconds}s`);
 
       // Calculate beast XP (same as player XP for now)
       const beastXP = rewardConfig.guaranteedXP;
@@ -18135,15 +18239,6 @@ namespace BloomBeasts {
    */
 
 
-  export interface BattleUIState {
-    mission: Mission;
-    battleState: BattleState | null;
-    progress: MissionRunProgress | null;
-    isComplete: boolean;
-    rewards: RewardResult | null;
-    winner: string | null;
-  }
-
   /**
    * Convert AnyCard[] to RuntimeCard[] for opponent decks
    * Creates minimal CardInstances (level 1, 0 XP) and converts them to RuntimeCards
@@ -18186,7 +18281,7 @@ namespace BloomBeasts {
     private battleController: BattleController;
 
     // Current state
-    private currentBattle: BattleUIState | null = null;
+    private currentBattle: BattleState | null = null;
     private shouldStopAI: boolean = false;
 
     // Callbacks
@@ -18234,7 +18329,7 @@ namespace BloomBeasts {
     /**
      * Initialize a mission battle
      */
-    initializeBattle(playerDeckCards: RuntimeCard[], playerName?: string): BattleUIState | null {
+    initializeBattle(playerDeckCards: RuntimeCard[], playerName?: string): BattleState | null {
       this.shouldStopAI = false;
 
       const mission = this.missionManager.getCurrentMission();
@@ -18283,15 +18378,8 @@ namespace BloomBeasts {
       // Initialize battle using generic battle controller
       const battle = this.battleController.initializeBattle(battleConfig);
 
-      // Create mission-specific state
-      this.currentBattle = {
-        mission,
-        battleState: battle,
-        progress: this.missionManager.getProgress(),
-        isComplete: false,
-        rewards: null,
-        winner: null,
-      };
+      // Store battle state
+      this.currentBattle = battle;
 
       return this.currentBattle;
     }
@@ -18299,43 +18387,50 @@ namespace BloomBeasts {
     /**
      * Get current battle state
      */
-    getCurrentBattle(): BattleUIState | null {
+    getCurrentBattle(): BattleState | null {
       return this.currentBattle;
+    }
+
+    /**
+     * Get mission manager
+     */
+    getMissionManager(): MissionManager {
+      return this.missionManager;
     }
 
     /**
      * Helper: Get player from TURBO state (player is always index 0)
      */
     private getPlayer() {
-      return this.currentBattle?.battleState?.turboState.gameData.players[0];
+      return this.currentBattle?.turboState.gameData.players[0];
     }
 
     /**
      * Helper: Get opponent from TURBO state (opponent is always index 1)
      */
     private getOpponent() {
-      return this.currentBattle?.battleState?.turboState.gameData.players[1];
+      return this.currentBattle?.turboState.gameData.players[1];
     }
 
     /**
      * Helper: Get player field from TURBO state
      */
     private getPlayerField() {
-      return this.currentBattle?.battleState?.turboState.gameData.field.player1;
+      return this.currentBattle?.turboState.gameData.field.player1;
     }
 
     /**
      * Helper: Get opponent field from TURBO state
      */
     private getOpponentField() {
-      return this.currentBattle?.battleState?.turboState.gameData.field.player2;
+      return this.currentBattle?.turboState.gameData.field.player2;
     }
 
     /**
      * Process a typed player action
      */
     async processTypedAction(action: BattleAction, data?: any): Promise<void> {
-      if (!this.currentBattle?.battleState) {
+      if (!this.currentBattle?.turboState) {
         Logger.error('No active battle');
         return;
       }
@@ -18458,8 +18553,8 @@ namespace BloomBeasts {
 
       // Sync state from BattleController immediately after action
       const updatedBattle = this.battleController.getCurrentBattle();
-      if (updatedBattle && this.currentBattle) {
-        this.currentBattle.battleState = updatedBattle;
+      if (updatedBattle) {
+        this.currentBattle = updatedBattle;
       }
 
       // Update mission progress
@@ -18530,13 +18625,13 @@ namespace BloomBeasts {
      */
     private async endPlayerTurn(): Promise<any> {
       Logger.info('[BattleUI] endPlayerTurn called');
-      if (!this.currentBattle?.battleState) {
+      if (!this.currentBattle?.turboState) {
         Logger.warn('[BattleUI] No current battle for endPlayerTurn');
         return { success: false };
       }
 
       // Check if battle is already complete (e.g., player just won)
-      if (this.currentBattle.isComplete) {
+      if (this.currentBattle.turboState.isComplete) {
         Logger.info('[BattleUI] Battle is already complete');
         return { success: false };
       }
@@ -18555,7 +18650,7 @@ namespace BloomBeasts {
       // Update the local game state immediately after turn change
       const stateAfterTurnEnd = this.battleController.getCurrentBattle();
       if (stateAfterTurnEnd) {
-        this.currentBattle.battleState = stateAfterTurnEnd;
+        this.currentBattle = stateAfterTurnEnd;
         Logger.info('[BattleUI] Updated local battle state after turn end');
         // Trigger render to update UI with new turn
         if (this.renderCallback) this.renderCallback();
@@ -18568,7 +18663,7 @@ namespace BloomBeasts {
       // Update the local game state again after AI turn
       const battleState = this.battleController.getCurrentBattle();
       if (battleState) {
-        this.currentBattle.battleState = battleState;
+        this.currentBattle = battleState;
         Logger.info('[BattleUI] Updated local battle state after AI turn');
         // Trigger render to update UI to show player's turn
         if (this.renderCallback) this.renderCallback();
@@ -18582,7 +18677,7 @@ namespace BloomBeasts {
      */
     private async processOpponentTurn(): Promise<void> {
       Logger.info('[BattleUI] Processing opponent turn');
-      if (!this.currentBattle?.battleState) {
+      if (!this.currentBattle?.turboState) {
         Logger.warn('[BattleUI] No current battle state for opponent turn');
         return;
       }
@@ -18618,7 +18713,7 @@ namespace BloomBeasts {
         // Final update after AI completes
         const updatedState = this.battleController.getCurrentBattle();
         if (updatedState) {
-          this.currentBattle.battleState = updatedState;
+          this.currentBattle = updatedState;
           if (this.renderCallback) this.renderCallback();
         }
       } catch (error) {
@@ -18664,7 +18759,7 @@ namespace BloomBeasts {
       }
 
       // Prevent multiple calls
-      if (this.currentBattle.isComplete) {
+      if (this.currentBattle.turboState.isComplete) {
         Logger.info('[BattleUI] Battle already completed, ignoring duplicate endBattle call');
         return;
       }
@@ -18678,10 +18773,8 @@ namespace BloomBeasts {
       Logger.info(`[BattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
 
       this.shouldStopAI = true;
-      this.currentBattle.isComplete = true;
-      this.currentBattle.winner = battleResult.winner;
 
-      // Calculate rewards based on winner
+      // Update mission progress based on winner
       if (battleResult.winner === 'player1') {
         // Player won! Mark opponent as defeated for mission progress
         Logger.info('[BattleUI] Player 1 won! Marking opponent as defeated.');
@@ -18689,24 +18782,18 @@ namespace BloomBeasts {
 
         this.missionManager.updateProgress('opponent-defeated', {});
         Logger.info('[BattleUI] updateProgress called successfully');
-
-        // Now complete the mission and award rewards
-        this.currentBattle.rewards = this.missionManager.completeMission();
-        Logger.info(`[BattleUI] Rewards generated: ${this.currentBattle.rewards !== null}`);
         this.battleController.completeBattle('player1');
       } else if (battleResult.winner === 'player2') {
         // Player lost
         Logger.info('[BattleUI] Player 2 won! No rewards.');
-        this.currentBattle.rewards = null;
         this.battleController.completeBattle('player2');
       } else {
         // Tie (both died) - treat as loss for now
         Logger.info('[BattleUI] Tie! No rewards.');
-        this.currentBattle.rewards = null;
         this.battleController.completeBattle(null);
       }
 
-      Logger.info(`[BattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}`);
+      Logger.info(`[BattleUI] Battle ended.`);
     }
 
     /**
@@ -19205,6 +19292,7 @@ namespace BloomBeasts {
     cardsReceived: any[];
     itemsReceived?: any[];
     bonusRewards?: string[];
+    completionTimeSeconds?: number;
   }
 
   /**
@@ -19517,7 +19605,7 @@ namespace BloomBeasts {
     /**
      * Validate deck before starting battle
      */
-    static validateDeck(deckCards: any[]): ValidationResult {
+    static validateDeck(deckCards: RuntimeCard[]): ValidationResult {
       const errors: string[] = [];
 
       // Check deck size
@@ -19555,8 +19643,9 @@ namespace BloomBeasts {
 
     /**
      * Validate player data structure
+     * Type guard pattern - checks if unknown data is valid PlayerData
      */
-    static validatePlayerData(data: any): ValidationResult {
+    static validatePlayerData(data: unknown): ValidationResult {
       const errors: string[] = [];
 
       if (!data || typeof data !== 'object') {
@@ -19564,36 +19653,42 @@ namespace BloomBeasts {
         return { valid: false, errors };
       }
 
+      const playerData = data as Record<string, unknown>;
+
       // Check required fields
-      if (!data.name || typeof data.name !== 'string') {
+      if (!playerData.name || typeof playerData.name !== 'string') {
         errors.push('Player name is missing or invalid');
       }
 
-      if (typeof data.totalXP !== 'number' || data.totalXP < 0) {
+      if (typeof playerData.totalXP !== 'number' || playerData.totalXP < 0) {
         errors.push('Player XP is invalid');
       }
 
-      if (typeof data.coins !== 'number' || data.coins < 0) {
+      if (typeof playerData.coins !== 'number' || playerData.coins < 0) {
         errors.push('Player coins is invalid');
       }
 
       // Check cards structure
-      if (!data.cards || typeof data.cards !== 'object') {
+      if (!playerData.cards || typeof playerData.cards !== 'object') {
         errors.push('Player cards data is missing');
       } else {
-        if (!Array.isArray(data.cards.collected)) {
+        const cards = playerData.cards as Record<string, unknown>;
+        if (!Array.isArray(cards.collected)) {
           errors.push('Player collected cards must be an array');
         }
-        if (!Array.isArray(data.cards.deck)) {
+        if (!Array.isArray(cards.deck)) {
           errors.push('Player deck must be an array');
         }
       }
 
       // Check missions structure
-      if (!data.missions || typeof data.missions !== 'object') {
+      if (!playerData.missions || typeof playerData.missions !== 'object') {
         errors.push('Player missions data is missing');
-      } else if (typeof data.missions.completedMissions !== 'object') {
-        errors.push('Completed missions must be an object');
+      } else {
+        const missions = playerData.missions as Record<string, unknown>;
+        if (typeof missions.completedMissions !== 'object') {
+          errors.push('Completed missions must be an object');
+        }
       }
 
       if (errors.length > 0) {
@@ -19609,7 +19704,7 @@ namespace BloomBeasts {
     /**
      * Validate battle action
      */
-    static validateBattleAction(action: string, battleState: any): ValidationResult {
+    static validateBattleAction(action: string, battleState: BattleState | null): ValidationResult {
       const errors: string[] = [];
 
       if (!action || typeof action !== 'string') {
@@ -19622,7 +19717,7 @@ namespace BloomBeasts {
         return { valid: false, errors };
       }
 
-      if (battleState.isComplete) {
+      if (battleState.turboState?.isComplete) {
         errors.push('Cannot perform action - battle is already complete');
       }
 
@@ -19749,7 +19844,7 @@ namespace BloomBeasts {
     /**
      * Initialize battle with mission ID
      */
-    initializeBattle(missionId: string, playerDeckCards: any[], playerName: string): any {
+    initializeBattle(missionId: string, playerDeckCards: RuntimeCard[], playerName: string): BattleState | null {
       const battleState = this.battleUI.initializeBattle(playerDeckCards, playerName);
 
       if (battleState) {
@@ -19806,14 +19901,14 @@ namespace BloomBeasts {
       const currentBattle = this.battleUI.getCurrentBattle();
 
       // Validate battle action
-      const validation = ValidationHelpers.validateBattleAction(action, currentBattle?.battleState);
+      const validation = ValidationHelpers.validateBattleAction(action, currentBattle);
       if (!validation.valid) {
         Logger.warn('[BattleOrchestrator] Battle action validation failed:', validation.errors);
         return;
       }
 
       // CRITICAL: Check if battle is already complete - prevent double processing
-      if (currentBattle && currentBattle.isComplete) {
+      if (currentBattle && currentBattle.turboState.isComplete) {
         Logger.info(`[BattleOrchestrator] Battle already complete, ignoring action: ${action}`);
         return;
       }
@@ -19854,10 +19949,14 @@ namespace BloomBeasts {
 
       // Immediately update display after action to show cards instantly
       const immediateState = this.battleUI.getCurrentBattle();
-      if (immediateState && !immediateState.isComplete) {
+      if (immediateState && !immediateState.turboState?.isComplete) {
+        const mission = this.battleUI.getMissionManager().getCurrentMission();
+        const progress = this.battleUI.getMissionManager().getProgress();
         const immediateDisplay = this.battleDisplayManager.createBattleDisplay(
           immediateState,
-          undefined
+          undefined,
+          mission,
+          progress
         );
         if (immediateDisplay) {
           this.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, immediateDisplay);
@@ -19868,15 +19967,19 @@ namespace BloomBeasts {
       const updatedState = this.battleUI.getCurrentBattle();
       if (updatedState) {
         // Check if battle ended FIRST - never render after completion
-        if (updatedState.isComplete) {
+        if (updatedState.turboState?.isComplete) {
           await this.handleBattleComplete(updatedState);
           return;
         }
 
         // Create updated battle display with fresh state
+        const mission = this.battleUI.getMissionManager().getCurrentMission();
+        const progress = this.battleUI.getMissionManager().getProgress();
         const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
           updatedState,
-          undefined
+          undefined,
+          mission,
+          progress
         );
 
         if (updatedDisplay) {
@@ -19888,7 +19991,7 @@ namespace BloomBeasts {
     /**
      * Handle auto-attack-all action with animations
      */
-    private async handleAutoAttackAll(typedAction: any): Promise<void> {
+    private async handleAutoAttackAll(typedAction: BattleAction): Promise<void> {
       this.soundManager.playSfx(SOUND_EFFECTS.ATTACK);
 
       // Process action with animation callback
@@ -19905,14 +20008,18 @@ namespace BloomBeasts {
       // Get updated state and render
       const updatedState = this.battleUI.getCurrentBattle();
       if (updatedState) {
-        if (updatedState.isComplete) {
+        if (updatedState.turboState?.isComplete) {
           await this.handleBattleComplete(updatedState);
           return;
         }
 
+        const mission = this.battleUI.getMissionManager().getCurrentMission();
+        const progress = this.battleUI.getMissionManager().getProgress();
         const updatedDisplay = this.battleDisplayManager.createBattleDisplay(
           updatedState,
-          undefined
+          undefined,
+          mission,
+          progress
         );
         if (updatedDisplay) {
           this.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, updatedDisplay);
@@ -19927,8 +20034,8 @@ namespace BloomBeasts {
       const timedOutPlayerId = action === 'timeout-player' ? 'player' : 'opponent';
 
       const currentBattle = this.battleUI.getCurrentBattle();
-      if (currentBattle && currentBattle.battleState) {
-        const currentPlayerId = currentBattle.battleState.turboState.turnInfo.currentPlayerId;
+      if (currentBattle && currentBattle.turboState) {
+        const currentPlayerId = currentBattle.turboState.turnInfo.currentPlayerId;
 
         // Process TIMEOUT action through TURBO
         await this.battleUI.processTypedAction({
@@ -19940,7 +20047,7 @@ namespace BloomBeasts {
 
         // Check if battle ended and handle completion
         const updatedState = this.battleUI.getCurrentBattle();
-        if (updatedState && updatedState.isComplete) {
+        if (updatedState && updatedState.turboState?.isComplete) {
           await this.handleBattleComplete(updatedState);
         }
       }
@@ -19961,7 +20068,7 @@ namespace BloomBeasts {
 
       // Check if battle ended and handle completion
       const updatedState = this.battleUI.getCurrentBattle();
-      if (updatedState && updatedState.isComplete) {
+      if (updatedState && updatedState.turboState?.isComplete) {
         await this.handleBattleComplete(updatedState);
       }
     }
@@ -19969,7 +20076,7 @@ namespace BloomBeasts {
     /**
      * Handle battle completion (victory or defeat)
      */
-    async handleBattleComplete(battleState: any): Promise<void> {
+    async handleBattleComplete(battleState: BattleState): Promise<void> {
       const playerData = this.gameStateManager.getPlayerDataOrNull();
       if (!playerData) return;
 
@@ -19978,12 +20085,84 @@ namespace BloomBeasts {
       const battleId = this.currentBattleId;
       this.currentBattleId = null;
 
-      if (battleState.rewards) {
+      // Use the BattleController's checkBattleEnd to get the proper winner
+      // This checks ALL win conditions: health, deck-out, sudden end, etc.
+      const battleResult = this.battleUI.getCurrentBattle();
+      if (!battleResult) {
+        Logger.error('[BattleOrchestrator] No battle result available');
+        return;
+      }
+
+      // Import WinConditionChecker to properly determine winner
+      // Player is always players[0] with id 'player', opponent is players[1] with id 'opponent'
+      const players = battleState.turboState.gameData.players;
+      const playerHealth = players[0].health;
+      const opponentHealth = players[1].health;
+
+      // Determine winner using the same logic as WinConditionChecker
+      let playerWon = false;
+
+      // Check sudden end (timeout/forfeit/disconnect) first (highest priority)
+      const suddenEnd = battleState.turboState.gameData.suddenEnd;
+      if (suddenEnd) {
+        // If opponent caused sudden end, player wins
+        playerWon = suddenEnd.playerId !== 'player';
+        Logger.info(`[BattleOrchestrator] Sudden end by ${suddenEnd.playerId}, player won: ${playerWon}`);
+      } else {
+        // Check health-based win
+        if (opponentHealth <= 0 && playerHealth > 0) {
+          playerWon = true;
+          Logger.info('[BattleOrchestrator] Player won by health');
+        } else if (playerHealth <= 0 && opponentHealth > 0) {
+          playerWon = false;
+          Logger.info('[BattleOrchestrator] Player lost by health');
+        } else {
+          // Check deck-out win
+          const playerHasCards = players[0].deck.length > 0 || players[0].hand.length > 0;
+          const opponentHasCards = players[1].deck.length > 0 || players[1].hand.length > 0;
+
+          if (!opponentHasCards && playerHasCards) {
+            playerWon = true;
+            Logger.info('[BattleOrchestrator] Player won by deck-out (opponent has no cards)');
+          } else if (!playerHasCards && opponentHasCards) {
+            playerWon = false;
+            Logger.info('[BattleOrchestrator] Player lost by deck-out (player has no cards)');
+          } else {
+            // Both dead or both decked out = tie (treat as loss)
+            playerWon = false;
+            Logger.info('[BattleOrchestrator] Tie game (treated as loss)');
+          }
+        }
+      }
+
+      // Get mission before any updates (needed for popups later)
+      const missionManager = this.battleUI.getMissionManager();
+      const mission = missionManager.getCurrentMission();
+
+      if (playerWon) {
+        // CRITICAL: Update mission progress with final health values AND mark opponent as defeated
+        // This sets progress.isCompleted = true, which is required for completeMission() to return rewards
+
+        // Update health first (needed for checkMissionCompletion to work)
+        missionManager.updateProgress('health-update', {
+          playerHealth: playerHealth,
+          opponentHealth: opponentHealth
+        });
+        Logger.info(`[BattleOrchestrator] Updated health - Player: ${playerHealth}, Opponent: ${opponentHealth}`);
+
+        // Then mark opponent as defeated (this calls checkMissionCompletion)
+        missionManager.updateProgress('opponent-defeated', {});
+        Logger.info('[BattleOrchestrator] Updated mission progress - opponent defeated');
+
+        // Debug: Check if mission is actually completed
+        const progress = missionManager.getProgress();
+        Logger.info(`[BattleOrchestrator] Mission progress.isCompleted: ${progress?.isCompleted}`);
+
         // Victory!
-        await this.handleVictory(battleState, playerData, battleId);
+        await this.handleVictory(battleState, playerData, battleId, mission);
       } else {
         // Defeat
-        await this.handleDefeat(battleState);
+        await this.handleDefeat(battleState, mission);
       }
 
       // Resume background music
@@ -19993,18 +20172,46 @@ namespace BloomBeasts {
     /**
      * Handle victory scenario
      */
-    private async handleVictory(battleState: any, playerData: any, battleId: string | null): Promise<void> {
+    private async handleVictory(battleState: BattleState, playerData: PlayerData, battleId: string | null, mission: any): Promise<void> {
       Logger.info('[BattleOrchestrator] VICTORY! Showing rewards popup');
+
+      // Complete the mission and get rewards
+      const missionManager = this.battleUI.getMissionManager();
+
+      // Debug: Check mission manager state before completing
+      const progress = missionManager.getProgress();
+      Logger.info(`[BattleOrchestrator] Before completeMission - mission: ${!!mission}, progress: ${!!progress}, isCompleted: ${progress?.isCompleted}`);
+      if (mission) {
+        Logger.info(`[BattleOrchestrator] Mission ID: ${mission.id}`);
+      }
+
+      const rewardResult = missionManager.completeMission();
+
+      if (!rewardResult) {
+        Logger.error('[BattleOrchestrator] No rewards received from mission completion');
+        Logger.error(`[BattleOrchestrator] Debug info - mission existed: ${!!mission}, progress existed: ${!!progress}, was completed: ${progress?.isCompleted}`);
+        return;
+      }
+
+      // Convert RewardResult to BattleRewards format
+      const rewards: BattleRewards = {
+        xpGained: rewardResult.xpGained,
+        beastXP: rewardResult.beastXP,
+        coinsReceived: rewardResult.coinsReceived || 0,
+        cardsReceived: rewardResult.cardsReceived,
+        itemsReceived: rewardResult.itemsReceived,
+        completionTimeSeconds: rewardResult.completionTimeSeconds,
+      };
 
       // Apply boost multipliers to rewards
       const boostMap = this.rewardCalculator.getBoostMap(playerData.boosts);
-      battleState.rewards = this.rewardCalculator.calculateRewards(battleState.rewards, boostMap);
+      const boostedRewards = this.rewardCalculator.calculateRewards(rewards, boostMap);
 
       // Award XP
-      this.gameStateManager.addXP(battleState.rewards.xpGained);
+      this.gameStateManager.addXP(boostedRewards.xpGained);
 
       // Award card XP directly to deck cards
-      const cardXP = battleState.rewards.beastXP || battleState.rewards.xpGained;
+      const cardXP = boostedRewards.beastXP || boostedRewards.xpGained;
       awardDeckExperience(
         cardXP,
         playerData.cards.deck,
@@ -20012,18 +20219,18 @@ namespace BloomBeasts {
       );
 
       // Add cards directly to collection
-      battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
+      boostedRewards.cardsReceived.forEach((card: AnyCard, index: number) => {
         addCardReward(card, playerData.cards.collected, index);
       });
 
       // Add coins
-      if (battleState.rewards.coinsReceived) {
-        this.gameStateManager.addCoins(battleState.rewards.coinsReceived);
+      if (boostedRewards.coinsReceived) {
+        this.gameStateManager.addCoins(boostedRewards.coinsReceived);
       }
 
       // Add items to inventory
-      if (battleState.rewards.itemsReceived) {
-        battleState.rewards.itemsReceived.forEach((itemReward: any) => {
+      if (boostedRewards.itemsReceived) {
+        boostedRewards.itemsReceived.forEach((itemReward: ItemRewardResult) => {
           this.gameStateManager.addItems(itemReward.itemId, itemReward.quantity);
         });
       }
@@ -20047,9 +20254,11 @@ namespace BloomBeasts {
       this.soundManager.playSfx(SOUND_EFFECTS.WIN);
 
       // Show mission complete popup
+      // NOTE: Use mission parameter captured before completeMission(),
+      // because completeMission() clears the mission manager's currentMission
       this.uiCoordinator.showMissionCompletePopup(
-        battleState.mission,
-        battleState.rewards,
+        mission,
+        boostedRewards,
         (sfxId: string) => this.soundManager.playSfx(sfxId),
         () => this.uiCoordinator.closePopupAndNavigate('missions')
       );
@@ -20058,7 +20267,7 @@ namespace BloomBeasts {
     /**
      * Handle defeat scenario
      */
-    private async handleDefeat(battleState: any): Promise<void> {
+    private async handleDefeat(battleState: BattleState, mission: any): Promise<void> {
       Logger.info('[BattleOrchestrator] DEFEAT! Showing failed popup');
 
       // Reset battle start time
@@ -20069,7 +20278,7 @@ namespace BloomBeasts {
 
       // Show mission failed popup
       this.uiCoordinator.showMissionFailedPopup(
-        battleState.mission,
+        mission,
         (sfxId: string) => this.soundManager.playSfx(sfxId),
         () => this.uiCoordinator.closePopupAndNavigate('missions')
       );
@@ -20087,6 +20296,9 @@ namespace BloomBeasts {
       const currentState = this.battleUI.getCurrentBattle();
       if (!currentState) return;
 
+      const mission = this.battleUI.getMissionManager().getCurrentMission();
+      const progress = this.battleUI.getMissionManager().getProgress();
+
       // Show animation (attacker glows green, target glows red)
       const displayWithAnimation = this.battleDisplayManager.createBattleDisplay(
         currentState,
@@ -20095,7 +20307,9 @@ namespace BloomBeasts {
           attackerIndex,
           targetPlayer,
           targetIndex
-        }
+        },
+        mission,
+        progress
       );
 
       if (displayWithAnimation) {
@@ -20367,10 +20581,14 @@ namespace BloomBeasts {
           // Set up render callback for battle UI to update display during AI turns
           this.systems.battleUI.setRenderCallback(() => {
             const currentBattle = this.systems.battleUI.getCurrentBattle();
-            if (currentBattle && !currentBattle.isComplete) {
+            if (currentBattle && !currentBattle.turboState.isComplete) {
+              const mission = this.systems.battleUI.getMissionManager().getCurrentMission();
+              const progress = this.systems.battleUI.getMissionManager().getProgress();
               const updatedDisplay = this.systems.battleDisplayManager.createBattleDisplay(
                 currentBattle,
-                undefined
+                undefined,
+                mission,
+                progress
               );
               if (updatedDisplay) {
                 this.systems.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, updatedDisplay);
@@ -20486,13 +20704,13 @@ namespace BloomBeasts {
       // Stop all timers when battle completes
       if (battleScreen) {
         const currentBattle = this.systems.battleUI.getCurrentBattle();
-        const wasComplete = currentBattle?.isComplete;
+        const wasComplete = currentBattle?.turboState.isComplete;
 
         await this.systems.battleOrchestrator.handleBattleAction(action);
 
         // Check if battle just completed and cleanup if needed
         const updatedBattle = this.systems.battleUI.getCurrentBattle();
-        if (!wasComplete && updatedBattle?.isComplete) {
+        if (!wasComplete && updatedBattle?.turboState.isComplete) {
           battleScreen.cleanup();
 
           // Save game data and refresh bindings when battle completes
@@ -21746,6 +21964,7 @@ namespace BloomBeasts {
    * - Horizon: See deployments/horizon/src/AssetCatalogLoader.ts for fetchAsData()-based loading
    */
 
+
   /**
    * Type of asset reference (image, audio, animation)
    */
@@ -22067,7 +22286,9 @@ namespace BloomBeasts {
           if (cardEntry.type === AssetEntryType.Beast) {
             // Assign rarity based on energy cost
             const cost = cardData.cost || 0;
-            if (cost >= 5) {
+            if (cardData.affinity === Affinity.Boss) {
+              cardData.rarity = 'boss';
+            } else if (cost >= 5) {
               cardData.rarity = 'rare';
             } else if (cost >= 3) {
               cardData.rarity = 'uncommon';
@@ -22416,6 +22637,116 @@ namespace BloomBeasts {
     };
   }
 
+  /**
+   * Create a catalog for non-affinity cards (Magic, Trap, Buff)
+   * These catalogs don't have an affinity but still need proper categorization
+   */
+  export function createNonAffinityCatalog(
+    category: CatalogCategory.Magic | CatalogCategory.Trap | CatalogCategory.Buff,
+    cards: CardDefinition[],
+    version: string = "1.0.0"
+  ): AssetCatalog {
+    const categoryNames = {
+      [CatalogCategory.Magic]: 'Magic',
+      [CatalogCategory.Trap]: 'Trap',
+      [CatalogCategory.Buff]: 'Buff',
+    };
+
+    return {
+      version,
+      category,
+      description: `${categoryNames[category]} cards`,
+      data: cards.map(buildCatalogEntry)
+    };
+  }
+
+  /**
+   * UI Asset Helpers
+   */
+
+  /**
+   * Create affinity UI assets (chests, icons, habitats, missions)
+   * Eliminates ~50 lines of boilerplate per affinity
+   */
+  export function createAffinityUIAssets(
+    affinity: Affinity.Fire | Affinity.Water | Affinity.Forest | Affinity.Sky,
+    horizonIds: {
+      mission: string;
+      chestClosed: string;
+      chestOpened: string;
+      icon: string;
+      habitatTemplate: string;
+    }
+  ): any[] {
+    const affinityLower = getAffinityLowercase(affinity);
+    const affinityName = Affinity[affinity];
+
+    return [
+      // Mission asset
+      {
+        id: `${affinityLower}-mission`,
+        type: AssetEntryType.Mission,
+        affinity: affinityLower,
+        name: `${affinityName} Mission`,
+        description: `${affinityName} affinity mission`,
+        assets: [{
+          type: AssetReferenceType.Image,
+          horizonAssetId: horizonIds.mission,
+          path: `assets/images/boss_${affinityLower}-boss.png`
+        }]
+      },
+      // Chest closed
+      {
+        id: `${affinityLower}-chest-closed`,
+        type: AssetEntryType.UI,
+        category: 'chest' as any,
+        name: `${affinityName} Chest Closed`,
+        assets: [{
+          type: AssetReferenceType.Image,
+          horizonAssetId: horizonIds.chestClosed,
+          path: `assets/images/chest_${affinityLower}-chest-closed.png`
+        }]
+      },
+      // Chest opened
+      {
+        id: `${affinityLower}-chest-opened`,
+        type: AssetEntryType.UI,
+        category: 'chest' as any,
+        name: `${affinityName} Chest Opened`,
+        assets: [{
+          type: AssetReferenceType.Image,
+          horizonAssetId: horizonIds.chestOpened,
+          path: `assets/images/chest_${affinityLower}-chest-opened.png`
+        }]
+      },
+      // Icon
+      {
+        id: `${affinityLower}-icon`,
+        type: AssetEntryType.UI,
+        category: 'icon' as any,
+        name: `${affinityName} Icon`,
+        assets: [{
+          type: AssetReferenceType.Image,
+          horizonAssetId: horizonIds.icon,
+          path: `assets/images/icon_${affinityLower}.png`
+        }]
+      },
+      // Habitat template
+      {
+        id: `${affinityLower}-habitat`,
+        type: AssetEntryType.UI,
+        category: 'card-template' as any,
+        name: `${affinityName} Habitat Card Template`,
+        description: `Template overlay for ${affinityLower} habitat cards`,
+        assets: [{
+          type: AssetReferenceType.Image,
+          horizonAssetId: horizonIds.habitatTemplate,
+          path: `assets/images/cards_${affinityLower}_habitat-card.png`
+        }]
+      }
+    ];
+  }
+
   // ==================== bloombeasts\common\catalogs\bossAssets.ts ====================
 
   /**
@@ -22635,44 +22966,12 @@ namespace BloomBeasts {
   ];
 
   /**
-   * Build the catalog manually since Buff cards don't have a single affinity
+   * Build the catalog using the builder - eliminates boilerplate and affinity mapping duplication
    */
-  export const buffAssets: AssetCatalog = {
-    version: "1.0.0",
-    category: CatalogCategory.Buff,
-    description: "Buff cards and assets",
-    data: buffCards.map((card) => {
-      const cardData = card.cardData;
-      const affinity = 'affinity' in cardData && cardData.affinity !== undefined
-        ? (() => {
-            // Map Affinity enum to AffinityLowercase enum
-            const affinityMap: Partial<Record<Affinity, AffinityLowercase>> = {
-              [Affinity.Fire]: AffinityLowercase.Fire,
-              [Affinity.Water]: AffinityLowercase.Water,
-              [Affinity.Forest]: AffinityLowercase.Forest,
-              [Affinity.Sky]: AffinityLowercase.Sky,
-              [Affinity.Boss]: AffinityLowercase.Boss,
-            };
-            return affinityMap[cardData.affinity as Affinity];
-          })()
-        : undefined;
-
-      return {
-        id: card.id,
-        type: AssetEntryType.Buff,
-        cardType: "Buff",
-        ...(affinity ? { affinity } : {}),
-        data: cardData,
-        assets: [
-          {
-            type: AssetReferenceType.Image,
-            ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
-            path: card.imagePath,
-          }
-        ]
-      };
-    })
-  };
+  export const buffAssets = createNonAffinityCatalog(
+    CatalogCategory.Buff,
+    buffCards
+  );
 
   // ==================== bloombeasts\common\catalogs\commonAssets.ts ====================
 
@@ -24038,24 +24337,12 @@ namespace BloomBeasts {
   ];
 
   /**
-   * Build the catalog manually since Magic cards don't have affinity
+   * Build the catalog using the builder - eliminates boilerplate
    */
-  export const magicAssets: AssetCatalog = {
-    version: "1.0.0",
-    category: CatalogCategory.Magic,
-    description: "Magic cards and assets",
-    data: magicCards.map((card) => ({
-      id: card.id,
-      type: AssetEntryType.Magic,
-      cardType: "Magic",
-      data: card.cardData,
-      assets: [{
-        type: AssetReferenceType.Image,
-        ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
-        path: card.imagePath,
-      }]
-    }))
-  };
+  export const magicAssets = createNonAffinityCatalog(
+    CatalogCategory.Magic,
+    magicCards
+  );
 
   // ==================== bloombeasts\common\catalogs\skyAssets.ts ====================
 
@@ -24398,24 +24685,12 @@ namespace BloomBeasts {
   ];
 
   /**
-   * Build the catalog manually since Trap cards don't have affinity
+   * Build the catalog using the builder - eliminates boilerplate
    */
-  export const trapAssets: AssetCatalog = {
-    version: "1.0.0",
-    category: CatalogCategory.Trap,
-    description: "Trap cards and assets",
-    data: trapCards.map((card) => ({
-      id: card.id,
-      type: AssetEntryType.Trap,
-      cardType: "Trap",
-      data: card.cardData,
-      assets: [{
-        type: AssetReferenceType.Image,
-        ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
-        path: card.imagePath,
-      }]
-    }))
-  };
+  export const trapAssets = createNonAffinityCatalog(
+    CatalogCategory.Trap,
+    trapCards
+  );
 
   // ==================== bloombeasts\common\catalogs\waterAssets.ts ====================
 

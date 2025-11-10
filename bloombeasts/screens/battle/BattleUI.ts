@@ -23,7 +23,6 @@ import type { BattleAction } from './engine/types/actions';
 import type { BloomBeastsPlayer } from './engine/BloomBeastsGame';
 import { createBattleCard } from '../../common/utils/cardUtils';
 import type { CardInstance } from '../common/types';
-import type { IBattleUI, BattleUIState } from '../../core/interfaces/IBattleUI';
 import { getCardIdentifier } from './engine/utils/cardIdentifiers';
 
 /**
@@ -68,7 +67,7 @@ export class BattleUI {
   private battleController: BattleController;
 
   // Current state
-  private currentBattle: BattleUIState | null = null;
+  private currentBattle: BattleState | null = null;
   private shouldStopAI: boolean = false;
 
   // Callbacks
@@ -116,7 +115,7 @@ export class BattleUI {
   /**
    * Initialize a mission battle
    */
-  initializeBattle(playerDeckCards: RuntimeCard[], playerName?: string): BattleUIState | null {
+  initializeBattle(playerDeckCards: RuntimeCard[], playerName?: string): BattleState | null {
     this.shouldStopAI = false;
 
     const mission = this.missionManager.getCurrentMission();
@@ -165,15 +164,8 @@ export class BattleUI {
     // Initialize battle using generic battle controller
     const battle = this.battleController.initializeBattle(battleConfig);
 
-    // Create mission-specific state
-    this.currentBattle = {
-      mission,
-      battleState: battle,
-      progress: this.missionManager.getProgress(),
-      isComplete: false,
-      rewards: null,
-      winner: null,
-    };
+    // Store battle state
+    this.currentBattle = battle;
 
     return this.currentBattle;
   }
@@ -181,43 +173,50 @@ export class BattleUI {
   /**
    * Get current battle state
    */
-  getCurrentBattle(): BattleUIState | null {
+  getCurrentBattle(): BattleState | null {
     return this.currentBattle;
+  }
+
+  /**
+   * Get mission manager
+   */
+  getMissionManager(): MissionManager {
+    return this.missionManager;
   }
 
   /**
    * Helper: Get player from TURBO state (player is always index 0)
    */
   private getPlayer() {
-    return this.currentBattle?.battleState?.turboState.gameData.players[0];
+    return this.currentBattle?.turboState.gameData.players[0];
   }
 
   /**
    * Helper: Get opponent from TURBO state (opponent is always index 1)
    */
   private getOpponent() {
-    return this.currentBattle?.battleState?.turboState.gameData.players[1];
+    return this.currentBattle?.turboState.gameData.players[1];
   }
 
   /**
    * Helper: Get player field from TURBO state
    */
   private getPlayerField() {
-    return this.currentBattle?.battleState?.turboState.gameData.field.player1;
+    return this.currentBattle?.turboState.gameData.field.player1;
   }
 
   /**
    * Helper: Get opponent field from TURBO state
    */
   private getOpponentField() {
-    return this.currentBattle?.battleState?.turboState.gameData.field.player2;
+    return this.currentBattle?.turboState.gameData.field.player2;
   }
 
   /**
    * Process a typed player action
    */
   async processTypedAction(action: BattleAction, data?: any): Promise<void> {
-    if (!this.currentBattle?.battleState) {
+    if (!this.currentBattle?.turboState) {
       Logger.error('No active battle');
       return;
     }
@@ -340,8 +339,8 @@ export class BattleUI {
 
     // Sync state from BattleController immediately after action
     const updatedBattle = this.battleController.getCurrentBattle();
-    if (updatedBattle && this.currentBattle) {
-      this.currentBattle.battleState = updatedBattle;
+    if (updatedBattle) {
+      this.currentBattle = updatedBattle;
     }
 
     // Update mission progress
@@ -412,13 +411,13 @@ export class BattleUI {
    */
   private async endPlayerTurn(): Promise<any> {
     Logger.info('[BattleUI] endPlayerTurn called');
-    if (!this.currentBattle?.battleState) {
+    if (!this.currentBattle?.turboState) {
       Logger.warn('[BattleUI] No current battle for endPlayerTurn');
       return { success: false };
     }
 
     // Check if battle is already complete (e.g., player just won)
-    if (this.currentBattle.isComplete) {
+    if (this.currentBattle.turboState.isComplete) {
       Logger.info('[BattleUI] Battle is already complete');
       return { success: false };
     }
@@ -437,7 +436,7 @@ export class BattleUI {
     // Update the local game state immediately after turn change
     const stateAfterTurnEnd = this.battleController.getCurrentBattle();
     if (stateAfterTurnEnd) {
-      this.currentBattle.battleState = stateAfterTurnEnd;
+      this.currentBattle = stateAfterTurnEnd;
       Logger.info('[BattleUI] Updated local battle state after turn end');
       // Trigger render to update UI with new turn
       if (this.renderCallback) this.renderCallback();
@@ -450,7 +449,7 @@ export class BattleUI {
     // Update the local game state again after AI turn
     const battleState = this.battleController.getCurrentBattle();
     if (battleState) {
-      this.currentBattle.battleState = battleState;
+      this.currentBattle = battleState;
       Logger.info('[BattleUI] Updated local battle state after AI turn');
       // Trigger render to update UI to show player's turn
       if (this.renderCallback) this.renderCallback();
@@ -464,7 +463,7 @@ export class BattleUI {
    */
   private async processOpponentTurn(): Promise<void> {
     Logger.info('[BattleUI] Processing opponent turn');
-    if (!this.currentBattle?.battleState) {
+    if (!this.currentBattle?.turboState) {
       Logger.warn('[BattleUI] No current battle state for opponent turn');
       return;
     }
@@ -500,7 +499,7 @@ export class BattleUI {
       // Final update after AI completes
       const updatedState = this.battleController.getCurrentBattle();
       if (updatedState) {
-        this.currentBattle.battleState = updatedState;
+        this.currentBattle = updatedState;
         if (this.renderCallback) this.renderCallback();
       }
     } catch (error) {
@@ -546,7 +545,7 @@ export class BattleUI {
     }
 
     // Prevent multiple calls
-    if (this.currentBattle.isComplete) {
+    if (this.currentBattle.turboState.isComplete) {
       Logger.info('[BattleUI] Battle already completed, ignoring duplicate endBattle call');
       return;
     }
@@ -560,10 +559,8 @@ export class BattleUI {
     Logger.info(`[BattleUI] Battle ending. Winner: ${battleResult.winner}, P1 HP: ${battleResult.player1Health}, P2 HP: ${battleResult.player2Health}`);
 
     this.shouldStopAI = true;
-    this.currentBattle.isComplete = true;
-    this.currentBattle.winner = battleResult.winner;
 
-    // Calculate rewards based on winner
+    // Update mission progress based on winner
     if (battleResult.winner === 'player1') {
       // Player won! Mark opponent as defeated for mission progress
       Logger.info('[BattleUI] Player 1 won! Marking opponent as defeated.');
@@ -571,24 +568,18 @@ export class BattleUI {
 
       this.missionManager.updateProgress('opponent-defeated', {});
       Logger.info('[BattleUI] updateProgress called successfully');
-
-      // Now complete the mission and award rewards
-      this.currentBattle.rewards = this.missionManager.completeMission();
-      Logger.info(`[BattleUI] Rewards generated: ${this.currentBattle.rewards !== null}`);
       this.battleController.completeBattle('player1');
     } else if (battleResult.winner === 'player2') {
       // Player lost
       Logger.info('[BattleUI] Player 2 won! No rewards.');
-      this.currentBattle.rewards = null;
       this.battleController.completeBattle('player2');
     } else {
       // Tie (both died) - treat as loss for now
       Logger.info('[BattleUI] Tie! No rewards.');
-      this.currentBattle.rewards = null;
       this.battleController.completeBattle(null);
     }
 
-    Logger.info(`[BattleUI] Battle ended. Rewards set: ${this.currentBattle.rewards !== null}`);
+    Logger.info(`[BattleUI] Battle ended.`);
   }
 
   /**

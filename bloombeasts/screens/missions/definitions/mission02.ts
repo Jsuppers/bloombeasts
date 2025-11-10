@@ -3,6 +3,7 @@
  * Forest Affinity Mission
  */
 
+import { Affinity } from '../../../common/engine';
 import { Mission } from '../types';
 import { createMissionDeck } from '../utils/deckBuilder';
 
@@ -36,6 +37,7 @@ export const mission02: Mission = {
         minAmount: 1,
         maxAmount: 2,
         dropChance: 0.9,
+        affinity: Affinity.Forest,
       },
     ],
     coinRewards: {

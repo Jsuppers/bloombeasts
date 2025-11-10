@@ -5,6 +5,7 @@
 
 import { Mission } from '../types';
 import { buildFireDeck } from '../../../common/engine/utils/deckBuilder';
+import { Affinity } from '../../../common/engine';
 
 export const mission11: Mission = {
   id: 'mission-11',
@@ -27,6 +28,7 @@ export const mission11: Mission = {
         minAmount: 1,
         maxAmount: 2,
         dropChance: 0.7,
+        affinity: Affinity.Fire,
       },
     ],
     coinRewards: {

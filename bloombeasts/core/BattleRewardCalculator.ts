@@ -16,6 +16,7 @@ export interface BattleRewards {
   cardsReceived: any[];
   itemsReceived?: any[];
   bonusRewards?: string[];
+  completionTimeSeconds?: number;
 }
 
 /**

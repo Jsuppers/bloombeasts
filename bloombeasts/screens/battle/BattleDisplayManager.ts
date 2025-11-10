@@ -28,15 +28,16 @@ export class BattleDisplayManager {
    * Create a battle display object from battle state
    */
   createBattleDisplay(
-    battleUIState: any,
-    options?: BattleDisplayOptions
+    battleState: any,
+    options?: BattleDisplayOptions,
+    mission?: any,
+    progress?: any
   ): BattleDisplay | null {
-    // Handle new TURBO-based battle state structure
-    if (!battleUIState || !battleUIState.battleState || !battleUIState.battleState.turboState) {
+    if (!battleState?.turboState) {
       return null;
     }
 
-    const turboState = battleUIState.battleState.turboState;
+    const turboState = battleState.turboState;
     const gameData = turboState.gameData;
 
     // Extract players and field from TURBO state
@@ -70,7 +71,7 @@ export class BattleDisplayManager {
       currentTurn: turboState.turnInfo.turnNumber,
       turnPlayer: turnPlayer,
       turnTimeRemaining: TURN_TIME_LIMIT,
-      objectives: this.getObjectiveDisplay(battleUIState),
+      objectives: this.getObjectiveDisplay(mission, progress),
       habitatZone: playerField.habitat || opponentField.habitat, // Use whichever has a habitat
       attackAnimation: options,
     };
@@ -81,26 +82,26 @@ export class BattleDisplayManager {
   /**
    * Get objective display for current battle
    */
-  private getObjectiveDisplay(battleState: any): ObjectiveDisplay[] {
-    if (!battleState.mission || !battleState.progress) {
+  private getObjectiveDisplay(mission: any, progress: any): ObjectiveDisplay[] {
+    if (!mission || !progress) {
       return [];
     }
 
     // Check if mission has objectives defined
-    if (!battleState.mission.objectives || !Array.isArray(battleState.mission.objectives)) {
+    if (!mission.objectives || !Array.isArray(mission.objectives)) {
       return [];
     }
 
-    return battleState.mission.objectives.map((obj: any) => {
+    return mission.objectives.map((obj: any) => {
       const key = `${obj.type}-${obj.target || 0}`;
-      const progress = battleState.progress.objectiveProgress.get(key) || 0;
+      const progressValue = progress.objectiveProgress.get(key) || 0;
       const target = obj.target || 1;
 
       return {
         description: obj.description || 'Unknown objective',
-        progress: Math.min(progress, target),
+        progress: Math.min(progressValue, target),
         target: target,
-        isComplete: progress >= target,
+        isComplete: progressValue >= target,
       };
     });
   }

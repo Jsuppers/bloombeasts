@@ -5,6 +5,7 @@
 
 import { Mission } from '../types';
 import { buildSkyDeck } from '../../../common/engine/utils/deckBuilder';
+import { Affinity } from '../../../common/engine';
 
 export const mission16: Mission = {
   id: 'mission-16',
@@ -27,12 +28,14 @@ export const mission16: Mission = {
         minAmount: 2,
         maxAmount: 2,
         dropChance: 0.7,
+        affinity: Affinity.Sky,
       },
       {
         cardPool: 'rare',
         minAmount: 1,
         maxAmount: 1,
         dropChance: 0.5,
+        affinity: Affinity.Sky,
       },
     ],
     coinRewards: {

@@ -169,10 +169,14 @@ export class ActionHandler {
         // Set up render callback for battle UI to update display during AI turns
         this.systems.battleUI.setRenderCallback(() => {
           const currentBattle = this.systems.battleUI.getCurrentBattle();
-          if (currentBattle && !currentBattle.isComplete) {
+          if (currentBattle && !currentBattle.turboState.isComplete) {
+            const mission = this.systems.battleUI.getMissionManager().getCurrentMission();
+            const progress = this.systems.battleUI.getMissionManager().getProgress();
             const updatedDisplay = this.systems.battleDisplayManager.createBattleDisplay(
               currentBattle,
-              undefined
+              undefined,
+              mission,
+              progress
             );
             if (updatedDisplay) {
               this.systems.uiCoordinator.updateBindingAndRender(BindingType.BattleDisplay, updatedDisplay);
@@ -288,13 +292,13 @@ export class ActionHandler {
     // Stop all timers when battle completes
     if (battleScreen) {
       const currentBattle = this.systems.battleUI.getCurrentBattle();
-      const wasComplete = currentBattle?.isComplete;
+      const wasComplete = currentBattle?.turboState.isComplete;
 
       await this.systems.battleOrchestrator.handleBattleAction(action);
 
       // Check if battle just completed and cleanup if needed
       const updatedBattle = this.systems.battleUI.getCurrentBattle();
-      if (!wasComplete && updatedBattle?.isComplete) {
+      if (!wasComplete && updatedBattle?.turboState.isComplete) {
         battleScreen.cleanup();
 
         // Save game data and refresh bindings when battle completes

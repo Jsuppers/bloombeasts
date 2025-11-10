@@ -5,6 +5,7 @@
 
 import { Mission } from '../types';
 import { buildWaterDeck } from '../../../common/engine/utils/deckBuilder';
+import { Affinity } from '../../../common/engine';
 
 export const mission08: Mission = {
   id: 'mission-08',
@@ -27,12 +28,14 @@ export const mission08: Mission = {
         minAmount: 1,
         maxAmount: 2,
         dropChance: 0.7,
+        affinity: Affinity.Water,
       },
       {
         cardPool: 'uncommon',
         minAmount: 1,
         maxAmount: 1,
         dropChance: 0.4,
+        affinity: Affinity.Water,
       },
     ],
     coinRewards: {

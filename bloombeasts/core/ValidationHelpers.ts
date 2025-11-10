@@ -7,7 +7,7 @@
 import { Logger } from '../common/engine/utils/Logger';
 import type { PlayerData } from '../types';
 import type { RuntimeCard } from '../common/engine/types/runtime';
-import type { BattleUIState } from './interfaces/IBattleUI';
+import type { BattleState } from '../screens/battle/engine/types';
 import { GAME_CONSTANTS } from './GameConstants';
 
 /**
@@ -124,7 +124,7 @@ export class ValidationHelpers {
   /**
    * Validate battle action
    */
-  static validateBattleAction(action: string, battleState: BattleUIState | null): ValidationResult {
+  static validateBattleAction(action: string, battleState: BattleState | null): ValidationResult {
     const errors: string[] = [];
 
     if (!action || typeof action !== 'string') {
@@ -137,7 +137,7 @@ export class ValidationHelpers {
       return { valid: false, errors };
     }
 
-    if (battleState.isComplete) {
+    if (battleState.turboState?.isComplete) {
       errors.push('Cannot perform action - battle is already complete');
     }
 

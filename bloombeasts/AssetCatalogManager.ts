@@ -10,6 +10,8 @@
  * - Horizon: See deployments/horizon/src/AssetCatalogLoader.ts for fetchAsData()-based loading
  */
 
+import { Affinity } from "./common/engine";
+
 /**
  * Type of asset reference (image, audio, animation)
  */
@@ -331,7 +333,9 @@ export class AssetCatalogManager {
         if (cardEntry.type === AssetEntryType.Beast) {
           // Assign rarity based on energy cost
           const cost = cardData.cost || 0;
-          if (cost >= 5) {
+          if (cardData.affinity === Affinity.Boss) {
+            cardData.rarity = 'boss';
+          } else if (cost >= 5) {
             cardData.rarity = 'rare';
           } else if (cost >= 3) {
             cardData.rarity = 'uncommon';
