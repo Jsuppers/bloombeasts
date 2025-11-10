@@ -151,3 +151,113 @@ export function defineCard(
     horizonAssetId
   };
 }
+
+/**
+ * Create a catalog for non-affinity cards (Magic, Trap, Buff)
+ * These catalogs don't have an affinity but still need proper categorization
+ */
+export function createNonAffinityCatalog(
+  category: CatalogCategory.Magic | CatalogCategory.Trap | CatalogCategory.Buff,
+  cards: CardDefinition[],
+  version: string = "1.0.0"
+): AssetCatalog {
+  const categoryNames = {
+    [CatalogCategory.Magic]: 'Magic',
+    [CatalogCategory.Trap]: 'Trap',
+    [CatalogCategory.Buff]: 'Buff',
+  };
+
+  return {
+    version,
+    category,
+    description: `${categoryNames[category]} cards`,
+    data: cards.map(buildCatalogEntry)
+  };
+}
+
+/**
+ * UI Asset Helpers
+ */
+
+/**
+ * Create affinity UI assets (chests, icons, habitats, missions)
+ * Eliminates ~50 lines of boilerplate per affinity
+ */
+export function createAffinityUIAssets(
+  affinity: Affinity.Fire | Affinity.Water | Affinity.Forest | Affinity.Sky,
+  horizonIds: {
+    mission: string;
+    chestClosed: string;
+    chestOpened: string;
+    icon: string;
+    habitatTemplate: string;
+  }
+): CardAssetEntry[] {
+  const affinityLower = getAffinityLowercase(affinity);
+  const affinityName = Affinity[affinity];
+
+  return [
+    // Mission asset
+    {
+      id: `${affinityLower}-mission`,
+      type: AssetEntryType.Mission,
+      affinity: affinityLower,
+      name: `${affinityName} Mission`,
+      description: `${affinityName} affinity mission`,
+      assets: [{
+        type: AssetReferenceType.Image,
+        horizonAssetId: horizonIds.mission,
+        path: `assets/images/boss_${affinityLower}-boss.png`
+      }]
+    },
+    // Chest closed
+    {
+      id: `${affinityLower}-chest-closed`,
+      type: AssetEntryType.UI,
+      category: 'chest' as any,
+      name: `${affinityName} Chest Closed`,
+      assets: [{
+        type: AssetReferenceType.Image,
+        horizonAssetId: horizonIds.chestClosed,
+        path: `assets/images/chest_${affinityLower}-chest-closed.png`
+      }]
+    },
+    // Chest opened
+    {
+      id: `${affinityLower}-chest-opened`,
+      type: AssetEntryType.UI,
+      category: 'chest' as any,
+      name: `${affinityName} Chest Opened`,
+      assets: [{
+        type: AssetReferenceType.Image,
+        horizonAssetId: horizonIds.chestOpened,
+        path: `assets/images/chest_${affinityLower}-chest-opened.png`
+      }]
+    },
+    // Icon
+    {
+      id: `${affinityLower}-icon`,
+      type: AssetEntryType.UI,
+      category: 'icon' as any,
+      name: `${affinityName} Icon`,
+      assets: [{
+        type: AssetReferenceType.Image,
+        horizonAssetId: horizonIds.icon,
+        path: `assets/images/icon_${affinityLower}.png`
+      }]
+    },
+    // Habitat template
+    {
+      id: `${affinityLower}-habitat`,
+      type: AssetEntryType.UI,
+      category: 'card-template' as any,
+      name: `${affinityName} Habitat Card Template`,
+      description: `Template overlay for ${affinityLower} habitat cards`,
+      assets: [{
+        type: AssetReferenceType.Image,
+        horizonAssetId: horizonIds.habitatTemplate,
+        path: `assets/images/cards_${affinityLower}_habitat-card.png`
+      }]
+    }
+  ] as CardAssetEntry[];
+}

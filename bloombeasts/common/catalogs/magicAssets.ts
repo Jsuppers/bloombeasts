@@ -5,11 +5,10 @@
  * Edit card definitions below, and the builder handles all the wrapper structure.
  */
 
-import type { AssetCatalog } from '../../AssetCatalogManager';
-import { CatalogCategory, AssetEntryType, AssetReferenceType } from '../../AssetCatalogManager';
+import { CatalogCategory } from '../../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration, StatType, ResourceType } from '../engine/types/abilities';
 import { CardType } from '../engine/types/core';
-import { defineCard } from './catalogBuilder';
+import { defineCard, createNonAffinityCatalog } from './catalogBuilder';
 import type { MagicCard } from '../engine/types/core';
 
 /**
@@ -84,21 +83,9 @@ const magicCards = [
 ];
 
 /**
- * Build the catalog manually since Magic cards don't have affinity
+ * Build the catalog using the builder - eliminates boilerplate
  */
-export const magicAssets: AssetCatalog = {
-  version: "1.0.0",
-  category: CatalogCategory.Magic,
-  description: "Magic cards and assets",
-  data: magicCards.map((card) => ({
-    id: card.id,
-    type: AssetEntryType.Magic,
-    cardType: "Magic",
-    data: card.cardData,
-    assets: [{
-      type: AssetReferenceType.Image,
-      ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
-      path: card.imagePath,
-    }]
-  }))
-};
+export const magicAssets = createNonAffinityCatalog(
+  CatalogCategory.Magic,
+  magicCards
+);

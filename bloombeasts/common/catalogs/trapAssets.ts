@@ -5,11 +5,10 @@
  * Edit card definitions below, and the builder handles all the wrapper structure.
  */
 
-import type { AssetCatalog } from '../../AssetCatalogManager';
-import { CatalogCategory, AssetEntryType, AssetReferenceType } from '../../AssetCatalogManager';
+import { CatalogCategory } from '../../AssetCatalogManager';
 import { AbilityTrigger, AbilityTarget, EffectType, EffectDuration } from '../engine/types/abilities';
 import { TrapTrigger, CardType, TrapConditionType } from '../engine/types/core';
-import { defineCard } from './catalogBuilder';
+import { defineCard, createNonAffinityCatalog } from './catalogBuilder';
 import type { TrapCard } from '../engine/types/core';
 
 /**
@@ -80,21 +79,9 @@ const trapCards = [
 ];
 
 /**
- * Build the catalog manually since Trap cards don't have affinity
+ * Build the catalog using the builder - eliminates boilerplate
  */
-export const trapAssets: AssetCatalog = {
-  version: "1.0.0",
-  category: CatalogCategory.Trap,
-  description: "Trap cards and assets",
-  data: trapCards.map((card) => ({
-    id: card.id,
-    type: AssetEntryType.Trap,
-    cardType: "Trap",
-    data: card.cardData,
-    assets: [{
-      type: AssetReferenceType.Image,
-      ...(card.horizonAssetId ? { horizonAssetId: card.horizonAssetId } : {}),
-      path: card.imagePath,
-    }]
-  }))
-};
+export const trapAssets = createNonAffinityCatalog(
+  CatalogCategory.Trap,
+  trapCards
+);

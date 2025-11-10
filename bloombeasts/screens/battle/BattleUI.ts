@@ -23,16 +23,8 @@ import type { BattleAction } from './engine/types/actions';
 import type { BloomBeastsPlayer } from './engine/BloomBeastsGame';
 import { createBattleCard } from '../../common/utils/cardUtils';
 import type { CardInstance } from '../common/types';
+import type { IBattleUI, BattleUIState } from '../../core/interfaces/IBattleUI';
 import { getCardIdentifier } from './engine/utils/cardIdentifiers';
-
-export interface BattleUIState {
-  mission: Mission;
-  battleState: BattleState | null;
-  progress: MissionRunProgress | null;
-  isComplete: boolean;
-  rewards: RewardResult | null;
-  winner: string | null;
-}
 
 /**
  * Convert AnyCard[] to RuntimeCard[] for opponent decks

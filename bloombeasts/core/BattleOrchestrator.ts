@@ -5,9 +5,14 @@
 
 import type { BattleUI } from '../screens/battle/BattleUI';
 import type { BattleDisplayManager } from '../screens/battle/BattleDisplayManager';
-import { parseActionString, BattleActions } from '../screens/battle/engine/types/actions';
+import type { BattleState } from '../screens/battle/engine/types';
+import { parseActionString, BattleActions, type BattleAction } from '../screens/battle/engine/types/actions';
 import { Logger } from '../common/engine/utils/Logger';
 import type { AsyncMethods } from '../common/ui/types/types/bindings';
+import type { RuntimeCard } from '../common/engine/types/runtime';
+import type { PlayerData } from '../types';
+import type { AnyCard } from '../common/engine/types/core';
+import type { ItemRewardResult } from '../screens/missions/MissionManager';
 import { GameStateManager } from './GameStateManager';
 import { BattleRewardCalculator, BoostMap } from './BattleRewardCalculator';
 import { UICoordinator } from './UICoordinator';
@@ -16,6 +21,7 @@ import { GAME_CONSTANTS, SOUND_EFFECTS } from './GameConstants';
 import { BindingType } from '../common/ui/types/types/BindingManager';
 import { getPlayerDeckCards, awardDeckExperience, addCardReward } from '../common/utils/cardUtils';
 import { ValidationHelpers } from './ValidationHelpers';
+import { BattleUIState } from '../screens/battle';
 
 /**
  * Orchestrates all battle-related operations
@@ -53,7 +59,7 @@ export class BattleOrchestrator {
   /**
    * Initialize battle with mission ID
    */
-  initializeBattle(missionId: string, playerDeckCards: any[], playerName: string): any {
+  initializeBattle(missionId: string, playerDeckCards: RuntimeCard[], playerName: string): BattleUIState | null {
     const battleState = this.battleUI.initializeBattle(playerDeckCards, playerName);
 
     if (battleState) {
@@ -192,7 +198,7 @@ export class BattleOrchestrator {
   /**
    * Handle auto-attack-all action with animations
    */
-  private async handleAutoAttackAll(typedAction: any): Promise<void> {
+  private async handleAutoAttackAll(typedAction: BattleAction): Promise<void> {
     this.soundManager.playSfx(SOUND_EFFECTS.ATTACK);
 
     // Process action with animation callback
@@ -273,7 +279,7 @@ export class BattleOrchestrator {
   /**
    * Handle battle completion (victory or defeat)
    */
-  async handleBattleComplete(battleState: any): Promise<void> {
+  async handleBattleComplete(battleState: BattleUIState): Promise<void> {
     const playerData = this.gameStateManager.getPlayerDataOrNull();
     if (!playerData) return;
 
@@ -297,7 +303,7 @@ export class BattleOrchestrator {
   /**
    * Handle victory scenario
    */
-  private async handleVictory(battleState: any, playerData: any, battleId: string | null): Promise<void> {
+  private async handleVictory(battleState: BattleUIState, playerData: PlayerData, battleId: string | null): Promise<void> {
     Logger.info('[BattleOrchestrator] VICTORY! Showing rewards popup');
 
     // Apply boost multipliers to rewards
@@ -316,20 +322,22 @@ export class BattleOrchestrator {
     );
 
     // Add cards directly to collection
-    battleState.rewards.cardsReceived.forEach((card: any, index: number) => {
-      addCardReward(card, playerData.cards.collected, index);
-    });
-
-    // Add coins
-    if (battleState.rewards.coinsReceived) {
-      this.gameStateManager.addCoins(battleState.rewards.coinsReceived);
-    }
-
-    // Add items to inventory
-    if (battleState.rewards.itemsReceived) {
-      battleState.rewards.itemsReceived.forEach((itemReward: any) => {
-        this.gameStateManager.addItems(itemReward.itemId, itemReward.quantity);
+    if (battleState.rewards) {
+      battleState.rewards.cardsReceived.forEach((card: AnyCard, index: number) => {
+        addCardReward(card, playerData.cards.collected, index);
       });
+
+      // Add coins
+      if (battleState.rewards.coinsReceived) {
+        this.gameStateManager.addCoins(battleState.rewards.coinsReceived);
+      }
+
+      // Add items to inventory
+      if (battleState.rewards.itemsReceived) {
+        battleState.rewards.itemsReceived.forEach((itemReward: ItemRewardResult) => {
+          this.gameStateManager.addItems(itemReward.itemId, itemReward.quantity);
+        });
+      }
     }
 
     // Track mission completion
@@ -362,7 +370,7 @@ export class BattleOrchestrator {
   /**
    * Handle defeat scenario
    */
-  private async handleDefeat(battleState: any): Promise<void> {
+  private async handleDefeat(battleState: BattleUIState): Promise<void> {
     Logger.info('[BattleOrchestrator] DEFEAT! Showing failed popup');
 
     // Reset battle start time

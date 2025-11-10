@@ -6,6 +6,8 @@
 
 import { Logger } from '../common/engine/utils/Logger';
 import type { PlayerData } from '../types';
+import type { RuntimeCard } from '../common/engine/types/runtime';
+import type { BattleUIState } from './interfaces/IBattleUI';
 import { GAME_CONSTANTS } from './GameConstants';
 
 /**
@@ -23,7 +25,7 @@ export class ValidationHelpers {
   /**
    * Validate deck before starting battle
    */
-  static validateDeck(deckCards: any[]): ValidationResult {
+  static validateDeck(deckCards: RuntimeCard[]): ValidationResult {
     const errors: string[] = [];
 
     // Check deck size
@@ -61,8 +63,9 @@ export class ValidationHelpers {
 
   /**
    * Validate player data structure
+   * Type guard pattern - checks if unknown data is valid PlayerData
    */
-  static validatePlayerData(data: any): ValidationResult {
+  static validatePlayerData(data: unknown): ValidationResult {
     const errors: string[] = [];
 
     if (!data || typeof data !== 'object') {
@@ -70,36 +73,42 @@ export class ValidationHelpers {
       return { valid: false, errors };
     }
 
+    const playerData = data as Record<string, unknown>;
+
     // Check required fields
-    if (!data.name || typeof data.name !== 'string') {
+    if (!playerData.name || typeof playerData.name !== 'string') {
       errors.push('Player name is missing or invalid');
     }
 
-    if (typeof data.totalXP !== 'number' || data.totalXP < 0) {
+    if (typeof playerData.totalXP !== 'number' || playerData.totalXP < 0) {
       errors.push('Player XP is invalid');
     }
 
-    if (typeof data.coins !== 'number' || data.coins < 0) {
+    if (typeof playerData.coins !== 'number' || playerData.coins < 0) {
       errors.push('Player coins is invalid');
     }
 
     // Check cards structure
-    if (!data.cards || typeof data.cards !== 'object') {
+    if (!playerData.cards || typeof playerData.cards !== 'object') {
       errors.push('Player cards data is missing');
     } else {
-      if (!Array.isArray(data.cards.collected)) {
+      const cards = playerData.cards as Record<string, unknown>;
+      if (!Array.isArray(cards.collected)) {
         errors.push('Player collected cards must be an array');
       }
-      if (!Array.isArray(data.cards.deck)) {
+      if (!Array.isArray(cards.deck)) {
         errors.push('Player deck must be an array');
       }
     }
 
     // Check missions structure
-    if (!data.missions || typeof data.missions !== 'object') {
+    if (!playerData.missions || typeof playerData.missions !== 'object') {
       errors.push('Player missions data is missing');
-    } else if (typeof data.missions.completedMissions !== 'object') {
-      errors.push('Completed missions must be an object');
+    } else {
+      const missions = playerData.missions as Record<string, unknown>;
+      if (typeof missions.completedMissions !== 'object') {
+        errors.push('Completed missions must be an object');
+      }
     }
 
     if (errors.length > 0) {
@@ -115,7 +124,7 @@ export class ValidationHelpers {
   /**
    * Validate battle action
    */
-  static validateBattleAction(action: string, battleState: any): ValidationResult {
+  static validateBattleAction(action: string, battleState: BattleUIState | null): ValidationResult {
     const errors: string[] = [];
 
     if (!action || typeof action !== 'string') {
