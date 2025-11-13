@@ -457,8 +457,9 @@ export class BattleOrchestrator {
       // If this is Cluck Norris mission, submit time to leaderboard
       if (battleId === GAME_CONSTANTS.MISSION_CLUCK_NORRIS_ID && this.battleStartTime) {
         const completionTime = (Date.now() - this.battleStartTime) / 1000;
-        // Submit via callback if available
-        // This will need to be passed through constructor or method
+        // Submit time to leaderboard
+        this.gameStateManager.submitCluckNorrisTime(completionTime);
+        Logger.info(`[BattleOrchestrator] Submitted Cluck Norris completion time: ${completionTime}s`);
       }
     }
 

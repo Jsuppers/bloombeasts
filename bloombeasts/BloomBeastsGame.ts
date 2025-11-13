@@ -248,6 +248,15 @@ export class BloomBeastsGame {
   }
 
   /**
+   * Update leaderboard data from server
+   */
+  updateLeaderboardData(data: any): void {
+    // Update the leaderboard binding with new data
+    this.UI.bindingManager.setBinding(BindingType.LeaderboardData, data);
+    Logger.info('[BloomBeastsGame] Updated leaderboard data');
+  }
+
+  /**
    * Dispose resources
    */
   dispose(): void {

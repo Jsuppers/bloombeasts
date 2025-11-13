@@ -85,6 +85,19 @@ export class GameStateManager {
   }
 
   /**
+   * Submit Cluck Norris speed run time to leaderboard
+   */
+  submitCluckNorrisTime(timeInSeconds: number): void {
+    if (!this.onLeaderboardScoreSubmit) {
+      Logger.warn('[GameStateManager] Cannot submit Cluck Norris time: no leaderboard callback');
+      return;
+    }
+
+    Logger.info(`[GameStateManager] Submitting Cluck Norris time: ${timeInSeconds}s`);
+    this.onLeaderboardScoreSubmit('cluckNorris', timeInSeconds);
+  }
+
+  /**
    * Get the quantity of a specific item from player's items array
    */
   getItemQuantity(itemId: string): number {

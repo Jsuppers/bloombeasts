@@ -10,7 +10,7 @@
  *   const game = new BloomBeasts.GameManager(platform);
  *
  * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY
- * Generated: 2025-11-10T10:43:02.833Z
+ * Generated: 2025-11-13T00:47:54.011Z
  * Files: 150
  *
  * @version 1.0.0
@@ -18897,6 +18897,19 @@ namespace BloomBeasts {
     }
 
     /**
+     * Submit Cluck Norris speed run time to leaderboard
+     */
+    submitCluckNorrisTime(timeInSeconds: number): void {
+      if (!this.onLeaderboardScoreSubmit) {
+        Logger.warn('[GameStateManager] Cannot submit Cluck Norris time: no leaderboard callback');
+        return;
+      }
+
+      Logger.info(`[GameStateManager] Submitting Cluck Norris time: ${timeInSeconds}s`);
+      this.onLeaderboardScoreSubmit('cluckNorris', timeInSeconds);
+    }
+
+    /**
      * Get the quantity of a specific item from player's items array
      */
     getItemQuantity(itemId: string): number {
@@ -20242,8 +20255,9 @@ namespace BloomBeasts {
         // If this is Cluck Norris mission, submit time to leaderboard
         if (battleId === GAME_CONSTANTS.MISSION_CLUCK_NORRIS_ID && this.battleStartTime) {
           const completionTime = (Date.now() - this.battleStartTime) / 1000;
-          // Submit via callback if available
-          // This will need to be passed through constructor or method
+          // Submit time to leaderboard
+          this.gameStateManager.submitCluckNorrisTime(completionTime);
+          Logger.info(`[BattleOrchestrator] Submitted Cluck Norris completion time: ${completionTime}s`);
         }
       }
 
@@ -21701,6 +21715,15 @@ namespace BloomBeasts {
      */
     private submitLeaderboardScore(type: 'experience' | 'cluckNorris', score: number): void {
       this.dataManager.submitLeaderboardScore(type, score);
+    }
+
+    /**
+     * Update leaderboard data from server
+     */
+    updateLeaderboardData(data: any): void {
+      // Update the leaderboard binding with new data
+      this.UI.bindingManager.setBinding(BindingType.LeaderboardData, data);
+      Logger.info('[BloomBeastsGame] Updated leaderboard data');
     }
 
     /**

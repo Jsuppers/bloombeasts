@@ -65,6 +65,16 @@ type LoadPlayerDataResponse = {
   [key: string]: any;
 };
 
+type LeaderboardData = {
+  topExperience: any[];
+  fastestCluckNorris: any[];
+};
+
+type LeaderboardDataPayload = {
+  data: LeaderboardData;
+  [key: string]: any;
+};
+
 // Simplified: No adapter needed - we just use Horizon's Binding directly!
 
 
@@ -125,6 +135,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
   private saveDataEvent!: NetworkEvent<SavePlayerDataPayload>;
   private loadDataEvent!: NetworkEvent<LoadPlayerDataPayload>;
   private loadDataResponseEvent!: NetworkEvent<LoadPlayerDataResponse>;
+  private leaderboardDataEvent!: NetworkEvent<LeaderboardDataPayload>;
 
   private currentMusicEntity: hz.Entity | null = null;
   private currentMusicVolume: number = 0.5;
@@ -398,6 +409,19 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
       setSfxEnabled: (enabled: boolean) => {
         this.setSfxEnabledImpl(enabled);
       },
+
+      // Network events: Send to server
+      sendNetworkEvent: (event: string, data: any) => {
+        console.log(`[Client] Sending network event: ${event}`, data);
+
+        // For leaderboard_score_submit event, send to server
+        if (event === 'leaderboard_score_submit') {
+          const leaderboardSubmitEvent = new NetworkEvent(event);
+          this.sendNetworkEvent(this.props.serverEntity, leaderboardSubmitEvent, data);
+        } else {
+          console.warn(`[Client] Unhandled network event: ${event}`);
+        }
+      },
     };
   }
 
@@ -469,6 +493,7 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     this.saveDataEvent = new NetworkEvent<SavePlayerDataPayload>('bloombeasts:savePlayerData');
     this.loadDataEvent = new NetworkEvent<LoadPlayerDataPayload>('bloombeasts:loadPlayerData');
     this.loadDataResponseEvent = new NetworkEvent<LoadPlayerDataResponse>('bloombeasts:loadPlayerDataResponse');
+    this.leaderboardDataEvent = new NetworkEvent<LeaderboardDataPayload>('leaderboard_data_update');
 
     // Check if we should initialize Local Mode
     // This check will be false on the server, true on the client after ownership transfer
@@ -519,6 +544,17 @@ class BloomBeastsUI extends UIComponent<{}, {}> {
     this.currentPlayer = player;
     const playerIndex = player.index.get();
     console.log('[Client] Player index:', playerIndex);
+
+    // Listen for leaderboard data updates from server
+    this.connectNetworkEvent(this.entity, this.leaderboardDataEvent, (payload: LeaderboardDataPayload) => {
+      console.log('[Client] Received leaderboard data update from server');
+
+      // Update the leaderboard data binding
+      if (this.game) {
+        this.game.updateLeaderboardData(payload.data);
+        console.log('[Client] Updated leaderboard display with new data');
+      }
+    });
 
     // Listen for player data response from server
     this.connectNetworkEvent(this.entity, this.loadDataResponseEvent, (response: LoadPlayerDataResponse) => {
